@@ -4,6 +4,7 @@
   "private": true,
   "description": "Open-source, self-hostable Platform as a Service (PaaS)",
   "license": "AGPL-3.0",
+  "type": "module",
   "engines": {
     "node": ">=22"
   },
@@ -24,6 +25,8 @@
     "@eslint/js": "catalog:",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
+    "eslint-plugin-simple-import-sort": "catalog:",
+    "eslint-plugin-unused-imports": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:"

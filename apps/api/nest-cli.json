@@ -1,8 +1,24 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
+  "monorepo": true,
   "sourceRoot": "src",
+  "entryFile": "entrypoints/api",
   "compilerOptions": {
+    "builder": {
+      "type": "swc",
+      "options": {
+        "stripLeadingPaths": false
+      }
+    },
     "deleteOutDir": true
+  },
+  "projects": {
+    "api": {
+      "type": "application",
+      "root": "src",
+      "entryFile": "entrypoints/api",
+      "sourceRoot": "src"
+    }
   }
 }
