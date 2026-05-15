@@ -1,0 +1,31 @@
+{
+  "name": "marsa",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Open-source, self-hostable Platform as a Service (PaaS)",
+  "license": "AGPL-3.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "lint": "pnpm -r --parallel run lint",
+    "lint:root": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "dev:api": "pnpm --filter api dev",
+    "dev:web": "pnpm --filter web dev",
+    "build": "pnpm -r run build",
+    "build:api": "pnpm --filter api build",
+    "build:web": "pnpm --filter web build",
+    "test": "pnpm -r --parallel run test"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
+  }
+}
