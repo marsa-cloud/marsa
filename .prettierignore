@@ -4,3 +4,10 @@ dist
 .output
 coverage
 pnpm-lock.yaml
+**/dist/**
+**/.nuxt/**
+**/.output/**
+**/coverage/**
+
+# Nuxt app: handled by @nuxt/eslint (stylistic rules) — avoid Prettier conflicts
+apps/web/**
