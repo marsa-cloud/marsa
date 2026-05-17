@@ -3,11 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "clean": "rm -rf .nuxt .output",
     "build": "nuxt build",
     "dev": "nuxt dev",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {

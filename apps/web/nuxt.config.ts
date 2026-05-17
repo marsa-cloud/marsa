@@ -17,11 +17,11 @@ export default defineNuxtConfig({
   eslint: {
     config: {
       stylistic: {
-        semi: true,
+        semi: false,
         commaDangle: 'always-multiline',
         quotes: 'single',
         braceStyle: '1tbs',
       },
     },
   },
-});
+})

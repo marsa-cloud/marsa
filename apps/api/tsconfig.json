@@ -1,8 +1,23 @@
 {
-  "extends": "../../tsconfig.node.json",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "module": "NodeNext",
+    "target": "esnext",
+    "moduleResolution": "NodeNext",
     "outDir": "./dist",
     "baseUrl": "./",
+    "paths": {
+      "#src/*": ["./src/*"],
+      "#test/*": ["./src/test/*"]
+    },
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "declaration": true,
+    "sourceMap": true,
+    "incremental": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "removeComments": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
