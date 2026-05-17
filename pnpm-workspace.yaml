@@ -55,3 +55,11 @@ catalog:
   '@iconify-json/simple-icons': ^1.2.81
   tailwindcss: ^4.3.0
   vue-tsc: ^3.2.8
+
+  # Test stack (web)
+  vitest: ^3.0.0
+  '@vitest/coverage-v8': ^3.0.0
+  '@vue/test-utils': ^2.4.6
+  '@nuxt/test-utils': ^3.19.0
+  happy-dom: ^17.0.0
+  playwright: ^1.50.0
