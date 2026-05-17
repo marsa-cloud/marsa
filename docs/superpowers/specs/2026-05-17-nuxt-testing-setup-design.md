@@ -17,14 +17,14 @@ Stand up unit, component, and end-to-end testing for `apps/web` using Nuxt's fir
 
 ## Stack
 
-| Concern | Tool | Why |
-|---|---|---|
-| Test runner | **Vitest** | First-party Vite/Nuxt integration; standard in the Vue/Nuxt ecosystem. |
-| Nuxt integration | **`@nuxt/test-utils`** | Provides `mountSuspended`, `mockNuxtImport`, `setup()`, `$fetch`, `createPage`. The only sanctioned way to test Nuxt apps. |
-| Component mount | `@vue/test-utils` | Peer dep of `@nuxt/test-utils`; lower-level mount helpers. |
-| DOM environment | **happy-dom** | Nuxt/Vitest default; ~3× faster than jsdom and spec-complete enough for component tests. |
-| Browser E2E | **Playwright** (Chromium) | Driven through `setup({ browser: true })` + `createPage`, not as a standalone runner. |
-| Coverage | `@vitest/coverage-v8` | Cheap to add; opt-in via `--coverage`. |
+| Concern          | Tool                      | Why                                                                                                                        |
+| ---------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Test runner      | **Vitest**                | First-party Vite/Nuxt integration; standard in the Vue/Nuxt ecosystem.                                                     |
+| Nuxt integration | **`@nuxt/test-utils`**    | Provides `mountSuspended`, `mockNuxtImport`, `setup()`, `$fetch`, `createPage`. The only sanctioned way to test Nuxt apps. |
+| Component mount  | `@vue/test-utils`         | Peer dep of `@nuxt/test-utils`; lower-level mount helpers.                                                                 |
+| DOM environment  | **happy-dom**             | Nuxt/Vitest default; ~3× faster than jsdom and spec-complete enough for component tests.                                   |
+| Browser E2E      | **Playwright** (Chromium) | Driven through `setup({ browser: true })` + `createPage`, not as a standalone runner.                                      |
+| Coverage         | `@vitest/coverage-v8`     | Cheap to add; opt-in via `--coverage`.                                                                                     |
 
 Versions are pinned in the root `pnpm-workspace.yaml` catalog; `apps/web/package.json` references them as `"catalog:"`.
 
@@ -37,16 +37,17 @@ ssr: false,
 ```
 
 Consequences:
+
 - No server-side rendering; `nuxi build` still produces a client bundle, `nuxi generate` produces a fully static site for CDN deployment.
 - `@nuxt/test-utils`'s `setup()` still works — it boots the Nuxt dev/preview server, just without SSR. `$fetch('/')` returns the SPA shell HTML; meaningful page assertions go through `createPage` (Playwright).
 
 ## Test layer matrix
 
-| Layer | Runs in | Environment | Helpers | Typical assertions |
-|---|---|---|---|---|
-| **Unit** | `vitest run` | `node` (default) | none | pure functions, composables that don't touch Nuxt internals |
-| **Component** | `vitest run` | `nuxt` (per-file directive) | `mountSuspended` from `@nuxt/test-utils/runtime` | render an SFC, query DOM, fire events, assert on emitted events / DOM state |
-| **E2E** | `vitest run --config vitest.e2e.config.ts` | `node` + booted Nuxt | `setup()` + `$fetch` + `createPage` | HTTP status, fetched markup, real-browser interactions |
+| Layer         | Runs in                                    | Environment                 | Helpers                                          | Typical assertions                                                          |
+| ------------- | ------------------------------------------ | --------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------- |
+| **Unit**      | `vitest run`                               | `node` (default)            | none                                             | pure functions, composables that don't touch Nuxt internals                 |
+| **Component** | `vitest run`                               | `nuxt` (per-file directive) | `mountSuspended` from `@nuxt/test-utils/runtime` | render an SFC, query DOM, fire events, assert on emitted events / DOM state |
+| **E2E**       | `vitest run --config vitest.e2e.config.ts` | `node` + booted Nuxt        | `setup()` + `$fetch` + `createPage`              | HTTP status, fetched markup, real-browser interactions                      |
 
 Component vs. unit is **not** a separate command or folder — it's just whether the file opts into the Nuxt environment via the directive:
 
@@ -80,6 +81,7 @@ apps/web/
 ```
 
 Conventions:
+
 - Co-located `__tests__/` folders for unit and component tests. Vue/Nuxt community standard.
 - File suffix is **`.spec.ts`** (matches Vitest defaults and Vue ecosystem). No `.unit.test.ts` / `.component.test.ts` split — the environment directive does the work.
 - E2E tests live at the package root under `tests/e2e/` because they aren't tied to a single source file.
@@ -121,9 +123,9 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     include: ['tests/e2e/**/*.spec.ts'],
-    testTimeout: 60_000,        // browser boot is slow
-    hookTimeout: 120_000,       // setup() builds and boots Nuxt
-    pool: 'forks',              // each e2e file gets its own Nuxt instance
+    testTimeout: 60_000, // browser boot is slow
+    hookTimeout: 120_000, // setup() builds and boots Nuxt
+    pool: 'forks', // each e2e file gets its own Nuxt instance
   },
 })
 ```
@@ -142,8 +144,8 @@ Minimal — Playwright is only used as a library driven by `@nuxt/test-utils`, n
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
-    "test:e2e:install": "playwright install --with-deps chromium"
-  }
+    "test:e2e:install": "playwright install --with-deps chromium",
+  },
 }
 ```
 
@@ -178,6 +180,7 @@ These are placeholders, deletable when real tests arrive — but they fail loudl
 ## Docs
 
 Create `apps/web/.claude/CLAUDE.md` (analogous to `apps/api/.claude/CLAUDE.md`) covering:
+
 - Stack overview (Nuxt 4, SPA-only, Nuxt UI, Tailwind 4).
 - Testing: layer matrix, file layout, the `// @vitest-environment nuxt` directive (it's an easy-to-forget gotcha), command map.
 - That all backend calls go to `apps/api` (no Nitro server routes / BFF).
@@ -196,6 +199,7 @@ Update root `marsa/.claude/CLAUDE.md` to point at the new `apps/web/.claude/CLAU
 ## Open questions
 
 None blocking. Future work that this spec deliberately doesn't decide:
+
 - Testing-Library style vs. direct `@vue/test-utils` API — let's see how real tests feel before legislating.
 - Coverage thresholds in CI — add later once we have real coverage to look at.
 - Visual regression tooling — wait until there's a UI worth regressing against.

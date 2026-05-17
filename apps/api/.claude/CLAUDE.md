@@ -55,6 +55,7 @@ src/app/<feature>/
 ```
 
 Conventions:
+
 - One controller per use-case folder; the controller delegates to a service.
 - Use-cases have their own `*.module.ts`; the feature's `<feature>.module.ts` imports its use-case modules.
 - Feature-internal code (entities, errors, etc.) stays inside the feature folder. If something needs to be shared across features, promote it to `src/modules/` or a workspace package — don't reach into another feature.

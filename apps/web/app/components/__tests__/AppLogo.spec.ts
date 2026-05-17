@@ -12,7 +12,7 @@ describe('AppLogo', () => {
 
   it('uses currentColor for the wordmark paths', async () => {
     const wrapper = await mountSuspended(AppLogo)
-    const wordmark = wrapper.findAll('path').filter((p) => p.attributes('fill') === 'currentColor')
+    const wordmark = wrapper.findAll('path').filter(p => p.attributes('fill') === 'currentColor')
     expect(wordmark.length).toBeGreaterThan(0)
   })
 })

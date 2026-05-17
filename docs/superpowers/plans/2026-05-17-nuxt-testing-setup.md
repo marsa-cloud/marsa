@@ -15,6 +15,7 @@
 ### Task 1: Add test deps to the pnpm catalog
 
 **Files:**
+
 - Modify: `pnpm-workspace.yaml`
 
 - [ ] **Step 1: Add catalog entries**
@@ -22,13 +23,13 @@
 Edit `pnpm-workspace.yaml`. After the existing `# Nuxt (web)` block, add a new `# Test stack (web)` block:
 
 ```yaml
-  # Test stack (web)
-  vitest: ^3.0.0
-  '@vitest/coverage-v8': ^3.0.0
-  '@vue/test-utils': ^2.4.6
-  '@nuxt/test-utils': ^3.19.0
-  happy-dom: ^17.0.0
-  playwright: ^1.50.0
+# Test stack (web)
+vitest: ^3.0.0
+'@vitest/coverage-v8': ^3.0.0
+'@vue/test-utils': ^2.4.6
+'@nuxt/test-utils': ^3.19.0
+happy-dom: ^17.0.0
+playwright: ^1.50.0
 ```
 
 - [ ] **Step 2: Commit**
@@ -43,6 +44,7 @@ git commit -m "chore: add web test stack to pnpm catalog"
 ### Task 2: Wire test deps into `apps/web` and install
 
 **Files:**
+
 - Modify: `apps/web/package.json`
 
 - [ ] **Step 1: Add devDependencies referencing the catalog**
@@ -58,14 +60,15 @@ Edit `apps/web/package.json`. Add the following entries to `devDependencies` (ke
     "@vue/test-utils": "catalog:",
     "happy-dom": "catalog:",
     "playwright": "catalog:",
-    "vitest": "catalog:"
-  }
+    "vitest": "catalog:",
+  },
 }
 ```
 
 - [ ] **Step 2: Install**
 
 Run from repo root:
+
 ```bash
 pnpm install
 ```
@@ -88,14 +91,17 @@ git commit -m "chore(web): install vitest + @nuxt/test-utils + playwright"
 - [ ] **Step 1: Install Chromium**
 
 Run from repo root:
+
 ```bash
 pnpm --filter web exec playwright install chromium
 ```
 
 Expected: Playwright downloads Chromium (~150MB on first run). Confirm with:
+
 ```bash
 ls ~/.cache/ms-playwright | grep chromium
 ```
+
 Expected output: a `chromium-<rev>` directory.
 
 - [ ] **Step 2: No commit** — this is a local artifact, not a tracked file.
@@ -105,6 +111,7 @@ Expected output: a `chromium-<rev>` directory.
 ### Task 4: Disable SSR in `nuxt.config.ts`
 
 **Files:**
+
 - Modify: `apps/web/nuxt.config.ts`
 
 - [ ] **Step 1: Add `ssr: false`**
@@ -141,6 +148,7 @@ git commit -m "feat(web): disable SSR (SPA-only mode)"
 ### Task 5: Create `vitest.config.ts` for unit + component tests
 
 **Files:**
+
 - Create: `apps/web/vitest.config.ts`
 
 - [ ] **Step 1: Write the config**
@@ -184,6 +192,7 @@ git commit -m "feat(web): add vitest config for unit + component tests"
 ### Task 6: Create `vitest.e2e.config.ts` for end-to-end tests
 
 **Files:**
+
 - Create: `apps/web/vitest.e2e.config.ts`
 
 - [ ] **Step 1: Write the config**
@@ -222,6 +231,7 @@ git commit -m "feat(web): add vitest config for e2e tests"
 ### Task 7: Create minimal `playwright.config.ts`
 
 **Files:**
+
 - Create: `apps/web/playwright.config.ts`
 
 Playwright is consumed as a library through `@nuxt/test-utils`'s `createPage`, not as a standalone runner — so this config isn't strictly required. We add a stub so that any tool (IDE plugins, ad-hoc `playwright` CLI invocations) that looks for one finds sensible defaults.
@@ -251,6 +261,7 @@ git commit -m "feat(web): add minimal playwright config"
 ### Task 8: Add test scripts to `apps/web/package.json`
 
 **Files:**
+
 - Modify: `apps/web/package.json`
 
 - [ ] **Step 1: Add scripts**
@@ -264,8 +275,8 @@ Edit `apps/web/package.json`. Add to the `scripts` block (preserve existing entr
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
-    "test:e2e:install": "playwright install --with-deps chromium"
-  }
+    "test:e2e:install": "playwright install --with-deps chromium",
+  },
 }
 ```
 
@@ -290,6 +301,7 @@ git commit -m "feat(web): add test, test:watch, test:e2e scripts"
 ### Task 9: Seed unit test — `useExample` composable
 
 **Files:**
+
 - Create: `apps/web/app/composables/useExample.ts`
 - Create: `apps/web/app/composables/__tests__/useExample.spec.ts`
 
@@ -351,6 +363,7 @@ git commit -m "test(web): seed unit test for useExample composable"
 ### Task 10: Seed component test — `AppLogo`
 
 **Files:**
+
 - Create: `apps/web/app/components/__tests__/AppLogo.spec.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -400,6 +413,7 @@ git commit -m "test(web): seed component test for AppLogo"
 ### Task 11: Seed E2E test — home page
 
 **Files:**
+
 - Create: `apps/web/tests/e2e/home.spec.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -442,6 +456,7 @@ pnpm --filter web test:e2e
 Expected: PASS — Nuxt builds (first run is slow, 30–90s), Playwright launches Chromium, both tests green.
 
 Common failure modes:
+
 - `Cannot find module 'playwright-core'` → `@nuxt/test-utils` couldn't resolve Playwright. Verify `pnpm --filter web list playwright` shows the install. If still failing, add `playwright-core` to the catalog and `apps/web/package.json` devDeps and re-install.
 - `Failed to launch chromium` → Task 3 was skipped. Run `pnpm --filter web test:e2e:install`.
 
@@ -457,11 +472,12 @@ git commit -m "test(web): seed e2e test for home page"
 ### Task 12: Create `apps/web/.claude/CLAUDE.md`
 
 **Files:**
+
 - Create: `apps/web/.claude/CLAUDE.md`
 
 - [ ] **Step 1: Write the file**
 
-```markdown
+````markdown
 # CLAUDE.md — apps/web
 
 Frontend-specific guidance. The root `marsa/.claude/CLAUDE.md` covers monorepo-wide concerns; this file adds web-only detail.
@@ -476,11 +492,11 @@ Always prefer Nuxt's first-party / batteries-included options when adding toolin
 
 Three layers, all driven by Vitest + `@nuxt/test-utils`:
 
-| Layer | Where | Environment | How |
-|---|---|---|---|
-| Unit | `app/<area>/__tests__/*.spec.ts` | `node` (default) | plain Vitest; import the function and assert |
+| Layer     | Where                                | Environment                 | How                                                                                              |
+| --------- | ------------------------------------ | --------------------------- | ------------------------------------------------------------------------------------------------ |
+| Unit      | `app/<area>/__tests__/*.spec.ts`     | `node` (default)            | plain Vitest; import the function and assert                                                     |
 | Component | `app/components/__tests__/*.spec.ts` | `nuxt` (per-file directive) | first line: `// @vitest-environment nuxt`, then `mountSuspended` from `@nuxt/test-utils/runtime` |
-| E2E | `tests/e2e/*.spec.ts` | booted Nuxt + Chromium | `setup()` + `$fetch` (HTTP) or `createPage` (Playwright) from `@nuxt/test-utils/e2e` |
+| E2E       | `tests/e2e/*.spec.ts`                | booted Nuxt + Chromium      | `setup()` + `$fetch` (HTTP) or `createPage` (Playwright) from `@nuxt/test-utils/e2e`             |
 
 **The `// @vitest-environment nuxt` directive is the easy-to-forget gotcha.** It must be the first line of any file that uses `mountSuspended`, `mockNuxtImport`, or Nuxt auto-imports. Without it, Vitest runs the file in the plain Node environment and Nuxt helpers fail with confusing errors.
 
@@ -492,6 +508,7 @@ pnpm --filter web test:watch           # interactive
 pnpm --filter web test:e2e             # boots Nuxt + Chromium (slow)
 pnpm --filter web test:e2e:install     # one-time Playwright browser install
 ```
+````
 
 `pnpm test` at the root runs only the fast layer (it fans out to each workspace's `test` script). E2E stays per-package.
 
@@ -523,20 +540,22 @@ apps/web/
 ## Backend coupling
 
 Every backend call goes to `apps/api` (NestJS on Fastify, prefix `/api`, URI versioning). Configure the base URL via Nuxt runtime config; never put backend logic in a Nuxt server route.
-```
+
+````
 
 - [ ] **Step 2: Commit**
 
 ```bash
 git add apps/web/.claude/CLAUDE.md
 git commit -m "docs(web): add apps/web CLAUDE.md"
-```
+````
 
 ---
 
 ### Task 13: Point the root CLAUDE.md at the new web doc
 
 **Files:**
+
 - Modify: `.claude/CLAUDE.md`
 
 - [ ] **Step 1: Update the repo-layout bullet for `apps/web`**
@@ -565,6 +584,7 @@ git commit -m "docs: link root CLAUDE.md to apps/web CLAUDE.md"
 ### Task 14: Wire web tests into CI
 
 **Files:**
+
 - Modify: `.github/workflows/ci.yml`
 
 - [ ] **Step 1: Add web test steps + Playwright cache**
@@ -572,25 +592,25 @@ git commit -m "docs: link root CLAUDE.md to apps/web CLAUDE.md"
 Edit `.github/workflows/ci.yml`. After the existing `- name: Test API` step, append:
 
 ```yaml
-      - name: Test Web (unit + component)
-        run: pnpm --filter web test
+- name: Test Web (unit + component)
+  run: pnpm --filter web test
 
-      - name: Get Playwright version
-        id: playwright-version
-        run: |
-          echo "version=$(pnpm --filter web list playwright --depth=0 --json | jq -r '.[0].devDependencies.playwright.version')" >> "$GITHUB_OUTPUT"
+- name: Get Playwright version
+  id: playwright-version
+  run: |
+    echo "version=$(pnpm --filter web list playwright --depth=0 --json | jq -r '.[0].devDependencies.playwright.version')" >> "$GITHUB_OUTPUT"
 
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+- name: Cache Playwright browsers
+  uses: actions/cache@v4
+  with:
+    path: ~/.cache/ms-playwright
+    key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
-      - name: Install Playwright browsers
-        run: pnpm --filter web exec playwright install --with-deps chromium
+- name: Install Playwright browsers
+  run: pnpm --filter web exec playwright install --with-deps chromium
 
-      - name: Test Web (e2e)
-        run: pnpm --filter web test:e2e
+- name: Test Web (e2e)
+  run: pnpm --filter web test:e2e
 ```
 
 - [ ] **Step 2: Verify the YAML is valid**
@@ -640,6 +660,7 @@ Expected: every command exits 0. If `format:check` fails, run `pnpm format` and 
 ## Self-review
 
 **Spec coverage check:**
+
 - SSR off → Task 4 ✓
 - Deps + catalog → Tasks 1, 2 ✓
 - `vitest.config.ts` → Task 5 ✓
@@ -653,6 +674,7 @@ Expected: every command exits 0. If `format:check` fails, run `pnpm format` and 
 - Final verification → Task 15 ✓
 
 **Known fragilities (documented inline in the relevant tasks):**
+
 - Playwright peer-dep variants between `playwright` and `playwright-core` (Task 11 fallback).
 - `playwright/test` export availability for `playwright.config.ts` (Task 7 fallback).
 - First-line `// @vitest-environment nuxt` directive is easy to misplace (Task 10 troubleshooting).
