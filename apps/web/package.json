@@ -21,8 +21,14 @@
   },
   "devDependencies": {
     "@nuxt/eslint": "catalog:",
+    "@nuxt/test-utils": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "@vue/test-utils": "catalog:",
     "eslint": "catalog:",
+    "happy-dom": "catalog:",
+    "playwright": "catalog:",
     "typescript": "catalog:",
+    "vitest": "catalog:",
     "vue-tsc": "catalog:"
   }
 }
