@@ -6,12 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Marsa is an open-source, self-hostable PaaS (Heroku/Railway-style) that deploys onto Kubernetes (K3s). Early-stage MVP — APIs and architecture change frequently.
 
+## Recommendations: lead with best practice, flag anti-patterns
+
+When proposing options (tooling, structure, naming, libraries, patterns), the **recommended** option must be what is genuinely best-practice in the relevant ecosystem — not what's symmetric with another package in this monorepo, easiest to implement, or already familiar. If the cross-package symmetric choice isn't the FE/BE community standard, say so explicitly. Actively flag anti-patterns ("this is unusual in <ecosystem> — most projects do X because Y") rather than presenting them neutrally. Symmetry across `apps/api` and `apps/web` is not a tiebreaker; pick the right convention for each stack.
+
 ## Repo layout
 
 pnpm monorepo (`pnpm-workspace.yaml`, packages under `apps/*` and `packages/*`). Node >= 22, pnpm 9.15.0.
 
 - `apps/api` — NestJS 11 backend on Fastify. **See `apps/api/CLAUDE.md`** for backend-specific architecture, build pipeline, test harness, and import conventions.
-- `apps/web` — Nuxt 4 + Nuxt UI + Tailwind 4 frontend (non-SSR, deployable to a CDN).
+- `apps/web` — Nuxt 4 + Nuxt UI + Tailwind 4 frontend, SPA-only (`ssr: false`). **See `apps/web/.claude/CLAUDE.md`** for frontend-specific testing setup and conventions.
 - `packages/` — currently empty; reserved for shared libs.
 
 Dependency versions live in a **pnpm catalog** (root `pnpm-workspace.yaml`). Workspace packages reference them as `"foo": "catalog:"` — bump versions in the catalog, not in package.json files.
