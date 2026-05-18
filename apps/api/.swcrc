@@ -1,6 +1,5 @@
 {
   "$schema": "https://swc.rs/schema.json",
-  "//": "tsconfig.json is ignored at build time — SWC reads this file instead. See 'Build pipeline' in apps/api/.claude/CLAUDE.md.",
   "jsc": {
     "parser": {
       "syntax": "typescript",
