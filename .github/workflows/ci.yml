@@ -44,3 +44,23 @@ jobs:
 
       - name: Test API
         run: pnpm --filter api test
+
+      - name: Test Web (unit + component)
+        run: pnpm --filter web test
+
+      - name: Get Playwright version
+        id: playwright-version
+        run: |
+          echo "version=$(pnpm --filter web list playwright --depth=0 --json | jq -r '.[0].devDependencies.playwright.version')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright browsers
+        run: pnpm --filter web exec playwright install --with-deps chromium
+
+      - name: Test Web (e2e)
+        run: pnpm --filter web test:e2e
