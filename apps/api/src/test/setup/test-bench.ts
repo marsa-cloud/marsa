@@ -72,7 +72,7 @@ export class TestBench {
     // TODO: override to test specific modules
 
     const testModule = await testModuleBuilder.compile()
-    const [app] = await Promise.all([this.createApp(testModule)])
+    const app = await this.createApp(testModule)
     // TODO: mock auth
     const testApp: TestApp = { app, testModule }
     this._apps.set(moduleKey, testApp)

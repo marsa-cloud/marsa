@@ -12,7 +12,7 @@ await setup({
 describe('home page (e2e)', () => {
   it('serves the SPA shell over HTTP', async () => {
     const html = await $fetch<string>('/')
-    expect(html).toContain('id="__nuxt"')
+    expect(html).toMatch(/<div\s[^>]*id="__nuxt"/)
   })
 
   it('renders the home page in a real browser', async () => {
