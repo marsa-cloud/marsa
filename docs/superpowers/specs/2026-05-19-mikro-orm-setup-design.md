@@ -13,10 +13,12 @@ The project has no entities and no migrations written yet, making this the lowes
 ## Packages
 
 **Remove:**
+
 - `@nestjs/typeorm`
 - `typeorm`
 
 **Add (all versioned together in the pnpm catalog):**
+
 - `@mikro-orm/core` — runtime core
 - `@mikro-orm/postgresql` — PostgreSQL driver; exports `defineConfig` for type-safe config
 - `@mikro-orm/nestjs` — NestJS integration (`MikroOrmModule`, `@InjectRepository`)
@@ -27,6 +29,7 @@ The project has no entities and no migrations written yet, making this the lowes
 `src/sql/sources/main.ts` is replaced by `src/sql/mikro-orm.config.ts`. It exports a `defineConfig()` object used by both the NestJS module and the MikroORM CLI.
 
 Key settings:
+
 - `namingStrategy: UnderscoreNamingStrategy` — built-in, no external package
 - DB credentials read from env vars (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`)
 - `migrations.path` → `dist/src/sql/migrations` (compiled output, used at runtime)
@@ -35,6 +38,7 @@ Key settings:
 - `entitiesTs` → `src/**/*.entity.ts`
 
 The CLI is pointed at this file via a `mikro-orm` key in `package.json`:
+
 ```json
 "mikro-orm": {
   "useTsNode": false,
@@ -43,6 +47,7 @@ The CLI is pointed at this file via a `mikro-orm` key in `package.json`:
 ```
 
 Migration scripts are added to `package.json`:
+
 - `migration:create` — `mikro-orm migration:create`
 - `migration:up` — `mikro-orm migration:up`
 - `migration:down` — `mikro-orm migration:down`
@@ -52,6 +57,7 @@ Migration scripts are added to `package.json`:
 `src/modules/database/database.module.ts` wraps `MikroOrmModule.forRootAsync()`, reading config from the shared `mikro-orm.config.ts`. It is a global module imported once by `ApiModule`.
 
 Feature modules register their entities locally:
+
 ```ts
 MikroOrmModule.forFeature([MyEntity])
 ```
@@ -82,6 +88,7 @@ TestSetup
 ```
 
 Lifecycle:
+
 - `initialize()` — calls `orm.em.fork()` then `em.begin()`
 - `teardown()` — calls `em.rollback()`
 
