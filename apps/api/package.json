@@ -10,10 +10,6 @@
     "#src/*": "./dist/src/*",
     "#test/*": "./dist/src/test/*"
   },
-  "mikro-orm": {
-    "useTsNode": false,
-    "configPaths": ["./dist/src/sql/mikro-orm.config.js"]
-  },
   "scripts": {
     "clean": "rimraf ./dist",
     "build": "nest build",
@@ -24,9 +20,9 @@
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "lint:fix": "eslint \"{src,test}/**/*.ts\" --fix",
-    "migration:create": "mikro-orm migration:create",
-    "migration:up": "mikro-orm migration:up",
-    "migration:down": "mikro-orm migration:down",
+    "migration:create": "mikro-orm migration:create --config ./dist/src/sql/mikro-orm.config.js",
+    "migration:up": "mikro-orm migration:up --config ./dist/src/sql/mikro-orm.config.js",
+    "migration:down": "mikro-orm migration:down --config ./dist/src/sql/mikro-orm.config.js",
     "test:setup": "node --env-file=.env.test dist/src/test/setup/global-setup.js",
     "test:run": "node --enable-source-maps --experimental-test-isolation=none --env-file=.env.test --test \"**/*.test.ts\"",
     "test": "pnpm clean && pnpm build && pnpm test:setup && pnpm test:run"

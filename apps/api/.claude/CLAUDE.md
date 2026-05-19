@@ -10,7 +10,7 @@ ORM is **MikroORM v6** (`@mikro-orm/postgresql`). Config at `src/sql/mikro-orm.c
 - Naming: `UnderscoreNamingStrategy` is built-in — no plugin needed.
 - `discovery: { warnWhenNoEntities: false }` in the shared config until the first entity exists — remove it then.
 - Use `orm.migrator` not `orm.getMigrator()` (deprecated in v6).
-- `pathTs`/`entitiesTs` are unnecessary — CLI uses `useTsNode: false` and runs against compiled `dist/` output.
+- `pathTs`/`entitiesTs` are unnecessary — CLI runs against compiled `dist/` output, config path passed via `--config` in each migration script.
 - Feature modules register entities with `MikroOrmModule.forFeature([Entity])`. `DatabaseModule` is global so `MikroORM` and `EntityManager` are available everywhere.
 - Test isolation: `TestSetup` forks the EM (`orm.em.fork()`), opens a transaction in `initialize()`, rolls back in `teardown()`.
 - `global-setup.ts` runs migrations by booting via `compileTestModule` and getting `MikroORM` from DI — not via a direct `MikroORM.init()` outside the module system.
