@@ -2,6 +2,19 @@
 
 Backend-specific guidance. The root `marsa/.claude/CLAUDE.md` covers monorepo-wide concerns; this file adds api-only detail.
 
+## Database (MikroORM)
+
+ORM is **MikroORM v6** (`@mikro-orm/postgresql`). Config at `src/sql/mikro-orm.config.ts`.
+
+- Connection: `clientUrl` (full URI) + separate `dbName` env var. Never individual host/port/user/password fields.
+- Naming: `UnderscoreNamingStrategy` is built-in — no plugin needed.
+- `discovery: { warnWhenNoEntities: false }` in the shared config until the first entity exists — remove it then.
+- Use `orm.migrator` not `orm.getMigrator()` (deprecated in v6).
+- `pathTs`/`entitiesTs` are unnecessary — CLI uses `useTsNode: false` and runs against compiled `dist/` output.
+- Feature modules register entities with `MikroOrmModule.forFeature([Entity])`. `DatabaseModule` is global so `MikroORM` and `EntityManager` are available everywhere.
+- Test isolation: `TestSetup` forks the EM (`orm.em.fork()`), opens a transaction in `initialize()`, rolls back in `teardown()`.
+- `global-setup.ts` runs migrations by booting via `compileTestModule` and getting `MikroORM` from DI — not via a direct `MikroORM.init()` outside the module system.
+
 ## Stack
 
 NestJS 11 on **Fastify** (`@nestjs/platform-fastify`). `@nestjs/platform-express` is a transitive dep — do not switch the adapter without reason. Package is **ESM** (`"type": "module"`), Node >= 22.
@@ -25,11 +38,11 @@ Other directories: `src/entrypoints/` (process bootstraps), `src/test/` (test ha
 
 Layered so tests can swap pieces:
 
-- `AppModule.forRoot(modules)` (`src/app.module.ts`) — root dynamic module; mounts whatever modules you pass.
-- `ApiModule` (`src/modules/api/api.module.ts`) — production composition; calls `AppModule.forRoot([...featureModules, ...supportModules])`. Booted by `entrypoints/api.ts`.
-- `TestModule.forRoot(modules, migrationsRun)` (`src/test/test.module.ts`) — parallel composition for tests; lets a spec mount only the modules under test.
+- `AppModule.forRoot(modules)` (`src/app.module.ts`) — root dynamic module. Always imports `DatabaseModule` plus whatever feature modules you pass.
+- `ApiModule` (`src/modules/api/api.module.ts`) — production composition; calls `AppModule.forRoot([...featureModules])`. Booted by `entrypoints/api.ts`.
+- `TestModule.forRoot(modules)` (`src/test/test.module.ts`) — parallel composition root for tests; mirrors `AppModule` (imports `DatabaseModule` directly + spread modules). Never nests inside `AppModule`.
 
-When you add a feature, register its top-level module inside `ApiModule` (and `TestModule` if it needs test-time wiring).
+`AppModule` and `TestModule` are parallel roots — infrastructure like `DatabaseModule` belongs in both directly, not passed in by callers. When you add a feature, register its module in `ApiModule` only.
 
 ## Feature shape (vertical slice)
 

@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pnpm --filter api lint && pnpm --filter api build",
+            "timeout": 60,
+            "statusMessage": "Verifying API lint + build..."
+          }
+        ]
+      }
+    ]
+  }
+}

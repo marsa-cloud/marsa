@@ -10,6 +10,10 @@
     "#src/*": "./dist/src/*",
     "#test/*": "./dist/src/test/*"
   },
+  "mikro-orm": {
+    "useTsNode": false,
+    "configPaths": ["./dist/src/sql/mikro-orm.config.js"]
+  },
   "scripts": {
     "clean": "rimraf ./dist",
     "build": "nest build",
@@ -20,6 +24,9 @@
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "lint:fix": "eslint \"{src,test}/**/*.ts\" --fix",
+    "migration:create": "mikro-orm migration:create",
+    "migration:up": "mikro-orm migration:up",
+    "migration:down": "mikro-orm migration:down",
     "test:setup": "node --env-file=.env.test dist/src/test/setup/global-setup.js",
     "test:run": "node --enable-source-maps --experimental-test-isolation=none --env-file=.env.test --test \"**/*.test.ts\"",
     "test": "pnpm clean && pnpm build && pnpm test:setup && pnpm test:run"
@@ -29,10 +36,15 @@
     "@nestjs/core": "catalog:",
     "@nestjs/platform-express": "catalog:",
     "@nestjs/platform-fastify": "^11.1.21",
+    "@mikro-orm/core": "catalog:",
+    "@mikro-orm/migrations": "catalog:",
+    "@mikro-orm/nestjs": "catalog:",
+    "@mikro-orm/postgresql": "catalog:",
     "@swc/cli": "^0.8.1",
     "@swc/core": "^1.15.33",
     "@types/qs": "^6.15.1",
     "fastify": "^5.8.5",
+    "pg": "^8.21.0",
     "qs": "^6.15.2",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:"

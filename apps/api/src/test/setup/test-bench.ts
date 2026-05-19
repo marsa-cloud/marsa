@@ -1,7 +1,7 @@
 import { after } from 'node:test'
 
-import { DynamicModule, Type } from '@nestjs/common'
-import { VersioningType } from '@nestjs/common'
+import { MikroORM } from '@mikro-orm/core'
+import { DynamicModule, Type, VersioningType } from '@nestjs/common'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import { Test, TestingModule } from '@nestjs/testing'
 import qs from 'qs'
@@ -15,15 +15,12 @@ after(async () => await TestBench.teardown())
 export interface TestApp {
   app: NestFastifyApplication
   testModule: TestingModule
-  // dataSource,
-  // authContext
+  orm: MikroORM
 }
 
 export class TestBench {
   private static _apps: Map<Type<unknown> | DynamicModule, TestApp> = new Map()
   private static _isUnitTestSetup: boolean = false
-  // private static _dataSource
-  // private static _authContext
 
   static async setupEndToEndTest(): Promise<TestSetup> {
     return this.setupIntegrationTest(ApiModule)
@@ -32,6 +29,7 @@ export class TestBench {
   static async setupModuleTest(module: Type<unknown> | DynamicModule): Promise<TestSetup> {
     return await TestBench.setupIntegrationTest(AppModule.forRoot([module]))
   }
+
   static async setupIntegrationTest(module: Type<unknown> | DynamicModule): Promise<TestSetup> {
     if (process.env.NODE_ENV !== 'test') {
       throw new Error('NODE_ENV must be set to test')
@@ -68,19 +66,15 @@ export class TestBench {
     }
 
     const testModuleBuilder = Test.createTestingModule({ imports: [module] })
-
-    // TODO: override to test specific modules
-
     const testModule = await testModuleBuilder.compile()
     const app = await this.createApp(testModule)
-    // TODO: mock auth
-    const testApp: TestApp = { app, testModule }
+    const orm = testModule.get(MikroORM)
+    const testApp: TestApp = { app, testModule, orm }
     this._apps.set(moduleKey, testApp)
     return testApp
   }
 
-  //   private static async initalizeDatabaseConnection(testModule: TestModule) {}
-  private static async createApp(testModule: TestingModule) {
+  private static async createApp(testModule: TestingModule): Promise<NestFastifyApplication> {
     const adapter = new FastifyAdapter({
       routerOptions: {
         querystringParser: (str) => qs.parse(str),
@@ -101,6 +95,4 @@ export class TestBench {
 
     return app
   }
-  //   private static mockAuth() {}
-  //   private static extendExpect() {}
 }

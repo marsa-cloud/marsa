@@ -14,7 +14,7 @@ describe('GET /api/v1/status (e2e)', () => {
   })
 
   after(async () => {
-    await TestBench.teardown()
+    await setup.teardown()
   })
 
   it('returns api info', async () => {
