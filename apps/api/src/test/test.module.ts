@@ -1,5 +1,7 @@
 import { DynamicModule, MiddlewareConsumer, Module, Type } from '@nestjs/common'
 
+import { DatabaseModule } from '#src/modules/database/database.module.js'
+
 @Module({})
 export class TestModule {
   static forRoot(
@@ -9,7 +11,7 @@ export class TestModule {
   ): DynamicModule {
     return {
       module: TestModule,
-      imports: [...modules],
+      imports: [DatabaseModule, ...modules],
     }
   }
 

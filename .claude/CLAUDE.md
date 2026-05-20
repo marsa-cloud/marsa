@@ -8,7 +8,7 @@ Marsa is an open-source, self-hostable PaaS (Heroku/Railway-style) that deploys 
 
 ## Recommendations: lead with best practice, flag anti-patterns
 
-When proposing options (tooling, structure, naming, libraries, patterns), the **recommended** option must be what is genuinely best-practice in the relevant ecosystem — not what's symmetric with another package in this monorepo, easiest to implement, or already familiar. If the cross-package symmetric choice isn't the FE/BE community standard, say so explicitly. Actively flag anti-patterns ("this is unusual in <ecosystem> — most projects do X because Y") rather than presenting them neutrally. Symmetry across `apps/api` and `apps/web` is not a tiebreaker; pick the right convention for each stack.
+When proposing options (tooling, structure, naming, libraries, patterns), the **recommended** option must be what is genuinely best-practice in the relevant ecosystem — not what's symmetric with another package in this monorepo, easiest to implement, or already familiar. If the cross-package symmetric choice isn't the FE/BE community standard, say so explicitly. Actively flag anti-patterns ("this is unusual in <ecosystem> — most projects do X because Y") rather than presenting them neutrally. If the user asks to implement something that is clearly an anti-pattern, **push back and explain why** before proceeding — don't silently implement it. Symmetry across `apps/api` and `apps/web` is not a tiebreaker; pick the right convention for each stack.
 
 ## Repo layout
 
