@@ -51,6 +51,10 @@ Per-package scripts: `pnpm --filter <api|web> <script>`.
 - ESLint flat config at the root (`eslint.config.mjs`) sets shared rules: `simple-import-sort`, `unused-imports`, padding between imports, and `eslint-config-prettier` to disable conflicting style rules. Each package extends this with its own `eslint.config.mjs`.
 - Editor save-on-fix is wired up in `.vscode/settings.json` (works in VS Code and Windsurf) using the unified `js/ts.*` setting keys. Auto-import prefers non-relative module specifiers.
 
+## Git workflow
+
+Always branch off `main` for any feature, bug fix, or chore — never commit directly to `main`. Branch naming: `feat/<topic>`, `fix/<topic>`, `chore/<topic>`. Open a PR to merge back.
+
 ## CI
 
 `.github/workflows/ci.yml` runs on push/PR to `main`: `format:check` → `lint` → `build:api` → `build:web` → `pnpm --filter api test`. CI uses `pnpm install --frozen-lockfile`, so commit `pnpm-lock.yaml` updates alongside dependency changes.
