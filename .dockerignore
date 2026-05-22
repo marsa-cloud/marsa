@@ -1,0 +1,30 @@
+# Dependencies — always reinstalled inside the image
+**/node_modules
+
+# Git history
+.git
+
+# Local build artifacts — rebuilt inside the image
+**/dist
+**/.nuxt
+**/.output
+**/.pnpm-store
+.pnpm-store
+
+# Test artifacts
+**/coverage
+**/__snapshots__
+
+# Env files — secrets must be injected at runtime, not baked in
+**/.env
+**/.env.*
+.env
+.env.*
+
+# CI/CD and docs — not needed at runtime
+.github
+docs
+
+# Misc
+**/*.log
+**/.DS_Store
