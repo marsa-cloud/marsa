@@ -9,6 +9,13 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  runtimeConfig: {
+    public: {
+      version: '0.0.0',
+      commit: '',
+    },
+  },
+
   routeRules: {
     '/': { prerender: true },
   },
