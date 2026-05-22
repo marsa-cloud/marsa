@@ -3,6 +3,13 @@ export default defineNuxtConfig({
   modules: ['@nuxt/eslint', '@nuxt/ui'],
   ssr: false,
 
+  runtimeConfig: {
+    public: {
+      version: '0.0.0',
+      commit: '',
+    },
+  },
+
   devtools: {
     enabled: true,
   },
