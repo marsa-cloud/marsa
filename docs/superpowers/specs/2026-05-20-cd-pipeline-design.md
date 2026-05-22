@@ -9,16 +9,16 @@ Continuous Deployment pipeline that builds and publishes two Docker images to GH
 
 ## Images
 
-| Image | Registry path |
-|-------|---------------|
+| Image      | Registry path                   |
+| ---------- | ------------------------------- |
 | NestJS API | `ghcr.io/marsa-cloud/marsa-api` |
 | Nuxt SPA   | `ghcr.io/marsa-cloud/marsa-web` |
 
 ## Triggers & Tagging
 
-| Event | Tags produced |
-|-------|---------------|
-| Push to `main` | `sha-<short-commit>`, `latest` |
+| Event                            | Tags produced                      |
+| -------------------------------- | ---------------------------------- |
+| Push to `main`                   | `sha-<short-commit>`, `latest`     |
 | Push of `v*` tag (e.g. `v1.2.0`) | `v1.2.0`, `1.2.0`, `1.2`, `latest` |
 
 ## Dockerfiles
@@ -34,7 +34,7 @@ Multi-stage build:
 
 Multi-stage build:
 
-- **Stage 1 (`builder`):** `node:22-alpine` + pnpm; installs all workspace deps. Accepts `ARG VERSION` (default `0.0.0`) and `ARG COMMIT`, exposes them as `ENV NUXT_PUBLIC_VERSION` / `ENV NUXT_PUBLIC_COMMIT` *before* `pnpm build:web` so Nuxt bakes them into `runtimeConfig.public` in the static SPA bundle. Nuxt SPA (`ssr: false`) emits static files to `.output/public/`.
+- **Stage 1 (`builder`):** `node:22-alpine` + pnpm; installs all workspace deps. Accepts `ARG VERSION` (default `0.0.0`) and `ARG COMMIT`, exposes them as `ENV NUXT_PUBLIC_VERSION` / `ENV NUXT_PUBLIC_COMMIT` _before_ `pnpm build:web` so Nuxt bakes them into `runtimeConfig.public` in the static SPA bundle. Nuxt SPA (`ssr: false`) emits static files to `.output/public/`.
 - **Stage 2 (`runner`):** `nginx:alpine`; copies `.output/public/` to `/usr/share/nginx/html`; no Node runtime at run time.
 
 Both images have a corresponding `.dockerignore` excluding `node_modules/`, `.git/`, `dist/`, `*.test.*`, and test fixtures.
@@ -43,8 +43,8 @@ Both images have a corresponding `.dockerignore` excluding `node_modules/`, `.gi
 
 Both images receive the same build args from CD:
 
-| Build arg | Source | API runtime | Web runtime |
-|-----------|--------|-------------|-------------|
+| Build arg | Source                                                                       | API runtime           | Web runtime                         |
+| --------- | ---------------------------------------------------------------------------- | --------------------- | ----------------------------------- |
 | `VERSION` | `steps.meta.outputs.version` (semver on tag pushes, `sha-<short>` on `main`) | `process.env.VERSION` | `useRuntimeConfig().public.version` |
 | `COMMIT`  | `${{ github.sha }}` (full 40-char SHA)                                       | `process.env.COMMIT`  | `useRuntimeConfig().public.commit`  |
 
@@ -74,7 +74,7 @@ The separate Helm chart repo references image tags as values:
 api:
   image:
     repository: ghcr.io/marsa-cloud/marsa-api
-    tag: sha-abc1234   # or a semver tag for releases
+    tag: sha-abc1234 # or a semver tag for releases
 
 web:
   image:

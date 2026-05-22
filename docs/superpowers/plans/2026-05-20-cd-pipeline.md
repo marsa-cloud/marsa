@@ -12,20 +12,21 @@
 
 ## File Map
 
-| File | Action | Purpose |
-|------|--------|---------|
-| `.dockerignore` | Create | Exclude noise from build context (root-level, used by both Dockerfiles) |
-| `apps/api/Dockerfile` | Create | Multi-stage: build NestJS → slim Node runner |
-| `apps/web/nginx.conf` | Create | nginx SPA config with `try_files` fallback to `index.html` |
-| `apps/web/Dockerfile` | Create | Multi-stage: build Nuxt SPA → nginx:alpine static server |
-| `apps/web/nuxt.config.ts` | Modify | Declare `runtimeConfig.public.{version,commit}` so `NUXT_PUBLIC_*` env vars bake into the SPA bundle |
-| `.github/workflows/cd.yml` | Create | Two parallel jobs: push marsa-api and marsa-web to GHCR |
+| File                       | Action | Purpose                                                                                              |
+| -------------------------- | ------ | ---------------------------------------------------------------------------------------------------- |
+| `.dockerignore`            | Create | Exclude noise from build context (root-level, used by both Dockerfiles)                              |
+| `apps/api/Dockerfile`      | Create | Multi-stage: build NestJS → slim Node runner                                                         |
+| `apps/web/nginx.conf`      | Create | nginx SPA config with `try_files` fallback to `index.html`                                           |
+| `apps/web/Dockerfile`      | Create | Multi-stage: build Nuxt SPA → nginx:alpine static server                                             |
+| `apps/web/nuxt.config.ts`  | Modify | Declare `runtimeConfig.public.{version,commit}` so `NUXT_PUBLIC_*` env vars bake into the SPA bundle |
+| `.github/workflows/cd.yml` | Create | Two parallel jobs: push marsa-api and marsa-web to GHCR                                              |
 
 ---
 
 ## Task 1: Root `.dockerignore`
 
 **Files:**
+
 - Create: `.dockerignore`
 
 Both Dockerfiles use `context: .` (repo root), so there is one shared `.dockerignore` at the root. Its job is to keep the build context lean and prevent secrets from leaking into image layers.
@@ -74,6 +75,7 @@ git commit -m "chore: add root .dockerignore for docker builds"
 ## Task 2: API Dockerfile
 
 **Files:**
+
 - Create: `apps/api/Dockerfile`
 
 Multi-stage build. The builder installs all deps and compiles TypeScript via `pnpm build:api` (which runs `nest build` via SWC). The runner reinstalls only production deps and copies the compiled `dist/`. The entrypoint is `dist/entrypoints/api.js` (derived from `nest-cli.json` → `entryFile: "entrypoints/api"`).
@@ -142,6 +144,7 @@ docker run --rm marsa-api:test ls dist/entrypoints/api.js
 ```
 
 Expected output:
+
 ```
 dist/entrypoints/api.js
 ```
@@ -158,6 +161,7 @@ git commit -m "feat: add multi-stage Dockerfile for API"
 ## Task 3: Web nginx config + Dockerfile
 
 **Files:**
+
 - Create: `apps/web/nginx.conf`
 - Create: `apps/web/Dockerfile`
 
@@ -232,6 +236,7 @@ docker stop test-web
 ```
 
 Expected:
+
 - First curl: prints `PASS: index.html served`
 - Second curl: prints `200` (nginx falls back to `index.html` for unknown routes, not 404)
 
@@ -247,13 +252,14 @@ git commit -m "feat: add multi-stage Dockerfile and nginx config for web"
 ## Task 4: CD workflow
 
 **Files:**
+
 - Create: `.github/workflows/cd.yml`
 
 Two parallel jobs share the same structure — the only difference is image name, Dockerfile path, and GHA cache scope. Tags are computed by `docker/metadata-action`:
 
-| Trigger | Tags |
-|---------|------|
-| Push to `main` | `sha-<7-char-commit>`, `latest` |
+| Trigger              | Tags                               |
+| -------------------- | ---------------------------------- |
+| Push to `main`       | `sha-<7-char-commit>`, `latest`    |
 | Push of `v1.2.3` tag | `v1.2.3`, `1.2.3`, `1.2`, `latest` |
 
 `GITHUB_TOKEN` is sufficient for GHCR on a public repo — no extra secrets needed. The `packages: write` permission is required explicitly because GitHub Actions restricts it by default.
