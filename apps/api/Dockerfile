@@ -39,4 +39,6 @@ ENV VERSION=$VERSION
 ENV COMMIT=$COMMIT
 EXPOSE 3000
 
+USER node
+
 CMD ["node", "dist/src/entrypoints/api.js"]
