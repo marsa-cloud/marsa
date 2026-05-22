@@ -55,6 +55,8 @@ Per-package scripts: `pnpm --filter <api|web> <script>`.
 
 Always branch off `main` for any feature, bug fix, or chore — never commit directly to `main`. Branch naming: `feat/<topic>`, `fix/<topic>`, `chore/<topic>`. Open a PR to merge back.
 
+Releases are cut by tagging `main` with `v<semver>` (e.g. `v1.0.0`); the CD workflow (`.github/workflows/cd.yml`) triggers on `v*` tags and publishes semver-tagged images to GHCR.
+
 ## CI
 
 `.github/workflows/ci.yml` runs on push/PR to `main`: `format:check` → `lint` → `build:api` → `build:web` → `pnpm --filter api test`. CI uses `pnpm install --frozen-lockfile`, so commit `pnpm-lock.yaml` updates alongside dependency changes.
