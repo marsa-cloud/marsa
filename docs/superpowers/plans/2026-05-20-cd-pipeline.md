@@ -18,6 +18,7 @@
 | `apps/api/Dockerfile` | Create | Multi-stage: build NestJS → slim Node runner |
 | `apps/web/nginx.conf` | Create | nginx SPA config with `try_files` fallback to `index.html` |
 | `apps/web/Dockerfile` | Create | Multi-stage: build Nuxt SPA → nginx:alpine static server |
+| `apps/web/nuxt.config.ts` | Modify | Declare `runtimeConfig.public.{version,commit}` so `NUXT_PUBLIC_*` env vars bake into the SPA bundle |
 | `.github/workflows/cd.yml` | Create | Two parallel jobs: push marsa-api and marsa-web to GHCR |
 
 ---
@@ -114,7 +115,11 @@ COPY --from=builder /app/apps/api/dist apps/api/dist
 
 WORKDIR /app/apps/api
 
+ARG VERSION=0.0.0
+ARG COMMIT
 ENV NODE_ENV=production
+ENV VERSION=$VERSION
+ENV COMMIT=$COMMIT
 EXPOSE 3000
 
 CMD ["node", "dist/entrypoints/api.js"]
@@ -190,6 +195,11 @@ COPY apps/web/package.json apps/web/
 RUN pnpm install --frozen-lockfile
 
 COPY . .
+
+ARG VERSION=0.0.0
+ARG COMMIT
+ENV NUXT_PUBLIC_VERSION=$VERSION
+ENV NUXT_PUBLIC_COMMIT=$COMMIT
 
 RUN pnpm build:web
 
@@ -306,6 +316,9 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ steps.meta.outputs.version }}
+            COMMIT=${{ github.sha }}
           cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
 
@@ -350,6 +363,9 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ steps.meta.outputs.version }}
+            COMMIT=${{ github.sha }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
 ```

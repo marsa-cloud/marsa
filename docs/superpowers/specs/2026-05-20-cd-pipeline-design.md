@@ -28,16 +28,27 @@ Continuous Deployment pipeline that builds and publishes two Docker images to GH
 Multi-stage build:
 
 - **Stage 1 (`builder`):** `node:22-alpine` + pnpm; installs all workspace deps from repo root, runs `pnpm build:api`, produces `dist/`.
-- **Stage 2 (`runner`):** `node:22-alpine`; copies `dist/` and installs production-only deps; entrypoint `node dist/main`.
+- **Stage 2 (`runner`):** `node:22-alpine`; copies `dist/` and installs production-only deps; entrypoint `node dist/main`. Accepts `ARG VERSION` (default `0.0.0`) and `ARG COMMIT`, exposes them as `ENV VERSION` / `ENV COMMIT` so `GetApiInfoService` can read them via `process.env`.
 
 ### `apps/web/Dockerfile`
 
 Multi-stage build:
 
-- **Stage 1 (`builder`):** `node:22-alpine` + pnpm; installs all workspace deps, runs `pnpm build:web`; Nuxt SPA (`ssr: false`) emits static files to `.output/public/`.
+- **Stage 1 (`builder`):** `node:22-alpine` + pnpm; installs all workspace deps. Accepts `ARG VERSION` (default `0.0.0`) and `ARG COMMIT`, exposes them as `ENV NUXT_PUBLIC_VERSION` / `ENV NUXT_PUBLIC_COMMIT` *before* `pnpm build:web` so Nuxt bakes them into `runtimeConfig.public` in the static SPA bundle. Nuxt SPA (`ssr: false`) emits static files to `.output/public/`.
 - **Stage 2 (`runner`):** `nginx:alpine`; copies `.output/public/` to `/usr/share/nginx/html`; no Node runtime at run time.
 
 Both images have a corresponding `.dockerignore` excluding `node_modules/`, `.git/`, `dist/`, `*.test.*`, and test fixtures.
+
+### Version & commit propagation
+
+Both images receive the same build args from CD:
+
+| Build arg | Source | API runtime | Web runtime |
+|-----------|--------|-------------|-------------|
+| `VERSION` | `steps.meta.outputs.version` (semver on tag pushes, `sha-<short>` on `main`) | `process.env.VERSION` | `useRuntimeConfig().public.version` |
+| `COMMIT`  | `${{ github.sha }}` (full 40-char SHA)                                       | `process.env.COMMIT`  | `useRuntimeConfig().public.commit`  |
+
+For the API the values are runtime env vars (changeable per pod). For the web SPA they are baked into the static bundle at build time — there is no runtime injection path for pure-SPA Nuxt without a Nitro server.
 
 ## CD Workflow (`.github/workflows/cd.yml`)
 
