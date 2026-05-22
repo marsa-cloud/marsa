@@ -3,18 +3,18 @@ export default defineNuxtConfig({
   modules: ['@nuxt/eslint', '@nuxt/ui'],
   ssr: false,
 
+  devtools: {
+    enabled: true,
+  },
+
+  css: ['~/assets/css/main.css'],
+
   runtimeConfig: {
     public: {
       version: '0.0.0',
       commit: '',
     },
   },
-
-  devtools: {
-    enabled: true,
-  },
-
-  css: ['~/assets/css/main.css'],
 
   routeRules: {
     '/': { prerender: true },
