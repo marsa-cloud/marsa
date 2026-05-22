@@ -1,0 +1,17 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "automerge": true,
+  "platformAutomerge": true,
+  "packageRules": [
+    { "matchUpdateTypes": ["major"], "automerge": false },
+    { "groupName": "NestJS", "matchPackagePatterns": ["^@nestjs/"] },
+    { "groupName": "Nuxt", "matchPackagePatterns": ["^nuxt$", "^@nuxt/"] },
+    { "groupName": "MikroORM", "matchPackagePatterns": ["^@mikro-orm/"] },
+    {
+      "groupName": "Node.js runtime",
+      "matchPackageNames": ["node"],
+      "matchManagers": ["dockerfile", "nvm"]
+    }
+  ]
+}

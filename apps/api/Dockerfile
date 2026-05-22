@@ -1,4 +1,4 @@
-FROM node:22-alpine AS builder
+FROM node:24.15.0-alpine AS builder
 RUN corepack enable
 
 WORKDIR /app
@@ -17,7 +17,7 @@ RUN pnpm build:api
 
 # ---------------------------------------------------------------
 
-FROM node:22-alpine AS runner
+FROM node:24.15.0-alpine AS runner
 RUN corepack enable
 
 WORKDIR /app
