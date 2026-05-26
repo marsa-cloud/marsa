@@ -58,4 +58,12 @@ apps/web/
 
 ## Backend coupling
 
-Every backend call goes to `apps/api` (NestJS on Fastify, prefix `/api`, URI versioning). Configure the base URL via Nuxt runtime config; never put backend logic in a Nuxt server route.
+Every backend call goes to `apps/api` (NestJS on Fastify, prefix `/api`, URI versioning). Base URL is `runtimeConfig.public.apiBase` (default `http://localhost:3000/api`, override at runtime with `NUXT_PUBLIC_API_BASE`) — it **includes** the `/api` prefix, so call sites use version-relative paths like `/v1/status`. Never put backend logic in a Nuxt server route (SPA, no BFF).
+
+### Generated API client (types + Zod, no SDK)
+
+Types and Zod schemas are generated from the api's `openapi.json` into `app/api/` via `@hey-api/openapi-ts` (config in `openapi-ts.config.ts`). The **SDK/client plugin is intentionally off** — we call the api through Nuxt's `$fetch`, not a generated client.
+
+- Regenerate with `pnpm --filter web generate:api` (reads `../api/openapi.json`); the generated `app/api/*` is **committed** and lint/format-ignored. CI drift-checks it — never hand-edit it.
+- **Calls go through the `$api` plugin** (`app/plugins/api.ts`, a `$fetch.create` instance with the base URL + interceptors), consumed via `useAsyncData(key, () => $api('/v1/...'))`. **Validate the response with the generated Zod schema in the `transform` hook** (`transform: (raw) => zSomething.parse(raw)`) — this is the boundary check; see `app/composables/useApiStatus.ts`.
+- **Which generated type to use:** the FE uses the **schema body type** (e.g. `GetApiInfoResponse`) and its Zod schema (`zGetApiInfoResponse`). Ignore the operation wrappers the generator also emits — `…V1Responses` (status-code map), `…V1Response` (response union), and `…V1Data` (request shape). They're hey-api plumbing, not what you bind to in components.
