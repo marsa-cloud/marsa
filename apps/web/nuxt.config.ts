@@ -3,6 +3,13 @@ export default defineNuxtConfig({
   modules: ['@nuxt/eslint', '@nuxt/ui'],
   ssr: false,
 
+  runtimeConfig: {
+    public: {
+      // Override at runtime with NUXT_PUBLIC_API_BASE
+      apiBase: 'http://localhost:3000/api',
+    },
+  },
+
   devtools: {
     enabled: true,
   },
