@@ -10,9 +10,13 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
+permissions:
+  contents: read
+
 jobs:
   ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     services:
       postgres:
@@ -51,8 +55,11 @@ jobs:
       - name: Lint
         run: pnpm run lint
 
-      - name: Build API
-        run: pnpm run build:api
+      - name: Type check API
+        run: pnpm --filter api typecheck
+
+      - name: Type check Web
+        run: pnpm --filter web typecheck
 
       - name: Build Web
         run: pnpm run build:web
