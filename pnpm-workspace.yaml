@@ -34,6 +34,7 @@ catalog:
   '@nestjs/common': ^11.0.1
   '@nestjs/core': ^11.0.1
   '@nestjs/platform-express': ^11.0.1
+  '@nestjs/swagger': ^11.4.4
   '@nestjs/cli': ^11.0.0
   '@nestjs/schematics': ^11.0.0
   '@nestjs/testing': ^11.0.1
@@ -61,6 +62,10 @@ catalog:
   '@iconify-json/simple-icons': ^1.2.81
   tailwindcss: ^4.3.0
   vue-tsc: ^3.2.8
+
+  # Web ↔ API contract codegen
+  '@hey-api/openapi-ts': ^0.97.3
+  zod: ^3.25.76
 
   # Test stack (web)
   vitest: ^3.0.0
