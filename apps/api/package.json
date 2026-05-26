@@ -20,6 +20,7 @@
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "lint:fix": "eslint \"{src,test}/**/*.ts\" --fix",
+    "typecheck": "tsc --noEmit",
     "migration:create": "mikro-orm migration:create --config ./dist/src/sql/mikro-orm.config.js",
     "migration:up": "mikro-orm migration:up --config ./dist/src/sql/mikro-orm.config.js",
     "migration:down": "mikro-orm migration:down --config ./dist/src/sql/mikro-orm.config.js",
