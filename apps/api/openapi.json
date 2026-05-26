@@ -1,0 +1,71 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/status": {
+      "get": {
+        "operationId": "getApiInfo",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetApiInfoResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "",
+        "tags": [
+          "status"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Marsa API",
+    "description": "Marsa PaaS HTTP API",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "schemas": {
+      "GetApiInfoResponse": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "marsa-api"
+          },
+          "version": {
+            "type": "string",
+            "example": "0.0.0"
+          },
+          "commit": {
+            "type": "string",
+            "nullable": true
+          },
+          "nodeEnv": {
+            "type": "string",
+            "example": "development"
+          },
+          "uptimeSeconds": {
+            "type": "number",
+            "example": 12
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "commit",
+          "nodeEnv",
+          "uptimeSeconds"
+        ]
+      }
+    }
+  }
+}
