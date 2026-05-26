@@ -14,16 +14,19 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
-    "test:e2e:install": "playwright install --with-deps chromium"
+    "test:e2e:install": "playwright install --with-deps chromium",
+    "generate:api": "openapi-ts"
   },
   "dependencies": {
     "@iconify-json/lucide": "catalog:",
     "@iconify-json/simple-icons": "catalog:",
     "@nuxt/ui": "catalog:",
     "nuxt": "catalog:",
-    "tailwindcss": "catalog:"
+    "tailwindcss": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
+    "@hey-api/openapi-ts": "catalog:",
     "@nuxt/eslint": "catalog:",
     "@nuxt/test-utils": "catalog:",
     "@vitest/coverage-v8": "catalog:",

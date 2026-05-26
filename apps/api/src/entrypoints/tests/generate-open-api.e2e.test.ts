@@ -34,9 +34,12 @@ describe('OpenAPI generation', () => {
     assert.equal(schemaRef, '#/components/schemas/GetApiInfoResponse')
 
     const schema = document.components?.schemas?.['GetApiInfoResponse'] as Record<string, any>
-    assert.deepEqual(
-      Object.keys(schema.properties).sort(),
-      ['commit', 'name', 'nodeEnv', 'uptimeSeconds', 'version'],
-    )
+    assert.deepEqual(Object.keys(schema.properties).sort(), [
+      'commit',
+      'name',
+      'nodeEnv',
+      'uptimeSeconds',
+      'version',
+    ])
   })
 })

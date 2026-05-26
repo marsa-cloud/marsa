@@ -30,7 +30,7 @@ instance / `useAPI` composable), with **Zod validation at the response boundary*
 - **Keeps the public-API door open at zero present cost.** Whether Marsa exposes
   a documented public API (CLI, Terraform provider, CI integrations, user
   scripts) is undecided. REST + OpenAPI is the only option that requires nothing
-  extra today *and* yields a language-agnostic, documentable contract later — the
+  extra today _and_ yields a language-agnostic, documentable contract later — the
   shape a self-hostable PaaS in the Heroku/Railway mold typically grows into.
 - **Idiomatic in both stacks.** The API is already REST; NestJS has first-class
   OpenAPI support via `@nestjs/swagger`. Nuxt's batteries-included
@@ -51,7 +51,7 @@ client (SDK) against the lighter `openapi-typescript` option, guided by the
 official Nuxt 4 documentation.
 
 - **Single source of truth, no drift.** Types and Zod schemas are generated
-  *from* the API's own DTOs/decorators (via the OpenAPI doc). A hand-maintained
+  _from_ the API's own DTOs/decorators (via the OpenAPI doc). A hand-maintained
   shared type package drifts silently from what the server returns.
 - **Runtime validation is worth keeping.** Pure `openapi-typescript` (types only)
   has the same hole as hand-written types: nothing checks the response at
@@ -67,7 +67,7 @@ official Nuxt 4 documentation.
   their own fetch layer that would bypass the Nuxt `$api` instance and the
   `transform` validation hook. An SDK pays off when paired with a separate query
   layer (e.g. TanStack Query) on a stack with no built-in data layer. Marsa is
-  Nuxt and *does* have one (`useFetch`/`useAsyncData`/`$fetch`), so the SDK is
+  Nuxt and _does_ have one (`useFetch`/`useAsyncData`/`$fetch`), so the SDK is
   redundant here. Types + Zod only.
 
 ## Architecture & Data Flow
@@ -117,7 +117,7 @@ $api ($fetch.create, baseURL from runtimeConfig) / useAPI composable
   ESLint/format ignores (generated, never hand-edited).
 - **Consumption uses Nuxt's documented primitives, not a bespoke wrapper:**
   - A Nuxt **plugin** provides `$api` — a `$fetch.create({ baseURL, onRequest,
-    onResponseError })` instance, `baseURL` from `runtimeConfig.public.apiBase`.
+onResponseError })` instance, `baseURL` from `runtimeConfig.public.apiBase`.
     This is the official external-API recipe.
   - Calls go through `$api` directly or via `useAsyncData(key, () => $api(...))`;
     optionally a `useAPI` composable via `createUseFetch`.

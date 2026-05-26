@@ -15,34 +15,38 @@
 ## File Structure
 
 **API (`apps/api`)**
-- `src/modules/status/use-cases/get-api-info/get-api-info.response.ts` — *modify*: convert the response interface to a `@nestjs/swagger`-decorated class so the schema is emitted.
-- `src/modules/status/use-cases/get-api-info/get-api-info.controller.ts` — *modify*: add `@ApiTags` + `@ApiOperation(operationId)` + `@ApiOkResponse` so the path has a clean operation id and typed 200 response.
-- `src/modules/swagger/build-api-documentation.ts` — *create*: builds the `DocumentBuilder` config (title/version).
-- `src/entrypoints/generate-open-api.ts` — *create*: boots `ApiModule`, mirrors prefix + versioning, writes `openapi.json`.
-- `openapi.json` — *create (generated, committed)*: the contract.
-- `package.json` — *modify*: add `@nestjs/swagger` dep + `generate:openapi` script.
-- `src/entrypoints/tests/generate-open-api.e2e.test.ts` — *create*: asserts the generated document contains the `/status` path with the expected operation id and response schema.
+
+- `src/modules/status/use-cases/get-api-info/get-api-info.response.ts` — _modify_: convert the response interface to a `@nestjs/swagger`-decorated class so the schema is emitted.
+- `src/modules/status/use-cases/get-api-info/get-api-info.controller.ts` — _modify_: add `@ApiTags` + `@ApiOperation(operationId)` + `@ApiOkResponse` so the path has a clean operation id and typed 200 response.
+- `src/modules/swagger/build-api-documentation.ts` — _create_: builds the `DocumentBuilder` config (title/version).
+- `src/entrypoints/generate-open-api.ts` — _create_: boots `ApiModule`, mirrors prefix + versioning, writes `openapi.json`.
+- `openapi.json` — _create (generated, committed)_: the contract.
+- `package.json` — _modify_: add `@nestjs/swagger` dep + `generate:openapi` script.
+- `src/entrypoints/tests/generate-open-api.e2e.test.ts` — _create_: asserts the generated document contains the `/status` path with the expected operation id and response schema.
 
 **Web (`apps/web`)**
-- `openapi-ts.config.ts` — *create*: hey-api config (typescript + zod plugins, no SDK), input = the API's `openapi.json`.
-- `app/api/types.gen.ts`, `app/api/zod.gen.ts` — *create (generated, committed)*.
-- `app/plugins/api.ts` — *create*: provides `$api` (`$fetch.create`) with base URL from runtime config.
-- `app/composables/useApiStatus.ts` — *create*: fetches `/v1/status` via `$api` and validates with the generated Zod schema in `transform`.
-- `app/composables/__tests__/useApiStatus.spec.ts` — *create*: component-env test; valid payload resolves, malformed payload rejects.
-- `nuxt.config.ts` — *modify*: add `runtimeConfig.public.apiBase`.
-- `eslint.config.mjs` — *modify*: ignore generated `app/api/**`.
-- `package.json` — *modify*: add `zod` + `@hey-api/openapi-ts` + `generate:api` script.
+
+- `openapi-ts.config.ts` — _create_: hey-api config (typescript + zod plugins, no SDK), input = the API's `openapi.json`.
+- `app/api/types.gen.ts`, `app/api/zod.gen.ts` — _create (generated, committed)_.
+- `app/plugins/api.ts` — _create_: provides `$api` (`$fetch.create`) with base URL from runtime config.
+- `app/composables/useApiStatus.ts` — _create_: fetches `/v1/status` via `$api` and validates with the generated Zod schema in `transform`.
+- `app/composables/__tests__/useApiStatus.spec.ts` — _create_: component-env test; valid payload resolves, malformed payload rejects.
+- `nuxt.config.ts` — _modify_: add `runtimeConfig.public.apiBase`.
+- `eslint.config.mjs` — _modify_: ignore generated `app/api/**`.
+- `package.json` — _modify_: add `zod` + `@hey-api/openapi-ts` + `generate:api` script.
 
 **Root**
-- `pnpm-workspace.yaml` — *modify*: catalog entries for `@nestjs/swagger`, `zod`, `@hey-api/openapi-ts`.
-- `.prettierignore` — *create or modify*: ignore generated client files.
-- `.github/workflows/ci.yml` — *modify*: add a "generate + drift check" step.
+
+- `pnpm-workspace.yaml` — _modify_: catalog entries for `@nestjs/swagger`, `zod`, `@hey-api/openapi-ts`.
+- `.prettierignore` — _create or modify_: ignore generated client files.
+- `.github/workflows/ci.yml` — _modify_: add a "generate + drift check" step.
 
 ---
 
 ## Task 1: Add dependency versions to the pnpm catalog
 
 **Files:**
+
 - Modify: `pnpm-workspace.yaml`
 
 - [ ] **Step 1: Add catalog entries**
@@ -50,20 +54,20 @@
 In `pnpm-workspace.yaml`, under the `# NestJS (api)` block add `@nestjs/swagger`, and add a new web/codegen block. Use these versions (verify they are the latest on npm when installing; bump if newer majors exist, but keep within the shown major):
 
 ```yaml
-  # NestJS (api)
-  '@nestjs/common': ^11.0.1
-  '@nestjs/core': ^11.0.1
-  '@nestjs/platform-express': ^11.0.1
-  '@nestjs/swagger': ^11.2.0
-  '@nestjs/cli': ^11.0.0
+# NestJS (api)
+'@nestjs/common': ^11.0.1
+'@nestjs/core': ^11.0.1
+'@nestjs/platform-express': ^11.0.1
+'@nestjs/swagger': ^11.2.0
+'@nestjs/cli': ^11.0.0
 ```
 
 Add near the web blocks:
 
 ```yaml
-  # Web ↔ API contract codegen
-  '@hey-api/openapi-ts': ^0.64.0
-  zod: ^3.24.0
+# Web ↔ API contract codegen
+'@hey-api/openapi-ts': ^0.64.0
+zod: ^3.24.0
 ```
 
 - [ ] **Step 2: Commit**
@@ -80,6 +84,7 @@ git commit -m "build: add swagger, hey-api, zod to pnpm catalog"
 **Why:** The SWC build ignores the `@nestjs/swagger` CLI plugin, so schema fields must come from explicit `@ApiProperty` decorators on a class (`.swcrc` already emits decorator metadata). An exported `interface` produces no runtime schema.
 
 **Files:**
+
 - Modify: `apps/api/package.json`
 - Modify: `apps/api/src/modules/status/use-cases/get-api-info/get-api-info.response.ts`
 
@@ -140,6 +145,7 @@ git commit -m "feat(api): make status response a swagger-decorated DTO"
 ## Task 3: Annotate the status controller for a clean OpenAPI operation
 
 **Files:**
+
 - Modify: `apps/api/src/modules/status/use-cases/get-api-info/get-api-info.controller.ts`
 
 - [ ] **Step 1: Add Swagger decorators**
@@ -186,6 +192,7 @@ git commit -m "feat(api): annotate status endpoint for openapi"
 ## Task 4: Build the OpenAPI documentation config helper
 
 **Files:**
+
 - Create: `apps/api/src/modules/swagger/build-api-documentation.ts`
 
 - [ ] **Step 1: Create the helper**
@@ -219,6 +226,7 @@ git commit -m "feat(api): add openapi document builder helper"
 ## Task 5: Create the OpenAPI generation entrypoint and script
 
 **Files:**
+
 - Create: `apps/api/src/entrypoints/generate-open-api.ts`
 - Modify: `apps/api/package.json`
 
@@ -298,6 +306,7 @@ git commit -m "feat(api): generate committed openapi.json"
 ## Task 6: Smoke-test the OpenAPI generation
 
 **Files:**
+
 - Create: `apps/api/src/entrypoints/tests/generate-open-api.e2e.test.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -340,10 +349,13 @@ describe('OpenAPI generation', () => {
     assert.equal(schemaRef, '#/components/schemas/GetApiInfoResponse')
 
     const schema = document.components.schemas.GetApiInfoResponse
-    assert.deepEqual(
-      Object.keys(schema.properties).sort(),
-      ['commit', 'name', 'nodeEnv', 'uptimeSeconds', 'version'],
-    )
+    assert.deepEqual(Object.keys(schema.properties).sort(), [
+      'commit',
+      'name',
+      'nodeEnv',
+      'uptimeSeconds',
+      'version',
+    ])
   })
 })
 ```
@@ -365,6 +377,7 @@ git commit -m "test(api): assert openapi document shape for status"
 ## Task 7: Add web runtime config for the API base URL
 
 **Files:**
+
 - Modify: `apps/web/nuxt.config.ts`
 
 - [ ] **Step 1: Add `runtimeConfig.public.apiBase`**
@@ -399,6 +412,7 @@ git commit -m "feat(web): add apiBase runtime config"
 ## Task 8: Configure hey-api codegen (types + zod, no SDK) and generate the client
 
 **Files:**
+
 - Modify: `apps/web/package.json`
 - Create: `apps/web/openapi-ts.config.ts`
 - Modify: `apps/web/eslint.config.mjs`
@@ -491,6 +505,7 @@ git commit -m "feat(web): generate api types + zod from openapi (no sdk)"
 ## Task 9: Add the `$api` plugin and a validated `useApiStatus` composable
 
 **Files:**
+
 - Create: `apps/web/app/plugins/api.ts`
 - Create: `apps/web/app/composables/useApiStatus.ts`
 
@@ -552,6 +567,7 @@ git commit -m "feat(web): add \$api plugin and validated useApiStatus composable
 ## Task 10: Test the boundary validation
 
 **Files:**
+
 - Create: `apps/web/app/composables/__tests__/useApiStatus.spec.ts`
 
 - [ ] **Step 1: Write the failing test**
@@ -618,6 +634,7 @@ git commit -m "test(web): verify zod boundary validation for api status"
 ## Task 11: Add the CI drift check
 
 **Files:**
+
 - Modify: `.github/workflows/ci.yml`
 
 - [ ] **Step 1: Add a generate + drift-check step**
@@ -625,22 +642,24 @@ git commit -m "test(web): verify zod boundary validation for api status"
 Insert this step after "Install dependencies" (line ~50) and before "Format check", so a stale committed contract fails fast:
 
 ```yaml
-      - name: Verify generated API contract is in sync
-        run: |
-          pnpm --filter api generate:openapi
-          pnpm --filter web generate:api
-          if ! git diff --exit-code -- apps/api/openapi.json 'apps/web/app/api'; then
-            echo "::error::Generated API contract is out of date. Run 'pnpm --filter api generate:openapi && pnpm --filter web generate:api' and commit the result."
-            exit 1
-          fi
+- name: Verify generated API contract is in sync
+  run: |
+    pnpm --filter api generate:openapi
+    pnpm --filter web generate:api
+    if ! git diff --exit-code -- apps/api/openapi.json 'apps/web/app/api'; then
+      echo "::error::Generated API contract is out of date. Run 'pnpm --filter api generate:openapi && pnpm --filter web generate:api' and commit the result."
+      exit 1
+    fi
 ```
 
 - [ ] **Step 2: Reproduce the check locally**
 
 Run:
+
 ```bash
 pnpm --filter api generate:openapi && pnpm --filter web generate:api && git diff --exit-code -- apps/api/openapi.json apps/web/app/api && echo "IN SYNC"
 ```
+
 Expected: prints `IN SYNC` with no diff (artifacts already committed and current).
 
 - [ ] **Step 3: Commit**
@@ -657,6 +676,7 @@ git commit -m "ci: verify web/api generated contract is in sync"
 - [ ] **Step 1: Run the whole pipeline as CI will**
 
 Run:
+
 ```bash
 pnpm install --frozen-lockfile \
   && pnpm format:check \
@@ -667,6 +687,7 @@ pnpm install --frozen-lockfile \
   && pnpm --filter api test \
   && pnpm --filter web test
 ```
+
 Expected: every step PASS.
 
 - [ ] **Step 2: Confirm the contract is committed and clean**

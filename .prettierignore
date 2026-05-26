@@ -11,3 +11,6 @@ pnpm-lock.yaml
 
 # Nuxt app: handled by @nuxt/eslint (stylistic rules) — avoid Prettier conflicts
 apps/web/**
+
+# Generated / committed artifacts — do not reformat
+apps/api/openapi.json
