@@ -49,6 +49,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify generated API contract is in sync
+        run: |
+          pnpm --filter api generate:openapi
+          pnpm --filter web generate:api
+          if ! git diff --exit-code -- apps/api/openapi.json 'apps/web/app/api'; then
+            echo "::error::Generated API contract is out of date. Run 'pnpm --filter api generate:openapi && pnpm --filter web generate:api' and commit the result."
+            exit 1
+          fi
+
       - name: Format check
         run: pnpm run format:check
 
