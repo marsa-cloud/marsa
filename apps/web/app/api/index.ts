@@ -2,8 +2,8 @@
 
 export type {
   ClientOptions,
-  GetApiInfoData,
   GetApiInfoResponse,
-  GetApiInfoResponse2,
-  GetApiInfoResponses,
+  GetApiInfoV1Data,
+  GetApiInfoV1Response,
+  GetApiInfoV1Responses,
 } from './types.gen.js'

@@ -10,7 +10,7 @@ export class GetApiInfoController {
   constructor(private readonly service: GetApiInfoService) {}
 
   @Get()
-  @ApiOperation({ operationId: 'getApiInfo' })
+  @ApiOperation({ operationId: 'getApiInfoV1' })
   @ApiOkResponse({ type: GetApiInfoResponse })
   handle(): GetApiInfoResponse {
     return this.service.execute()

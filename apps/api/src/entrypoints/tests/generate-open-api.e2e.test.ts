@@ -27,7 +27,7 @@ describe('OpenAPI generation', () => {
     const statusGet = document.paths['/api/v1/status']?.get
 
     assert.ok(statusGet, 'expected /api/v1/status GET to be documented')
-    assert.equal(statusGet.operationId, 'getApiInfo')
+    assert.equal(statusGet.operationId, 'getApiInfoV1')
 
     const response200 = statusGet.responses['200'] as Record<string, any>
     const schemaRef = response200.content['application/json'].schema.$ref

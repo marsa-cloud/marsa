@@ -10,4 +10,4 @@ export const zGetApiInfoResponse = z.object({
   uptimeSeconds: z.number(),
 })
 
-export const zGetApiInfoResponse2 = zGetApiInfoResponse
+export const zGetApiInfoV1Response = zGetApiInfoResponse

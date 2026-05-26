@@ -3,7 +3,7 @@
   "paths": {
     "/api/v1/status": {
       "get": {
-        "operationId": "getApiInfo",
+        "operationId": "getApiInfoV1",
         "parameters": [],
         "responses": {
           "200": {

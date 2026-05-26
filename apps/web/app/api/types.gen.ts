@@ -12,15 +12,15 @@ export type GetApiInfoResponse = {
   uptimeSeconds: number
 }
 
-export type GetApiInfoData = {
+export type GetApiInfoV1Data = {
   body?: never
   path?: never
   query?: never
   url: '/api/v1/status'
 }
 
-export type GetApiInfoResponses = {
+export type GetApiInfoV1Responses = {
   200: GetApiInfoResponse
 }
 
-export type GetApiInfoResponse2 = GetApiInfoResponses[keyof GetApiInfoResponses]
+export type GetApiInfoV1Response = GetApiInfoV1Responses[keyof GetApiInfoV1Responses]
