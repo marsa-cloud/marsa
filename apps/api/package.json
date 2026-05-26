@@ -32,6 +32,7 @@
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
     "@nestjs/platform-express": "catalog:",
+    "@nestjs/swagger": "catalog:",
     "@nestjs/platform-fastify": "^11.1.21",
     "@mikro-orm/core": "catalog:",
     "@mikro-orm/migrations": "catalog:",
