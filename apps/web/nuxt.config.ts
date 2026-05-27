@@ -13,6 +13,8 @@ export default defineNuxtConfig({
     public: {
       // Override at runtime with NUXT_PUBLIC_API_BASE
       apiBase: 'http://localhost:3000/api',
+      version: '0.0.0',
+      commit: '',
     },
   },
 
