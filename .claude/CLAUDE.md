@@ -68,3 +68,12 @@ Releases are cut by tagging `main` with `v<semver>` (e.g. `v1.0.0`); the CD work
 ## CI
 
 `.github/workflows/ci.yml` runs on push/PR to `main`: `format:check` → `lint` → typecheck (`api` + `web`) → `build:web` → `pnpm --filter api test` → web unit/component tests → web e2e. The API is type-checked (`tsc --noEmit`) rather than built separately, since `pnpm --filter api test` rebuilds internally. CI uses `pnpm install --frozen-lockfile`, so commit `pnpm-lock.yaml` updates alongside dependency changes.
+
+### Test coverage gates
+
+Both test suites enforce a **minimum coverage threshold** — the test step fails (and so does CI) when coverage drops below the floor. The gates ride the existing test steps; there is no separate coverage job.
+
+- **web** (`vitest.config.ts` → `test.coverage`): v8 provider, scoped to hand-written `app/**` source (generated `app/api/*` and config files excluded). Floors: lines/statements 88%, branches 90%, functions 60%.
+- **api** (`test:run` script): Node's built-in `--experimental-test-coverage` with `--test-coverage-lines=80 --test-coverage-branches=80 --test-coverage-functions=90`; test files and `src/test/**` are excluded. Source-mapped back to `.ts` via `--enable-source-maps`.
+
+These are **ratchet floors**, set a few points below the coverage measured when the gate was introduced (web ~90% lines, api ~85% lines — see issue #39). Raise them as coverage improves; never lower them to make a red build pass — add tests instead.
