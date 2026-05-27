@@ -7,18 +7,19 @@
 The handover assessment found marsa had no security-specific CI — only `ci.yml` (lint/typecheck/test) and `cd.yml`. ApexYard ships a golden-path `security.yml`, but it is npm-based and bundles five tools (Semgrep, npm audit, TruffleHog, CodeQL, eslint-security) plus a PR-comment job. marsa is a pnpm monorepo (Node pinned via `.nvmrc`).
 
 Measured baseline before choosing the design:
+
 - Semgrep (`p/owasp-top-ten` + `p/typescript` + `p/nodejs`): **0 findings** (92 files, 114 rules).
 - TruffleHog (full history, `--only-verified`): **0 secrets**.
 - `pnpm audit`: **8 advisories — 1 critical + 2 high + 2 moderate + 3 low**, the critical/high all from the dev-only `happy-dom` test environment.
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
-| **Semgrep + TruffleHog blocking, pnpm audit advisory** (chosen) | Immediate enforcement where the baseline is clean; doesn't red the build on pre-existing dep CVEs; clean separation from the dependency-triage work | `pnpm audit` findings don't fail CI yet — a temporary gap until the flip |
-| All three blocking now | Maximal enforcement | Reds the build on day one (1 critical + 2 high deps); blocks unrelated PRs until deps are bumped |
-| All three advisory | No day-one friction | No teeth — secret/SAST regressions wouldn't fail CI, defeating the point |
-| Adopt the full template verbatim (incl. CodeQL, eslint-security, PR-comment) | Most coverage | CodeQL needs repo setup (default-vs-advanced conflicts); eslint-security is ad-hoc warn-only noise; npm-based, wrong package manager; more surface to maintain on an MVP |
+| Option                                                                       | Pros                                                                                                                                                | Cons                                                                                                                                                                     |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Semgrep + TruffleHog blocking, pnpm audit advisory** (chosen)              | Immediate enforcement where the baseline is clean; doesn't red the build on pre-existing dep CVEs; clean separation from the dependency-triage work | `pnpm audit` findings don't fail CI yet — a temporary gap until the flip                                                                                                 |
+| All three blocking now                                                       | Maximal enforcement                                                                                                                                 | Reds the build on day one (1 critical + 2 high deps); blocks unrelated PRs until deps are bumped                                                                         |
+| All three advisory                                                           | No day-one friction                                                                                                                                 | No teeth — secret/SAST regressions wouldn't fail CI, defeating the point                                                                                                 |
+| Adopt the full template verbatim (incl. CodeQL, eslint-security, PR-comment) | Most coverage                                                                                                                                       | CodeQL needs repo setup (default-vs-advanced conflicts); eslint-security is ad-hoc warn-only noise; npm-based, wrong package manager; more surface to maintain on an MVP |
 
 ## Decision
 
