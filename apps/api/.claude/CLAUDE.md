@@ -25,6 +25,13 @@ NestJS 11 on **Fastify** (`@nestjs/platform-fastify`). `@nestjs/platform-express
 
 The Fastify adapter config is duplicated in `src/test/setup/test-bench.ts` (`TestBench.createApp`). **Keep both in sync** — same parser, same router options. If you change one, change the other.
 
+## OpenAPI contract (web consumes this)
+
+The api is the source of truth for the web↔api contract. `src/entrypoints/generate-open-api.ts` boots `ApiModule` with `{ preview: true }` (no DB connection), re-applies the same global prefix + URI versioning as `entrypoints/api.ts`, and writes a **committed** `apps/api/openapi.json`. Run `pnpm --filter api generate:openapi` after changing any endpoint, DTO, or decorator, and commit the result — CI drift-checks it.
+
+- Because the SWC build ignores the `@nestjs/swagger` CLI plugin, response shapes must come from **explicit `@ApiProperty` decorators on a DTO class** (an exported `interface` produces no schema). Annotate controllers with `@ApiOperation({ operationId })` + `@ApiOkResponse({ type: Dto })`.
+- **`operationId` convention: version-suffix it** (e.g. `getApiInfoV1`, not `getApiInfo`). The web's generator names the operation-response type after the operationId; without the version suffix it collides with the DTO schema type and emits an ugly `…Response2` alias. Suffixing keeps the schema type (`GetApiInfoResponse`) and the operation type (`GetApiInfoV1Response`) distinct, and mirrors the URI version.
+
 ## Source layout
 
 Two top-level source areas with distinct roles:
