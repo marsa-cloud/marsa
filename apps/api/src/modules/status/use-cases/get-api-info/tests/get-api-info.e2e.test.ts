@@ -1,6 +1,6 @@
-import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 
+import { expect } from 'expect'
 import request from 'supertest'
 
 import { TestBench } from '#src/test/setup/test-bench.js'
@@ -20,8 +20,8 @@ describe('GET /api/v1/status (e2e)', () => {
   it('returns api info', async () => {
     const response = await request(setup.httpServer).get('/api/v1/status').expect(200)
 
-    assert.equal(response.body.name, 'marsa-api')
-    assert.equal(typeof response.body.version, 'string')
-    assert.equal(typeof response.body.uptimeSeconds, 'number')
+    expect(response.body.name).toBe('marsa-api')
+    expect(typeof response.body.version).toBe('string')
+    expect(typeof response.body.uptimeSeconds).toBe('number')
   })
 })

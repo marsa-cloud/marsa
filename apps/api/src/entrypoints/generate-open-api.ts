@@ -3,10 +3,9 @@ import { dirname, resolve } from 'node:path'
 
 import { Logger, VersioningType } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
-import { SwaggerModule } from '@nestjs/swagger'
 
 import { ApiModule } from '#src/modules/api/api.module.js'
-import { buildApiDocumentation } from '#src/modules/swagger/build-api-documentation.js'
+import { createOpenApiDocument } from '#src/modules/swagger/create-open-api-document.js'
 
 const OUTPUT_PATH = resolve(process.cwd(), 'openapi.json')
 
@@ -20,8 +19,7 @@ async function generateOpenApi(): Promise<void> {
     app.setGlobalPrefix('api')
     app.enableVersioning({ type: VersioningType.URI })
 
-    const documentation = buildApiDocumentation('1.0')
-    const document = SwaggerModule.createDocument(app, documentation)
+    const document = createOpenApiDocument(app)
 
     mkdirSync(dirname(OUTPUT_PATH), { recursive: true })
     writeFileSync(OUTPUT_PATH, `${JSON.stringify(document, null, 2)}\n`)

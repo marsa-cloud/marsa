@@ -1,40 +1,35 @@
-import assert from 'node:assert/strict'
 import { after, before, describe, it } from 'node:test'
 
-import type { INestApplication } from '@nestjs/common'
-import { VersioningType } from '@nestjs/common'
-import { NestFactory } from '@nestjs/core'
-import { SwaggerModule } from '@nestjs/swagger'
+import { expect } from 'expect'
 
-import { ApiModule } from '#src/modules/api/api.module.js'
-import { buildApiDocumentation } from '#src/modules/swagger/build-api-documentation.js'
+import { createOpenApiDocument } from '#src/modules/swagger/create-open-api-document.js'
+import { TestBench } from '#src/test/setup/test-bench.js'
+import { TestSetup } from '#src/test/setup/test-setup.js'
 
 describe('OpenAPI generation', () => {
-  let app: INestApplication
+  let setup: TestSetup
 
   before(async () => {
-    app = await NestFactory.create(ApiModule, { logger: false, preview: true })
-    app.setGlobalPrefix('api')
-    app.enableVersioning({ type: VersioningType.URI })
+    setup = await TestBench.setupEndToEndTest()
   })
 
   after(async () => {
-    await app.close()
+    await setup.teardown()
   })
 
   it('includes the versioned status path with a typed response', () => {
-    const document = SwaggerModule.createDocument(app, buildApiDocumentation('1.0'))
+    const document = createOpenApiDocument(setup.app)
     const statusGet = document.paths['/api/v1/status']?.get
 
-    assert.ok(statusGet, 'expected /api/v1/status GET to be documented')
-    assert.equal(statusGet.operationId, 'getApiInfoV1')
+    expect(statusGet).toBeDefined()
+    expect(statusGet?.operationId).toBe('getApiInfoV1')
 
-    const response200 = statusGet.responses['200'] as Record<string, any>
+    const response200 = statusGet?.responses['200'] as Record<string, any>
     const schemaRef = response200.content['application/json'].schema.$ref
-    assert.equal(schemaRef, '#/components/schemas/GetApiInfoResponse')
+    expect(schemaRef).toBe('#/components/schemas/GetApiInfoResponse')
 
     const schema = document.components?.schemas?.['GetApiInfoResponse'] as Record<string, any>
-    assert.deepEqual(Object.keys(schema.properties).sort(), [
+    expect(Object.keys(schema.properties).sort()).toEqual([
       'commit',
       'name',
       'nodeEnv',
