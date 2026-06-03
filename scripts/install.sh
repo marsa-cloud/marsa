@@ -13,7 +13,7 @@
 # `helm upgrade --install`).
 #
 # Usage:
-#   sudo ./install.sh --domain marsa.example.com [--email you@example.com] [options]
+#   sudo ./scripts/install.sh --domain marsa.example.com [--email you@example.com] [options]
 #
 # See --help for the full flag list.
 
@@ -54,32 +54,32 @@ usage() {
   cat <<EOF
 ${C_BOLD}Marsa installer${C_RESET}
 
-Installs or updates Marsa on a fresh Debian/Ubuntu VPS. Provisions K3s and Helm
-as needed, then deploys the Marsa Helm chart with HTTPS via Let's Encrypt.
+Sets up everything Marsa needs on a fresh Debian/Ubuntu server and deploys
+Marsa, served over HTTPS via Let's Encrypt.
 
 ${C_BOLD}Usage${C_RESET}
-  sudo ./install.sh --domain <domain> [--email <email>] [options]
+  sudo ./scripts/install.sh --domain <domain> [--email <email>] [options]
 
 ${C_BOLD}Required${C_RESET}
-  --domain <domain>     Domain Marsa is served on (drives ingress + TLS).
+  --domain <domain>     Domain Marsa is served on (also drives HTTPS).
                         The web UI is served on <domain>, the API on api.<domain>.
 
 ${C_BOLD}Options${C_RESET}
   --email <email>       Email for Let's Encrypt registration.
                         Defaults to admin@<domain> if omitted.
-  --chart-version <v>   Pin a specific chart version. Default: latest published.
-  --namespace <ns>      Kubernetes namespace. Default: ${NAMESPACE}.
-  --release <name>      Helm release name. Default: ${RELEASE_NAME}.
-  --no-tls              Disable HTTPS (sets tls.enabled=false). Not recommended.
+  --chart-version <v>   Pin a specific Marsa version. Default: latest published.
+  --namespace <ns>      Namespace to install into. Default: ${NAMESPACE}.
+  --release <name>      Install/release name. Default: ${RELEASE_NAME}.
+  --no-tls              Disable HTTPS. Not recommended.
   -h, --help            Show this help and exit.
 
 ${C_BOLD}Environment overrides${C_RESET}
-  MARSA_CHART_REF       OCI chart reference. Default: ${CHART_REF}
-  MARSA_RELEASE_NAME    Helm release name (same as --release).
+  MARSA_CHART_REF       Marsa chart reference. Default: ${CHART_REF}
+  MARSA_RELEASE_NAME    Install/release name (same as --release).
 
 ${C_BOLD}Examples${C_RESET}
-  sudo ./install.sh --domain marsa.example.com --email ops@example.com
-  sudo ./install.sh --domain marsa.example.com --chart-version 0.1.0
+  sudo ./scripts/install.sh --domain marsa.example.com --email ops@example.com
+  sudo ./scripts/install.sh --domain marsa.example.com --chart-version 0.1.0
 
 ${C_BOLD}DNS${C_RESET}
   Point both <domain> and api.<domain> (or a wildcard *.<domain>) at this
@@ -91,13 +91,23 @@ EOF
 
 TLS_ENABLED="true"
 
+# Guard a value-taking flag: fail cleanly when its value is missing or is
+# actually the next flag (e.g. `--domain` at end of line, or `--domain --no-tls`),
+# instead of letting an unconditional `shift 2` blow up or eat the next flag.
+require_arg_value() {
+  local flag="$1" value="${2:-}"
+  if [ -z "$value" ] || [ "${value#-}" != "$value" ]; then
+    die "${flag} requires a value"
+  fi
+}
+
 while [ $# -gt 0 ]; do
   case "$1" in
-    --domain)        DOMAIN="${2:-}"; shift 2 ;;
-    --email)         EMAIL="${2:-}"; shift 2 ;;
-    --chart-version) CHART_VERSION="${2:-}"; shift 2 ;;
-    --namespace)     NAMESPACE="${2:-}"; shift 2 ;;
-    --release)       RELEASE_NAME="${2:-}"; shift 2 ;;
+    --domain)        require_arg_value "$1" "${2:-}"; DOMAIN="$2"; shift 2 ;;
+    --email)         require_arg_value "$1" "${2:-}"; EMAIL="$2"; shift 2 ;;
+    --chart-version) require_arg_value "$1" "${2:-}"; CHART_VERSION="$2"; shift 2 ;;
+    --namespace)     require_arg_value "$1" "${2:-}"; NAMESPACE="$2"; shift 2 ;;
+    --release)       require_arg_value "$1" "${2:-}"; RELEASE_NAME="$2"; shift 2 ;;
     --no-tls)        TLS_ENABLED="false"; shift ;;
     -h|--help)       usage; exit 0 ;;
     *)               die "Unknown argument: $1 (run --help for usage)" ;;
@@ -230,18 +240,27 @@ deploy_marsa() {
 # --- Summary ------------------------------------------------------------------
 
 summary() {
+  local scheme="https"
+  [ "$TLS_ENABLED" = "false" ] && scheme="http"
+
   cat <<EOF
 
 ${C_GREEN}${C_BOLD}Marsa is installed.${C_RESET}
 
-  Web UI : https://${DOMAIN}
-  API    : https://api.${DOMAIN}
-  Release: ${RELEASE_NAME}  (namespace: ${NAMESPACE})
+  Web UI : ${scheme}://${DOMAIN}
+  API    : ${scheme}://api.${DOMAIN}
 
 Next steps:
+EOF
+
+  if [ "$TLS_ENABLED" = "true" ]; then
+    cat <<EOF
   • Ensure DNS for ${DOMAIN} and api.${DOMAIN} points at this server's public IP
-    so Let's Encrypt can complete the HTTP-01 challenge.
-  • Inspect the deployment:  KUBECONFIG=${K3S_KUBECONFIG} kubectl -n ${NAMESPACE} get pods
+    so the HTTPS certificate can be issued.
+EOF
+  fi
+
+  cat <<EOF
   • Re-run this script with the same arguments at any time to update Marsa.
 EOF
 }

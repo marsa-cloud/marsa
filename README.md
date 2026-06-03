@@ -17,17 +17,15 @@ It lets you deploy and manage applications on your own infrastructure using Kube
 
 ## Install on a VPS
 
-On a fresh Debian/Ubuntu server, the bundled installer provisions K3s + Helm and
-deploys Marsa from its Helm chart with HTTPS via Let's Encrypt:
+On a fresh Debian/Ubuntu server, one command installs Marsa and serves it over HTTPS:
 
 ```bash
-sudo ./scripts/install.sh --domain marsa.example.com --email you@example.com
+curl -fsSL https://get.marsa.gomaa.ovh | bash -s -- --domain marsa.example.com --email you@example.com
 ```
 
 Point both `marsa.example.com` and `api.marsa.example.com` (or `*.marsa.example.com`)
-at the server's public IP first, so the certificate challenge can complete. Re-running
-the script with the same arguments updates an existing install. See
-`scripts/install.sh --help` for all options.
+at the server's public IP first, so the HTTPS certificate can be issued. Re-running
+the same command updates an existing install.
 
 ## Current Status
 
