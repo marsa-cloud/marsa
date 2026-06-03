@@ -29,6 +29,12 @@ EMAIL=""
 CHART_VERSION=""        # empty → Helm pulls the latest published version
 MIN_HELM_MINOR=8        # Helm 3.8+ for OCI support
 K3S_KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
+# Helm's official get-helm-3 installer, pinned to a release tag rather than the
+# moving `main` branch (supply-chain hygiene — see AgDR-0003). Overridable for
+# testing. The pinned script still installs the latest stable Helm by default;
+# set MARSA_HELM_VERSION to pin the Helm version itself.
+HELM_INSTALL_SCRIPT_TAG="${MARSA_HELM_INSTALL_SCRIPT_TAG:-v3.16.4}"
+HELM_VERSION="${MARSA_HELM_VERSION:-}"
 
 # --- Output helpers -----------------------------------------------------------
 
@@ -148,10 +154,11 @@ install_k3s() {
     return
   fi
   info "Installing K3s (this also provisions Traefik ingress + local-path storage)"
-  # --write-kubeconfig-mode 644 lets non-root tools (and Helm here) read the
-  # kubeconfig. K3s bundles Traefik and local-path-provisioner, which is exactly
-  # what the Marsa chart expects (see marsa-charts README § Target platform).
-  curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode 644" sh -
+  # K3s bundles Traefik and local-path-provisioner, which is exactly what the
+  # Marsa chart expects (see marsa-charts README § Target platform). The
+  # kubeconfig is left at K3s's default mode 0600 (root-only) — this script and
+  # Helm both run as root, so nothing needs it world-readable (see AgDR-0003).
+  curl -sfL https://get.k3s.io | sh -
 
   info "Waiting for K3s node to become Ready"
   local tries=0
@@ -183,8 +190,13 @@ install_helm() {
   if require_cmd helm; then
     warn "Installed Helm is older than 3.${MIN_HELM_MINOR} (no OCI support); upgrading"
   fi
-  info "Installing Helm"
-  curl -sfL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  info "Installing Helm (installer pinned to ${HELM_INSTALL_SCRIPT_TAG})"
+  local get_helm="https://raw.githubusercontent.com/helm/helm/${HELM_INSTALL_SCRIPT_TAG}/scripts/get-helm-3"
+  if [ -n "$HELM_VERSION" ]; then
+    curl -sfL "$get_helm" | DESIRED_VERSION="$HELM_VERSION" bash
+  else
+    curl -sfL "$get_helm" | bash
+  fi
   helm_supports_oci || die "Helm install did not yield a 3.${MIN_HELM_MINOR}+ version"
   ok "Helm $(helm version --template '{{.Version}}' 2>/dev/null) ready"
 }
@@ -202,7 +214,7 @@ deploy_marsa() {
     --namespace "$NAMESPACE" --create-namespace
     --set "tls.enabled=${TLS_ENABLED}"
     --set "tls.domain=${DOMAIN}"
-    --wait --timeout 10m
+    --wait --timeout 10m --atomic
   )
   [ -n "$CHART_VERSION" ] && args+=(--version "$CHART_VERSION")
   [ -n "$EMAIL" ] && args+=(--set "email=${EMAIL}")
