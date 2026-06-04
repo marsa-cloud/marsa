@@ -34,9 +34,17 @@ Accepted tradeoff — **piping upstream installers to a root shell**: both `get.
 - The script is coupled to the chart's value schema (`tls.enabled`, `tls.domain`, `email`) — verified against `charts/marsa/values.yaml`. If the chart renames those, the script's `--set` flags must follow.
 - Air-gapped / offline installs are out of scope; the script fetches K3s, Helm, and the chart over the network.
 
+## Amendment — 2026-06-04 (#50): first real-VPS run exposed three breakages
+
+The first end-to-end run on a real VPS (now that the chart is published as `0.0.1-alpha.1`) surfaced three failures the static checks couldn't catch. These supersede the matching points above.
+
+- **Pre-release version resolution → add `--devel`.** The original "no `--chart-version` ⇒ Helm pulls latest" assumed a stable release exists. The registry only ships pre-release tags (`0.0.1-alpha.1`) while Marsa is pre-1.0, and Helm's OCI "latest" resolution **excludes pre-releases** — so an unpinned install died with `could not locate a version matching provided version string`. Fix: pass `--devel` (≡ constraint `>0.0.0-0`) when no version is pinned, so resolution includes pre-releases. Verified: `helm show chart oci://… --devel` resolves `0.0.1-alpha.1`, plain does not. The installer now ships **pre-release charts by default** — acceptable and intended while pre-1.0; `--chart-version` still pins an exact release.
+- **`--atomic` → `--rollback-on-failure`; Helm floor 3.8 → 3.18.** Helm 3.18 renamed `--atomic` to `--rollback-on-failure` and Helm 4 removed `--atomic` outright. Rather than feature-detect, we always use `--rollback-on-failure` and raise `MIN_HELM_MINOR` to 18 so the flag is guaranteed present (3.18 still satisfies the OCI ≥3.8 requirement). `get-helm-3` installs ≥3.18 as current stable, so fresh installs are unaffected.
+- **Distribution URL → GitHub raw, not the OVH vanity redirect.** The README's `https://get.marsa.gomaa.ovh` resolves to an OVH web-redirect that only listens on port 80 (no TLS cert), so `https://` reset the connection before the script was even fetched. The README now points at `https://raw.githubusercontent.com/marsa-cloud/marsa/main/scripts/install.sh` (real TLS, zero infra). A pretty vanity URL over HTTPS is deferred to the real-domain purchase (#49) — via a TLS-terminating proxy (e.g. Cloudflare), not OVH's free redirect.
+
 ## Artifacts
 
-- Issue: marsa-cloud/marsa#16
+- Issue: marsa-cloud/marsa#16, marsa-cloud/marsa#50 (amendment)
 - PR: marsa-cloud/marsa#48
 - File: `scripts/install.sh`
 - Related: marsa-charts README § Target platform / Install; marsa-charts AgDR-0003 (OCI distribution), AgDR-0004 (subchart/anti-scope), AgDR-0005 (public-ingress TLS).

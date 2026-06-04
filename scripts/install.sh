@@ -5,7 +5,8 @@
 # What it does, in order:
 #   1. Pre-flight checks (root, Debian/Ubuntu, required tools)
 #   2. Installs K3s if absent (brings its own Traefik ingress + local-path storage)
-#   3. Installs Helm 3.8+ if absent (3.8+ is required for native OCI registry pulls)
+#   3. Installs Helm 3.18+ if absent (OCI registry pulls need 3.8+; the
+#      `--rollback-on-failure` flag we deploy with needs 3.18+)
 #   4. helm upgrade --install of the Marsa chart from the OCI registry
 #
 # Re-running the script with the same arguments updates an existing install
@@ -26,8 +27,8 @@ RELEASE_NAME="${MARSA_RELEASE_NAME:-marsa}"
 NAMESPACE="marsa"
 DOMAIN=""
 EMAIL=""
-CHART_VERSION=""        # empty → Helm pulls the latest published version
-MIN_HELM_MINOR=8        # Helm 3.8+ for OCI support
+CHART_VERSION=""        # empty → Helm pulls the latest published version (incl. pre-releases)
+MIN_HELM_MINOR=18       # 3.18+: --rollback-on-failure (also covers OCI's 3.8 floor)
 K3S_KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
 # Helm's official get-helm-3 installer, pinned to a release tag rather than the
 # moving `main` branch (supply-chain hygiene — see AgDR-0003). Overridable for
@@ -67,7 +68,8 @@ ${C_BOLD}Required${C_RESET}
 ${C_BOLD}Options${C_RESET}
   --email <email>       Email for Let's Encrypt registration.
                         Defaults to admin@<domain> if omitted.
-  --chart-version <v>   Pin a specific Marsa version. Default: latest published.
+  --chart-version <v>   Pin a specific Marsa version.
+                        Default: latest published, including pre-releases.
   --namespace <ns>      Namespace to install into. Default: ${NAMESPACE}.
   --release <name>      Install/release name. Default: ${RELEASE_NAME}.
   --no-tls              Disable HTTPS. Not recommended.
@@ -182,8 +184,8 @@ install_k3s() {
 
 # --- Helm ---------------------------------------------------------------------
 
-helm_supports_oci() {
-  # Returns 0 when installed Helm is >= 3.MIN_HELM_MINOR.
+helm_meets_min() {
+  # Returns 0 when installed Helm is >= 3.MIN_HELM_MINOR (OCI pulls + --rollback-on-failure).
   local ver major minor
   ver="$(helm version --template '{{.Version}}' 2>/dev/null | sed 's/^v//')" || return 1
   major="${ver%%.*}"
@@ -193,12 +195,12 @@ helm_supports_oci() {
 }
 
 install_helm() {
-  if require_cmd helm && helm_supports_oci; then
+  if require_cmd helm && helm_meets_min; then
     ok "Helm $(helm version --template '{{.Version}}' 2>/dev/null) already installed — skipping"
     return
   fi
   if require_cmd helm; then
-    warn "Installed Helm is older than 3.${MIN_HELM_MINOR} (no OCI support); upgrading"
+    warn "Installed Helm is older than 3.${MIN_HELM_MINOR}; upgrading"
   fi
   info "Installing Helm (installer pinned to ${HELM_INSTALL_SCRIPT_TAG})"
   local get_helm="https://raw.githubusercontent.com/helm/helm/${HELM_INSTALL_SCRIPT_TAG}/scripts/get-helm-3"
@@ -207,7 +209,7 @@ install_helm() {
   else
     curl -sfL "$get_helm" | bash
   fi
-  helm_supports_oci || die "Helm install did not yield a 3.${MIN_HELM_MINOR}+ version"
+  helm_meets_min || die "Helm install did not yield a 3.${MIN_HELM_MINOR}+ version"
   ok "Helm $(helm version --template '{{.Version}}' 2>/dev/null) ready"
 }
 
@@ -224,13 +226,19 @@ deploy_marsa() {
     --namespace "$NAMESPACE" --create-namespace
     --set "tls.enabled=${TLS_ENABLED}"
     --set "tls.domain=${DOMAIN}"
-    --wait --timeout 10m --atomic
+    --wait --timeout 10m --rollback-on-failure
   )
-  [ -n "$CHART_VERSION" ] && args+=(--version "$CHART_VERSION")
   [ -n "$EMAIL" ] && args+=(--set "email=${EMAIL}")
 
-  if [ -z "$CHART_VERSION" ]; then
-    info "No --chart-version pinned; Helm will pull the latest published chart"
+  if [ -n "$CHART_VERSION" ]; then
+    args+=(--version "$CHART_VERSION")
+  else
+    # No version pinned: resolve the newest published chart. --devel is required
+    # so Helm's OCI "latest" resolution includes pre-releases — while Marsa is
+    # pre-1.0 the registry only ships alpha/beta tags, and without --devel Helm
+    # matches no stable version and fails with "could not locate a version".
+    args+=(--devel)
+    info "No --chart-version pinned; pulling the latest published chart (including pre-releases)"
   fi
 
   helm "${args[@]}"
