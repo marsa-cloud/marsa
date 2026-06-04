@@ -20,7 +20,7 @@ It lets you deploy and manage applications on your own infrastructure using Kube
 On a fresh Debian/Ubuntu server, one command installs Marsa and serves it over HTTPS:
 
 ```bash
-curl -fsSL https://get.marsa.gomaa.ovh | bash -s -- --domain marsa.example.com --email you@example.com
+curl -fsSL https://raw.githubusercontent.com/marsa-cloud/marsa/main/scripts/install.sh | bash -s -- --domain marsa.example.com --email you@example.com
 ```
 
 Point both `marsa.example.com` and `api.marsa.example.com` (or `*.marsa.example.com`)
