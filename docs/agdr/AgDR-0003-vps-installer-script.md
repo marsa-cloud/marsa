@@ -65,7 +65,7 @@ decision to "…and joins nodes to it".
   to keep it out of shell history / the script's own argv.
 - **Server IP stays a placeholder** in the printed join command (`<private-ip>`): the server
   can't reliably tell which of its interfaces is the private one, so auto-detecting risks
-  emitting a public IP. The node-token *is* auto-substituted (unambiguous, read from
+  emitting a public IP. The node-token _is_ auto-substituted (unambiguous, read from
   `/var/lib/rancher/k3s/server/node-token`).
 - **Inter-node encryption deferred to #24 ("Marsa Networking within Apps").** The K3s
   control plane (node registration on 6443) is already TLS — K3s ships its own PKI and the
