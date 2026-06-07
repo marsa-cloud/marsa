@@ -25,8 +25,11 @@ set -euo pipefail
 CHART_REF="${MARSA_CHART_REF:-oci://ghcr.io/marsa-cloud/charts/marsa}"
 RELEASE_NAME="${MARSA_RELEASE_NAME:-marsa}"
 NAMESPACE="marsa"
+MODE="server"             # "server" (default install) or "agent" (join an existing cluster)
 DOMAIN=""
 EMAIL=""
+SERVER_URL=""             # agent mode: K3s server URL, e.g. https://10.0.0.5:6443
+TOKEN="${MARSA_K3S_TOKEN:-}"  # agent mode: cluster node-token (env avoids it landing in shell history / ps)
 CHART_VERSION=""        # empty → Helm pulls the latest published version (incl. pre-releases)
 MIN_HELM_MINOR=18       # 3.18+: --rollback-on-failure (also covers OCI's 3.8 floor)
 K3S_KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
@@ -59,13 +62,14 @@ Sets up everything Marsa needs on a fresh Debian/Ubuntu server and deploys
 Marsa, served over HTTPS via Let's Encrypt.
 
 ${C_BOLD}Usage${C_RESET}
-  sudo ./scripts/install.sh --domain <domain> [--email <email>] [options]
+  Server (default):  sudo ./scripts/install.sh --domain <domain> [--email <email>] [options]
+  Agent  (join):     sudo ./scripts/install.sh --agent --server-url <url> --token <token>
 
-${C_BOLD}Required${C_RESET}
+${C_BOLD}Required (server mode)${C_RESET}
   --domain <domain>     Domain Marsa is served on (also drives HTTPS).
                         The web UI is served on <domain>, the API on api.<domain>.
 
-${C_BOLD}Options${C_RESET}
+${C_BOLD}Options (server mode)${C_RESET}
   --email <email>       Email for Let's Encrypt registration.
                         Defaults to admin@<domain> if omitted.
   --chart-version <v>   Pin a specific Marsa version.
@@ -75,13 +79,25 @@ ${C_BOLD}Options${C_RESET}
   --no-tls              Disable HTTPS. Not recommended.
   -h, --help            Show this help and exit.
 
+${C_BOLD}Agent mode${C_RESET} — join this machine to an existing cluster as a worker node
+  --agent               Join an existing Marsa cluster instead of installing one.
+  --server-url <url>    K3s server URL, e.g. https://10.0.0.5:6443   (required with --agent)
+  --token <token>       Cluster node-token from the server            (required with --agent)
+
+  The server's install summary prints a ready-to-paste join command (token filled in).
+  In --agent mode the server-only flags (--domain / --email / --no-tls / --chart-version)
+  are not valid. Connect nodes over a private network — inter-node traffic is not
+  encrypted by default (see marsa-cloud/marsa#24).
+
 ${C_BOLD}Environment overrides${C_RESET}
   MARSA_CHART_REF       Marsa chart reference. Default: ${CHART_REF}
   MARSA_RELEASE_NAME    Install/release name (same as --release).
+  MARSA_K3S_TOKEN       Agent-mode node-token (alternative to --token; keeps it out of ps).
 
 ${C_BOLD}Examples${C_RESET}
   sudo ./scripts/install.sh --domain marsa.example.com --email ops@example.com
   sudo ./scripts/install.sh --domain marsa.example.com --chart-version 0.1.0
+  sudo ./scripts/install.sh --agent --server-url https://10.0.0.5:6443 --token <node-token>
 
 ${C_BOLD}DNS${C_RESET}
   Point both <domain> and api.<domain> (or a wildcard *.<domain>) at this
@@ -105,6 +121,9 @@ require_arg_value() {
 
 while [ $# -gt 0 ]; do
   case "$1" in
+    --agent)         MODE="agent"; shift ;;
+    --server-url)    require_arg_value "$1" "${2:-}"; SERVER_URL="$2"; shift 2 ;;
+    --token)         require_arg_value "$1" "${2:-}"; TOKEN="$2"; shift 2 ;;
     --domain)        require_arg_value "$1" "${2:-}"; DOMAIN="$2"; shift 2 ;;
     --email)         require_arg_value "$1" "${2:-}"; EMAIL="$2"; shift 2 ;;
     --chart-version) require_arg_value "$1" "${2:-}"; CHART_VERSION="$2"; shift 2 ;;
@@ -118,16 +137,34 @@ done
 
 # --- Validation ---------------------------------------------------------------
 
-[ -n "$DOMAIN" ] || { usage; echo; die "--domain is required"; }
+if [ "$MODE" = "agent" ]; then
+  # Agent mode joins an existing cluster; it installs no chart, so the server-only
+  # flags are meaningless here. Reject them explicitly rather than silently ignore.
+  [ -z "$DOMAIN" ]        || die "--domain is not valid in --agent mode (agents don't serve the app)"
+  [ -z "$EMAIL" ]         || die "--email is not valid in --agent mode"
+  [ -z "$CHART_VERSION" ] || die "--chart-version is not valid in --agent mode"
+  [ "$TLS_ENABLED" = "true" ] || die "--no-tls is not valid in --agent mode"
 
-# Basic domain shape check: at least one dot, no scheme, no path.
-if ! printf '%s' "$DOMAIN" | grep -Eq '^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)+$'; then
-  die "--domain '$DOMAIN' does not look like a bare domain (e.g. marsa.example.com)"
-fi
+  [ -n "$SERVER_URL" ] || { usage; echo; die "--agent requires --server-url"; }
+  [ -n "$TOKEN" ]      || die "--agent requires --token (or set MARSA_K3S_TOKEN)"
 
-if [ -z "$EMAIL" ] && [ "$TLS_ENABLED" = "true" ]; then
-  EMAIL="admin@${DOMAIN}"
-  warn "No --email given; defaulting Let's Encrypt registration to ${EMAIL}"
+  # Shape check: K3s server URL must be https://<host>:<port> (the supervisor API
+  # on 6443 is TLS even on a bare IP — K3s ships its own PKI; the token pins the CA).
+  if ! printf '%s' "$SERVER_URL" | grep -Eq '^https://[a-zA-Z0-9._-]+:[0-9]+$'; then
+    die "--server-url '$SERVER_URL' must look like https://<host>:<port> (e.g. https://10.0.0.5:6443)"
+  fi
+else
+  [ -n "$DOMAIN" ] || { usage; echo; die "--domain is required"; }
+
+  # Basic domain shape check: at least one dot, no scheme, no path.
+  if ! printf '%s' "$DOMAIN" | grep -Eq '^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)+$'; then
+    die "--domain '$DOMAIN' does not look like a bare domain (e.g. marsa.example.com)"
+  fi
+
+  if [ -z "$EMAIL" ] && [ "$TLS_ENABLED" = "true" ]; then
+    EMAIL="admin@${DOMAIN}"
+    warn "No --email given; defaulting Let's Encrypt registration to ${EMAIL}"
+  fi
 fi
 
 # --- Pre-flight ---------------------------------------------------------------
@@ -180,6 +217,28 @@ install_k3s() {
     sleep 2
   done
   ok "K3s is up and the node is Ready"
+}
+
+install_k3s_agent() {
+  if require_cmd k3s && systemctl is-active --quiet k3s-agent 2>/dev/null; then
+    ok "K3s agent already installed and running — skipping"
+    return
+  fi
+  info "Joining the cluster at ${SERVER_URL} as a K3s agent"
+  # Agent install: same upstream installer as the server, but K3S_URL + K3S_TOKEN make
+  # it register as a worker. The token goes via the env var (not k3s's argv) so it does
+  # not leak into process listings on this node. Registration over 6443 is TLS — K3s
+  # generates its own PKI and the token pins the server's CA hash.
+  curl -sfL https://get.k3s.io | K3S_URL="$SERVER_URL" K3S_TOKEN="$TOKEN" sh -
+
+  info "Waiting for the K3s agent to start"
+  local tries=0
+  until systemctl is-active --quiet k3s-agent 2>/dev/null; do
+    tries=$((tries + 1))
+    [ "$tries" -ge 60 ] && die "K3s agent did not become active within ~2 minutes"
+    sleep 2
+  done
+  ok "K3s agent is up and has joined the cluster"
 }
 
 # --- Helm ---------------------------------------------------------------------
@@ -268,8 +327,37 @@ EOF
 EOF
   fi
 
+  local token_file="/var/lib/rancher/k3s/server/node-token" node_token="<node-token>"
+  [ -r "$token_file" ] && node_token="$(cat "$token_file")"
+
   cat <<EOF
+  • To add a worker node, run this on each new machine (token already filled in):
+
+      curl -fsSL https://raw.githubusercontent.com/marsa-cloud/marsa/main/scripts/install.sh \\
+        | sudo bash -s -- --agent \\
+            --server-url https://<private-ip>:6443 \\
+            --token ${node_token}
+
+    Replace <private-ip> with this server's address on the private network the
+    nodes share.
+  • Connect nodes over a private network — inter-node traffic is not encrypted by
+    default (see marsa-cloud/marsa#24).
   • Re-run this script with the same arguments at any time to update Marsa.
+EOF
+}
+
+agent_summary() {
+  cat <<EOF
+
+${C_GREEN}${C_BOLD}This node has joined the Marsa cluster.${C_RESET}
+
+  Server : ${SERVER_URL}
+
+Next steps:
+  • Verify the node is Ready by running this on the SERVER:
+      sudo k3s kubectl get nodes
+  • Inter-node traffic is not encrypted by default — keep nodes on a private
+    network (see marsa-cloud/marsa#24).
 EOF
 }
 
@@ -277,6 +365,14 @@ EOF
 
 main() {
   printf '%s%sMarsa installer%s\n' "$C_BOLD" "$C_BLUE" "$C_RESET"
+
+  if [ "$MODE" = "agent" ]; then
+    preflight "$@"
+    install_k3s_agent
+    agent_summary
+    return
+  fi
+
   preflight "$@"
   install_k3s
   install_helm
