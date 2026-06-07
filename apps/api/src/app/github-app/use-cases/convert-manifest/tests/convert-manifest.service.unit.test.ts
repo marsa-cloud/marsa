@@ -82,15 +82,28 @@ describe('ConvertManifestService', () => {
     expect(called).toBe(false)
   })
 
-  it('rejects a missing code', async () => {
+  it('rejects a missing or non-string code', async () => {
     const { service, signer } = build(() => Promise.resolve(CREDS))
 
     await expect(service.execute({ code: '', state: signer.sign() })).rejects.toThrow(/code/)
+    await expect(
+      service.execute({ code: 123 as unknown as string, state: signer.sign() }),
+    ).rejects.toThrow(/code/)
   })
 
-  it('maps a GitHub failure to a 502', async () => {
+  it('rejects a non-string state without throwing a 500', async () => {
+    const { service } = build(() => Promise.resolve(CREDS))
+
+    await expect(
+      service.execute({ code: 'code123', state: 42 as unknown as string }),
+    ).rejects.toThrow(/state/)
+  })
+
+  it('maps a GitHub failure to a 502 without leaking the upstream error', async () => {
     const { service, signer } = build(() => Promise.reject(new Error('boom')))
 
-    await expect(service.execute({ code: 'x', state: signer.sign() })).rejects.toThrow(/boom/)
+    await expect(service.execute({ code: 'x', state: signer.sign() })).rejects.toThrow(
+      /Could not complete GitHub App creation/,
+    )
   })
 })

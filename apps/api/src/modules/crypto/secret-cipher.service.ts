@@ -40,7 +40,7 @@ export class SecretCipherService {
 
   encrypt(plaintext: string): string {
     const iv = randomBytes(IV_LENGTH)
-    const cipher = createCipheriv(ALGORITHM, this.key, iv)
+    const cipher = createCipheriv(ALGORITHM, this.key, iv, { authTagLength: AUTH_TAG_LENGTH })
     const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()])
     const authTag = cipher.getAuthTag()
     return Buffer.concat([iv, authTag, ciphertext]).toString('base64')
@@ -54,7 +54,7 @@ export class SecretCipherService {
     const iv = data.subarray(0, IV_LENGTH)
     const authTag = data.subarray(IV_LENGTH, IV_LENGTH + AUTH_TAG_LENGTH)
     const ciphertext = data.subarray(IV_LENGTH + AUTH_TAG_LENGTH)
-    const decipher = createDecipheriv(ALGORITHM, this.key, iv)
+    const decipher = createDecipheriv(ALGORITHM, this.key, iv, { authTagLength: AUTH_TAG_LENGTH })
     decipher.setAuthTag(authTag)
     return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8')
   }

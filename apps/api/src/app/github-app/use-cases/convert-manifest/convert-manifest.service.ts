@@ -1,8 +1,11 @@
 import { EntityManager } from '@mikro-orm/core'
-import { BadGatewayException, BadRequestException, Injectable } from '@nestjs/common'
+import { BadGatewayException, BadRequestException, Injectable, Logger } from '@nestjs/common'
 
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
-import { GitHubManifestClient } from '#src/app/github-app/github-manifest.client.js'
+import {
+  type GitHubAppCredentials,
+  GitHubManifestClient,
+} from '#src/app/github-app/github-manifest.client.js'
 import { StateSigner } from '#src/app/github-app/state-signer.js'
 import { ConvertManifestRequest } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.request.js'
 import type { ConvertManifestResponse } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.response.js'
@@ -10,6 +13,8 @@ import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.j
 
 @Injectable()
 export class ConvertManifestService {
+  private readonly logger = new Logger(ConvertManifestService.name)
+
   constructor(
     private readonly em: EntityManager,
     private readonly stateSigner: StateSigner,
@@ -18,18 +23,20 @@ export class ConvertManifestService {
   ) {}
 
   async execute(request: ConvertManifestRequest): Promise<ConvertManifestResponse> {
-    if (!request.code) {
+    if (typeof request.code !== 'string' || request.code.length === 0) {
       throw new BadRequestException('code is required')
     }
-    if (!this.stateSigner.verify(request.state)) {
+    if (typeof request.state !== 'string' || !this.stateSigner.verify(request.state)) {
       throw new BadRequestException('invalid or expired state')
     }
 
-    let creds
+    let creds: GitHubAppCredentials
     try {
       creds = await this.client.convertManifest(request.code)
     } catch (error) {
-      throw new BadGatewayException((error as Error).message)
+      // Log the upstream detail server-side; don't leak GitHub's raw error to the client.
+      this.logger.error(`GitHub manifest conversion failed: ${(error as Error).message}`)
+      throw new BadGatewayException('Could not complete GitHub App creation with GitHub.')
     }
 
     const app = new GitHubApp()
