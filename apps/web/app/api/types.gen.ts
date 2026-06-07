@@ -12,6 +12,44 @@ export type GetApiInfoResponse = {
   uptimeSeconds: number
 }
 
+export type GetManifestResponse = {
+  /**
+   * GitHub App manifest — the FE posts this as the `manifest` form field.
+   */
+  manifest: {
+    [key: string]: unknown
+  }
+  /**
+   * Form action the FE submits the manifest to.
+   */
+  formAction: string
+  /**
+   * Signed CSRF state; echoed back by GitHub on the callback.
+   */
+  state: string
+}
+
+export type ConvertManifestRequest = {
+  /**
+   * Temporary code from the GitHub redirect.
+   */
+  code: string
+  /**
+   * Signed CSRF state echoed back by GitHub.
+   */
+  state: string
+}
+
+export type ConvertManifestResponse = {
+  appSlug: string
+  appName: string
+  htmlUrl: string
+  /**
+   * Where the operator installs the App on their repos (#23).
+   */
+  installUrl: string
+}
+
 export type GetApiInfoV1Data = {
   body?: never
   path?: never
@@ -24,3 +62,31 @@ export type GetApiInfoV1Responses = {
 }
 
 export type GetApiInfoV1Response = GetApiInfoV1Responses[keyof GetApiInfoV1Responses]
+
+export type GetGithubAppManifestV1Data = {
+  body?: never
+  path?: never
+  query?: never
+  url: '/api/v1/github-app/manifest'
+}
+
+export type GetGithubAppManifestV1Responses = {
+  200: GetManifestResponse
+}
+
+export type GetGithubAppManifestV1Response =
+  GetGithubAppManifestV1Responses[keyof GetGithubAppManifestV1Responses]
+
+export type ConvertGithubAppManifestV1Data = {
+  body: ConvertManifestRequest
+  path?: never
+  query?: never
+  url: '/api/v1/github-app/conversions'
+}
+
+export type ConvertGithubAppManifestV1Responses = {
+  200: ConvertManifestResponse
+}
+
+export type ConvertGithubAppManifestV1Response =
+  ConvertGithubAppManifestV1Responses[keyof ConvertGithubAppManifestV1Responses]

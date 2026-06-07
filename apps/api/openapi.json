@@ -22,6 +22,60 @@
           "status"
         ]
       }
+    },
+    "/api/v1/github-app/manifest": {
+      "get": {
+        "operationId": "getGithubAppManifestV1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetManifestResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "",
+        "tags": [
+          "github-app"
+        ]
+      }
+    },
+    "/api/v1/github-app/conversions": {
+      "post": {
+        "operationId": "convertGithubAppManifestV1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConvertManifestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConvertManifestResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "",
+        "tags": [
+          "github-app"
+        ]
+      }
     }
   },
   "info": {
@@ -64,6 +118,75 @@
           "commit",
           "nodeEnv",
           "uptimeSeconds"
+        ]
+      },
+      "GetManifestResponse": {
+        "type": "object",
+        "properties": {
+          "manifest": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "GitHub App manifest — the FE posts this as the `manifest` form field."
+          },
+          "formAction": {
+            "type": "string",
+            "example": "https://github.com/settings/apps/new?state=abc123",
+            "description": "Form action the FE submits the manifest to."
+          },
+          "state": {
+            "type": "string",
+            "description": "Signed CSRF state; echoed back by GitHub on the callback."
+          }
+        },
+        "required": [
+          "manifest",
+          "formAction",
+          "state"
+        ]
+      },
+      "ConvertManifestRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Temporary code from the GitHub redirect."
+          },
+          "state": {
+            "type": "string",
+            "description": "Signed CSRF state echoed back by GitHub."
+          }
+        },
+        "required": [
+          "code",
+          "state"
+        ]
+      },
+      "ConvertManifestResponse": {
+        "type": "object",
+        "properties": {
+          "appSlug": {
+            "type": "string",
+            "example": "marsa-demo-marsa-cc"
+          },
+          "appName": {
+            "type": "string",
+            "example": "marsa-demo.marsa.cc"
+          },
+          "htmlUrl": {
+            "type": "string",
+            "example": "https://github.com/apps/marsa-demo-marsa-cc"
+          },
+          "installUrl": {
+            "type": "string",
+            "description": "Where the operator installs the App on their repos (#23).",
+            "example": "https://github.com/apps/marsa-demo-marsa-cc/installations/new"
+          }
+        },
+        "required": [
+          "appSlug",
+          "appName",
+          "htmlUrl",
+          "installUrl"
         ]
       }
     }

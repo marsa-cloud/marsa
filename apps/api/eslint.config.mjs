@@ -5,7 +5,7 @@ import baseConfig from '../../eslint.config.mjs'
 
 export default tseslint.config(
   {
-    ignores: ['eslint.config.mjs', 'dist/**', 'coverage/**'],
+    ignores: ['eslint.config.mjs', 'dist/**', 'coverage/**', 'src/sql/migrations/**'],
   },
   ...baseConfig,
   ...tseslint.configs.recommendedTypeChecked,

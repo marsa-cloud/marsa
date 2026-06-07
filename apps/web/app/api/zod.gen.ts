@@ -10,4 +10,28 @@ export const zGetApiInfoResponse = z.object({
   uptimeSeconds: z.number(),
 })
 
+export const zGetManifestResponse = z.object({
+  manifest: z.record(z.string(), z.unknown()),
+  formAction: z.string(),
+  state: z.string(),
+})
+
+export const zConvertManifestRequest = z.object({
+  code: z.string(),
+  state: z.string(),
+})
+
+export const zConvertManifestResponse = z.object({
+  appSlug: z.string(),
+  appName: z.string(),
+  htmlUrl: z.string(),
+  installUrl: z.string(),
+})
+
 export const zGetApiInfoV1Response = zGetApiInfoResponse
+
+export const zGetGithubAppManifestV1Response = zGetManifestResponse
+
+export const zConvertGithubAppManifestV1Body = zConvertManifestRequest
+
+export const zConvertGithubAppManifestV1Response = zConvertManifestResponse

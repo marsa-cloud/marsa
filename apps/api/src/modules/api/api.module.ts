@@ -1,10 +1,11 @@
 import { MiddlewareConsumer, Module } from '@nestjs/common'
 
 import { AppModule } from '#src/app.module.js'
+import { GitHubAppModule } from '#src/app/github-app/github-app.module.js'
 import { StatusModule } from '#src/modules/status/status.module.js'
 
 @Module({
-  imports: [AppModule.forRoot([StatusModule])],
+  imports: [AppModule.forRoot([StatusModule, GitHubAppModule])],
 })
 export class ApiModule {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
