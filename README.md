@@ -27,6 +27,27 @@ Point both `marsa.example.com` and `api.marsa.example.com` (or `*.marsa.example.
 at the server's public IP first, so the HTTPS certificate can be issued. Re-running
 the same command updates an existing install.
 
+## Adding More Nodes
+
+To grow the cluster (e.g. to run your database on a separate server from the backend),
+join more worker nodes with the same installer in `--agent` mode. Run this on each new
+machine:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/marsa-cloud/marsa/main/scripts/install.sh \
+  | sudo bash -s -- --agent --server-url https://<private-ip>:6443 --token <node-token>
+```
+
+- `<private-ip>` — the original server's address on the private network the nodes share.
+- `<node-token>` — read from `/var/lib/rancher/k3s/server/node-token` on the server. The
+  server's install summary prints this command with the token already filled in.
+
+Verify the node joined by running `sudo k3s kubectl get nodes` on the server.
+
+> [!WARNING]
+> Connect nodes over a **private network**. Inter-node traffic is not encrypted by
+> default; encrypted networking is tracked in [#24](https://github.com/marsa-cloud/marsa/issues/24).
+
 ## Current Status
 
 Early prototype / MVP phase.

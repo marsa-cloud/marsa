@@ -42,9 +42,43 @@ The first end-to-end run on a real VPS (now that the chart is published as `0.0.
 - **`--atomic` → `--rollback-on-failure`; Helm floor 3.8 → 3.18.** Helm 3.18 renamed `--atomic` to `--rollback-on-failure` and Helm 4 removed `--atomic` outright. Rather than feature-detect, we always use `--rollback-on-failure` and raise `MIN_HELM_MINOR` to 18 so the flag is guaranteed present (3.18 still satisfies the OCI ≥3.8 requirement). `get-helm-3` installs ≥3.18 as current stable, so fresh installs are unaffected.
 - **Distribution URL → GitHub raw, not the OVH vanity redirect.** The README's `https://get.marsa.gomaa.ovh` resolves to an OVH web-redirect that only listens on port 80 (no TLS cert), so `https://` reset the connection before the script was even fetched. The README now points at `https://raw.githubusercontent.com/marsa-cloud/marsa/main/scripts/install.sh` (real TLS, zero infra). A pretty vanity URL over HTTPS is deferred to the real-domain purchase (#49) — via a TLS-terminating proxy (e.g. Cloudflare), not OVH's free redirect.
 
+## Amendment — 2026-06-07 (#29): `--agent` mode to join worker nodes
+
+The installer was server-only — it could stand up a single K3s server but offered no
+first-class way to add nodes (issue #29: e.g. running the DB on a separate server from the
+backend). The only prior support was copy-paste guidance text. This amendment adds a join
+mode to the **same script**, extending AgDR-0003's "one bash script provisions the cluster"
+decision to "…and joins nodes to it".
+
+- **`--agent --server-url <url> --token <token>` installs K3s as an agent**, not a server.
+  Mode is selected by a `MODE` variable (`server` default). Agent mode runs a much shorter
+  path — `preflight → install_k3s_agent → agent_summary` — with **no Helm, no chart, no
+  domain/TLS** (a worker node serves none of the app). The existing server path is unchanged
+  except that `summary()` now prints a ready-to-paste `install.sh --agent` join command.
+- **Mode-aware validation.** Server mode still requires `--domain`. Agent mode requires
+  `--server-url` (shape-checked `https://<host>:<port>`) + `--token`, and **rejects** the
+  server-only flags (`--domain` / `--email` / `--no-tls` / `--chart-version`) rather than
+  silently ignoring them.
+- **Token handling.** The token is passed to the K3s installer as the **`K3S_TOKEN` env
+  var**, not on `k3s`'s argv, so it doesn't leak into process listings on the node. The
+  script also accepts the token from `MARSA_K3S_TOKEN` (env) as an alternative to `--token`
+  to keep it out of shell history / the script's own argv.
+- **Server IP stays a placeholder** in the printed join command (`<private-ip>`): the server
+  can't reliably tell which of its interfaces is the private one, so auto-detecting risks
+  emitting a public IP. The node-token *is* auto-substituted (unambiguous, read from
+  `/var/lib/rancher/k3s/server/node-token`).
+- **Inter-node encryption deferred to #24 ("Marsa Networking within Apps").** The K3s
+  control plane (node registration on 6443) is already TLS — K3s ships its own PKI and the
+  token pins the server CA. But the pod/service **data plane** (flannel VXLAN overlay) is
+  plaintext by default. Rather than bundle an encryption strategy (wireguard-native flannel /
+  linkerd / cert-manager / host VPN) into this feature, the MVP **assumes a private network**
+  and documents that constraint with a warning; #24 owns the post-MVP encryption decision.
+
 ## Artifacts
 
-- Issue: marsa-cloud/marsa#16, marsa-cloud/marsa#50 (amendment)
+- Issue: marsa-cloud/marsa#16, marsa-cloud/marsa#50 (amendment), marsa-cloud/marsa#29 (agent mode)
 - PR: marsa-cloud/marsa#48
 - File: `scripts/install.sh`
-- Related: marsa-charts README § Target platform / Install; marsa-charts AgDR-0003 (OCI distribution), AgDR-0004 (subchart/anti-scope), AgDR-0005 (public-ingress TLS).
+- Related: marsa-cloud/marsa#24 (inter-node encryption, deferred); marsa-charts README
+  § Target platform / Install; marsa-charts AgDR-0003 (OCI distribution), AgDR-0004
+  (subchart/anti-scope), AgDR-0005 (public-ingress TLS).
