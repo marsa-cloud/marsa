@@ -15,10 +15,10 @@ Three layers, all driven by Vitest + `@nuxt/test-utils`:
 | Layer | Where | Environment | How |
 |---|---|---|---|
 | Unit | `app/<area>/__tests__/*.spec.ts` | `node` (default) | plain Vitest; import the function and assert |
-| Component | `app/components/__tests__/*.spec.ts` | `nuxt` (per-file directive) | first line: `// @vitest-environment nuxt`, then `mountSuspended` from `@nuxt/test-utils/runtime` |
+| Component / Nuxt | `app/**/__tests__/*.nuxt.spec.ts` | `nuxt` (by filename) | name the file `*.nuxt.spec.ts`, then use `mountSuspended` / `mockNuxtImport` from `@nuxt/test-utils/runtime` |
 | E2E | `tests/e2e/*.spec.ts` | booted Nuxt + Chromium | `setup()` + `$fetch` (HTTP) or `createPage` (Playwright) from `@nuxt/test-utils/e2e` |
 
-**The `// @vitest-environment nuxt` directive is the easy-to-forget gotcha.** It must be the first line of any file that uses `mountSuspended`, `mockNuxtImport`, or Nuxt auto-imports. Without it, Vitest runs the file in the plain Node environment and Nuxt helpers fail with confusing errors.
+**Nuxt-environment tests are selected by the `*.nuxt.spec.ts` filename (since `@nuxt/test-utils` v4).** Any test using `mountSuspended`, `mockNuxtImport`, or Nuxt auto-imports must be named `*.nuxt.spec.ts`. v4's `defineVitestConfig` splits the run into a **nuxt** project (globs `**/*.nuxt.spec.ts`) and a **node** project (everything else). The old v3 first-line `// @vitest-environment nuxt` directive **no longer routes files** — a misnamed file silently lands in the node project, where the Nuxt helpers fail with confusing errors. Pure-logic specs (no Nuxt helpers) stay plain `*.spec.ts` and run in node.
 
 ### Commands
 

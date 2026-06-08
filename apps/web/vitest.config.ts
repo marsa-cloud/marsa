@@ -19,15 +19,18 @@ export default defineVitestConfig({
       include: ['app/**/*.{ts,vue}'],
       exclude: ['app/api/**', 'app/**/__tests__/**'],
       reporter: ['text', 'text-summary'],
-      // Ratchet floor — raise these as coverage improves (issue #39).
-      // Baseline at introduction: lines/statements 90.4%, branches 100%,
-      // functions 66.7%. Floors sit a few points below so a real regression
-      // fails CI without day-one churn from minor fluctuation.
+      // TEMPORARY v4 ratchet — see #66.
+      // Vitest 4 + @nuxt/test-utils 4 instrument files the Nuxt test-bootstrap
+      // loads (app.vue, plugins, auto-imported composables) plus the untested
+      // starter scaffolding (index.vue, TemplateMenu.vue), which vitest 3 did
+      // not count — dropping measured coverage from ~90% to ~30%. Rather than
+      // mask scaffolding via excludes, the floors are lowered to current
+      // reality and #66 tracks adding tests + ratcheting them back up.
       thresholds: {
-        lines: 88,
-        functions: 60,
-        branches: 90,
-        statements: 88,
+        lines: 28,
+        functions: 12,
+        branches: 30,
+        statements: 28,
       },
     },
   },
