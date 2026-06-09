@@ -3,7 +3,7 @@ import { afterEach, before, describe, it } from 'node:test'
 import { expect } from 'expect'
 import sinon from 'sinon'
 
-import { GitHubManifestClient } from '#src/app/github-app/github-manifest.client.js'
+import { GitHubManifestClient } from '#src/modules/github-client/github-manifest.client.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 function fakeResponse(init: Partial<Response> & { json?: () => Promise<unknown> }): Response {

@@ -1,19 +1,7 @@
 import { Injectable } from '@nestjs/common'
 
-const GITHUB_API = 'https://api.github.com'
-
-/** Normalised credentials returned by the manifest conversion. */
-export interface GitHubAppCredentials {
-  id: number
-  slug: string
-  name: string
-  htmlUrl: string
-  ownerLogin: string | null
-  clientId: string
-  clientSecret: string
-  webhookSecret: string
-  pem: string
-}
+import { GITHUB_API } from '#src/modules/github-client/github-client.constants.js'
+import type { GitHubAppCredentials } from '#src/modules/github-client/github-client.types.js'
 
 interface ConversionResponse {
   id: number
