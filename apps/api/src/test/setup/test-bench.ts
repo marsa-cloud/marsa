@@ -1,7 +1,7 @@
 import { after } from 'node:test'
 
 import { MikroORM } from '@mikro-orm/core'
-import { DynamicModule, Type, VersioningType } from '@nestjs/common'
+import { DynamicModule, Type, ValidationPipe, VersioningType } from '@nestjs/common'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import { Test, TestingModule } from '@nestjs/testing'
 import qs from 'qs'
@@ -89,6 +89,9 @@ export class TestBench {
 
     app.setGlobalPrefix('api')
     app.enableVersioning({ type: VersioningType.URI })
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }),
+    )
 
     await app.init()
     await app.getHttpAdapter().getInstance().ready()

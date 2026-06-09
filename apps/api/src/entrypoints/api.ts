@@ -1,4 +1,4 @@
-import { VersioningType } from '@nestjs/common'
+import { ValidationPipe, VersioningType } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import QueryString from 'qs'
@@ -23,6 +23,9 @@ async function bootstrap(): Promise<void> {
   app.enableVersioning({
     type: VersioningType.URI,
   })
+  app.useGlobalPipes(
+    new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }),
+  )
 
   await app.listen(Number(process.env.PORT) || 3000, '0.0.0.0')
 }
