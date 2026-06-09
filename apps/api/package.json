@@ -32,6 +32,7 @@
   "dependencies": {
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
+    "@nestjs/config": "catalog:",
     "@nestjs/platform-express": "catalog:",
     "@nestjs/swagger": "catalog:",
     "@nestjs/platform-fastify": "^11.1.21",
@@ -42,7 +43,10 @@
     "@swc/cli": "^0.8.1",
     "@swc/core": "^1.15.33",
     "@types/qs": "^6.15.1",
+    "class-transformer": "catalog:",
+    "class-validator": "catalog:",
     "fastify": "^5.8.5",
+    "joi": "catalog:",
     "pg": "^8.21.0",
     "qs": "^6.15.2",
     "reflect-metadata": "catalog:",
