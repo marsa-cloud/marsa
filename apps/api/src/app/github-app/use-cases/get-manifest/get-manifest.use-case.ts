@@ -1,20 +1,21 @@
-import { Injectable } from '@nestjs/common'
+import { Inject, Injectable } from '@nestjs/common'
 
-import { GitHubAppConfig } from '#src/app/github-app/github-app.config.js'
+import { type GitHubAppConfig, githubAppConfig } from '#src/app/github-app/github-app.config.js'
+import type { GitHubAppManifest } from '#src/app/github-app/github-app.types.js'
 import { StateSigner } from '#src/app/github-app/state-signer.js'
-import type { GetManifestResponse } from '#src/app/github-app/use-cases/get-manifest/get-manifest.response.js'
+import { GetManifestResponse } from '#src/app/github-app/use-cases/get-manifest/get-manifest.response.js'
 
 @Injectable()
-export class GetManifestService {
+export class GetManifestUseCase {
   constructor(
-    private readonly config: GitHubAppConfig,
+    @Inject(githubAppConfig.KEY) private readonly config: GitHubAppConfig,
     private readonly stateSigner: StateSigner,
   ) {}
 
   execute(): GetManifestResponse {
     const state = this.stateSigner.sign()
 
-    const manifest: Record<string, unknown> = {
+    const manifest: GitHubAppManifest = {
       name: appName(this.config.webUrl),
       url: this.config.webUrl,
       hook_attributes: { url: this.config.webhookUrl },
@@ -28,7 +29,7 @@ export class GetManifestService {
 
     const formAction = `https://github.com/settings/apps/new?state=${encodeURIComponent(state)}`
 
-    return { manifest, formAction, state }
+    return new GetManifestResponse(manifest, formAction, state)
   }
 }
 
