@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common'
 
-import { GitHubAppSharedModule } from '#src/app/github-app/github-app-shared.module.js'
+import { StateSigner } from '#src/app/github-app/state-signer.js'
 import { ConvertManifestController } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.controller.js'
-import { ConvertManifestService } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.service.js'
+import { ConvertManifestUseCase } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.use-case.js'
+import { GitHubClientModule } from '#src/modules/github-client/github-client.module.js'
 
 @Module({
-  imports: [GitHubAppSharedModule],
+  imports: [GitHubClientModule],
   controllers: [ConvertManifestController],
-  providers: [ConvertManifestService],
+  providers: [ConvertManifestUseCase, StateSigner],
 })
 export class ConvertManifestModule {}

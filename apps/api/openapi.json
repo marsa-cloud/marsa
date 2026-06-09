@@ -54,7 +54,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ConvertManifestRequest"
+                "$ref": "#/components/schemas/ConvertManifestCommand"
               }
             }
           }
@@ -144,7 +144,7 @@
           "state"
         ]
       },
-      "ConvertManifestRequest": {
+      "ConvertManifestCommand": {
         "type": "object",
         "properties": {
           "code": {

@@ -4,13 +4,11 @@ import { EntityManager } from '@mikro-orm/core'
 import { expect } from 'expect'
 
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
-import {
-  type GitHubAppCredentials,
-  GitHubManifestClient,
-} from '#src/app/github-app/github-manifest.client.js'
 import { StateSigner } from '#src/app/github-app/state-signer.js'
-import { ConvertManifestService } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.service.js'
+import { ConvertManifestUseCase } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.use-case.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
+import type { GitHubAppCredentials } from '#src/modules/github-client/github-client.types.js'
+import { GitHubManifestClient } from '#src/modules/github-client/github-manifest.client.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 const CREDS: GitHubAppCredentials = {
@@ -33,17 +31,17 @@ function build(convert: () => Promise<GitHubAppCredentials>) {
     fork: () => ({ persistAndFlush: (e: GitHubApp) => Promise.resolve(void persisted.push(e)) }),
   } as unknown as EntityManager
   const client = { convertManifest: convert } as unknown as GitHubManifestClient
-  const service = new ConvertManifestService(em, signer, client, cipher)
-  return { service, signer, cipher, persisted }
+  const usecase = new ConvertManifestUseCase(em, signer, client, cipher)
+  return { usecase, signer, cipher, persisted }
 }
 
-describe('ConvertManifestService', () => {
+describe('ConvertManifestUseCase', () => {
   before(() => TestBench.setupUnitTest())
 
   it('persists encrypted credentials and returns a sanitized response', async () => {
-    const { service, signer, cipher, persisted } = build(() => Promise.resolve(CREDS))
+    const { usecase, signer, cipher, persisted } = build(() => Promise.resolve(CREDS))
 
-    const result = await service.execute({ code: 'code123', state: signer.sign() })
+    const result = await usecase.execute({ code: 'code123', state: signer.sign() })
 
     expect(result).toEqual({
       appSlug: 'marsa-x',
@@ -62,47 +60,47 @@ describe('ConvertManifestService', () => {
   })
 
   it('persists a null ownerLogin as undefined', async () => {
-    const { service, signer, persisted } = build(() =>
+    const { usecase, signer, persisted } = build(() =>
       Promise.resolve({ ...CREDS, ownerLogin: null }),
     )
 
-    await service.execute({ code: 'code123', state: signer.sign() })
+    await usecase.execute({ code: 'code123', state: signer.sign() })
 
     expect(persisted[0].ownerLogin).toBeUndefined()
   })
 
   it('rejects an invalid state before calling GitHub', async () => {
     let called = false
-    const { service } = build(() => {
+    const { usecase } = build(() => {
       called = true
       return Promise.resolve(CREDS)
     })
 
-    await expect(service.execute({ code: 'code123', state: 'bad' })).rejects.toThrow(/state/)
+    await expect(usecase.execute({ code: 'code123', state: 'bad' })).rejects.toThrow(/state/)
     expect(called).toBe(false)
   })
 
   it('rejects a missing or non-string code', async () => {
-    const { service, signer } = build(() => Promise.resolve(CREDS))
+    const { usecase, signer } = build(() => Promise.resolve(CREDS))
 
-    await expect(service.execute({ code: '', state: signer.sign() })).rejects.toThrow(/code/)
+    await expect(usecase.execute({ code: '', state: signer.sign() })).rejects.toThrow(/code/)
     await expect(
-      service.execute({ code: 123 as unknown as string, state: signer.sign() }),
+      usecase.execute({ code: 123 as unknown as string, state: signer.sign() }),
     ).rejects.toThrow(/code/)
   })
 
   it('rejects a non-string state without throwing a 500', async () => {
-    const { service } = build(() => Promise.resolve(CREDS))
+    const { usecase } = build(() => Promise.resolve(CREDS))
 
     await expect(
-      service.execute({ code: 'code123', state: 42 as unknown as string }),
+      usecase.execute({ code: 'code123', state: 42 as unknown as string }),
     ).rejects.toThrow(/state/)
   })
 
   it('maps a GitHub failure to a 502 without leaking the upstream error', async () => {
-    const { service, signer } = build(() => Promise.reject(new Error('boom')))
+    const { usecase, signer } = build(() => Promise.reject(new Error('boom')))
 
-    await expect(service.execute({ code: 'x', state: signer.sign() })).rejects.toThrow(
+    await expect(usecase.execute({ code: 'x', state: signer.sign() })).rejects.toThrow(
       /Could not complete GitHub App creation/,
     )
   })
