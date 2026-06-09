@@ -1,45 +1,55 @@
-import { Injectable } from '@nestjs/common'
+import { type ConfigType, registerAs } from '@nestjs/config'
+import Joi from 'joi'
 
-function required(name: string): string {
-  const value = process.env[name]
-  if (!value) {
-    throw new Error(`${name} is not set`)
-  }
-  return value.replace(/\/+$/, '')
+const WEBHOOK_PATH = '/api/v1/github-app/webhooks'
+const REDIRECT_PATH = '/setup/github/callback'
+const OAUTH_CALLBACK_PATH = '/auth/github/callback'
+
+interface GitHubAppEnv {
+  MARSA_WEB_URL: string
+  MARSA_API_PUBLIC_URL: string
 }
 
+const schema = Joi.object<GitHubAppEnv, true>({
+  MARSA_WEB_URL: Joi.string().uri().required(),
+  MARSA_API_PUBLIC_URL: Joi.string().uri().required(),
+})
+
 /**
- * Public URLs for this install, used to build the GitHub App manifest.
+ * GitHub App provisioning config (namespace `githubApp`).
  *
- * - `webUrl` — the operator-facing origin (e.g. https://demo.marsa.cc).
- * - `apiPublicUrl` — the publicly-reachable API origin GitHub posts webhooks to
- *   (e.g. https://api.demo.marsa.cc, or an ngrok/cloudflared tunnel in dev).
- *
- * Both fail fast at construction if unset. Chart wiring of these env vars is a
- * marsa-charts follow-up (AgDR-0006).
+ * Validates the install's two public-URL env vars with Joi at boot (fail-fast on
+ * a missing or non-URI value) and derives the manifest webhook / redirect /
+ * oauth-callback URLs. Injected via `@Inject(githubAppConfig.KEY)` through
+ * `ConfigModule.forFeature`. A global env-validation schema and migrating the
+ * other ad-hoc `process.env` reads are deferred — see AgDR-0008. Chart wiring of
+ * these env vars is a marsa-charts follow-up (AgDR-0006).
  */
-@Injectable()
-export class GitHubAppConfig {
-  readonly webUrl: string
-  readonly apiPublicUrl: string
-
-  constructor() {
-    this.webUrl = required('MARSA_WEB_URL')
-    this.apiPublicUrl = required('MARSA_API_PUBLIC_URL')
+export const githubAppConfig = registerAs('githubApp', () => {
+  const { error } = schema.validate({
+    MARSA_WEB_URL: process.env.MARSA_WEB_URL,
+    MARSA_API_PUBLIC_URL: process.env.MARSA_API_PUBLIC_URL,
+  })
+  if (error) {
+    throw new Error(`Invalid github-app config: ${error.message}`)
   }
 
-  /** GitHub posts push/webhook events here (receiver built in #23). */
-  get webhookUrl(): string {
-    return `${this.apiPublicUrl}/api/v1/github-app/webhooks`
-  }
+  // Validated above as required URIs; read the raw env directly since Joi's
+  // returned `value` is loosely typed as `any`.
+  const webUrl = stripTrailingSlash(process.env.MARSA_WEB_URL ?? '')
+  const apiPublicUrl = stripTrailingSlash(process.env.MARSA_API_PUBLIC_URL ?? '')
 
-  /** Manifest conversion redirect — GitHub returns the browser here with ?code&state. */
-  get redirectUrl(): string {
-    return `${this.webUrl}/setup/github/callback`
+  return {
+    webUrl,
+    apiPublicUrl,
+    webhookUrl: `${apiPublicUrl}${WEBHOOK_PATH}`,
+    redirectUrl: `${webUrl}${REDIRECT_PATH}`,
+    oauthCallbackUrl: `${webUrl}${OAUTH_CALLBACK_PATH}`,
   }
+})
 
-  /** OAuth user-authorization callback — declared now so #22 login needs no re-registration. */
-  get oauthCallbackUrl(): string {
-    return `${this.webUrl}/auth/github/callback`
-  }
+export type GitHubAppConfig = ConfigType<typeof githubAppConfig>
+
+function stripTrailingSlash(url: string): string {
+  return url.replace(/\/+$/, '')
 }
