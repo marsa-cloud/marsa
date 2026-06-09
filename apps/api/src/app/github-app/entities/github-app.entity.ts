@@ -12,25 +12,28 @@ import { Entity, PrimaryKey, Property } from '@mikro-orm/core'
  */
 @Entity({ tableName: 'github_app' })
 export class GitHubApp {
+  // Application-generated UUID (not a DB-side default): MikroORM assigns `id` on
+  // instantiation via randomUUID(), so the row carries its key before flush — no
+  // DB round-trip to learn it, and no autoincrement/serial sequence to coordinate.
   @PrimaryKey({ type: 'uuid' })
   id: string = randomUUID()
 
-  @Property()
+  @Property({ type: 'string', length: 255 })
   githubAppId!: string
 
-  @Property()
+  @Property({ type: 'string', length: 255 })
   slug!: string
 
-  @Property()
+  @Property({ type: 'string', length: 255 })
   name!: string
 
-  @Property()
+  @Property({ type: 'string', length: 255 })
   htmlUrl!: string
 
-  @Property({ nullable: true })
+  @Property({ type: 'string', length: 255, nullable: true })
   ownerLogin?: string
 
-  @Property()
+  @Property({ type: 'string', length: 255 })
   clientId!: string
 
   @Property({ type: 'text' })
@@ -42,9 +45,9 @@ export class GitHubApp {
   @Property({ type: 'text' })
   privateKeyPemEnc!: string
 
-  @Property()
+  @Property({ type: 'datetime' })
   createdAt: Date = new Date()
 
-  @Property({ onUpdate: () => new Date() })
+  @Property({ type: 'datetime', onUpdate: () => new Date() })
   updatedAt: Date = new Date()
 }
