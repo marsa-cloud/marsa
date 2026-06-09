@@ -14,6 +14,3 @@ apps/web/**
 
 # Generated / committed artifacts — do not reformat
 apps/api/openapi.json
-
-# MikroORM-generated migrations — emitted with the ORM's own style
-apps/api/src/sql/migrations/**

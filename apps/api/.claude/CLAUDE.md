@@ -12,6 +12,7 @@ ORM is **MikroORM v6** (`@mikro-orm/postgresql`). Config at `src/sql/mikro-orm.c
 - Use `orm.migrator` not `orm.getMigrator()` (deprecated in v6).
 - `pathTs`/`entitiesTs` are unnecessary — CLI runs against compiled `dist/` output, config path passed via `--config` in each migration script.
 - Feature modules register entities with `MikroOrmModule.forFeature([Entity])`. `DatabaseModule` is global so `MikroORM` and `EntityManager` are available everywhere.
+- **No bare `@Property()`.** Every column declares explicit options — at minimum `type`, plus `nullable` / `length` / `unique` / `default` where they apply — so the entity is the readable source of truth for the table and doesn't silently couple the column to the field's inferred TS type. Handbook: `handbooks/domain/marsa-api/mikroorm-property-options.md`.
 - Test isolation: `TestSetup` forks the EM (`orm.em.fork()`), opens a transaction in `initialize()`, rolls back in `teardown()`.
 - `global-setup.ts` runs migrations by booting via `compileTestModule` and getting `MikroORM` from DI — not via a direct `MikroORM.init()` outside the module system.
 
@@ -63,20 +64,23 @@ src/app/<feature>/
   use-cases/
     <use-case>/
       <use-case>.module.ts       # use-case wiring
-      <use-case>.controller.ts   # one controller per use-case
-      <use-case>.service.ts
-      <use-case>.response.ts     # response DTO
+      <use-case>.controller.ts   # one controller per use-case; injects the use-case
+      <use-case>.use-case.ts     # application logic — class <Action>UseCase
+      <use-case>.command.ts      # input DTO — class <Action>Command
+      <use-case>.response.ts     # output DTO — class <Action>Response (with a constructor)
       tests/
-        <use-case>.service.unit.test.ts
+        <use-case>.use-case.unit.test.ts
         <use-case>.e2e.test.ts
-  entities/                       # feature-owned domain entities
+  entities/                       # feature-owned domain entities (+ <entity>.builder.ts for complex ones)
   errors/                         # feature-specific error types
   ...                             # repositories, events, value objects, etc. as needed
 ```
 
 Conventions:
 
-- One controller per use-case folder; the controller delegates to a service.
+- **Name after the folder, not the transport.** The application class is `<Action>UseCase` (file `<use-case>.use-case.ts`), **not** `<Action>Service` — the folder is `use-cases/`, and `…Service` is reserved for shared support code under `src/modules/`. The input DTO is `<action>.command.ts` exporting `<Action>Command`, **not** `.request.ts` / `…Request`. The controller keeps `…Controller`, injects the use-case as `private readonly usecase: <Action>UseCase`, and delegates to it. Handbook: `handbooks/domain/marsa-api/use-case-naming.md`.
+- **Response DTOs declare a constructor** and are returned via `new <Action>Response(...)` — never an object-literal cast (`{ … } as <Action>Response`) or field-by-field mutation. Handbook: `handbooks/domain/marsa-api/response-constructors.md`.
+- **Build complex entities (≈5+ fields, or any secret-bearing) via a `<Entity>Builder`** (`entities/<entity>.builder.ts`, fluent `withX().build()`), not inline field assignment in the use-case. Handbook: `handbooks/domain/marsa-api/entity-builder.md`.
 - Use-cases have their own `*.module.ts`; the feature's `<feature>.module.ts` imports its use-case modules.
 - Feature-internal code (entities, errors, etc.) stays inside the feature folder. If something needs to be shared across features, promote it to `src/modules/` or a workspace package — don't reach into another feature.
 - Tests sit in `tests/` next to the code they cover, with `.unit.test.ts` and `.e2e.test.ts` suffixes.
