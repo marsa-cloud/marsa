@@ -52,17 +52,17 @@ describe('SecretCipherService', () => {
     const bytes = Buffer.from(token, 'base64')
     bytes[bytes.length - 1] ^= 0x01
 
-    expect(() => cipher.decrypt(bytes.toString('base64'))).toThrow()
+    expect(() => cipher.decrypt(bytes.toString('base64'))).toThrow(/authenticate/)
   })
 
   it('throws when decrypting with the wrong key', () => {
     const token = withKey(KEY_A).encrypt('secret')
 
-    expect(() => withKey(KEY_B).decrypt(token)).toThrow()
+    expect(() => withKey(KEY_B).decrypt(token)).toThrow(/authenticate/)
   })
 
   it('throws on a token that is too short', () => {
-    const cipher = withKey(KEY_A)
+
 
     expect(() => cipher.decrypt(Buffer.alloc(4).toString('base64'))).toThrow(/too short/)
   })
