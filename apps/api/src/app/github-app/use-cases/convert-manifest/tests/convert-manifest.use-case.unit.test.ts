@@ -1,6 +1,6 @@
 import { before, describe, it } from 'node:test'
 
-import { EntityManager } from '@mikro-orm/core'
+import { EntityManager, UniqueConstraintViolationException } from '@mikro-orm/core'
 import { expect } from 'expect'
 
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
@@ -31,7 +31,14 @@ const VALID_STATE = 'valid-state'
 const command = (code: string, state: string = VALID_STATE) =>
   new ConvertManifestCommandBuilder().withCode(code).withState(state).build()
 
-function build(convert: () => Promise<GitHubAppCredentials>, existing: GitHubApp | null = null) {
+// `raceWinner`, when set, simulates a lost insert race: findOne sees no row, the
+// insert throws a unique-violation, and the retry's findOneOrFail returns the row
+// a concurrent request inserted.
+function build(
+  convert: () => Promise<GitHubAppCredentials>,
+  existing: GitHubApp | null = null,
+  raceWinner: GitHubApp | null = null,
+) {
   const manifestState = {
     consume: (s: string) => Promise.resolve(s === VALID_STATE),
     issue: () => Promise.resolve(VALID_STATE),
@@ -41,9 +48,16 @@ function build(convert: () => Promise<GitHubAppCredentials>, existing: GitHubApp
   const em = {
     fork: () => ({
       findOne: () => Promise.resolve(existing),
-      persistAndFlush: (e: GitHubApp) => Promise.resolve(void persisted.push(e)),
+      findOneOrFail: () => Promise.resolve(raceWinner),
+      persistAndFlush: (e: GitHubApp) => {
+        if (raceWinner) {
+          return Promise.reject(new UniqueConstraintViolationException(new Error('duplicate key')))
+        }
+        return Promise.resolve(void persisted.push(e))
+      },
       assign: (target: GitHubApp, data: Partial<GitHubApp>) => Object.assign(target, data),
       flush: () => Promise.resolve(),
+      clear: () => {},
     }),
   } as unknown as EntityManager
   const client = { convertManifest: convert } as unknown as GitHubManifestClient
@@ -130,5 +144,17 @@ describe('ConvertManifestUseCase', () => {
     expect(persisted).toHaveLength(0)
     expect(existing.slug).toBe('marsa-x')
     expect(cipher.decrypt(existing.clientSecretEnc)).toBe('csecret')
+  })
+
+  it('recovers from a lost insert race by updating the winning row', async () => {
+    const raceWinner = new GitHubApp()
+    raceWinner.githubAppId = '555'
+    raceWinner.slug = 'stale-slug'
+    const { usecase, cipher } = build(() => Promise.resolve(CREDS), null, raceWinner)
+
+    await usecase.execute(command('code123'))
+
+    expect(raceWinner.slug).toBe('marsa-x')
+    expect(cipher.decrypt(raceWinner.clientSecretEnc)).toBe('csecret')
   })
 })

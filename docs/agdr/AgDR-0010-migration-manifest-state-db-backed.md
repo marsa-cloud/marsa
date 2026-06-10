@@ -105,4 +105,4 @@ Deploy-order constraint: none — additive; api ships the migration with the cod
 - Supersedes: [AgDR-0006](AgDR-0006-github-app-credential-storage.md) (the `state` option row only — encryption-at-rest and the rest of AgDR-0006 stand)
 - Builds on: [AgDR-0007](AgDR-0007-migration-github-app-table.md) (the original `github_app` table migration)
 - Enables: marsa-cloud/marsa#22 (session-bound provisioning)
-- Commits / PRs: PR #64 (filled in as the migration ships)
+- Commits / PRs: PR #64

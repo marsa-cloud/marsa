@@ -1,4 +1,4 @@
-import { EntityManager } from '@mikro-orm/core'
+import { EntityManager, UniqueConstraintViolationException } from '@mikro-orm/core'
 import { BadGatewayException, BadRequestException, Injectable, Logger } from '@nestjs/common'
 
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
@@ -52,11 +52,10 @@ export class ConvertManifestUseCase {
       .build()
 
     // fork() gives a clean EM independent of request-context middleware.
-    // Idempotent on github_app_id (also DB-guarded by a UNIQUE constraint): a
+    // Idempotent on github_app_id (DB-guarded by a UNIQUE constraint): a
     // re-provision updates the existing row instead of inserting a duplicate.
     const em = this.em.fork()
-    const existing = await em.findOne(GitHubApp, { githubAppId })
-    if (existing) {
+    const applyCredsTo = async (existing: GitHubApp): Promise<void> => {
       em.assign(existing, {
         slug: app.slug,
         name: app.name,
@@ -68,8 +67,22 @@ export class ConvertManifestUseCase {
         privateKeyPemEnc: app.privateKeyPemEnc,
       })
       await em.flush()
+    }
+
+    const existing = await em.findOne(GitHubApp, { githubAppId })
+    if (existing) {
+      await applyCredsTo(existing)
     } else {
-      await em.persistAndFlush(app)
+      try {
+        await em.persistAndFlush(app)
+      } catch (error) {
+        // Lost a concurrent insert race on github_app_id — re-resolve as an update.
+        if (!(error instanceof UniqueConstraintViolationException)) {
+          throw error
+        }
+        em.clear()
+        await applyCredsTo(await em.findOneOrFail(GitHubApp, { githubAppId }))
+      }
     }
 
     return new ConvertManifestResponse(
