@@ -68,6 +68,7 @@ src/app/<feature>/
       <use-case>.use-case.ts     # application logic — class <Action>UseCase
       <use-case>.command.ts      # input DTO — class <Action>Command
       <use-case>.command.builder.ts # test-side builder for the command
+      <use-case>.repository.ts   # use-case-scoped DB access (wraps a forked EM)
       <use-case>.response.ts     # output DTO — class <Action>Response (with a constructor)
       tests/
         <use-case>.use-case.unit.test.ts
@@ -84,10 +85,11 @@ Conventions:
 - **Build every entity via a `<Entity>Builder`** (`entities/<entity>.builder.ts`, fluent `withX().build()`) — never inline field assignment, no field-count threshold. Handbook: `handbooks/domain/marsa-api/entity-builder.md`.
 - **Commands** are class-validator DTOs Nest deserialises from the request body; on the request path you never hand-build them. For constructing a command in **tests**, use a `<Action>CommandBuilder` (`<use-case>.command.builder.ts`) instead of inline object literals. Handbook: `handbooks/domain/marsa-api/command-builder.md`.
 - **Validate at the DTO boundary** — presence/type/shape checks live on the command DTO as `class-validator` decorators (`@IsString()`, `@IsNotEmpty()`, …) enforced by the global `ValidationPipe`; do **not** re-check the same things manually inside the use-case. Handbook: `handbooks/domain/marsa-api/validation-in-dto.md`.
+- **A use-case's DB access goes through its own `<use-case>.repository.ts`** (class `<Action>Repository`, co-located in the slice) — never a raw `EntityManager` injected into the use-case. The repository wraps `em.fork()` internally for request isolation; the use-case depends on the repository, which makes it mock-trivial. Repositories are **use-case-scoped** (like commands/responses), not feature-wide aggregate repos. Handbook: `handbooks/domain/marsa-api/use-case-repository.md` · AgDR-0011.
 - **Document every error a use-case throws** on its controller via the matching `@Api*Response()` decorator (`@ApiBadRequestResponse`, `@ApiResponse({ status: 502 })`, …) so the OpenAPI contract reflects the real response set, not just the happy path. Handbook: `handbooks/domain/marsa-api/document-thrown-errors.md`.
 - **Share a service across use-cases via its own module** — put the service in a `<Service>Module` that `providers` **and** `exports` it, then `imports` that module wherever it's needed; don't re-list the provider in each use-case module. Handbook: `handbooks/domain/marsa-api/service-sharing-via-module.md`.
 - **Place utility functions by reach** — a helper used by a single use-case/module lives in that feature's local `utils/`; a genuinely cross-cutting helper goes in `src/utils/`. Don't leave general-purpose helpers inline in a use-case or config file. Handbook: `handbooks/domain/marsa-api/util-placement.md`.
-- **Comments explain non-obvious *why*, not *what*** — don't narrate what the code already states; trust the reader to ask in review if something's unclear. Handbook: `handbooks/domain/marsa-api/no-redundant-comments.md`.
+- **Comments explain non-obvious _why_, not _what_** — don't narrate what the code already states; trust the reader to ask in review if something's unclear. Handbook: `handbooks/domain/marsa-api/no-redundant-comments.md`.
 - Use-cases have their own `*.module.ts`; the feature's `<feature>.module.ts` imports its use-case modules.
 - Feature-internal code (entities, errors, etc.) stays inside the feature folder. If something needs to be shared across features, promote it to `src/modules/` or a workspace package — don't reach into another feature.
 - Tests sit in `tests/` next to the code they cover, with `.unit.test.ts` and `.e2e.test.ts` suffixes.
