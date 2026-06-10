@@ -5,6 +5,7 @@ import { expect } from 'expect'
 
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
 import { ManifestStateService } from '#src/app/github-app/manifest-state/manifest-state.service.js'
+import { ConvertManifestCommandBuilder } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.command.builder.js'
 import { ConvertManifestUseCase } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.use-case.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
 import type { GitHubAppCredentials } from '#src/modules/github-client/github-client.types.js'
@@ -26,6 +27,9 @@ const CREDS: GitHubAppCredentials = {
 // The state service is mocked, so the literal value only has to be a non-empty
 // string the fake `consume` recognises — its UUID shape is irrelevant here.
 const VALID_STATE = 'valid-state'
+
+const command = (code: string, state: string = VALID_STATE) =>
+  new ConvertManifestCommandBuilder().withCode(code).withState(state).build()
 
 function build(convert: () => Promise<GitHubAppCredentials>, existing: GitHubApp | null = null) {
   const manifestState = {
@@ -53,7 +57,7 @@ describe('ConvertManifestUseCase', () => {
   it('persists encrypted credentials and returns a sanitized response', async () => {
     const { usecase, cipher, persisted } = build(() => Promise.resolve(CREDS))
 
-    const result = await usecase.execute({ code: 'code123', state: VALID_STATE })
+    const result = await usecase.execute(command('code123'))
 
     expect(result).toEqual({
       appSlug: 'marsa-x',
@@ -74,7 +78,7 @@ describe('ConvertManifestUseCase', () => {
   it('persists a null ownerLogin as undefined', async () => {
     const { usecase, persisted } = build(() => Promise.resolve({ ...CREDS, ownerLogin: null }))
 
-    await usecase.execute({ code: 'code123', state: VALID_STATE })
+    await usecase.execute(command('code123'))
 
     expect(persisted[0].ownerLogin).toBeUndefined()
   })
@@ -86,14 +90,14 @@ describe('ConvertManifestUseCase', () => {
       return Promise.resolve(CREDS)
     })
 
-    await expect(usecase.execute({ code: 'code123', state: 'bad' })).rejects.toThrow(/state/)
+    await expect(usecase.execute(command('code123', 'bad'))).rejects.toThrow(/state/)
     expect(called).toBe(false)
   })
 
   it('rejects a missing or non-string code', async () => {
     const { usecase } = build(() => Promise.resolve(CREDS))
 
-    await expect(usecase.execute({ code: '', state: VALID_STATE })).rejects.toThrow(/code/)
+    await expect(usecase.execute(command(''))).rejects.toThrow(/code/)
     await expect(
       usecase.execute({ code: 123 as unknown as string, state: VALID_STATE }),
     ).rejects.toThrow(/code/)
@@ -110,7 +114,7 @@ describe('ConvertManifestUseCase', () => {
   it('maps a GitHub failure to a 502 without leaking the upstream error', async () => {
     const { usecase } = build(() => Promise.reject(new Error('boom')))
 
-    await expect(usecase.execute({ code: 'x', state: VALID_STATE })).rejects.toThrow(
+    await expect(usecase.execute(command('x'))).rejects.toThrow(
       /Could not complete GitHub App creation/,
     )
   })
@@ -121,7 +125,7 @@ describe('ConvertManifestUseCase', () => {
     existing.slug = 'stale-slug'
     const { usecase, cipher, persisted } = build(() => Promise.resolve(CREDS), existing)
 
-    await usecase.execute({ code: 'code123', state: VALID_STATE })
+    await usecase.execute(command('code123'))
 
     expect(persisted).toHaveLength(0)
     expect(existing.slug).toBe('marsa-x')

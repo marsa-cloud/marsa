@@ -1,10 +1,6 @@
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
 
-/**
- * Fluent builder for {@link GitHubApp}. Keeps the use-case free of field-by-field
- * mutation for a secret-bearing, 9-field entity. Encryption stays the caller's job —
- * the builder takes already-encrypted `*Enc` values so it has no service dependencies.
- */
+/** Takes already-encrypted `*Enc` values — encryption stays the caller's job. */
 export class GitHubAppBuilder {
   private readonly app = new GitHubApp()
 

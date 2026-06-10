@@ -3,6 +3,7 @@ import { after, before, describe, it } from 'node:test'
 import { expect } from 'expect'
 import request from 'supertest'
 
+import { ConvertManifestCommandBuilder } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.command.builder.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -31,7 +32,7 @@ describe('POST /api/v1/github-app/conversions (e2e)', () => {
 
     const response = await request(setup.httpServer)
       .post('/api/v1/github-app/conversions')
-      .send({ code: '', state: manifest.body.state })
+      .send(new ConvertManifestCommandBuilder().withCode('').withState(manifest.body.state).build())
       .expect(400)
 
     // ValidationPipe returns `message` as a string[]; the manual guard returns a
