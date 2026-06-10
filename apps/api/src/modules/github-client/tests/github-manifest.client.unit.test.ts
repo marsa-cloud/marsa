@@ -3,6 +3,7 @@ import { afterEach, before, describe, it } from 'node:test'
 import { expect } from 'expect'
 import sinon from 'sinon'
 
+import type { GitHubManifestConversionResponse } from '#src/modules/github-client/github-client.types.js'
 import { GitHubManifestClient } from '#src/modules/github-client/github-manifest.client.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
@@ -15,7 +16,7 @@ describe('GitHubManifestClient', () => {
   afterEach(() => sinon.restore())
 
   it('maps a successful conversion response', async () => {
-    const payload = {
+    const payload: GitHubManifestConversionResponse = {
       id: 123,
       slug: 'marsa-x',
       name: 'marsa.x',
@@ -39,7 +40,7 @@ describe('GitHubManifestClient', () => {
   })
 
   it('defaults ownerLogin to null when owner is absent', async () => {
-    const payload = {
+    const payload: GitHubManifestConversionResponse = {
       id: 1,
       slug: 's',
       name: 'n',

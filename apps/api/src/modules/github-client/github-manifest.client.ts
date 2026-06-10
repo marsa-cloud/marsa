@@ -1,19 +1,10 @@
 import { Injectable } from '@nestjs/common'
 
 import { GITHUB_API } from '#src/modules/github-client/github-client.constants.js'
-import type { GitHubAppCredentials } from '#src/modules/github-client/github-client.types.js'
-
-interface ConversionResponse {
-  id: number
-  slug: string
-  name: string
-  html_url: string
-  owner?: { login?: string } | null
-  client_id: string
-  client_secret: string
-  webhook_secret: string
-  pem: string
-}
+import type {
+  GitHubAppCredentials,
+  GitHubManifestConversionResponse,
+} from '#src/modules/github-client/github-client.types.js'
 
 /**
  * Talks to GitHub's manifest conversion endpoint. Injectable so tests provide a
@@ -36,7 +27,7 @@ export class GitHubManifestClient {
       throw new Error(`GitHub manifest conversion failed: ${response.status} ${body}`.trim())
     }
 
-    const data = (await response.json()) as ConversionResponse
+    const data = (await response.json()) as GitHubManifestConversionResponse
     return {
       id: data.id,
       slug: data.slug,
