@@ -22,10 +22,10 @@ export class ConvertManifestUseCase {
   ) {}
 
   async execute(command: ConvertManifestCommand): Promise<ConvertManifestResponse> {
-    if (typeof command.code !== 'string' || command.code.length === 0) {
-      throw new BadRequestException('code is required')
-    }
-    if (typeof command.state !== 'string' || !(await this.manifestState.consume(command.state))) {
+    // Presence/type of `code` and `state` is enforced by class-validator on the
+    // command DTO; the only check left here is the business rule that the state
+    // token is valid and unconsumed.
+    if (!(await this.manifestState.consume(command.state))) {
       throw new BadRequestException('invalid or expired state')
     }
 
@@ -85,11 +85,6 @@ export class ConvertManifestUseCase {
       }
     }
 
-    return new ConvertManifestResponse(
-      creds.slug,
-      creds.name,
-      creds.htmlUrl,
-      `${creds.htmlUrl}/installations/new`,
-    )
+    return new ConvertManifestResponse(app)
   }
 }

@@ -69,6 +69,12 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Malformed body, or an invalid/expired state token."
+          },
+          "502": {
+            "description": "GitHub App creation failed upstream at GitHub."
           }
         },
         "summary": "",
@@ -120,13 +126,80 @@
           "uptimeSeconds"
         ]
       },
+      "HookAttributesDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Webhook delivery URL."
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "ManifestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "hook_attributes": {
+            "$ref": "#/components/schemas/HookAttributesDto"
+          },
+          "redirect_url": {
+            "type": "string"
+          },
+          "callback_urls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "public": {
+            "type": "boolean"
+          },
+          "request_oauth_on_install": {
+            "type": "boolean"
+          },
+          "default_permissions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "default_events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name",
+          "url",
+          "hook_attributes",
+          "redirect_url",
+          "callback_urls",
+          "public",
+          "request_oauth_on_install",
+          "default_permissions",
+          "default_events"
+        ]
+      },
       "GetManifestResponse": {
         "type": "object",
         "properties": {
           "manifest": {
-            "type": "object",
-            "additionalProperties": true,
-            "description": "GitHub App manifest — the FE posts this as the `manifest` form field."
+            "description": "GitHub App manifest — the FE posts this as the `manifest` form field.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ManifestDto"
+              }
+            ]
           },
           "formAction": {
             "type": "string",

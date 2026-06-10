@@ -1,6 +1,8 @@
 import { type ConfigType, registerAs } from '@nestjs/config'
 import Joi from 'joi'
 
+import { stripTrailingSlash } from '#src/utils/strip-trailing-slash.js'
+
 const WEBHOOK_PATH = '/api/v1/github-app/webhooks'
 const REDIRECT_PATH = '/setup/github/callback'
 const OAUTH_CALLBACK_PATH = '/auth/github/callback'
@@ -49,7 +51,3 @@ export const githubAppConfig = registerAs('githubApp', () => {
 })
 
 export type GitHubAppConfig = ConfigType<typeof githubAppConfig>
-
-function stripTrailingSlash(url: string): string {
-  return url.replace(/\/+$/, '')
-}

@@ -108,23 +108,6 @@ describe('ConvertManifestUseCase', () => {
     expect(called).toBe(false)
   })
 
-  it('rejects a missing or non-string code', async () => {
-    const { usecase } = build(() => Promise.resolve(CREDS))
-
-    await expect(usecase.execute(command(''))).rejects.toThrow(/code/)
-    await expect(
-      usecase.execute({ code: 123 as unknown as string, state: VALID_STATE }),
-    ).rejects.toThrow(/code/)
-  })
-
-  it('rejects a non-string state without throwing a 500', async () => {
-    const { usecase } = build(() => Promise.resolve(CREDS))
-
-    await expect(
-      usecase.execute({ code: 'code123', state: 42 as unknown as string }),
-    ).rejects.toThrow(/state/)
-  })
-
   it('maps a GitHub failure to a 502 without leaking the upstream error', async () => {
     const { usecase } = build(() => Promise.reject(new Error('boom')))
 
