@@ -2,7 +2,8 @@ import { EntityManager } from '@mikro-orm/core'
 import { BadGatewayException, BadRequestException, Injectable, Logger } from '@nestjs/common'
 
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
-import { StateSigner } from '#src/app/github-app/state-signer.js'
+import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
+import { ManifestStateService } from '#src/app/github-app/manifest-state/manifest-state.service.js'
 import { ConvertManifestCommand } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.command.js'
 import { ConvertManifestResponse } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.response.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
@@ -15,7 +16,7 @@ export class ConvertManifestUseCase {
 
   constructor(
     private readonly em: EntityManager,
-    private readonly stateSigner: StateSigner,
+    private readonly manifestState: ManifestStateService,
     private readonly client: GitHubManifestClient,
     private readonly cipher: SecretCipherService,
   ) {}
@@ -24,7 +25,7 @@ export class ConvertManifestUseCase {
     if (typeof command.code !== 'string' || command.code.length === 0) {
       throw new BadRequestException('code is required')
     }
-    if (typeof command.state !== 'string' || !this.stateSigner.verify(command.state)) {
+    if (typeof command.state !== 'string' || !(await this.manifestState.consume(command.state))) {
       throw new BadRequestException('invalid or expired state')
     }
 
@@ -37,8 +38,9 @@ export class ConvertManifestUseCase {
       throw new BadGatewayException('Could not complete GitHub App creation with GitHub.')
     }
 
+    const githubAppId = String(creds.id)
     const app = new GitHubAppBuilder()
-      .withGithubAppId(String(creds.id))
+      .withGithubAppId(githubAppId)
       .withSlug(creds.slug)
       .withName(creds.name)
       .withHtmlUrl(creds.htmlUrl)
@@ -50,7 +52,25 @@ export class ConvertManifestUseCase {
       .build()
 
     // fork() gives a clean EM independent of request-context middleware.
-    await this.em.fork().persistAndFlush(app)
+    // Idempotent on github_app_id (also DB-guarded by a UNIQUE constraint): a
+    // re-provision updates the existing row instead of inserting a duplicate.
+    const em = this.em.fork()
+    const existing = await em.findOne(GitHubApp, { githubAppId })
+    if (existing) {
+      em.assign(existing, {
+        slug: app.slug,
+        name: app.name,
+        htmlUrl: app.htmlUrl,
+        ownerLogin: app.ownerLogin,
+        clientId: app.clientId,
+        clientSecretEnc: app.clientSecretEnc,
+        webhookSecretEnc: app.webhookSecretEnc,
+        privateKeyPemEnc: app.privateKeyPemEnc,
+      })
+      await em.flush()
+    } else {
+      await em.persistAndFlush(app)
+    }
 
     return new ConvertManifestResponse(
       creds.slug,

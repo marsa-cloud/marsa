@@ -26,12 +26,16 @@ describe('POST /api/v1/github-app/conversions (e2e)', () => {
     expect(response.body.message).toMatch(/state/)
   })
 
-  it('rejects a missing code with 400 even when state is valid', async () => {
+  it('rejects an empty code with 400 (message mentions code) even when state is valid', async () => {
     const manifest = await request(setup.httpServer).get('/api/v1/github-app/manifest').expect(200)
 
-    await request(setup.httpServer)
+    const response = await request(setup.httpServer)
       .post('/api/v1/github-app/conversions')
       .send({ code: '', state: manifest.body.state })
       .expect(400)
+
+    // ValidationPipe returns `message` as a string[]; the manual guard returns a
+    // string — String(...) normalises both so the assertion holds either way.
+    expect(String(response.body.message)).toMatch(/code/)
   })
 })

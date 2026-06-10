@@ -19,7 +19,8 @@ export class GetManifestResponse {
 
   @ApiProperty({
     type: String,
-    description: 'Signed CSRF state; echoed back by GitHub on the callback.',
+    description:
+      'Single-use CSRF state token (DB-backed, expires in 10 min); echoed back by GitHub on the callback.',
   })
   readonly state: string
 

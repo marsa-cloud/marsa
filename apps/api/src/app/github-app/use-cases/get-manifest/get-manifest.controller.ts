@@ -12,7 +12,7 @@ export class GetManifestController {
   @Get()
   @ApiOperation({ operationId: 'getGithubAppManifestV1' })
   @ApiOkResponse({ type: GetManifestResponse })
-  handle(): GetManifestResponse {
+  handle(): Promise<GetManifestResponse> {
     return this.usecase.execute()
   }
 }

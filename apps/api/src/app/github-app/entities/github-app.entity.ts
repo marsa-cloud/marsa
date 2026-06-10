@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-import { Entity, PrimaryKey, Property } from '@mikro-orm/core'
+import { Entity, PrimaryKey, Property, Unique } from '@mikro-orm/core'
 
 /**
  * A GitHub App provisioned for this install via the Manifest flow (#58,
@@ -19,9 +19,11 @@ export class GitHubApp {
   id: string = randomUUID()
 
   @Property({ type: 'string', length: 255 })
+  @Unique()
   githubAppId!: string
 
   @Property({ type: 'string', length: 255 })
+  @Unique()
   slug!: string
 
   @Property({ type: 'string', length: 255 })

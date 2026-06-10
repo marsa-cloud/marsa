@@ -2,18 +2,18 @@ import { Inject, Injectable } from '@nestjs/common'
 
 import { type GitHubAppConfig, githubAppConfig } from '#src/app/github-app/github-app.config.js'
 import type { GitHubAppManifest } from '#src/app/github-app/github-app.types.js'
-import { StateSigner } from '#src/app/github-app/state-signer.js'
+import { ManifestStateService } from '#src/app/github-app/manifest-state/manifest-state.service.js'
 import { GetManifestResponse } from '#src/app/github-app/use-cases/get-manifest/get-manifest.response.js'
 
 @Injectable()
 export class GetManifestUseCase {
   constructor(
     @Inject(githubAppConfig.KEY) private readonly config: GitHubAppConfig,
-    private readonly stateSigner: StateSigner,
+    private readonly manifestState: ManifestStateService,
   ) {}
 
-  execute(): GetManifestResponse {
-    const state = this.stateSigner.sign()
+  async execute(): Promise<GetManifestResponse> {
+    const state = await this.manifestState.issue()
 
     const manifest: GitHubAppManifest = {
       name: appName(this.config.webUrl),

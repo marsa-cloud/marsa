@@ -4,7 +4,7 @@ import { EntityManager } from '@mikro-orm/core'
 import { expect } from 'expect'
 
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
-import { StateSigner } from '#src/app/github-app/state-signer.js'
+import { ManifestStateService } from '#src/app/github-app/manifest-state/manifest-state.service.js'
 import { ConvertManifestUseCase } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.use-case.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
 import type { GitHubAppCredentials } from '#src/modules/github-client/github-client.types.js'
@@ -23,25 +23,37 @@ const CREDS: GitHubAppCredentials = {
   pem: 'PEMDATA',
 }
 
-function build(convert: () => Promise<GitHubAppCredentials>) {
-  const signer = new StateSigner()
+// The state service is mocked, so the literal value only has to be a non-empty
+// string the fake `consume` recognises — its UUID shape is irrelevant here.
+const VALID_STATE = 'valid-state'
+
+function build(convert: () => Promise<GitHubAppCredentials>, existing: GitHubApp | null = null) {
+  const manifestState = {
+    consume: (s: string) => Promise.resolve(s === VALID_STATE),
+    issue: () => Promise.resolve(VALID_STATE),
+  } as unknown as ManifestStateService
   const cipher = new SecretCipherService()
   const persisted: GitHubApp[] = []
   const em = {
-    fork: () => ({ persistAndFlush: (e: GitHubApp) => Promise.resolve(void persisted.push(e)) }),
+    fork: () => ({
+      findOne: () => Promise.resolve(existing),
+      persistAndFlush: (e: GitHubApp) => Promise.resolve(void persisted.push(e)),
+      assign: (target: GitHubApp, data: Partial<GitHubApp>) => Object.assign(target, data),
+      flush: () => Promise.resolve(),
+    }),
   } as unknown as EntityManager
   const client = { convertManifest: convert } as unknown as GitHubManifestClient
-  const usecase = new ConvertManifestUseCase(em, signer, client, cipher)
-  return { usecase, signer, cipher, persisted }
+  const usecase = new ConvertManifestUseCase(em, manifestState, client, cipher)
+  return { usecase, cipher, persisted, existing }
 }
 
 describe('ConvertManifestUseCase', () => {
   before(() => TestBench.setupUnitTest())
 
   it('persists encrypted credentials and returns a sanitized response', async () => {
-    const { usecase, signer, cipher, persisted } = build(() => Promise.resolve(CREDS))
+    const { usecase, cipher, persisted } = build(() => Promise.resolve(CREDS))
 
-    const result = await usecase.execute({ code: 'code123', state: signer.sign() })
+    const result = await usecase.execute({ code: 'code123', state: VALID_STATE })
 
     expect(result).toEqual({
       appSlug: 'marsa-x',
@@ -60,11 +72,9 @@ describe('ConvertManifestUseCase', () => {
   })
 
   it('persists a null ownerLogin as undefined', async () => {
-    const { usecase, signer, persisted } = build(() =>
-      Promise.resolve({ ...CREDS, ownerLogin: null }),
-    )
+    const { usecase, persisted } = build(() => Promise.resolve({ ...CREDS, ownerLogin: null }))
 
-    await usecase.execute({ code: 'code123', state: signer.sign() })
+    await usecase.execute({ code: 'code123', state: VALID_STATE })
 
     expect(persisted[0].ownerLogin).toBeUndefined()
   })
@@ -81,11 +91,11 @@ describe('ConvertManifestUseCase', () => {
   })
 
   it('rejects a missing or non-string code', async () => {
-    const { usecase, signer } = build(() => Promise.resolve(CREDS))
+    const { usecase } = build(() => Promise.resolve(CREDS))
 
-    await expect(usecase.execute({ code: '', state: signer.sign() })).rejects.toThrow(/code/)
+    await expect(usecase.execute({ code: '', state: VALID_STATE })).rejects.toThrow(/code/)
     await expect(
-      usecase.execute({ code: 123 as unknown as string, state: signer.sign() }),
+      usecase.execute({ code: 123 as unknown as string, state: VALID_STATE }),
     ).rejects.toThrow(/code/)
   })
 
@@ -98,10 +108,23 @@ describe('ConvertManifestUseCase', () => {
   })
 
   it('maps a GitHub failure to a 502 without leaking the upstream error', async () => {
-    const { usecase, signer } = build(() => Promise.reject(new Error('boom')))
+    const { usecase } = build(() => Promise.reject(new Error('boom')))
 
-    await expect(usecase.execute({ code: 'x', state: signer.sign() })).rejects.toThrow(
+    await expect(usecase.execute({ code: 'x', state: VALID_STATE })).rejects.toThrow(
       /Could not complete GitHub App creation/,
     )
+  })
+
+  it('updates the existing row instead of inserting a duplicate (idempotent)', async () => {
+    const existing = new GitHubApp()
+    existing.githubAppId = '555'
+    existing.slug = 'stale-slug'
+    const { usecase, cipher, persisted } = build(() => Promise.resolve(CREDS), existing)
+
+    await usecase.execute({ code: 'code123', state: VALID_STATE })
+
+    expect(persisted).toHaveLength(0)
+    expect(existing.slug).toBe('marsa-x')
+    expect(cipher.decrypt(existing.clientSecretEnc)).toBe('csecret')
   })
 })
