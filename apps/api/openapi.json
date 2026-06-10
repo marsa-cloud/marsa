@@ -45,7 +45,7 @@
         ]
       }
     },
-    "/api/v1/github-app/conversions": {
+    "/api/v1/github-app/convert-manifest": {
       "post": {
         "operationId": "convertGithubAppManifestV1",
         "parameters": [],

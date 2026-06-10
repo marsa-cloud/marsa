@@ -15,7 +15,7 @@ export function useGithubProvisioning() {
   }
 
   async function convert(code: string, state: string): Promise<ConvertManifestResponse> {
-    const raw = await $api('/v1/github-app/conversions', {
+    const raw = await $api('/v1/github-app/convert-manifest', {
       method: 'POST',
       body: { code, state },
     })

@@ -7,7 +7,17 @@ import { zConvertManifestResponse, zGetManifestResponse } from '~/api/zod.gen'
 describe('github provisioning contracts', () => {
   it('accepts a valid manifest response', () => {
     const valid = {
-      manifest: { url: 'https://demo.marsa.cc' },
+      manifest: {
+        name: 'marsa-demo-marsa-cc',
+        url: 'https://demo.marsa.cc',
+        hook_attributes: { url: 'https://api.demo.marsa.cc/api/v1/github-app/webhooks' },
+        redirect_url: 'https://demo.marsa.cc/setup/github/callback',
+        callback_urls: ['https://demo.marsa.cc/auth/github/callback'],
+        public: false,
+        request_oauth_on_install: true,
+        default_permissions: { contents: 'read', metadata: 'read' },
+        default_events: ['push'],
+      },
       formAction: 'https://github.com/settings/apps/new?state=s',
       state: 's',
     }

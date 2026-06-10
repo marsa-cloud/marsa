@@ -12,7 +12,7 @@ import { ConvertManifestResponse } from '#src/app/github-app/use-cases/convert-m
 import { ConvertManifestUseCase } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.use-case.js'
 
 @ApiTags('github-app')
-@Controller({ path: 'github-app/conversions', version: '1' })
+@Controller({ path: 'github-app/convert-manifest', version: '1' })
 export class ConvertManifestController {
   constructor(private readonly usecase: ConvertManifestUseCase) {}
 

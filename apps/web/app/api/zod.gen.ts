@@ -10,13 +10,29 @@ export const zGetApiInfoResponse = z.object({
   uptimeSeconds: z.number(),
 })
 
+export const zHookAttributesDto = z.object({
+  url: z.string(),
+})
+
+export const zManifestDto = z.object({
+  name: z.string(),
+  url: z.string(),
+  hook_attributes: zHookAttributesDto,
+  redirect_url: z.string(),
+  callback_urls: z.array(z.string()),
+  public: z.boolean(),
+  request_oauth_on_install: z.boolean(),
+  default_permissions: z.record(z.string(), z.string()),
+  default_events: z.array(z.string()),
+})
+
 export const zGetManifestResponse = z.object({
-  manifest: z.record(z.string(), z.unknown()),
+  manifest: zManifestDto,
   formAction: z.string(),
   state: z.string(),
 })
 
-export const zConvertManifestRequest = z.object({
+export const zConvertManifestCommand = z.object({
   code: z.string(),
   state: z.string(),
 })
@@ -32,6 +48,6 @@ export const zGetApiInfoV1Response = zGetApiInfoResponse
 
 export const zGetGithubAppManifestV1Response = zGetManifestResponse
 
-export const zConvertGithubAppManifestV1Body = zConvertManifestRequest
+export const zConvertGithubAppManifestV1Body = zConvertManifestCommand
 
 export const zConvertGithubAppManifestV1Response = zConvertManifestResponse

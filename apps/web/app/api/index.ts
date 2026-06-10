@@ -3,9 +3,10 @@
 export type {
   ClientOptions,
   ConvertGithubAppManifestV1Data,
+  ConvertGithubAppManifestV1Errors,
   ConvertGithubAppManifestV1Response,
   ConvertGithubAppManifestV1Responses,
-  ConvertManifestRequest,
+  ConvertManifestCommand,
   ConvertManifestResponse,
   GetApiInfoResponse,
   GetApiInfoV1Data,
@@ -15,4 +16,6 @@ export type {
   GetGithubAppManifestV1Response,
   GetGithubAppManifestV1Responses,
   GetManifestResponse,
+  HookAttributesDto,
+  ManifestDto,
 } from './types.gen.js'

@@ -7,7 +7,7 @@ import { ConvertManifestCommandBuilder } from '#src/app/github-app/use-cases/con
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
-describe('POST /api/v1/github-app/conversions (e2e)', () => {
+describe('POST /api/v1/github-app/convert-manifest (e2e)', () => {
   let setup: TestSetup
 
   before(async () => {
@@ -20,7 +20,7 @@ describe('POST /api/v1/github-app/conversions (e2e)', () => {
 
   it('rejects an invalid state with 400 (no GitHub call)', async () => {
     const response = await request(setup.httpServer)
-      .post('/api/v1/github-app/conversions')
+      .post('/api/v1/github-app/convert-manifest')
       .send({ code: 'whatever', state: 'invalid' })
       .expect(400)
 
@@ -31,7 +31,7 @@ describe('POST /api/v1/github-app/conversions (e2e)', () => {
     const manifest = await request(setup.httpServer).get('/api/v1/github-app/manifest').expect(200)
 
     const response = await request(setup.httpServer)
-      .post('/api/v1/github-app/conversions')
+      .post('/api/v1/github-app/convert-manifest')
       .send(new ConvertManifestCommandBuilder().withCode('').withState(manifest.body.state).build())
       .expect(400)
 
