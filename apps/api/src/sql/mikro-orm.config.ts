@@ -9,5 +9,4 @@ export default defineConfig({
     path: 'dist/src/sql/migrations',
   },
   entities: ['dist/src/**/*.entity.js'],
-  discovery: { warnWhenNoEntities: false },
 })

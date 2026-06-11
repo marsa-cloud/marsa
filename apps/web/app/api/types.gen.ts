@@ -12,6 +12,63 @@ export type GetApiInfoResponse = {
   uptimeSeconds: number
 }
 
+export type HookAttributesDto = {
+  /**
+   * Webhook delivery URL.
+   */
+  url: string
+}
+
+export type ManifestDto = {
+  name: string
+  url: string
+  hook_attributes: HookAttributesDto
+  redirect_url: string
+  callback_urls: Array<string>
+  public: boolean
+  request_oauth_on_install: boolean
+  default_permissions: {
+    [key: string]: string
+  }
+  default_events: Array<string>
+}
+
+export type GetManifestResponse = {
+  /**
+   * GitHub App manifest — the FE posts this as the `manifest` form field.
+   */
+  manifest: ManifestDto
+  /**
+   * Form action the FE submits the manifest to.
+   */
+  formAction: string
+  /**
+   * Single-use CSRF state token (DB-backed, expires in 10 min); echoed back by GitHub on the callback.
+   */
+  state: string
+}
+
+export type ConvertManifestCommand = {
+  /**
+   * Temporary code from the GitHub redirect.
+   */
+  code: string
+  /**
+   * Signed CSRF state echoed back by GitHub.
+   */
+  state: string
+}
+
+export type ConvertManifestResponse = {
+  appSlug: string
+  appName: string
+  htmlUrl: string
+  /**
+   * Where the operator installs the App on their repos (#23).
+   */
+  installUrl: string
+}
+
 export type GetApiInfoV1Data = {
   body?: never
   path?: never
@@ -24,3 +81,42 @@ export type GetApiInfoV1Responses = {
 }
 
 export type GetApiInfoV1Response = GetApiInfoV1Responses[keyof GetApiInfoV1Responses]
+
+export type GetGithubAppManifestV1Data = {
+  body?: never
+  path?: never
+  query?: never
+  url: '/api/v1/github-app/manifest'
+}
+
+export type GetGithubAppManifestV1Responses = {
+  200: GetManifestResponse
+}
+
+export type GetGithubAppManifestV1Response =
+  GetGithubAppManifestV1Responses[keyof GetGithubAppManifestV1Responses]
+
+export type ConvertGithubAppManifestV1Data = {
+  body: ConvertManifestCommand
+  path?: never
+  query?: never
+  url: '/api/v1/github-app/convert-manifest'
+}
+
+export type ConvertGithubAppManifestV1Errors = {
+  /**
+   * Malformed body, or an invalid/expired state token.
+   */
+  400: unknown
+  /**
+   * GitHub App creation failed upstream at GitHub.
+   */
+  502: unknown
+}
+
+export type ConvertGithubAppManifestV1Responses = {
+  200: ConvertManifestResponse
+}
+
+export type ConvertGithubAppManifestV1Response =
+  ConvertGithubAppManifestV1Responses[keyof ConvertGithubAppManifestV1Responses]

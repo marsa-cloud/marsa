@@ -2,8 +2,20 @@
 
 export type {
   ClientOptions,
+  ConvertGithubAppManifestV1Data,
+  ConvertGithubAppManifestV1Errors,
+  ConvertGithubAppManifestV1Response,
+  ConvertGithubAppManifestV1Responses,
+  ConvertManifestCommand,
+  ConvertManifestResponse,
   GetApiInfoResponse,
   GetApiInfoV1Data,
   GetApiInfoV1Response,
   GetApiInfoV1Responses,
+  GetGithubAppManifestV1Data,
+  GetGithubAppManifestV1Response,
+  GetGithubAppManifestV1Responses,
+  GetManifestResponse,
+  HookAttributesDto,
+  ManifestDto,
 } from './types.gen.js'

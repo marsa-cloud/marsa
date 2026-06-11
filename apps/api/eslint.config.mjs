@@ -57,4 +57,15 @@ export default tseslint.config(
       '@typescript-eslint/no-floating-promises': 'off',
     },
   },
+  {
+    // MikroORM migrations are CLI-generated and override `up()` / `down()` whose
+    // base signature is `Promise<void>` — they're async by contract even when the
+    // body only calls the synchronous `this.addSql`. Lint them like any other
+    // source (imports, unused vars, etc.); just exempt the one rule the framework's
+    // required signature conflicts with.
+    files: ['src/sql/migrations/**/*.ts'],
+    rules: {
+      '@typescript-eslint/require-await': 'off',
+    },
+  },
 )

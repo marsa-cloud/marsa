@@ -26,12 +26,13 @@
     "migration:up": "mikro-orm migration:up --config ./dist/src/sql/mikro-orm.config.js",
     "migration:down": "mikro-orm migration:down --config ./dist/src/sql/mikro-orm.config.js",
     "test:setup": "node --env-file=.env.test dist/src/test/setup/global-setup.js",
-    "test:run": "node --enable-source-maps --experimental-test-isolation=none --env-file=.env.test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-branches=80 --test-coverage-functions=90 --test-coverage-exclude=\"src/test/**\" --test-coverage-exclude=\"**/*.test.ts\" --test \"**/*.test.ts\"",
+    "test:run": "node --enable-source-maps --experimental-test-isolation=none --env-file=.env.test --experimental-test-coverage --test-coverage-lines=80 --test-coverage-branches=80 --test-coverage-functions=90 --test-coverage-exclude=\"src/test/**\" --test-coverage-exclude=\"**/*.test.ts\" --test-coverage-exclude=\"src/sql/migrations/**\" --test \"**/*.test.ts\"",
     "test": "pnpm clean && pnpm build && pnpm test:setup && pnpm test:run"
   },
   "dependencies": {
     "@nestjs/common": "catalog:",
     "@nestjs/core": "catalog:",
+    "@nestjs/config": "catalog:",
     "@nestjs/platform-express": "catalog:",
     "@nestjs/swagger": "catalog:",
     "@nestjs/platform-fastify": "^11.1.21",
@@ -42,13 +43,17 @@
     "@swc/cli": "^0.8.1",
     "@swc/core": "^1.15.33",
     "@types/qs": "^6.15.1",
+    "class-transformer": "catalog:",
+    "class-validator": "catalog:",
     "fastify": "^5.8.5",
+    "joi": "catalog:",
     "pg": "^8.21.0",
     "qs": "^6.15.2",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:"
   },
   "devDependencies": {
+    "@mikro-orm/cli": "catalog:",
     "@nestjs/cli": "catalog:",
     "@nestjs/schematics": "catalog:",
     "@nestjs/testing": "catalog:",
