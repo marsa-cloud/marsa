@@ -44,6 +44,17 @@ export const zConvertManifestResponse = z.object({
   installUrl: z.string(),
 })
 
+export const zCaptureInstallationCommand = z.object({
+  installationId: z.string(),
+  setupAction: z.string(),
+})
+
+export const zCaptureInstallationResponse = z.object({
+  installationId: z.string(),
+  accountLogin: z.string().nullable(),
+  connected: z.boolean(),
+})
+
 export const zGetApiInfoV1Response = zGetApiInfoResponse
 
 export const zGetGithubAppManifestV1Response = zGetManifestResponse
@@ -51,3 +62,7 @@ export const zGetGithubAppManifestV1Response = zGetManifestResponse
 export const zConvertGithubAppManifestV1Body = zConvertManifestCommand
 
 export const zConvertGithubAppManifestV1Response = zConvertManifestResponse
+
+export const zCaptureGithubAppInstallationV1Body = zCaptureInstallationCommand
+
+export const zCaptureGithubAppInstallationV1Response = zCaptureInstallationResponse

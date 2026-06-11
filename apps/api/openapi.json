@@ -82,6 +82,44 @@
           "github-app"
         ]
       }
+    },
+    "/api/v1/github-app/capture-installation": {
+      "post": {
+        "operationId": "captureGithubAppInstallationV1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptureInstallationCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaptureInstallationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body, an unsupported setup_action, or no provisioned App."
+          },
+          "502": {
+            "description": "The installation could not be verified with GitHub."
+          }
+        },
+        "summary": "",
+        "tags": [
+          "github-app"
+        ]
+      }
     }
   },
   "info": {
@@ -260,6 +298,47 @@
           "appName",
           "htmlUrl",
           "installUrl"
+        ]
+      },
+      "CaptureInstallationCommand": {
+        "type": "object",
+        "properties": {
+          "installationId": {
+            "type": "string",
+            "description": "GitHub's numeric installation id from the post-install redirect."
+          },
+          "setupAction": {
+            "type": "string",
+            "description": "GitHub's `setup_action` query param (expected: `install`)."
+          }
+        },
+        "required": [
+          "installationId",
+          "setupAction"
+        ]
+      },
+      "CaptureInstallationResponse": {
+        "type": "object",
+        "properties": {
+          "installationId": {
+            "type": "string",
+            "example": "88776655"
+          },
+          "accountLogin": {
+            "type": "string",
+            "nullable": true,
+            "example": "octo-org"
+          },
+          "connected": {
+            "type": "boolean",
+            "description": "True once the installation is captured and its access verified.",
+            "example": true
+          }
+        },
+        "required": [
+          "installationId",
+          "accountLogin",
+          "connected"
         ]
       }
     }
