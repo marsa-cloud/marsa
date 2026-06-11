@@ -25,8 +25,8 @@ AgDR-0006 chose a **stateless HMAC-signed `state`** (`nonce + exp`, constant-tim
 Manifest-flow CSRF guard, explicitly deferring a DB-backed / session-bound token to #22. On the
 second review of PR #64 the CEO reversed that for the `state` mechanism specifically:
 
-> *"replace with stateful storage of this somewhere"* … *"we will nuke StateSigner and replace
-> with a table"* … *"do not defer."*
+> _"replace with stateful storage of this somewhere"_ … _"we will nuke StateSigner and replace
+> with a table"_ … _"do not defer."_
 
 The stateless token cannot be invalidated once issued — it is replayable within its TTL, and the
 HMAC subkey is one more thing to manage. Operator-session binding still can't happen (auth is #22),
@@ -38,11 +38,11 @@ possible. Folded into this migration since it is the same persist path and the s
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
-| Keep stateless HMAC (AgDR-0006) | No table, no DB round-trip | CEO ruled it out; replayable within TTL; un-revocable; extra key to manage |
-| **DB row, delete-on-consume** | True single-use (atomic conditional `DELETE`); self-cleaning happy path; trivial path to session-binding in #22 | One table; expired-unused rows need an eventual sweep |
-| DB row, mark `consumed_at` | Audit trail of replay attempts | Extra column + a cleanup job sooner; more than v0.1 needs |
+| Option                          | Pros                                                                                                            | Cons                                                                       |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Keep stateless HMAC (AgDR-0006) | No table, no DB round-trip                                                                                      | CEO ruled it out; replayable within TTL; un-revocable; extra key to manage |
+| **DB row, delete-on-consume**   | True single-use (atomic conditional `DELETE`); self-cleaning happy path; trivial path to session-binding in #22 | One table; expired-unused rows need an eventual sweep                      |
+| DB row, mark `consumed_at`      | Audit trail of replay attempts                                                                                  | Extra column + a cleanup job sooner; more than v0.1 needs                  |
 
 For uniqueness: (a) DB UNIQUE constraint + idempotent upsert vs (b) app-level check only — chose
 **(a)**: the constraint is the durable guard, the entity `@Unique()` keeps the schema diffable, and
@@ -53,7 +53,7 @@ the idempotent lookup turns a retry into an update instead of a 500.
 Chosen: **DB row with delete-on-consume**, plus **UNIQUE on `github_app(github_app_id, slug)`** and an
 idempotent persist.
 
-- `github_app_manifest_state`: `id uuid PK` (app-generated `randomUUID()` — the uuid *is* the token),
+- `github_app_manifest_state`: `id uuid PK` (app-generated `randomUUID()` — the uuid _is_ the token),
   `expires_at`, `created_at`.
 - `issue()` inserts a row (10-min TTL) and returns its id as `state`.
 - `consume(state)` does a single atomic `DELETE … WHERE id = $1 AND expires_at > now()` and treats
