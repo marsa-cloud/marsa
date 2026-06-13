@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
-import { Entity, ManyToOne, PrimaryKey, Property, Unique } from '@mikro-orm/core'
+import { Entity, ManyToOne, PrimaryKey, Property, type Ref, Unique } from '@mikro-orm/core'
 
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
 
@@ -17,17 +17,21 @@ import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
 @Entity({ tableName: 'github_installation' })
 export class GitHubInstallation {
   @PrimaryKey({ type: 'uuid' })
-  id: string = randomUUID()
+  uuid: string = randomUUID()
 
   @Property({ type: 'string', length: 255 })
   @Unique()
   installationId!: string
 
   @Property({ type: 'string', length: 255, nullable: true })
-  accountLogin?: string
+  accountLogin?: string | null
 
-  @ManyToOne(() => GitHubApp, { nullable: false })
-  app!: GitHubApp
+  // Explicit owning FK relation: a typed `Ref` makes the foreign key first-class
+  // (column `app_uuid` → `github_app.uuid`) and lets callers read `app.uuid`
+  // without loading the row. We model the FK via the reference, not a duplicate
+  // scalar column (which MikroORM would double-map).
+  @ManyToOne(() => GitHubApp, { nullable: false, ref: true })
+  app!: Ref<GitHubApp>
 
   @Property({ type: 'datetime' })
   createdAt: Date = new Date()

@@ -1,3 +1,15 @@
+import type { createAppAuth } from '@octokit/auth-app'
+
+/** The `@octokit/auth-app` factory; an injectable seam so tests substitute a fake. */
+export type AppAuthFactory = typeof createAppAuth
+
+/** Inputs for minting a GitHub installation access token. */
+export interface InstallationTokenParams {
+  githubAppId: string
+  privateKeyPem: string
+  installationId: string
+}
+
 /** Raw GitHub App manifest-conversion response (snake_case, GitHub's shape). */
 export interface GitHubManifestConversionResponse {
   id: number

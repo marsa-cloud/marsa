@@ -27,7 +27,10 @@ export class CaptureInstallationRepository {
    * re-resolves to the existing row). The App relation is set from a reference so
    * we don't reload it. `accountLogin` is left untouched here; #61 enriches it.
    */
-  async upsertByInstallationId(installationId: string, appId: string): Promise<GitHubInstallation> {
+  async upsertByInstallationId(
+    installationId: string,
+    appUuid: string,
+  ): Promise<GitHubInstallation> {
     const em = this.em.fork()
 
     const existing = await em.findOne(GitHubInstallation, { installationId })
@@ -37,7 +40,7 @@ export class CaptureInstallationRepository {
 
     const installation = new GitHubInstallationBuilder()
       .withInstallationId(installationId)
-      .withApp(em.getReference(GitHubApp, appId))
+      .withApp(em.getReference(GitHubApp, appUuid, { wrapped: true }))
       .build()
 
     try {

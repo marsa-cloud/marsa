@@ -3,7 +3,7 @@ import { Migration } from '@mikro-orm/migrations'
 export class Migration20260610100415 extends Migration {
   override async up(): Promise<void> {
     this.addSql(
-      `create table "github_app_manifest_state" ("id" uuid not null, "expires_at" timestamptz not null, "created_at" timestamptz not null, constraint "github_app_manifest_state_pkey" primary key ("id"));`,
+      `create table "github_app_manifest_state" ("uuid" uuid not null, "expires_at" timestamptz not null, "created_at" timestamptz not null, constraint "github_app_manifest_state_pkey" primary key ("uuid"));`,
     )
 
     this.addSql(

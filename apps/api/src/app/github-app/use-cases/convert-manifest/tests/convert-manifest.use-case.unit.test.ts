@@ -8,8 +8,8 @@ import { ConvertManifestCommandBuilder } from '#src/app/github-app/use-cases/con
 import { ConvertManifestRepository } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.repository.js'
 import { ConvertManifestUseCase } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.use-case.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
+import { GithubClient } from '#src/modules/github-client/github-client.js'
 import type { GitHubAppCredentials } from '#src/modules/github-client/github-client.types.js'
-import { GitHubManifestClient } from '#src/modules/github-client/github-manifest.client.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 const CREDS: GitHubAppCredentials = {
@@ -41,7 +41,7 @@ function build(convert: () => Promise<GitHubAppCredentials>) {
   const repository = {
     upsertByGithubAppId: (app: GitHubApp) => Promise.resolve(void upserted.push(app)),
   } as unknown as ConvertManifestRepository
-  const client = { convertManifest: convert } as unknown as GitHubManifestClient
+  const client = { convertManifest: convert } as unknown as GithubClient
   const usecase = new ConvertManifestUseCase(manifestState, repository, client, cipher)
   return { usecase, cipher, upserted }
 }
