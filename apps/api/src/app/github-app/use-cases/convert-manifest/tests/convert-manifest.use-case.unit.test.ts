@@ -8,7 +8,7 @@ import { ConvertManifestCommandBuilder } from '#src/app/github-app/use-cases/con
 import { ConvertManifestRepository } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.repository.js'
 import { ConvertManifestUseCase } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.use-case.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
-import { GithubClient } from '#src/modules/github-client/github-client.js'
+import { MockGithubClient } from '#src/modules/github-client/mock-github-client.js'
 import type { GitHubAppCredentials } from '#src/modules/github-client/github-client.types.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
@@ -31,7 +31,7 @@ describe('ConvertManifestUseCase', () => {
   it('encrypts credentials, persists via the repository, returns a sanitized response', async () => {
     const manifestState = sinon.createStubInstance(ManifestStateService)
     const repository = sinon.createStubInstance(ConvertManifestRepository)
-    const client = sinon.createStubInstance(GithubClient)
+    const client = sinon.createStubInstance(MockGithubClient)
     const cipher = new SecretCipherService()
 
     manifestState.consume.resolves(true)
@@ -61,7 +61,7 @@ describe('ConvertManifestUseCase', () => {
   it('maps a null ownerLogin to undefined on the persisted app', async () => {
     const manifestState = sinon.createStubInstance(ManifestStateService)
     const repository = sinon.createStubInstance(ConvertManifestRepository)
-    const client = sinon.createStubInstance(GithubClient)
+    const client = sinon.createStubInstance(MockGithubClient)
     const cipher = new SecretCipherService()
 
     manifestState.consume.resolves(true)
@@ -80,7 +80,7 @@ describe('ConvertManifestUseCase', () => {
   it('rejects an invalid state before calling GitHub', async () => {
     const manifestState = sinon.createStubInstance(ManifestStateService)
     const repository = sinon.createStubInstance(ConvertManifestRepository)
-    const client = sinon.createStubInstance(GithubClient)
+    const client = sinon.createStubInstance(MockGithubClient)
     const cipher = new SecretCipherService()
 
     manifestState.consume.resolves(false)
@@ -98,7 +98,7 @@ describe('ConvertManifestUseCase', () => {
   it('maps a GitHub failure to a 502 without leaking the upstream error', async () => {
     const manifestState = sinon.createStubInstance(ManifestStateService)
     const repository = sinon.createStubInstance(ConvertManifestRepository)
-    const client = sinon.createStubInstance(GithubClient)
+    const client = sinon.createStubInstance(MockGithubClient)
     const cipher = new SecretCipherService()
 
     manifestState.consume.resolves(true)
