@@ -25,7 +25,7 @@ const MOCK_CREDENTIALS: GitHubAppCredentials = {
 /**
  * Network-free `GithubClient` for test/local environments (AgDR-0014). Returns
  * canned values; never calls GitHub. Override individual methods via
- * `createMockGithubClient({ getInstallationToken: ... })`.
+ * `sinon.createStubInstance(MockGithubClient)`.
  */
 @Injectable()
 export class MockGithubClient extends GithubClient {
@@ -38,9 +38,4 @@ export class MockGithubClient extends GithubClient {
   getInstallationToken(_params: InstallationTokenParams): Promise<string> {
     return Promise.resolve('ghs_mock_installation_token')
   }
-}
-
-/** Build a `MockGithubClient` with selected methods swapped for stubs. */
-export function createMockGithubClient(overrides: Partial<GithubClient> = {}): GithubClient {
-  return Object.assign(new MockGithubClient(), overrides)
 }

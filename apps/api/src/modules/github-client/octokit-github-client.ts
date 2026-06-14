@@ -1,40 +1,23 @@
 import { createHash } from 'node:crypto'
 
-import { Injectable, Logger, Optional } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 import { createAppAuth } from '@octokit/auth-app'
 
 import { GITHUB_API } from '#src/modules/github-client/github-client.constants.js'
 import { GithubClient } from '#src/modules/github-client/github-client.js'
 import type {
-  AppAuthFactory,
   GitHubAppCredentials,
   GitHubManifestConversionResponse,
   InstallationTokenParams,
 } from '#src/modules/github-client/github-client.types.js'
 
-/**
- * Real GitHub client (AgDR-0014). Manifest conversion is one unauthenticated POST
- * (the `code` is the credential, ~1h TTL — AgDR-0006). Installation tokens go
- * through `@octokit/auth-app` (AgDR-0012), which signs the App JWT from the PEM,
- * exchanges it for a ~1h token, and caches + auto-refreshes internally.
- *
- * The per-App `auth` instance is cached so the library's token cache survives
- * across calls. The cache key is the App id **plus a fingerprint of the PEM**, so
- * rotating an App's private key refreshes the cached auth instead of minting with
- * the stale key. `createAuth` is an injectable seam (defaults to the real
- * `createAppAuth`) so tests substitute a fake without hitting GitHub.
- */
 @Injectable()
 export class OctokitGithubClient extends GithubClient {
   private readonly logger = new Logger(OctokitGithubClient.name)
   private readonly authByApp = new Map<
     string,
-    { keyFingerprint: string; auth: ReturnType<AppAuthFactory> }
+    { keyFingerprint: string; auth: ReturnType<typeof createAppAuth> }
   >()
-
-  constructor(@Optional() private readonly createAuth: AppAuthFactory = createAppAuth) {
-    super()
-  }
 
   async convertManifest(code: string): Promise<GitHubAppCredentials> {
     const response = await fetch(
@@ -79,13 +62,14 @@ export class OctokitGithubClient extends GithubClient {
     }
   }
 
-  private authFor(githubAppId: string, privateKeyPem: string): ReturnType<AppAuthFactory> {
+  private authFor(githubAppId: string, privateKeyPem: string): ReturnType<typeof createAppAuth> {
     const keyFingerprint = createHash('sha256').update(privateKeyPem).digest('hex')
     const cached = this.authByApp.get(githubAppId)
     if (cached && cached.keyFingerprint === keyFingerprint) {
       return cached.auth
     }
-    const auth = this.createAuth({ appId: githubAppId, privateKey: privateKeyPem })
+
+    const auth = createAppAuth({ appId: githubAppId, privateKey: privateKeyPem })
     this.authByApp.set(githubAppId, { keyFingerprint, auth })
     return auth
   }

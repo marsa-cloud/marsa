@@ -100,7 +100,12 @@ Conventions:
 - Use-cases have their own `*.module.ts`; the feature's `<feature>.module.ts` imports its use-case modules.
 - Feature-internal code (entities, errors, etc.) stays inside the feature folder. If something needs to be shared across features, promote it to `src/modules/` or a workspace package — don't reach into another feature.
 - Tests sit in `tests/` next to the code they cover, with `.unit.test.ts` and `.e2e.test.ts` suffixes.
-- **Test the right layer** — use-cases get unit tests, endpoints get e2e tests; **repositories do not get dedicated unit tests** (they're thin `em.fork()` wrappers covered via the use-case + e2e tests) until explicitly asked. Handbook: `handbooks/domain/marsa-api/test-layer-boundaries.md`.
+- **Test the right layer** — three test types, each with a distinct scope:
+  - **E2E tests** (`.e2e.test.ts`) — exercise the full HTTP stack for API endpoints. One happy path + one bad path per use-case is sufficient; exhaustive coverage belongs in unit tests, not here.
+  - **Unit tests** (`.use-case.unit.test.ts`) — test the use-case class directly (no HTTP, no DB). Focus on side-effect branches and error paths that e2e tests don't cover. Does not need to be exhaustive — be sensible about what's worth testing at this level.
+  - **Integration tests** (`.integration.test.ts`) — for code that has no HTTP entry point (jobs, event handlers, scheduled tasks). Boot the module, drive the logic directly.
+  - **Repositories do not get dedicated tests** — they're thin `em.fork()` wrappers covered implicitly by e2e tests.
+  Handbook: `handbooks/domain/marsa-api/test-layer-boundaries.md`.
 - **Stub collaborators with sinon `createStubInstance(Class)`** in unit tests — not object literals cast through `as unknown as <Class>`; the stub stays in sync with the class signature and gives call-tracking for free. Handbook: `handbooks/domain/marsa-api/sinon-stub-instance.md`.
 
 ## Test harness

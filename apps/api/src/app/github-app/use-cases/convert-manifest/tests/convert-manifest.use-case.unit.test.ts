@@ -1,8 +1,8 @@
-import { before, describe, it } from 'node:test'
+import { afterEach, before, describe, it } from 'node:test'
 
 import { expect } from 'expect'
+import sinon from 'sinon'
 
-import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
 import { ManifestStateService } from '#src/app/github-app/manifest-state/manifest-state.service.js'
 import { ConvertManifestCommandBuilder } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.command.builder.js'
 import { ConvertManifestRepository } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.repository.js'
@@ -24,35 +24,24 @@ const CREDS: GitHubAppCredentials = {
   pem: 'PEMDATA',
 }
 
-// The state service is mocked, so the literal value only has to be a non-empty
-// string the fake `consume` recognises — its UUID shape is irrelevant here.
-const VALID_STATE = 'valid-state'
-
-const command = (code: string, state: string = VALID_STATE) =>
-  new ConvertManifestCommandBuilder().withCode(code).withState(state).build()
-
-function build(convert: () => Promise<GitHubAppCredentials>) {
-  const manifestState = {
-    consume: (s: string) => Promise.resolve(s === VALID_STATE),
-    issue: () => Promise.resolve(VALID_STATE),
-  } as unknown as ManifestStateService
-  const cipher = new SecretCipherService()
-  const upserted: GitHubApp[] = []
-  const repository = {
-    upsertByGithubAppId: (app: GitHubApp) => Promise.resolve(void upserted.push(app)),
-  } as unknown as ConvertManifestRepository
-  const client = { convertManifest: convert } as unknown as GithubClient
-  const usecase = new ConvertManifestUseCase(manifestState, repository, client, cipher)
-  return { usecase, cipher, upserted }
-}
-
 describe('ConvertManifestUseCase', () => {
   before(() => TestBench.setupUnitTest())
+  afterEach(() => sinon.restore())
 
   it('encrypts credentials, persists via the repository, returns a sanitized response', async () => {
-    const { usecase, cipher, upserted } = build(() => Promise.resolve(CREDS))
+    const manifestState = sinon.createStubInstance(ManifestStateService)
+    const repository = sinon.createStubInstance(ConvertManifestRepository)
+    const client = sinon.createStubInstance(GithubClient)
+    const cipher = new SecretCipherService()
 
-    const result = await usecase.execute(command('code123'))
+    manifestState.consume.resolves(true)
+    client.convertManifest.resolves(CREDS)
+    repository.upsertByGithubAppId.resolves()
+
+    const usecase = new ConvertManifestUseCase(manifestState, repository, client, cipher)
+    const result = await usecase.execute(
+      new ConvertManifestCommandBuilder().withCode('code123').withState('valid-state').build(),
+    )
 
     expect(result).toEqual({
       appSlug: 'marsa-x',
@@ -60,8 +49,7 @@ describe('ConvertManifestUseCase', () => {
       htmlUrl: 'https://github.com/apps/marsa-x',
       installUrl: 'https://github.com/apps/marsa-x/installations/new',
     })
-    expect(upserted).toHaveLength(1)
-    const app = upserted[0]
+    const app = repository.upsertByGithubAppId.firstCall.args[0]
     expect(app.githubAppId).toBe('555')
     expect(app.clientId).toBe('cid')
     expect(app.clientSecretEnc).not.toContain('csecret')
@@ -71,29 +59,56 @@ describe('ConvertManifestUseCase', () => {
   })
 
   it('maps a null ownerLogin to undefined on the persisted app', async () => {
-    const { usecase, upserted } = build(() => Promise.resolve({ ...CREDS, ownerLogin: null }))
+    const manifestState = sinon.createStubInstance(ManifestStateService)
+    const repository = sinon.createStubInstance(ConvertManifestRepository)
+    const client = sinon.createStubInstance(GithubClient)
+    const cipher = new SecretCipherService()
 
-    await usecase.execute(command('code123'))
+    manifestState.consume.resolves(true)
+    client.convertManifest.resolves({ ...CREDS, ownerLogin: null })
+    repository.upsertByGithubAppId.resolves()
 
-    expect(upserted[0].ownerLogin).toBeUndefined()
+    const usecase = new ConvertManifestUseCase(manifestState, repository, client, cipher)
+    await usecase.execute(
+      new ConvertManifestCommandBuilder().withCode('code123').withState('valid-state').build(),
+    )
+
+    const app = repository.upsertByGithubAppId.firstCall.args[0]
+    expect(app.ownerLogin).toBeUndefined()
   })
 
   it('rejects an invalid state before calling GitHub', async () => {
-    let called = false
-    const { usecase } = build(() => {
-      called = true
-      return Promise.resolve(CREDS)
-    })
+    const manifestState = sinon.createStubInstance(ManifestStateService)
+    const repository = sinon.createStubInstance(ConvertManifestRepository)
+    const client = sinon.createStubInstance(GithubClient)
+    const cipher = new SecretCipherService()
 
-    await expect(usecase.execute(command('code123', 'bad'))).rejects.toThrow(/state/)
-    expect(called).toBe(false)
+    manifestState.consume.resolves(false)
+
+    const usecase = new ConvertManifestUseCase(manifestState, repository, client, cipher)
+    await expect(
+      usecase.execute(
+        new ConvertManifestCommandBuilder().withCode('code123').withState('bad-state').build(),
+      ),
+    ).rejects.toThrow(/state/)
+
+    expect(client.convertManifest.called).toBe(false)
   })
 
   it('maps a GitHub failure to a 502 without leaking the upstream error', async () => {
-    const { usecase } = build(() => Promise.reject(new Error('boom')))
+    const manifestState = sinon.createStubInstance(ManifestStateService)
+    const repository = sinon.createStubInstance(ConvertManifestRepository)
+    const client = sinon.createStubInstance(GithubClient)
+    const cipher = new SecretCipherService()
 
-    await expect(usecase.execute(command('x'))).rejects.toThrow(
-      /Could not complete GitHub App creation/,
-    )
+    manifestState.consume.resolves(true)
+    client.convertManifest.rejects(new Error('boom'))
+
+    const usecase = new ConvertManifestUseCase(manifestState, repository, client, cipher)
+    await expect(
+      usecase.execute(
+        new ConvertManifestCommandBuilder().withCode('x').withState('valid-state').build(),
+      ),
+    ).rejects.toThrow(/Could not complete GitHub App creation/)
   })
 })
