@@ -18,11 +18,11 @@ ticket: marsa-cloud/marsa#59
 
 ## Options Considered
 
-| Option | Pros | Cons |
-| --- | --- | --- |
-| **(a) Abstract `GithubClient` + `OctokitGithubClient` (real) + `MockGithubClient`, factory-provided by env** (chosen) | One injection token for all GitHub ops; consumers depend on the abstract type; e2e/local get a network-free client for free; new GitHub ops are methods on one class, not new providers | One class spans two concerns; a factory branch on env |
-| (b) Keep two services, add a mock for each | Minimal change | Doesn't address "one class"; two mocks to maintain; review note unaddressed |
-| (c) `GithubClient` facade delegating to the two existing services | One entry point | Keeps the two providers it was meant to collapse; more indirection, not less |
+| Option                                                                                                                | Pros                                                                                                                                                                                    | Cons                                                                         |
+| --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| **(a) Abstract `GithubClient` + `OctokitGithubClient` (real) + `MockGithubClient`, factory-provided by env** (chosen) | One injection token for all GitHub ops; consumers depend on the abstract type; e2e/local get a network-free client for free; new GitHub ops are methods on one class, not new providers | One class spans two concerns; a factory branch on env                        |
+| (b) Keep two services, add a mock for each                                                                            | Minimal change                                                                                                                                                                          | Doesn't address "one class"; two mocks to maintain; review note unaddressed  |
+| (c) `GithubClient` facade delegating to the two existing services                                                     | One entry point                                                                                                                                                                         | Keeps the two providers it was meant to collapse; more indirection, not less |
 
 ## Decision
 

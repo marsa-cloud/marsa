@@ -105,7 +105,7 @@ Conventions:
   - **Unit tests** (`.use-case.unit.test.ts`) — test the use-case class directly (no HTTP, no DB). Focus on side-effect branches and error paths that e2e tests don't cover. Does not need to be exhaustive — be sensible about what's worth testing at this level.
   - **Integration tests** (`.integration.test.ts`) — for code that has no HTTP entry point (jobs, event handlers, scheduled tasks). Boot the module, drive the logic directly.
   - **Repositories do not get dedicated tests** — they're thin `em.fork()` wrappers covered implicitly by e2e tests.
-  Handbook: `handbooks/domain/marsa-api/test-layer-boundaries.md`.
+    Handbook: `handbooks/domain/marsa-api/test-layer-boundaries.md`.
 - **Stub collaborators with sinon `createStubInstance(Class)`** in unit tests — not object literals cast through `as unknown as <Class>`; the stub stays in sync with the class signature and gives call-tracking for free. Handbook: `handbooks/domain/marsa-api/sinon-stub-instance.md`.
 
 ## Test harness
