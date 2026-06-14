@@ -8,8 +8,8 @@ import { ConvertManifestCommandBuilder } from '#src/app/github-app/use-cases/con
 import { ConvertManifestRepository } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.repository.js'
 import { ConvertManifestUseCase } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.use-case.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
-import { MockGithubClient } from '#src/modules/github-client/mock-github-client.js'
 import type { GitHubAppCredentials } from '#src/modules/github-client/github-client.types.js'
+import { MockGithubClient } from '#src/modules/github-client/mock-github-client.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 const CREDS: GitHubAppCredentials = {
