@@ -17,7 +17,7 @@ export class ManifestStateService {
   async issue(ttlMs: number = DEFAULT_TTL_MS): Promise<string> {
     const state = new ManifestStateBuilder().withExpiresAt(new Date(Date.now() + ttlMs)).build()
     await this.em.fork().persistAndFlush(state)
-    return state.id
+    return state.uuid
   }
 
   async consume(state: string): Promise<boolean> {
@@ -27,7 +27,7 @@ export class ManifestStateService {
     // Atomic conditional delete → verifies at most once, no replay.
     const deleted = await this.em
       .fork()
-      .nativeDelete(ManifestState, { id: state, expiresAt: { $gt: new Date() } })
+      .nativeDelete(ManifestState, { uuid: state, expiresAt: { $gt: new Date() } })
     return deleted === 1
   }
 }

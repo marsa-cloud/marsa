@@ -46,6 +46,9 @@ catalog:
   reflect-metadata: ^0.2.2
   rxjs: ^7.8.1
 
+  # GitHub integration (api)
+  '@octokit/auth-app': ^8.2.0
+
   # Node / test tooling (api)
   '@types/express': ^5.0.0
   '@types/node': ^24.0.0

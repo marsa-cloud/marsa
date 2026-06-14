@@ -1,3 +1,10 @@
+/** Inputs for minting a GitHub installation access token. */
+export interface InstallationTokenParams {
+  githubAppId: string
+  privateKeyPem: string
+  installationId: string
+}
+
 /** Raw GitHub App manifest-conversion response (snake_case, GitHub's shape). */
 export interface GitHubManifestConversionResponse {
   id: number

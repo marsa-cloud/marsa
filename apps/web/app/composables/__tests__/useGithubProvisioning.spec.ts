@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { zConvertManifestResponse, zGetManifestResponse } from '~/api/zod.gen'
+import {
+  zCaptureInstallationResponse,
+  zConvertManifestResponse,
+  zGetManifestResponse,
+} from '~/api/zod.gen'
 
 // Boundary contract checks (mirrors useApiStatus.spec): validate the generated
 // Zod schemas the composable parses responses against, without booting Nuxt.
@@ -44,5 +48,15 @@ describe('github provisioning contracts', () => {
     expect(() =>
       zConvertManifestResponse.parse({ appSlug: 'x', appName: 5, htmlUrl: 'u', installUrl: 'i' }),
     ).toThrow()
+  })
+
+  it('accepts a valid capture-installation response (null accountLogin allowed)', () => {
+    const valid = { installationId: '88776655', accountLogin: null, connected: true }
+
+    expect(zCaptureInstallationResponse.parse(valid)).toEqual(valid)
+  })
+
+  it('rejects a capture-installation response missing installationId', () => {
+    expect(() => zCaptureInstallationResponse.parse({ accountLogin: null, connected: true })).toThrow()
   })
 })

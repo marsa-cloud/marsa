@@ -6,8 +6,8 @@ import { ConvertManifestCommand } from '#src/app/github-app/use-cases/convert-ma
 import { ConvertManifestRepository } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.repository.js'
 import { ConvertManifestResponse } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.response.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
+import { GithubClient } from '#src/modules/github-client/github-client.js'
 import type { GitHubAppCredentials } from '#src/modules/github-client/github-client.types.js'
-import { GitHubManifestClient } from '#src/modules/github-client/github-manifest.client.js'
 
 @Injectable()
 export class ConvertManifestUseCase {
@@ -16,7 +16,7 @@ export class ConvertManifestUseCase {
   constructor(
     private readonly manifestState: ManifestStateService,
     private readonly repository: ConvertManifestRepository,
-    private readonly client: GitHubManifestClient,
+    private readonly client: GithubClient,
     private readonly cipher: SecretCipherService,
   ) {}
 

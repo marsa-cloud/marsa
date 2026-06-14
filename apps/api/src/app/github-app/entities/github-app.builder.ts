@@ -2,7 +2,19 @@ import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
 
 /** Takes already-encrypted `*Enc` values — encryption stays the caller's job. */
 export class GitHubAppBuilder {
-  private readonly app = new GitHubApp()
+  private readonly app: GitHubApp
+
+  constructor() {
+    this.app = new GitHubApp()
+    this.app.githubAppId = '42'
+    this.app.slug = 'marsa-app'
+    this.app.name = 'marsa'
+    this.app.htmlUrl = 'https://github.com/apps/marsa-app'
+    this.app.clientId = 'client-id'
+    this.app.clientSecretEnc = 'enc-client-secret'
+    this.app.webhookSecretEnc = 'enc-webhook-secret'
+    this.app.privateKeyPemEnc = 'enc-private-key-pem'
+  }
 
   withGithubAppId(githubAppId: string): this {
     this.app.githubAppId = githubAppId

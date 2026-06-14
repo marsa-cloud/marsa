@@ -9,4 +9,5 @@ export default defineConfig({
     path: 'dist/src/sql/migrations',
   },
   entities: ['dist/src/**/*.entity.js'],
+  // debug: ['query', 'query-params'],
 })

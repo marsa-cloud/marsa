@@ -69,6 +69,26 @@ export type ConvertManifestResponse = {
   installUrl: string
 }
 
+export type CaptureInstallationCommand = {
+  /**
+   * GitHub's numeric installation id from the post-install redirect.
+   */
+  installationId: string
+  /**
+   * GitHub's `setup_action` query param (expected: `install`).
+   */
+  setupAction: 'install'
+}
+
+export type CaptureInstallationResponse = {
+  installationId: string
+  accountLogin: string | null
+  /**
+   * True once the installation is captured and its access verified.
+   */
+  connected: boolean
+}
+
 export type GetApiInfoV1Data = {
   body?: never
   path?: never
@@ -120,3 +140,28 @@ export type ConvertGithubAppManifestV1Responses = {
 
 export type ConvertGithubAppManifestV1Response =
   ConvertGithubAppManifestV1Responses[keyof ConvertGithubAppManifestV1Responses]
+
+export type CaptureGithubAppInstallationV1Data = {
+  body: CaptureInstallationCommand
+  path?: never
+  query?: never
+  url: '/api/v1/github-app/capture-installation'
+}
+
+export type CaptureGithubAppInstallationV1Errors = {
+  /**
+   * Malformed body, an unsupported setup_action, or no provisioned App.
+   */
+  400: unknown
+  /**
+   * The installation could not be verified with GitHub.
+   */
+  502: unknown
+}
+
+export type CaptureGithubAppInstallationV1Responses = {
+  200: CaptureInstallationResponse
+}
+
+export type CaptureGithubAppInstallationV1Response =
+  CaptureGithubAppInstallationV1Responses[keyof CaptureGithubAppInstallationV1Responses]

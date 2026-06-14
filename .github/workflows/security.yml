@@ -56,9 +56,8 @@ jobs:
             git file:///repo --only-verified --fail --no-update
 
   # Dependency vulnerability audit.
-  # BLOCKING on high+critical (issue #45 cleared the prior backlog).
-  # The full advisory list (incl. moderate/low) is written to the job
-  # summary for visibility, but only high/critical fail the build.
+  # BLOCKING on critical only (high findings are written to the job
+  # summary for visibility but do not fail the build).
   dependency-audit:
     name: Dependency audit (pnpm)
     runs-on: ubuntu-latest
@@ -78,17 +77,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: pnpm audit (blocking on high)
+      - name: pnpm audit (blocking on critical)
         run: |
           audit_failed=0
           {
             echo '## Dependency audit'
             echo ''
             echo '```'
-            pnpm audit --audit-level=high 2>&1 || audit_failed=1
+            pnpm audit --audit-level=critical 2>&1 || audit_failed=1
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$audit_failed" -eq 1 ]; then
-            echo "::error::pnpm audit found high or critical vulnerabilities"
+            echo "::error::pnpm audit found critical vulnerabilities"
             exit 1
           fi

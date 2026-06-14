@@ -2,29 +2,56 @@
 import type { ConvertManifestResponse } from '~/api/types.gen'
 
 const route = useRoute()
-const { convert } = useGithubProvisioning()
+const { convert, captureInstallation } = useGithubProvisioning()
 
-const status = ref<'loading' | 'success' | 'error'>('loading')
+const status = ref<'loading' | 'created' | 'installed' | 'error'>('loading')
 const result = ref<ConvertManifestResponse | null>(null)
 const message = ref('')
 
-onMounted(async () => {
-  const code = typeof route.query.code === 'string' ? route.query.code : ''
-  const state = typeof route.query.state === 'string' ? route.query.state : ''
+function queryString(key: string): string {
+  return typeof route.query[key] === 'string' ? route.query[key] : ''
+}
 
+async function completeManifest(code: string, state: string) {
+  try {
+    result.value = await convert(code, state)
+    status.value = 'created'
+  } catch {
+    status.value = 'error'
+    message.value = 'Could not complete GitHub App setup. The link may have expired — please try again.'
+  }
+}
+
+async function completeInstall(installationId: string, setupAction: string) {
+  try {
+    await captureInstallation(installationId, setupAction)
+    status.value = 'installed'
+  } catch {
+    status.value = 'error'
+    message.value = 'Could not connect the installation. Please try installing again.'
+  }
+}
+
+onMounted(async () => {
+  // GitHub returns here twice in the flow: first from the manifest conversion
+  // (code + state), then from the post-install redirect (installation_id +
+  // setup_action). Dispatch on which params are present.
+  const installationId = queryString('installation_id')
+  const setupAction = queryString('setup_action')
+  if (installationId && setupAction) {
+    await completeInstall(installationId, setupAction)
+    return
+  }
+
+  const code = queryString('code')
+  const state = queryString('state')
   if (!code || !state) {
     status.value = 'error'
     message.value = 'Missing authorization code or state from GitHub.'
     return
   }
 
-  try {
-    result.value = await convert(code, state)
-    status.value = 'success'
-  } catch {
-    status.value = 'error'
-    message.value = 'Could not complete GitHub App setup. The link may have expired — please try again.'
-  }
+  await completeManifest(code, state)
 })
 </script>
 
@@ -49,7 +76,7 @@ onMounted(async () => {
     />
 
     <div
-      v-else
+      v-else-if="status === 'created'"
       class="space-y-4"
     >
       <UAlert
@@ -67,5 +94,13 @@ onMounted(async () => {
         Install on repositories
       </UButton>
     </div>
+
+    <UAlert
+      v-else
+      color="success"
+      icon="i-lucide-check"
+      title="GitHub connected"
+      description="Marsa can now access your selected repositories. You're ready to deploy."
+    />
   </UContainer>
 </template>

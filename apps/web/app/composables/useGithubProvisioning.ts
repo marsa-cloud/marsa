@@ -1,5 +1,13 @@
-import type { ConvertManifestResponse, GetManifestResponse } from '~/api/types.gen'
-import { zConvertManifestResponse, zGetManifestResponse } from '~/api/zod.gen'
+import type {
+  CaptureInstallationResponse,
+  ConvertManifestResponse,
+  GetManifestResponse,
+} from '~/api/types.gen'
+import {
+  zCaptureInstallationResponse,
+  zConvertManifestResponse,
+  zGetManifestResponse,
+} from '~/api/zod.gen'
 
 /**
  * Client for the GitHub App provisioning endpoints (#58). Responses are
@@ -22,7 +30,18 @@ export function useGithubProvisioning() {
     return zConvertManifestResponse.parse(raw)
   }
 
-  return { fetchManifest, convert }
+  async function captureInstallation(
+    installationId: string,
+    setupAction: string,
+  ): Promise<CaptureInstallationResponse> {
+    const raw = await $api('/v1/github-app/capture-installation', {
+      method: 'POST',
+      body: { installationId, setupAction },
+    })
+    return zCaptureInstallationResponse.parse(raw)
+  }
+
+  return { fetchManifest, convert, captureInstallation }
 }
 
 /**

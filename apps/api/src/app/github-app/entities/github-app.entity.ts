@@ -12,11 +12,11 @@ import { Entity, PrimaryKey, Property, Unique } from '@mikro-orm/core'
  */
 @Entity({ tableName: 'github_app' })
 export class GitHubApp {
-  // Application-generated UUID (not a DB-side default): MikroORM assigns `id` on
+  // Application-generated UUID (not a DB-side default): MikroORM assigns `uuid` on
   // instantiation via randomUUID(), so the row carries its key before flush — no
   // DB round-trip to learn it, and no autoincrement/serial sequence to coordinate.
   @PrimaryKey({ type: 'uuid' })
-  id: string = randomUUID()
+  uuid: string = randomUUID()
 
   @Property({ type: 'string', length: 255 })
   @Unique()

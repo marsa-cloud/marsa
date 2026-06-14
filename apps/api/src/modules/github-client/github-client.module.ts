@@ -1,13 +1,21 @@
 import { Module } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 
-import { GitHubManifestClient } from '#src/modules/github-client/github-manifest.client.js'
+import { GithubClient } from '#src/modules/github-client/github-client.js'
+import { MockGithubClient } from '#src/modules/github-client/mock-github-client.js'
+import { OctokitGithubClient } from '#src/modules/github-client/octokit-github-client.js'
 
-/**
- * Support module for talking to GitHub's API. Currently exposes the manifest
- * conversion client; future GitHub API access (octokit, #23) lands here too.
- */
 @Module({
-  providers: [GitHubManifestClient],
-  exports: [GitHubManifestClient],
+  providers: [
+    {
+      provide: GithubClient,
+      useFactory: (config: ConfigService) =>
+        config.getOrThrow('NODE_ENV') === 'test'
+          ? new MockGithubClient()
+          : new OctokitGithubClient(),
+      inject: [ConfigService],
+    },
+  ],
+  exports: [GithubClient],
 })
 export class GitHubClientModule {}
