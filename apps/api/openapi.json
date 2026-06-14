@@ -305,11 +305,17 @@
         "properties": {
           "installationId": {
             "type": "string",
-            "description": "GitHub's numeric installation id from the post-install redirect."
+            "description": "GitHub's numeric installation id from the post-install redirect.",
+            "pattern": "^\\d+$",
+            "example": "88776655"
           },
           "setupAction": {
             "type": "string",
-            "description": "GitHub's `setup_action` query param (expected: `install`)."
+            "description": "GitHub's `setup_action` query param (expected: `install`).",
+            "enum": [
+              "install"
+            ],
+            "example": "install"
           }
         },
         "required": [

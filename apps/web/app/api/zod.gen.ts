@@ -45,8 +45,8 @@ export const zConvertManifestResponse = z.object({
 })
 
 export const zCaptureInstallationCommand = z.object({
-  installationId: z.string(),
-  setupAction: z.string(),
+  installationId: z.string().regex(/^\d+$/),
+  setupAction: z.enum(['install']),
 })
 
 export const zCaptureInstallationResponse = z.object({

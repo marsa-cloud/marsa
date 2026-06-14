@@ -77,7 +77,7 @@ export type CaptureInstallationCommand = {
   /**
    * GitHub's `setup_action` query param (expected: `install`).
    */
-  setupAction: string
+  setupAction: 'install'
 }
 
 export type CaptureInstallationResponse = {
