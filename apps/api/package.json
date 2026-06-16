@@ -36,6 +36,7 @@
     "@nestjs/platform-express": "catalog:",
     "@nestjs/swagger": "catalog:",
     "@nestjs/platform-fastify": "^11.1.21",
+    "@fastify/secure-session": "^8.2.0",
     "@mikro-orm/core": "catalog:",
     "@mikro-orm/migrations": "catalog:",
     "@mikro-orm/nestjs": "catalog:",

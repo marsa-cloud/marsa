@@ -1,8 +1,10 @@
+import fastifySecureSession from '@fastify/secure-session'
 import { ValidationPipe, VersioningType } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import QueryString from 'qs'
 
+import { authConfig } from '#src/app/auth/auth.config.js'
 import { ApiModule } from '#src/modules/api/api.module.js'
 
 async function bootstrap(): Promise<void> {
@@ -18,6 +20,17 @@ async function bootstrap(): Promise<void> {
       },
     }),
   )
+
+  await app.register(fastifySecureSession, {
+    key: authConfig().sessionKey,
+    cookieName: 'marsa_session',
+    cookie: {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    },
+  })
 
   app.setGlobalPrefix('api')
   app.enableVersioning({

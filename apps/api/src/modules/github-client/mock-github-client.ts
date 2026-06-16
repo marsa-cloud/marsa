@@ -3,7 +3,9 @@ import { Injectable } from '@nestjs/common'
 import { GithubClient } from '#src/modules/github-client/github-client.js'
 import type {
   GitHubAppCredentials,
+  GitHubUser,
   InstallationTokenParams,
+  UserOAuthExchangeParams,
 } from '#src/modules/github-client/github-client.types.js'
 
 const MOCK_PREFIX = 'mock'
@@ -22,6 +24,12 @@ const MOCK_CREDENTIALS: GitHubAppCredentials = {
   pem: 'mock-private-key-pem',
 }
 
+/** Canned authenticated user returned by the mock for the user-OAuth flow (#62). */
+const MOCK_USER: GitHubUser = {
+  id: 1,
+  login: 'marsa-mock-user',
+}
+
 /**
  * Network-free `GithubClient` for test/local environments (AgDR-0014). Returns
  * canned values; never calls GitHub. Override individual methods via
@@ -37,5 +45,15 @@ export class MockGithubClient extends GithubClient {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getInstallationToken(_params: InstallationTokenParams): Promise<string> {
     return Promise.resolve('ghs_mock_installation_token')
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  exchangeUserOAuthCode(_params: UserOAuthExchangeParams): Promise<string> {
+    return Promise.resolve('ghu_mock_user_access_token')
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  getAuthenticatedUser(_userAccessToken: string): Promise<GitHubUser> {
+    return Promise.resolve({ ...MOCK_USER })
   }
 }

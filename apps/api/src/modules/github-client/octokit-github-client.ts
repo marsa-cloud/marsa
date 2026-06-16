@@ -3,12 +3,18 @@ import { createHash } from 'node:crypto'
 import { Injectable, Logger } from '@nestjs/common'
 import { createAppAuth } from '@octokit/auth-app'
 
-import { GITHUB_API } from '#src/modules/github-client/github-client.constants.js'
+import {
+  GITHUB_API,
+  GITHUB_OAUTH_TOKEN_URL,
+} from '#src/modules/github-client/github-client.constants.js'
 import { GithubClient } from '#src/modules/github-client/github-client.js'
 import type {
   GitHubAppCredentials,
   GitHubManifestConversionResponse,
+  GitHubOAuthAccessTokenResponse,
+  GitHubUser,
   InstallationTokenParams,
+  UserOAuthExchangeParams,
 } from '#src/modules/github-client/github-client.types.js'
 
 @Injectable()
@@ -60,6 +66,48 @@ export class OctokitGithubClient extends GithubClient {
       this.logger.error(`installation token mint failed: ${(error as Error).message}`)
       throw new Error('Could not mint a GitHub installation access token.')
     }
+  }
+
+  async exchangeUserOAuthCode(params: UserOAuthExchangeParams): Promise<string> {
+    const response = await fetch(GITHUB_OAUTH_TOKEN_URL, {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: params.clientId,
+        client_secret: params.clientSecret,
+        code: params.code,
+      }),
+    })
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '')
+      throw new Error(`GitHub OAuth code exchange failed: ${response.status} ${body}`.trim())
+    }
+
+    const data = (await response.json()) as GitHubOAuthAccessTokenResponse
+    if (!data.access_token) {
+      throw new Error(
+        `GitHub OAuth code exchange returned no access_token: ${data.error ?? ''} ${data.error_description ?? ''}`.trim(),
+      )
+    }
+    return data.access_token
+  }
+
+  async getAuthenticatedUser(userAccessToken: string): Promise<GitHubUser> {
+    const response = await fetch(`${GITHUB_API}/user`, {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${userAccessToken}`,
+      },
+    })
+
+    if (!response.ok) {
+      const body = await response.text().catch(() => '')
+      throw new Error(`GitHub user lookup failed: ${response.status} ${body}`.trim())
+    }
+
+    const data = (await response.json()) as GitHubUser
+    return { id: data.id, login: data.login }
   }
 
   private authFor(githubAppId: string, privateKeyPem: string): ReturnType<typeof createAppAuth> {

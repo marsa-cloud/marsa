@@ -30,3 +30,23 @@ export interface GitHubAppCredentials {
   webhookSecret: string
   pem: string
 }
+
+/** Inputs for exchanging a user-OAuth `code` for a GitHub user access token. */
+export interface UserOAuthExchangeParams {
+  clientId: string
+  clientSecret: string
+  code: string
+}
+
+/** GitHub's `GET /user` response, normalised to the fields Marsa persists. */
+export interface GitHubUser {
+  id: number
+  login: string
+}
+
+/** Raw GitHub `POST /login/oauth/access_token` response (snake_case, GitHub's shape). */
+export interface GitHubOAuthAccessTokenResponse {
+  access_token?: string
+  error?: string
+  error_description?: string
+}
