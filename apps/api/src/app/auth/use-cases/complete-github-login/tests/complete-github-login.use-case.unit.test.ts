@@ -50,9 +50,7 @@ describe('CompleteGithubLoginUseCase', () => {
 
     expect(operator.githubUserId).toBe('1')
     expect(operator.githubLogin).toBe('marsa-mock-user')
-    expect(repository.upsertByGithubUserId.calledOnceWithExactly('1', 'marsa-mock-user')).toBe(
-      true,
-    )
+    expect(repository.upsertByGithubUserId.calledOnceWithExactly('1', 'marsa-mock-user')).toBe(true)
     expect(github.exchangeUserOAuthCode.calledOnce).toBe(true)
   })
 
@@ -74,9 +72,7 @@ describe('CompleteGithubLoginUseCase', () => {
     const { usecase, github, repository } = build()
     github.exchangeUserOAuthCode.rejects(new Error('bad code'))
 
-    await expect(usecase.execute(command())).rejects.toThrow(
-      /Could not complete login with GitHub/,
-    )
+    await expect(usecase.execute(command())).rejects.toThrow(/Could not complete login with GitHub/)
     expect(repository.upsertByGithubUserId.notCalled).toBe(true)
   })
 
