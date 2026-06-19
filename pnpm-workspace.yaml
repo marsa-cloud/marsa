@@ -45,9 +45,11 @@ catalog:
   class-transformer: ^0.5.1
   reflect-metadata: ^0.2.2
   rxjs: ^7.8.1
+  dayjs: ^1.11.13
 
   # GitHub integration (api)
   '@octokit/auth-app': ^8.2.0
+  '@octokit/request': ^10.0.10
 
   # Node / test tooling (api)
   '@types/express': ^5.0.0

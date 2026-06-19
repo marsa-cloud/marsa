@@ -1,9 +1,9 @@
-import { EntityManager, UniqueConstraintViolationException } from '@mikro-orm/core'
+import { EntityManager } from '@mikro-orm/core'
 import { Injectable } from '@nestjs/common'
 
-import { OperatorBuilder } from '#src/app/auth/entities/operator.builder.js'
-import { Operator } from '#src/app/auth/entities/operator.entity.js'
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
+import { UserBuilder } from '#src/app/user/entities/user.builder.js'
+import { User } from '#src/app/user/entities/user.entity.js'
 
 /**
  * Persistence for the complete-github-login use-case (AgDR-0011 pattern). Wraps
@@ -25,35 +25,20 @@ export class CompleteGithubLoginRepository {
   }
 
   /**
-   * Upsert the operator by `githubUserId`, idempotent and race-safe via the
-   * UNIQUE constraint (a lost insert race re-resolves to the existing row,
-   * mirroring `CaptureInstallationRepository.upsertByInstallationId`). The
-   * GitHub login is refreshed on every login in case the user renamed it.
+   * Upsert the user by `githubUserId` — atomic via MikroORM's native
+   * INSERT ... ON CONFLICT, so no findOne-then-write race window. The GitHub
+   * login is refreshed on every login in case the user renamed it.
    */
-  async upsertByGithubUserId(githubUserId: string, githubLogin: string): Promise<Operator> {
+  async upsertByGithubUserId(githubUserId: string, githubLogin: string): Promise<User> {
     const em = this.em.fork()
-
-    const existing = await em.findOne(Operator, { githubUserId })
-    if (existing) {
-      existing.githubLogin = githubLogin
-      await em.flush()
-      return existing
-    }
-
-    const operator = new OperatorBuilder()
+    const user = new UserBuilder()
       .withGithubUserId(githubUserId)
       .withGithubLogin(githubLogin)
       .build()
 
-    try {
-      await em.persistAndFlush(operator)
-      return operator
-    } catch (error) {
-      if (!(error instanceof UniqueConstraintViolationException)) {
-        throw error
-      }
-      em.clear()
-      return em.findOneOrFail(Operator, { githubUserId })
-    }
+    // The builder's `uuid` is real but irrelevant on conflict — `onConflictFields`
+    // pins the conflict target to `githubUserId` so a second login for the same
+    // GitHub user updates the existing row instead of racing on the PK.
+    return em.upsert(user, undefined, { onConflictFields: ['githubUserId'] })
   }
 }

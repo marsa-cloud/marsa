@@ -18,9 +18,10 @@ export abstract class GithubClient {
   /** Mint a short-lived installation access token (#59). */
   abstract getInstallationToken(params: InstallationTokenParams): Promise<string>
 
-  /** Exchange a user-OAuth `code` for a GitHub user access token (#62, AgDR-0016). */
-  abstract exchangeUserOAuthCode(params: UserOAuthExchangeParams): Promise<string>
-
-  /** Fetch the authenticated user (numeric id + login) for a user access token (#62). */
-  abstract getAuthenticatedUser(userAccessToken: string): Promise<GitHubUser>
+  /**
+   * Exchange a user-OAuth `code` for an access token, then fetch the
+   * authenticated user it identifies (#62, AgDR-0016). One seam method, not two
+   * — callers never need the intermediate access token.
+   */
+  abstract loginUser(params: UserOAuthExchangeParams): Promise<GitHubUser>
 }

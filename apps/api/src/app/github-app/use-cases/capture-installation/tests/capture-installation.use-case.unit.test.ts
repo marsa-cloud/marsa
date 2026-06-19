@@ -1,5 +1,6 @@
 import { before, describe, it } from 'node:test'
 
+import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
 
@@ -20,7 +21,7 @@ const command = (installationId = '777') =>
     .build()
 
 function build(options: { app?: GitHubApp | null; accountLogin?: string | null } = {}) {
-  const cipher = new SecretCipherService()
+  const cipher = new SecretCipherService(new ConfigService())
   const app =
     options.app === undefined
       ? new GitHubAppBuilder().withPrivateKeyPemEnc(cipher.encrypt('PEMDATA')).build()

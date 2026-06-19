@@ -5,6 +5,12 @@ import { GITHUB_OAUTH_AUTHORIZE_URL } from '#src/app/auth/use-cases/begin-github
 import { BeginGithubLoginRepository } from '#src/app/auth/use-cases/begin-github-login/begin-github-login.repository.js'
 import { type GitHubAppConfig, githubAppConfig } from '#src/app/github-app/github-app.config.js'
 
+export interface BeginGithubLoginResult {
+  authorizeUrl: string
+  /** Bound into the session by the controller, to be matched at complete-login (#62 login-CSRF). */
+  state: string
+}
+
 @Injectable()
 export class BeginGithubLoginUseCase {
   constructor(
@@ -13,7 +19,7 @@ export class BeginGithubLoginUseCase {
     @Inject(githubAppConfig.KEY) private readonly config: GitHubAppConfig,
   ) {}
 
-  async execute(): Promise<string> {
+  async execute(): Promise<BeginGithubLoginResult> {
     const app = await this.repository.loadProvisionedApp()
     if (!app) {
       throw new BadRequestException('No provisioned GitHub App — create the App first.')
@@ -26,6 +32,6 @@ export class BeginGithubLoginUseCase {
       state,
       redirect_uri: this.config.oauthCallbackUrl,
     })
-    return `${GITHUB_OAUTH_AUTHORIZE_URL}?${params.toString()}`
+    return { authorizeUrl: `${GITHUB_OAUTH_AUTHORIZE_URL}?${params.toString()}`, state }
   }
 }

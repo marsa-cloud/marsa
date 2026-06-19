@@ -50,6 +50,19 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Verify generated API contract is in sync
+        # generate:openapi boots ApiModule in Nest's `preview` mode (no DB connection,
+        # no providers instantiated) — but ConfigModule.forRoot's Joi schema (AgDR-0020)
+        # validates at module-definition time regardless, so the required vars below
+        # are placeholders satisfying the schema shape, never used for real I/O.
+        env:
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432
+          DB_NAME: placeholder
+          # Fake value (base64 of repeated "*"), never decrypted or used for real I/O — see the block comment above.
+          APP_SECRETS_ENCRYPTION_KEY: KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKio=
+          # Fake value (base64 of repeated "*"), never used to sign a real session — see the block comment above.
+          AUTH_SESSION_SECRET_KEY: KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKio=
+          MARSA_WEB_URL: https://placeholder.invalid
+          MARSA_API_PUBLIC_URL: https://placeholder.invalid
         run: |
           pnpm --filter api generate:openapi
           pnpm --filter web generate:api

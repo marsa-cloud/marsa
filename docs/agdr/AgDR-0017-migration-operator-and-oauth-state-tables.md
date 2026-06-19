@@ -13,14 +13,14 @@ ticket: marsa-cloud/marsa#62
 > In the context of implementing GitHub user-OAuth login with an HttpOnly session (#62, [AgDR-0016](AgDR-0016-oauth-seam-and-session-mechanism.md)), facing the need to durably record authenticated operators and to validate single-use OAuth state tokens, I decided to execute a **schema** migration adding `operator` and `auth_oauth_state` tables, to achieve persistent operator identity (keyed on GitHub's stable numeric user id per [AgDR-0004](AgDR-0004-authentication-and-idp-strategy.md)) and CSRF-safe OAuth callbacks, accepting two new additive tables with no relation to existing data.
 
 **Migration type**: schema
-**Affected tables / entities**: `operator` (new), `auth_oauth_state` (new) — no FKs to existing tables
+**Affected tables / entities**: `users` (renamed from `operator` in-place, see [AgDR-0019](AgDR-0019-user-rename-and-role-enum.md)) (new), `auth_oauth_state` (new) — no FKs to existing tables
 **Estimated downtime**: none — both are additive new tables; no locks on existing data
-**Data volume**: `operator` — 1 row per authenticated operator (a self-hosted instance typically has a handful); `auth_oauth_state` — 1 short-lived row per login attempt (10-minute TTL, consumed on use), negligible and self-pruning
+**Data volume**: `users` — 1 row per authenticated user (a self-hosted instance typically has a handful); `auth_oauth_state` — 1 short-lived row per login attempt (10-minute TTL, consumed on use). **Correction**: "self-pruning" here described only the happy path (consumption deletes the row) — an issued-but-never-consumed state is **not** reaped on a timer. This is the same gap already named honestly in this AgDR's own Consequences section below; that section is the accurate statement, this line is amended to match it.
 **Target environment(s)**: dev-only for now → prod when v0.1 ships (no staging env yet)
 
 ## Context
 
-#62 adds "Sign in with GitHub" for the dashboard. Per AgDR-0016, the OAuth code exchange goes through the `GithubClient` seam and the session is a stateless `@fastify/secure-session` cookie holding only the operator `uuid` — so the only durable state this feature needs is:
+#62 adds "Sign in with GitHub" for the dashboard. Per AgDR-0016 (amended by [AgDR-0022](AgDR-0022-oauth-state-session-binding.md)), the OAuth code exchange goes through the `GithubClient` seam and the session is a stateless `@fastify/secure-session` cookie holding only the user `uuid` (field `userUuid`) — so the only durable state this feature needs is:
 
 1. **Who is this operator** (`operator`) — upserted by GitHub's numeric user id on every successful login, mirroring the `github_installation` pattern (AgDR-0013) of a dedicated table rather than overloading an existing one.
 2. **Was this OAuth callback CSRF-legitimate** (`auth_oauth_state`) — a single-use, expiring token issued at `GET /api/v1/auth/github` and consumed at `POST /api/v1/auth/github/session`. Mirrors the existing `manifest_state` pattern (AgDR-0010) closely enough that a thin parallel table was preferred over forcing a generic/shared name onto manifest-specific code (per the feature-internal-code convention in `apps/api/.claude/CLAUDE.md`).
@@ -42,6 +42,8 @@ Chosen: **two dedicated tables**.
 
 Neither table has a foreign key to existing tables — both are root entities for the `auth` feature.
 
+**Amended by [AgDR-0019](AgDR-0019-user-rename-and-role-enum.md)**: `operator` is renamed to `users` in-place (same migration file, not a new one — licensed by this migration never having shipped to a deployed environment, per the dev-only target above) and gains a `role` enum column. The table/entity name below is historical; `users` is the name from this point forward.
+
 ## Rollback Plan
 
 1. Run `pnpm --filter api migration:down` — executes the generated `down()`, which runs `DROP TABLE "operator";` and `DROP TABLE "auth_oauth_state";`. Both tables are self-contained (no inbound FKs from other tables), so the drop is safe in either order.
@@ -52,7 +54,7 @@ Neither table has a foreign key to existing tables — both are root entities fo
 
 ## Cross-Service Consumers
 
-- **marsa-api** — sole reader/writer (`begin-github-login` issues `auth_oauth_state` rows and reads `operator`; `complete-github-login` consumes `auth_oauth_state` and upserts `operator`; `get-current-operator` reads `operator`).
+- **marsa-api** — sole reader/writer (`begin-github-login` issues `auth_oauth_state` rows and reads `users`; `complete-github-login` consumes `auth_oauth_state` and upserts `users`; `get-current-user`, renamed from `get-current-operator` per [AgDR-0019](AgDR-0019-user-rename-and-role-enum.md), reads `users`).
 - **none** else — `apps/web` never queries these tables directly; it only sees the HTTP responses and the session cookie.
 
 Deploy-order constraint: none — both tables are net-new with no dependency on prior migrations beyond the baseline schema.
@@ -80,4 +82,5 @@ Deploy-order constraint: none — both tables are net-new with no dependency on 
 - Ticket: marsa-cloud/marsa#62 (migration tracked on the feature ticket via the `migration` label, per the AgDR-0013 precedent)
 - Builds on: [AgDR-0004](AgDR-0004-authentication-and-idp-strategy.md) (forward-compat key), [AgDR-0010](AgDR-0010-migration-manifest-state-db-backed.md) (single-use state token precedent), [AgDR-0013](AgDR-0013-migration-github-installation-table.md) (dedicated-table precedent)
 - Pairs with: [AgDR-0016](AgDR-0016-oauth-seam-and-session-mechanism.md) (seam + session mechanism decisions for #62)
+- Amended by: [AgDR-0019](AgDR-0019-user-rename-and-role-enum.md) (`operator`→`users` rename + `role` column, same migration file), [AgDR-0022](AgDR-0022-oauth-state-session-binding.md) (session-binding check added on top of this table's DB-only single-use check)
 - Commits / PRs: filled in as the migration ships

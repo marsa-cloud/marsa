@@ -1,3 +1,5 @@
+import dayjs from 'dayjs'
+
 import { OAuthState } from '#src/app/auth/entities/oauth-state.entity.js'
 
 export class OAuthStateBuilder {
@@ -5,7 +7,7 @@ export class OAuthStateBuilder {
 
   constructor() {
     this.state = new OAuthState()
-    this.state.expiresAt = new Date(Date.now() + 10 * 60 * 1000)
+    this.state.expiresAt = dayjs().add(10, 'minute').toDate()
   }
 
   withExpiresAt(expiresAt: Date): this {

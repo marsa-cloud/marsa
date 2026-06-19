@@ -31,9 +31,9 @@ ticket: marsa-cloud/marsa#62
 Chosen: **(a)**.
 
 - `GithubClient` (the abstract seam) gains `exchangeUserOAuthCode(code, creds)` and `getAuthenticatedUser(userToken)`, implemented in `OctokitGithubClient` against `https://github.com/login/oauth/access_token` and `GET /user`, with a deterministic `MockGithubClient` binding for tests (same shape as the existing `convertManifest`/`getInstallationToken` methods).
-- Session state is a `@fastify/secure-session` HttpOnly, SameSite=Lax (Secure in prod) encrypted cookie holding only the operator's `uuid` + GitHub numeric id — no session table, no DB round-trip to check a session.
-- The operator record (new `Operator` entity) is keyed on `githubUserId` (string, `@Unique`, the stable GitHub numeric id) per AgDR-0004's forward-compat rule — unaffected by this decision, carried forward unchanged.
-- OAuth CSRF state reuses (or generalizes) the existing DB-backed single-use state pattern already built for the manifest flow (`app/github-app/manifest-state/`), rather than inventing a second token mechanism.
+- Session state is a `@fastify/secure-session` HttpOnly, SameSite=Lax (Secure in prod) encrypted cookie holding only the user's `uuid` (field `userUuid`, post-[AgDR-0019](AgDR-0019-user-rename-and-role-enum.md) rename) — **correction**: earlier wording here said "uuid + GitHub numeric id"; the numeric id has only ever lived on the DB row (`githubUserId`), never in the cookie. No session table, no DB round-trip to check a session.
+- The operator record (new `Operator` entity, renamed to `User` per [AgDR-0019](AgDR-0019-user-rename-and-role-enum.md)) is keyed on `githubUserId` (string, `@Unique`, the stable GitHub numeric id) per AgDR-0004's forward-compat rule — unaffected by this decision, carried forward unchanged.
+- OAuth CSRF state reuses (or generalizes) the existing DB-backed single-use state pattern already built for the manifest flow (`app/github-app/manifest-state/`), rather than inventing a second token mechanism. **Amended by [AgDR-0022](AgDR-0022-oauth-state-session-binding.md)**: the DB-only check on its own doesn't bind the callback to the browser that began the flow (login-CSRF); the issued state is now also stored in the session and matched at completion, in addition to the DB single-use check described here.
 
 ## Consequences
 

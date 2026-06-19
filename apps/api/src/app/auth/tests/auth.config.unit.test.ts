@@ -15,17 +15,15 @@ describe('authConfig', () => {
     expect(config.sessionKey.length).toBe(32)
   })
 
-  it('fails fast when AUTH_SESSION_SECRET_KEY is missing', () => {
-    const original = process.env.AUTH_SESSION_SECRET_KEY
-    delete process.env.AUTH_SESSION_SECRET_KEY
-    try {
-      expect(() => authConfig()).toThrow(/AUTH_SESSION_SECRET_KEY/)
-    } finally {
-      process.env.AUTH_SESSION_SECRET_KEY = original
-    }
+  it('falls back to the default cookie name when AUTH_COOKIE_NAME is unset', () => {
+    const config = authConfig()
+
+    expect(config.cookieName).toBe('marsa_session')
   })
 
   it('fails fast when the key does not decode to 32 bytes', () => {
+    // Presence of AUTH_SESSION_SECRET_KEY is guaranteed by the global env schema
+    // (AgDR-0020); this only proves the still-local byte-length check still fires.
     const original = process.env.AUTH_SESSION_SECRET_KEY
     process.env.AUTH_SESSION_SECRET_KEY = Buffer.from('too-short').toString('base64')
     try {

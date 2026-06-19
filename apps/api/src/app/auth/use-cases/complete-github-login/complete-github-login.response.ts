@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger'
 
-import { Operator } from '#src/app/auth/entities/operator.entity.js'
+import { User } from '#src/app/user/entities/user.entity.js'
 
 export class CompleteGithubLoginResponse {
   @ApiProperty({ type: String, example: '1' })
@@ -9,8 +9,8 @@ export class CompleteGithubLoginResponse {
   @ApiProperty({ type: String, example: 'octocat' })
   readonly login: string
 
-  constructor(operator: Operator) {
-    this.id = operator.githubUserId
-    this.login = operator.githubLogin
+  constructor(user: User) {
+    this.id = user.githubUserId
+    this.login = user.githubLogin
   }
 }

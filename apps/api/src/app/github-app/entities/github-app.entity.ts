@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto'
 
 import { Entity, PrimaryKey, Property, Unique } from '@mikro-orm/core'
 
+import { asUuid, type Uuid } from '#src/utils/uuid.js'
+
 /**
  * A GitHub App provisioned for this install via the Manifest flow (#58,
  * AgDR-0005). One row per provisioned App.
@@ -16,7 +18,7 @@ export class GitHubApp {
   // instantiation via randomUUID(), so the row carries its key before flush — no
   // DB round-trip to learn it, and no autoincrement/serial sequence to coordinate.
   @PrimaryKey({ type: 'uuid' })
-  uuid: string = randomUUID()
+  uuid: Uuid = asUuid(randomUUID())
 
   @Property({ type: 'string', length: 255 })
   @Unique()

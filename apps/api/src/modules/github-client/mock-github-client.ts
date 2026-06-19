@@ -48,12 +48,7 @@ export class MockGithubClient extends GithubClient {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  exchangeUserOAuthCode(_params: UserOAuthExchangeParams): Promise<string> {
-    return Promise.resolve('ghu_mock_user_access_token')
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  getAuthenticatedUser(_userAccessToken: string): Promise<GitHubUser> {
+  loginUser(_params: UserOAuthExchangeParams): Promise<GitHubUser> {
     return Promise.resolve({ ...MOCK_USER })
   }
 }

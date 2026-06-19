@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common'
 
 import { ManifestStateBuilder } from '#src/app/github-app/entities/manifest-state.builder.js'
 import { ManifestState } from '#src/app/github-app/entities/manifest-state.entity.js'
+import { asUuid } from '#src/utils/uuid.js'
 
 const DEFAULT_TTL_MS = 10 * 60 * 1000
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -27,7 +28,7 @@ export class ManifestStateService {
     // Atomic conditional delete → verifies at most once, no replay.
     const deleted = await this.em
       .fork()
-      .nativeDelete(ManifestState, { uuid: state, expiresAt: { $gt: new Date() } })
+      .nativeDelete(ManifestState, { uuid: asUuid(state), expiresAt: { $gt: new Date() } })
     return deleted === 1
   }
 }

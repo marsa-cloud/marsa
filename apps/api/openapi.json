@@ -179,7 +179,7 @@
     },
     "/api/v1/auth/me": {
       "get": {
-        "operationId": "getCurrentOperatorV1",
+        "operationId": "getCurrentUserV1",
         "parameters": [],
         "responses": {
           "200": {
@@ -187,7 +187,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GetCurrentOperatorResponse"
+                  "$ref": "#/components/schemas/GetCurrentUserResponse"
                 }
               }
             }
@@ -206,7 +206,7 @@
   "info": {
     "title": "Marsa API",
     "description": "Marsa PaaS HTTP API",
-    "version": "1.0",
+    "version": "0.0.0",
     "contact": {}
   },
   "tags": [],
@@ -462,7 +462,7 @@
           "login"
         ]
       },
-      "GetCurrentOperatorResponse": {
+      "GetCurrentUserResponse": {
         "type": "object",
         "properties": {
           "id": {

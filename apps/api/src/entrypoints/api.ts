@@ -1,5 +1,6 @@
 import fastifySecureSession from '@fastify/secure-session'
 import { ValidationPipe, VersioningType } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { NestFactory } from '@nestjs/core'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import QueryString from 'qs'
@@ -21,14 +22,16 @@ async function bootstrap(): Promise<void> {
     }),
   )
 
+  const config = app.get(ConfigService)
+
   await app.register(fastifySecureSession, {
     key: authConfig().sessionKey,
-    cookieName: 'marsa_session',
+    cookieName: authConfig().cookieName,
     cookie: {
       path: '/',
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      secure: config.get('NODE_ENV', 'development') === 'production',
     },
   })
 
@@ -40,7 +43,7 @@ async function bootstrap(): Promise<void> {
     new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }),
   )
 
-  await app.listen(Number(process.env.PORT) || 3000, '0.0.0.0')
+  await app.listen(config.get<number>('PORT', 3000), '0.0.0.0')
 }
 
 void bootstrap()

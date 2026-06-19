@@ -1,11 +1,13 @@
 import { EntityManager } from '@mikro-orm/core'
 import { Injectable } from '@nestjs/common'
+import { isUUID } from 'class-validator'
+import dayjs from 'dayjs'
 
 import { OAuthStateBuilder } from '#src/app/auth/entities/oauth-state.builder.js'
 import { OAuthState } from '#src/app/auth/entities/oauth-state.entity.js'
+import { asUuid } from '#src/utils/uuid.js'
 
-const DEFAULT_TTL_MS = 10 * 60 * 1000
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const DEFAULT_TTL_MINUTES = 10
 
 /**
  * DB-backed, single-use CSRF state for the user-OAuth round-trip (#62).
@@ -19,20 +21,22 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export class OAuthStateService {
   constructor(private readonly em: EntityManager) {}
 
-  async issue(ttlMs: number = DEFAULT_TTL_MS): Promise<string> {
-    const state = new OAuthStateBuilder().withExpiresAt(new Date(Date.now() + ttlMs)).build()
+  async issue(ttlMinutes: number = DEFAULT_TTL_MINUTES): Promise<string> {
+    const state = new OAuthStateBuilder()
+      .withExpiresAt(dayjs().add(ttlMinutes, 'minute').toDate())
+      .build()
     await this.em.fork().persistAndFlush(state)
     return state.uuid
   }
 
   async consume(state: string): Promise<boolean> {
-    if (!UUID_RE.test(state)) {
+    if (!isUUID(state)) {
       return false
     }
     // Atomic conditional delete → verifies at most once, no replay.
     const deleted = await this.em
       .fork()
-      .nativeDelete(OAuthState, { uuid: state, expiresAt: { $gt: new Date() } })
+      .nativeDelete(OAuthState, { uuid: asUuid(state), expiresAt: { $gt: dayjs().toDate() } })
     return deleted === 1
   }
 }

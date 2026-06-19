@@ -2,10 +2,11 @@ import { createHash } from 'node:crypto'
 
 import { Injectable, Logger } from '@nestjs/common'
 import { createAppAuth } from '@octokit/auth-app'
+import { request } from '@octokit/request'
 
 import {
-  GITHUB_API,
   GITHUB_OAUTH_TOKEN_URL,
+  GITHUB_REQUEST_TIMEOUT_MS,
 } from '#src/modules/github-client/github-client.constants.js'
 import { GithubClient } from '#src/modules/github-client/github-client.js'
 import type {
@@ -26,20 +27,18 @@ export class OctokitGithubClient extends GithubClient {
   >()
 
   async convertManifest(code: string): Promise<GitHubAppCredentials> {
-    const response = await fetch(
-      `${GITHUB_API}/app-manifests/${encodeURIComponent(code)}/conversions`,
-      {
-        method: 'POST',
-        headers: { Accept: 'application/vnd.github+json' },
-      },
-    )
-
-    if (!response.ok) {
-      const body = await response.text().catch(() => '')
-      throw new Error(`GitHub manifest conversion failed: ${response.status} ${body}`.trim())
+    let data: GitHubManifestConversionResponse
+    try {
+      const response = await request('POST /app-manifests/{code}/conversions', {
+        code,
+        headers: { accept: 'application/vnd.github+json' },
+        request: { signal: AbortSignal.timeout(GITHUB_REQUEST_TIMEOUT_MS) },
+      })
+      data = response.data as GitHubManifestConversionResponse
+    } catch (error) {
+      throw new Error(`GitHub manifest conversion failed: ${(error as Error).message}`)
     }
 
-    const data = (await response.json()) as GitHubManifestConversionResponse
     return {
       id: data.id,
       slug: data.slug,
@@ -68,23 +67,29 @@ export class OctokitGithubClient extends GithubClient {
     }
   }
 
-  async exchangeUserOAuthCode(params: UserOAuthExchangeParams): Promise<string> {
-    const response = await fetch(GITHUB_OAUTH_TOKEN_URL, {
-      method: 'POST',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+  async loginUser(params: UserOAuthExchangeParams): Promise<GitHubUser> {
+    const userAccessToken = await this.exchangeUserOAuthCode(params)
+    return this.getAuthenticatedUser(userAccessToken)
+  }
+
+  private async exchangeUserOAuthCode(params: UserOAuthExchangeParams): Promise<string> {
+    let data: GitHubOAuthAccessTokenResponse
+    try {
+      // Not a documented REST endpoint under api.github.com — `@octokit/endpoint`
+      // leaves an absolute `http(s)://` route URL untouched instead of prefixing
+      // it with `baseUrl`.
+      const response = await request(`POST ${GITHUB_OAUTH_TOKEN_URL}`, {
+        headers: { accept: 'application/json' },
         client_id: params.clientId,
         client_secret: params.clientSecret,
         code: params.code,
-      }),
-    })
-
-    if (!response.ok) {
-      const body = await response.text().catch(() => '')
-      throw new Error(`GitHub OAuth code exchange failed: ${response.status} ${body}`.trim())
+        request: { signal: AbortSignal.timeout(GITHUB_REQUEST_TIMEOUT_MS) },
+      })
+      data = response.data as GitHubOAuthAccessTokenResponse
+    } catch (error) {
+      throw new Error(`GitHub OAuth code exchange failed: ${(error as Error).message}`)
     }
 
-    const data = (await response.json()) as GitHubOAuthAccessTokenResponse
     if (!data.access_token) {
       throw new Error(
         `GitHub OAuth code exchange returned no access_token: ${data.error ?? ''} ${data.error_description ?? ''}`.trim(),
@@ -93,20 +98,21 @@ export class OctokitGithubClient extends GithubClient {
     return data.access_token
   }
 
-  async getAuthenticatedUser(userAccessToken: string): Promise<GitHubUser> {
-    const response = await fetch(`${GITHUB_API}/user`, {
-      headers: {
-        Accept: 'application/vnd.github+json',
-        Authorization: `Bearer ${userAccessToken}`,
-      },
-    })
-
-    if (!response.ok) {
-      const body = await response.text().catch(() => '')
-      throw new Error(`GitHub user lookup failed: ${response.status} ${body}`.trim())
+  private async getAuthenticatedUser(userAccessToken: string): Promise<GitHubUser> {
+    let data: { id: number; login: string }
+    try {
+      const response = await request('GET /user', {
+        headers: {
+          accept: 'application/vnd.github+json',
+          authorization: `Bearer ${userAccessToken}`,
+        },
+        request: { signal: AbortSignal.timeout(GITHUB_REQUEST_TIMEOUT_MS) },
+      })
+      data = response.data
+    } catch (error) {
+      throw new Error(`GitHub user lookup failed: ${(error as Error).message}`)
     }
 
-    const data = (await response.json()) as GitHubUser
     return { id: data.id, login: data.login }
   }
 

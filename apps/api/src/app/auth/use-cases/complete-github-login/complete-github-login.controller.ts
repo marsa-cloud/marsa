@@ -27,8 +27,13 @@ export class CompleteGithubLoginController {
     @Body() body: CompleteGithubLoginCommand,
     @Req() request: FastifyRequest,
   ): Promise<CompleteGithubLoginResponse> {
-    const operator = await this.usecase.execute(body)
-    request.session.set('operatorUuid', operator.uuid)
-    return new CompleteGithubLoginResponse(operator)
+    const sessionState = request.session.get('oauthState')
+    // Single-use regardless of outcome — a failed attempt shouldn't leave the
+    // CSRF token sitting in the session for a retry.
+    request.session.set('oauthState', undefined)
+
+    const user = await this.usecase.execute(body, sessionState)
+    request.session.set('userUuid', user.uuid)
+    return new CompleteGithubLoginResponse(user)
   }
 }

@@ -65,7 +65,7 @@ export const zCompleteGithubLoginResponse = z.object({
   login: z.string(),
 })
 
-export const zGetCurrentOperatorResponse = z.object({
+export const zGetCurrentUserResponse = z.object({
   id: z.string(),
   login: z.string(),
 })
@@ -86,4 +86,4 @@ export const zCompleteGithubLoginV1Body = zCompleteGithubLoginCommand
 
 export const zCompleteGithubLoginV1Response = zCompleteGithubLoginResponse
 
-export const zGetCurrentOperatorV1Response = zGetCurrentOperatorResponse
+export const zGetCurrentUserV1Response = zGetCurrentUserResponse

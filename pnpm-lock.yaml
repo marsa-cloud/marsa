@@ -69,6 +69,9 @@ catalogs:
     '@octokit/auth-app':
       specifier: ^8.2.0
       version: 8.2.0
+    '@octokit/request':
+      specifier: ^10.0.10
+      version: 10.0.10
     '@types/express':
       specifier: ^5.0.0
       version: 5.0.6
@@ -93,6 +96,9 @@ catalogs:
     class-validator:
       specifier: ^0.14.1
       version: 0.14.4
+    dayjs:
+      specifier: ^1.11.13
+      version: 1.11.21
     eslint:
       specifier: ^9.18.0
       version: 9.39.4
@@ -242,6 +248,9 @@ importers:
       '@octokit/auth-app':
         specifier: 'catalog:'
         version: 8.2.0
+      '@octokit/request':
+        specifier: 'catalog:'
+        version: 10.0.10
       '@swc/cli':
         specifier: ^0.8.1
         version: 0.8.1(@swc/core@1.15.33(@swc/helpers@0.5.21))(chokidar@4.0.3)
@@ -257,6 +266,9 @@ importers:
       class-validator:
         specifier: 'catalog:'
         version: 0.14.4
+      dayjs:
+        specifier: 'catalog:'
+        version: 1.11.21
       fastify:
         specifier: ^5.8.5
         version: 5.8.5
@@ -4445,6 +4457,9 @@ packages:
 
   dataloader@2.2.3:
     resolution: {integrity: sha512-y2krtASINtPFS1rSDjacrFgn1dcUuoREVabwlOGOe4SdxenREqwjwjElAdwvbGM7kgZz9a3KVicWR7vcz8rnzA==}
+
+  dayjs@1.11.21:
+    resolution: {integrity: sha512-98IT+HOahAisibz/yjKbzuOBwYcjJ7BCLPzARyHiyEBmRz4fatF+KPJszEHXsGYjUG234aH/cOjW1wwTbKUZlA==}
 
   db0@0.3.4:
     resolution: {integrity: sha512-RiXXi4WaNzPTHEOu8UPQKMooIbqOEyqA1t7Z6MsdxSCeb8iUC9ko3LcmsLmeUt2SM5bctfArZKkRQggKZz7JNw==}
@@ -12640,6 +12655,8 @@ snapshots:
   csstype@3.2.3: {}
 
   dataloader@2.2.3: {}
+
+  dayjs@1.11.21: {}
 
   db0@0.3.4: {}
 

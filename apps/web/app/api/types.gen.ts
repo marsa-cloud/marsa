@@ -105,7 +105,7 @@ export type CompleteGithubLoginResponse = {
   login: string
 }
 
-export type GetCurrentOperatorResponse = {
+export type GetCurrentUserResponse = {
   id: string
   login: string
 }
@@ -226,23 +226,22 @@ export type CompleteGithubLoginV1Responses = {
 export type CompleteGithubLoginV1Response =
   CompleteGithubLoginV1Responses[keyof CompleteGithubLoginV1Responses]
 
-export type GetCurrentOperatorV1Data = {
+export type GetCurrentUserV1Data = {
   body?: never
   path?: never
   query?: never
   url: '/api/v1/auth/me'
 }
 
-export type GetCurrentOperatorV1Errors = {
+export type GetCurrentUserV1Errors = {
   /**
    * No active session.
    */
   401: unknown
 }
 
-export type GetCurrentOperatorV1Responses = {
-  200: GetCurrentOperatorResponse
+export type GetCurrentUserV1Responses = {
+  200: GetCurrentUserResponse
 }
 
-export type GetCurrentOperatorV1Response =
-  GetCurrentOperatorV1Responses[keyof GetCurrentOperatorV1Responses]
+export type GetCurrentUserV1Response = GetCurrentUserV1Responses[keyof GetCurrentUserV1Responses]

@@ -1,5 +1,6 @@
 import { afterEach, before, describe, it } from 'node:test'
 
+import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import sinon from 'sinon'
 
@@ -32,7 +33,7 @@ describe('ConvertManifestUseCase', () => {
     const manifestState = sinon.createStubInstance(ManifestStateService)
     const repository = sinon.createStubInstance(ConvertManifestRepository)
     const client = sinon.createStubInstance(MockGithubClient)
-    const cipher = new SecretCipherService()
+    const cipher = new SecretCipherService(new ConfigService())
 
     manifestState.consume.resolves(true)
     client.convertManifest.resolves(CREDS)
@@ -62,7 +63,7 @@ describe('ConvertManifestUseCase', () => {
     const manifestState = sinon.createStubInstance(ManifestStateService)
     const repository = sinon.createStubInstance(ConvertManifestRepository)
     const client = sinon.createStubInstance(MockGithubClient)
-    const cipher = new SecretCipherService()
+    const cipher = new SecretCipherService(new ConfigService())
 
     manifestState.consume.resolves(true)
     client.convertManifest.resolves({ ...CREDS, ownerLogin: null })
@@ -81,7 +82,7 @@ describe('ConvertManifestUseCase', () => {
     const manifestState = sinon.createStubInstance(ManifestStateService)
     const repository = sinon.createStubInstance(ConvertManifestRepository)
     const client = sinon.createStubInstance(MockGithubClient)
-    const cipher = new SecretCipherService()
+    const cipher = new SecretCipherService(new ConfigService())
 
     manifestState.consume.resolves(false)
 
@@ -99,7 +100,7 @@ describe('ConvertManifestUseCase', () => {
     const manifestState = sinon.createStubInstance(ManifestStateService)
     const repository = sinon.createStubInstance(ConvertManifestRepository)
     const client = sinon.createStubInstance(MockGithubClient)
-    const cipher = new SecretCipherService()
+    const cipher = new SecretCipherService(new ConfigService())
 
     manifestState.consume.resolves(true)
     client.convertManifest.rejects(new Error('boom'))
