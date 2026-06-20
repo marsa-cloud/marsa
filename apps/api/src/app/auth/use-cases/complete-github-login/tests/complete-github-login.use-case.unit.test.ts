@@ -1,11 +1,11 @@
 import { before, describe, it } from 'node:test'
 
+import { EntityManager } from '@mikro-orm/core'
 import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
 
 import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
-import { OAuthStateService } from '#src/app/auth/oauth-state.service.js'
 import { CompleteGithubLoginCommandBuilder } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.builder.js'
 import { CompleteGithubLoginRepository } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.repository.js'
 import { CompleteGithubLoginUseCase } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.use-case.js'
@@ -30,18 +30,21 @@ function build(options: { app?: GitHubApp | null; stateValid?: boolean } = {}) {
 
   const repository = createStubInstance(CompleteGithubLoginRepository)
   repository.loadProvisionedApp.resolves(app)
-  repository.upsertByGithubUserId.resolves(
+  repository.consumeState.resolves(options.stateValid ?? true)
+  repository.upsertUser.resolves(
     new UserBuilder().withGithubUserId('1').withGithubLogin('marsa-mock-user').build(),
   )
 
-  const oauthState = createStubInstance(OAuthStateService)
-  oauthState.consume.resolves(options.stateValid ?? true)
+  // The use-case wraps its writes in `em.transactional(cb)`; run the callback
+  // inline so the stubbed repository calls execute (the real EM never boots).
+  const em = createStubInstance(EntityManager)
+  em.transactional.callsFake((work) => Promise.resolve(work(em)))
 
   const github = createStubInstance(OctokitGithubClient)
   github.loginUser.resolves({ id: 1, login: 'marsa-mock-user' })
 
-  const usecase = new CompleteGithubLoginUseCase(repository, oauthState, github, cipher)
-  return { usecase, repository, oauthState, github, app }
+  const usecase = new CompleteGithubLoginUseCase(em, repository, github, cipher)
+  return { usecase, repository, github, app }
 }
 
 describe('CompleteGithubLoginUseCase', () => {
@@ -54,26 +57,29 @@ describe('CompleteGithubLoginUseCase', () => {
 
     expect(user.githubUserId).toBe('1')
     expect(user.githubLogin).toBe('marsa-mock-user')
-    expect(repository.upsertByGithubUserId.calledOnceWithExactly('1', 'marsa-mock-user')).toBe(true)
+    expect(repository.upsertUser.calledOnceWithExactly('1', 'marsa-mock-user')).toBe(true)
     expect(github.loginUser.calledOnce).toBe(true)
   })
 
-  it('rejects an invalid or expired state before calling GitHub', async () => {
-    const { usecase, github } = build({ stateValid: false })
+  it('rejects an invalid or expired state after exchanging the code, without upserting', async () => {
+    const { usecase, github, repository } = build({ stateValid: false })
 
     await expect(usecase.execute(command(), SESSION_STATE)).rejects.toThrow(
       /Invalid or expired OAuth state/,
     )
-    expect(github.loginUser.notCalled).toBe(true)
+    // The state's single-use/replay guard is the second layer, inside the tx, so
+    // the exchange has already happened; the upsert must not.
+    expect(github.loginUser.calledOnce).toBe(true)
+    expect(repository.upsertUser.notCalled).toBe(true)
   })
 
   it('rejects when the callback state does not match the session-bound state', async () => {
-    const { usecase, github, oauthState } = build()
+    const { usecase, github, repository } = build()
 
     await expect(usecase.execute(command(), 'some-other-state')).rejects.toThrow(
       /Invalid or expired OAuth state/,
     )
-    expect(oauthState.consume.notCalled).toBe(true)
+    expect(repository.consumeState.notCalled).toBe(true)
     expect(github.loginUser.notCalled).toBe(true)
   })
 
@@ -102,7 +108,8 @@ describe('CompleteGithubLoginUseCase', () => {
     await expect(usecase.execute(command(), SESSION_STATE)).rejects.toThrow(
       /Could not complete login with GitHub/,
     )
-    expect(repository.upsertByGithubUserId.notCalled).toBe(true)
+    expect(repository.consumeState.notCalled).toBe(true)
+    expect(repository.upsertUser.notCalled).toBe(true)
   })
 
   it('lets a decrypt failure surface as itself, before any GitHub call', async () => {

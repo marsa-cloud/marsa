@@ -1,6 +1,6 @@
+import { EntityManager } from '@mikro-orm/core'
 import { BadGatewayException, BadRequestException, Injectable, Logger } from '@nestjs/common'
 
-import { OAuthStateService } from '#src/app/auth/oauth-state.service.js'
 import { CompleteGithubLoginCommand } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.js'
 import { CompleteGithubLoginRepository } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.repository.js'
 import { User } from '#src/app/user/entities/user.entity.js'
@@ -12,8 +12,8 @@ export class CompleteGithubLoginUseCase {
   private readonly logger = new Logger(CompleteGithubLoginUseCase.name)
 
   constructor(
+    private readonly em: EntityManager,
     private readonly repository: CompleteGithubLoginRepository,
-    private readonly oauthState: OAuthStateService,
     private readonly github: GithubClient,
     private readonly cipher: SecretCipherService,
   ) {}
@@ -22,19 +22,7 @@ export class CompleteGithubLoginUseCase {
     command: CompleteGithubLoginCommand,
     sessionState: string | undefined,
   ): Promise<User> {
-    // Field presence/type is enforced at the DTO boundary by class-validator, so
-    // it isn't re-checked here.
-    //
-    // Two independent checks guard the state: it must match what this browser's
-    // session was given at begin-login (closes login-CSRF — an attacker can't
-    // complete a login they didn't begin), and it must still exist, unconsumed
-    // and unexpired, in the DB (closes replay).
     if (!sessionState || sessionState !== command.state) {
-      throw new BadRequestException('Invalid or expired OAuth state.')
-    }
-
-    const stateValid = await this.oauthState.consume(command.state)
-    if (!stateValid) {
       throw new BadRequestException('Invalid or expired OAuth state.')
     }
 
@@ -43,9 +31,6 @@ export class CompleteGithubLoginUseCase {
       throw new BadRequestException('No provisioned GitHub App — create the App first.')
     }
 
-    // Decrypt the stored secret up front, outside the GitHub call's try/catch, so
-    // a local decrypt/config failure surfaces as itself rather than being
-    // misreported as a GitHub exchange (502) error.
     const clientSecret = this.cipher.decrypt(app.clientSecretEnc)
 
     let githubUser: { id: number; login: string }
@@ -60,6 +45,13 @@ export class CompleteGithubLoginUseCase {
       throw new BadGatewayException('Could not complete login with GitHub.')
     }
 
-    return this.repository.upsertByGithubUserId(String(githubUser.id), githubUser.login)
+    return this.em.transactional(async () => {
+      const consumed = await this.repository.consumeState(command.state)
+      if (!consumed) {
+        throw new BadRequestException('Invalid or expired OAuth state.')
+      }
+
+      return this.repository.upsertUser(String(githubUser.id), githubUser.login)
+    })
   }
 }

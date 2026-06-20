@@ -1,9 +1,7 @@
 import { after, before, describe, it } from 'node:test'
 
-import { EntityManager } from '@mikro-orm/core'
 import { expect } from 'expect'
 
-import { OAuthState } from '#src/app/auth/entities/oauth-state.entity.js'
 import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { OAuthStateModule } from '#src/app/auth/oauth-state.module.js'
 import { OAuthStateService } from '#src/app/auth/oauth-state.service.js'
@@ -11,22 +9,16 @@ import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 import { generateUuid } from '#src/utils/uuid.js'
 
-// The service forks its own EM and commits (issue/consume must outlive a single
-// request), so rows don't ride the TestSetup transaction — we wipe the table in
-// `after` instead of relying on rollback.
 describe('OAuthStateService (db)', () => {
   let setup: TestSetup
   let service: OAuthStateService
-  let em: EntityManager
 
   before(async () => {
     setup = await TestBench.setupModuleTest(OAuthStateModule)
     service = setup.testModule.get(OAuthStateService)
-    em = setup.testModule.get(EntityManager)
   })
 
   after(async () => {
-    await em.fork().nativeDelete(OAuthState, {})
     await setup.teardown()
   })
 

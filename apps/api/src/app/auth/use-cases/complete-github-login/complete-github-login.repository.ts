@@ -1,48 +1,38 @@
-import { EntityManager } from '@mikro-orm/core'
+import type { EntityRepository } from '@mikro-orm/core'
+import { InjectRepository } from '@mikro-orm/nestjs'
 import { Injectable } from '@nestjs/common'
 
+import { OAuthState } from '#src/app/auth/entities/oauth-state.entity.js'
+import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
 import { UserBuilder } from '#src/app/user/entities/user.builder.js'
 import { User } from '#src/app/user/entities/user.entity.js'
 
-/**
- * Persistence for the complete-github-login use-case (AgDR-0011 pattern). Wraps
- * a forked EM for request isolation; the use-case depends on this, not the raw EM.
- */
 @Injectable()
 export class CompleteGithubLoginRepository {
-  constructor(private readonly em: EntityManager) {}
+  constructor(
+    @InjectRepository(GitHubApp) private readonly apps: EntityRepository<GitHubApp>,
+    @InjectRepository(OAuthState) private readonly states: EntityRepository<OAuthState>,
+    @InjectRepository(User) private readonly users: EntityRepository<User>,
+  ) {}
 
-  /**
-   * The single provisioned App for this install (self-hosted = one row). Returns
-   * the most recently created if more than one ever exists; null if none.
-   */
   async loadProvisionedApp(): Promise<GitHubApp | null> {
-    const [app] = await this.em
-      .fork()
-      .find(GitHubApp, {}, { orderBy: { createdAt: 'DESC' }, limit: 1 })
+    const [app] = await this.apps.find({}, { orderBy: { createdAt: 'DESC' }, limit: 1 })
     return app ?? null
   }
 
-  /**
-   * Upsert the user by `githubUserId` — atomic via MikroORM's native
-   * INSERT ... ON CONFLICT, so no findOne-then-write race window. The GitHub
-   * login is refreshed on every login in case the user renamed it.
-   */
-  async upsertByGithubUserId(githubUserId: string, githubLogin: string): Promise<User> {
-    const em = this.em.fork()
+  async consumeState(state: OAuthStateUuid): Promise<boolean> {
+    const deleted = await this.states.nativeDelete({ uuid: state, expiresAt: { $gt: new Date() } })
+    return deleted === 1
+  }
+
+  async upsertUser(githubUserId: string, githubLogin: string): Promise<User> {
     const user = new UserBuilder()
       .withGithubUserId(githubUserId)
       .withGithubLogin(githubLogin)
       .build()
 
-    // `onConflictFields` pins the conflict target to `githubUserId` so a second
-    // login for the same GitHub user updates the existing row instead of racing
-    // on the PK. `onConflictExcludeFields` keeps the builder's freshly-generated
-    // `uuid` out of the conflict-update SET clause, so a repeat login can't
-    // rewrite the existing row's uuid out from under any session that already
-    // references it.
-    return em.upsert(user, undefined, {
+    return this.users.upsert(user, {
       onConflictFields: ['githubUserId'],
       onConflictExcludeFields: ['uuid'],
     })

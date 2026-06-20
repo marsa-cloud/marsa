@@ -5,7 +5,6 @@ import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import request from 'supertest'
 
-import { OAuthState } from '#src/app/auth/entities/oauth-state.entity.js'
 import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { CompleteGithubLoginCommandBuilder } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.builder.js'
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
@@ -26,13 +25,6 @@ describe('POST /api/v1/auth/github/session (e2e)', () => {
   })
 
   after(async () => {
-    // The use-case + state service each fork their own EM and commit, so these
-    // rows don't ride the TestSetup transaction — wipe them explicitly. The
-    // mismatched-state test below issues a state via the real begin-login flow
-    // but never consumes it (the mismatch is rejected before `consume()` runs).
-    await em.fork().nativeDelete(GitHubApp, {})
-    await em.fork().nativeDelete(User, {})
-    await em.fork().nativeDelete(OAuthState, {})
     await setup.teardown()
   })
 

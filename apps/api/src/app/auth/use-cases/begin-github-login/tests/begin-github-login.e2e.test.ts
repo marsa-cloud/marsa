@@ -4,7 +4,6 @@ import { EntityManager } from '@mikro-orm/core'
 import { expect } from 'expect'
 import request from 'supertest'
 
-import { OAuthState } from '#src/app/auth/entities/oauth-state.entity.js'
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
@@ -20,12 +19,6 @@ describe('GET /api/v1/auth/github (e2e)', () => {
   })
 
   after(async () => {
-    // The use-case's repository + OAuthStateService each fork their own EM
-    // (request isolation), so rows they write are committed on a separate
-    // connection and don't ride the TestSetup transaction — wipe them
-    // explicitly. The happy-path test below issues a state it never consumes.
-    await em.fork().nativeDelete(GitHubApp, {})
-    await em.fork().nativeDelete(OAuthState, {})
     await setup.teardown()
   })
 
