@@ -5,7 +5,7 @@ import dayjs from 'dayjs'
 
 import { OAuthStateBuilder } from '#src/app/auth/entities/oauth-state.builder.js'
 import { OAuthState } from '#src/app/auth/entities/oauth-state.entity.js'
-import { asUuid } from '#src/utils/uuid.js'
+import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 
 const DEFAULT_TTL_MINUTES = 10
 
@@ -21,7 +21,7 @@ const DEFAULT_TTL_MINUTES = 10
 export class OAuthStateService {
   constructor(private readonly em: EntityManager) {}
 
-  async issue(ttlMinutes: number = DEFAULT_TTL_MINUTES): Promise<string> {
+  async issue(ttlMinutes: number = DEFAULT_TTL_MINUTES): Promise<OAuthStateUuid> {
     const state = new OAuthStateBuilder()
       .withExpiresAt(dayjs().add(ttlMinutes, 'minute').toDate())
       .build()
@@ -29,14 +29,15 @@ export class OAuthStateService {
     return state.uuid
   }
 
-  async consume(state: string): Promise<boolean> {
+  async consume(state: OAuthStateUuid): Promise<boolean> {
     if (!isUUID(state)) {
       return false
     }
     // Atomic conditional delete → verifies at most once, no replay.
-    const deleted = await this.em
-      .fork()
-      .nativeDelete(OAuthState, { uuid: asUuid(state), expiresAt: { $gt: dayjs().toDate() } })
+    const deleted = await this.em.fork().nativeDelete(OAuthState, {
+      uuid: state,
+      expiresAt: { $gt: dayjs().toDate() },
+    })
     return deleted === 1
   }
 }

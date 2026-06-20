@@ -6,6 +6,7 @@ import { expect } from 'expect'
 import request from 'supertest'
 
 import { OAuthState } from '#src/app/auth/entities/oauth-state.entity.js'
+import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { CompleteGithubLoginCommandBuilder } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.builder.js'
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
@@ -13,6 +14,7 @@ import { User } from '#src/app/user/entities/user.entity.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
+import { generateUuid } from '#src/utils/uuid.js'
 
 describe('POST /api/v1/auth/github/session (e2e)', () => {
   let setup: TestSetup
@@ -44,13 +46,15 @@ describe('POST /api/v1/auth/github/session (e2e)', () => {
     const beginResponse = await request(setup.httpServer).get('/api/v1/auth/github').expect(302)
     const beginCookie = beginResponse.headers['set-cookie']?.[0]
     expect(beginCookie).toBeDefined()
-    const state = new URL(beginResponse.headers.location).searchParams.get('state')
+    const state = new URL(beginResponse.headers.location).searchParams.get(
+      'state',
+    ) as OAuthStateUuid
     expect(state).toBeTruthy()
 
     const response = await request(setup.httpServer)
       .post('/api/v1/auth/github/session')
       .set('Cookie', beginCookie)
-      .send(new CompleteGithubLoginCommandBuilder().withState(state!).build())
+      .send(new CompleteGithubLoginCommandBuilder().withState(state).build())
       .expect(200)
 
     expect(response.body).toMatchObject({ id: '1', login: 'marsa-mock-user' })
@@ -68,11 +72,13 @@ describe('POST /api/v1/auth/github/session (e2e)', () => {
     const login = async () => {
       const beginResponse = await request(setup.httpServer).get('/api/v1/auth/github').expect(302)
       const beginCookie = beginResponse.headers['set-cookie']?.[0]
-      const state = new URL(beginResponse.headers.location).searchParams.get('state')
+      const state = new URL(beginResponse.headers.location).searchParams.get(
+        'state',
+      ) as OAuthStateUuid
       await request(setup.httpServer)
         .post('/api/v1/auth/github/session')
         .set('Cookie', beginCookie)
-        .send(new CompleteGithubLoginCommandBuilder().withState(state!).build())
+        .send(new CompleteGithubLoginCommandBuilder().withState(state).build())
         .expect(200)
     }
 
@@ -93,9 +99,7 @@ describe('POST /api/v1/auth/github/session (e2e)', () => {
     await request(setup.httpServer)
       .post('/api/v1/auth/github/session')
       .send(
-        new CompleteGithubLoginCommandBuilder()
-          .withState('00000000-0000-0000-0000-000000000000')
-          .build(),
+        new CompleteGithubLoginCommandBuilder().withState(generateUuid<OAuthStateUuid>()).build(),
       )
       .expect(400)
   })
@@ -115,9 +119,7 @@ describe('POST /api/v1/auth/github/session (e2e)', () => {
         .post('/api/v1/auth/github/session')
         .set('Cookie', beginCookie)
         .send(
-          new CompleteGithubLoginCommandBuilder()
-            .withState('11111111-1111-1111-1111-111111111111')
-            .build(),
+          new CompleteGithubLoginCommandBuilder().withState(generateUuid<OAuthStateUuid>()).build(),
         )
         .expect(400)
     } finally {

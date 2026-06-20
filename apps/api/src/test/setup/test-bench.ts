@@ -2,13 +2,12 @@ import { after } from 'node:test'
 
 import fastifySecureSession from '@fastify/secure-session'
 import { MikroORM } from '@mikro-orm/core'
-import { DynamicModule, Type, ValidationPipe, VersioningType } from '@nestjs/common'
+import { type DynamicModule, type Type, ValidationPipe, VersioningType } from '@nestjs/common'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import { Test, TestingModule } from '@nestjs/testing'
 import qs from 'qs'
 
 import { AppModule } from '#src/app.module.js'
-import { authConfig } from '#src/app/auth/auth.config.js'
 import { ApiModule } from '#src/modules/api/api.module.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -90,7 +89,7 @@ export class TestBench {
     const app = testModule.createNestApplication<NestFastifyApplication>(adapter)
 
     await app.register(fastifySecureSession, {
-      key: authConfig().sessionKey,
+      key: process.env.AUTH_SESSION_SECRET_KEY as string,
       cookieName: 'marsa_session',
       cookie: {
         path: '/',

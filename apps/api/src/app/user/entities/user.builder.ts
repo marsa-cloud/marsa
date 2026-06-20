@@ -1,4 +1,5 @@
-import { User, UserRole } from '#src/app/user/entities/user.entity.js'
+import { User } from '#src/app/user/entities/user.entity.js'
+import { UserRole } from '#src/app/user/enums/user-role.enum.js'
 
 export class UserBuilder {
   private readonly user: User

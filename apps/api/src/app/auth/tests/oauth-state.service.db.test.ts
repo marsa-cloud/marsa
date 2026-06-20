@@ -4,10 +4,12 @@ import { EntityManager } from '@mikro-orm/core'
 import { expect } from 'expect'
 
 import { OAuthState } from '#src/app/auth/entities/oauth-state.entity.js'
+import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { OAuthStateModule } from '#src/app/auth/oauth-state.module.js'
 import { OAuthStateService } from '#src/app/auth/oauth-state.service.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
+import { generateUuid } from '#src/utils/uuid.js'
 
 // The service forks its own EM and commits (issue/consume must outlive a single
 // request), so rows don't ride the TestSetup transaction — we wipe the table in
@@ -36,7 +38,7 @@ describe('OAuthStateService (db)', () => {
   })
 
   it('rejects an unknown token', async () => {
-    expect(await service.consume('00000000-0000-0000-0000-000000000000')).toBe(false)
+    expect(await service.consume(generateUuid())).toBe(false)
   })
 
   it('rejects an expired token', async () => {
@@ -46,6 +48,6 @@ describe('OAuthStateService (db)', () => {
   })
 
   it('rejects a malformed (non-uuid) token without touching the db', async () => {
-    expect(await service.consume('not-a-uuid')).toBe(false)
+    expect(await service.consume('not-a-uuid' as OAuthStateUuid)).toBe(false)
   })
 })

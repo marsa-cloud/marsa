@@ -1,4 +1,9 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common'
+import {
+  type CanActivate,
+  type ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common'
 import type { FastifyRequest } from 'fastify'
 
 /**

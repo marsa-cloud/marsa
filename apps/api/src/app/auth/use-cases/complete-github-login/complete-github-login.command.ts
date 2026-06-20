@@ -1,5 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger'
-import { IsNotEmpty, IsString } from 'class-validator'
+import { IsNotEmpty, IsString, IsUUID } from 'class-validator'
+
+import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 
 export class CompleteGithubLoginCommand {
   @ApiProperty({
@@ -15,6 +17,7 @@ export class CompleteGithubLoginCommand {
     description: 'The CSRF state issued by `GET /auth/github`, echoed back by GitHub.',
   })
   @IsString()
+  @IsUUID()
   @IsNotEmpty()
-  state!: string
+  state!: OAuthStateUuid
 }

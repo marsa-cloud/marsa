@@ -1,8 +1,7 @@
-import { randomUUID } from 'node:crypto'
-
 import { Entity, PrimaryKey, Property, Unique } from '@mikro-orm/core'
 
-import { asUuid, type Uuid } from '#src/utils/uuid.js'
+import type { GitHubAppUuid } from '#src/app/github-app/entities/github-app.uuid.js'
+import { generateUuid } from '#src/utils/uuid.js'
 
 /**
  * A GitHub App provisioned for this install via the Manifest flow (#58,
@@ -14,11 +13,8 @@ import { asUuid, type Uuid } from '#src/utils/uuid.js'
  */
 @Entity({ tableName: 'github_app' })
 export class GitHubApp {
-  // Application-generated UUID (not a DB-side default): MikroORM assigns `uuid` on
-  // instantiation via randomUUID(), so the row carries its key before flush — no
-  // DB round-trip to learn it, and no autoincrement/serial sequence to coordinate.
   @PrimaryKey({ type: 'uuid' })
-  uuid: Uuid = asUuid(randomUUID())
+  uuid: GitHubAppUuid = generateUuid<GitHubAppUuid>()
 
   @Property({ type: 'string', length: 255 })
   @Unique()

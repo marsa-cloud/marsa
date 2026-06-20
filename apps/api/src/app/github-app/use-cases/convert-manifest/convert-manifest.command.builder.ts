@@ -1,3 +1,4 @@
+import type { ManifestStateUuid } from '#src/app/github-app/entities/manifest-state.uuid.js'
 import { ConvertManifestCommand } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.command.js'
 
 /** Test-side builder for {@link ConvertManifestCommand}; on the request path Nest deserialises the DTO. */
@@ -9,7 +10,7 @@ export class ConvertManifestCommandBuilder {
     return this
   }
 
-  withState(state: string): this {
+  withState(state: ManifestStateUuid): this {
     this.command.state = state
     return this
   }

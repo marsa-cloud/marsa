@@ -10,9 +10,6 @@ export class GetApiInfoService {
   execute(): GetApiInfoResponse {
     return {
       name: 'marsa-api',
-      // VERSION/NODE_ENV carry Joi defaults (AgDR-0020) rather than `required()`,
-      // so they're read via `get(key, default)` here to match outside of a booted
-      // app (e.g. this service constructed with a bare `ConfigService()` in tests).
       version: this.config.get('VERSION', '0.0.0'),
       commit: this.config.get('COMMIT') ?? null,
       nodeEnv: this.config.get('NODE_ENV', 'development'),

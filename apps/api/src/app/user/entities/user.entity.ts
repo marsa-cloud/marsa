@@ -1,26 +1,13 @@
-import { randomUUID } from 'node:crypto'
+import { Entity, PrimaryKey, Property, Unique } from '@mikro-orm/core'
 
-import { Entity, Enum, PrimaryKey, Property, Unique } from '@mikro-orm/core'
+import type { UserUuid } from '#src/app/user/entities/user.uuid.js'
+import { UserRole, UserRoleEnum } from '#src/app/user/enums/user-role.enum.js'
+import { generateUuid } from '#src/utils/uuid.js'
 
-import { asUuid, type Uuid } from '#src/utils/uuid.js'
-
-export enum UserRole {
-  Operator = 'operator',
-}
-
-/**
- * A Marsa dashboard user, authenticated via GitHub user-OAuth (#62).
- *
- * `githubUserId` is GitHub's stable numeric user id, stored as a string — an
- * identifier, never used arithmetically.
- */
-@Entity({ tableName: 'users' })
+@Entity({ tableName: 'user' })
 export class User {
-  // Application-generated UUID (not a DB-side default): MikroORM assigns `uuid` on
-  // instantiation via randomUUID(), so the row carries its key before flush — no
-  // DB round-trip to learn it, and no autoincrement/serial sequence to coordinate.
   @PrimaryKey({ type: 'uuid' })
-  uuid: Uuid = asUuid(randomUUID())
+  uuid: UserUuid = generateUuid<UserUuid>()
 
   @Property({ type: 'string', length: 255 })
   @Unique()
@@ -29,8 +16,8 @@ export class User {
   @Property({ type: 'string', length: 255 })
   githubLogin!: string
 
-  @Enum(() => UserRole)
-  role: UserRole = UserRole.Operator
+  @UserRoleEnum({ default: UserRole.Operator })
+  role!: UserRole
 
   @Property({ type: 'datetime' })
   createdAt: Date = new Date()

@@ -5,7 +5,6 @@ import { NestFactory } from '@nestjs/core'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import QueryString from 'qs'
 
-import { authConfig } from '#src/app/auth/auth.config.js'
 import { ApiModule } from '#src/modules/api/api.module.js'
 
 async function bootstrap(): Promise<void> {
@@ -25,13 +24,13 @@ async function bootstrap(): Promise<void> {
   const config = app.get(ConfigService)
 
   await app.register(fastifySecureSession, {
-    key: authConfig().sessionKey,
-    cookieName: authConfig().cookieName,
+    key: config.getOrThrow<string>('AUTH_SESSION_SECRET_KEY'),
+    cookieName: config.getOrThrow<string>('AUTH_COOKIE_NAME'),
     cookie: {
       path: '/',
       httpOnly: true,
       sameSite: 'lax',
-      secure: config.get('NODE_ENV', 'development') === 'production',
+      secure: config.getOrThrow('NODE_ENV') === 'production',
     },
   })
 
@@ -43,7 +42,7 @@ async function bootstrap(): Promise<void> {
     new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }),
   )
 
-  await app.listen(config.get<number>('PORT', 3000), '0.0.0.0')
+  await app.listen(config.getOrThrow<number>('PORT'), '0.0.0.0')
 }
 
 void bootstrap()

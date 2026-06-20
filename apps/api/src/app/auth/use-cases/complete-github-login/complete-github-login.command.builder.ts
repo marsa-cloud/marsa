@@ -1,6 +1,6 @@
-import { randomUUID } from 'node:crypto'
-
+import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { CompleteGithubLoginCommand } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.js'
+import { generateUuid } from '#src/utils/uuid.js'
 
 /** Test-side builder for {@link CompleteGithubLoginCommand}; on the request path Nest deserialises the DTO. */
 export class CompleteGithubLoginCommandBuilder {
@@ -8,7 +8,7 @@ export class CompleteGithubLoginCommandBuilder {
 
   constructor() {
     this.command.code = 'mock-code'
-    this.command.state = randomUUID()
+    this.command.state = generateUuid<OAuthStateUuid>()
   }
 
   withCode(code: string): this {
@@ -16,7 +16,7 @@ export class CompleteGithubLoginCommandBuilder {
     return this
   }
 
-  withState(state: string): this {
+  withState(state: OAuthStateUuid): this {
     this.command.state = state
     return this
   }

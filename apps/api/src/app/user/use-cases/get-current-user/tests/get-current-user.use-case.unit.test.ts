@@ -8,7 +8,7 @@ import { UserBuilder } from '#src/app/user/entities/user.builder.js'
 import { GetCurrentUserRepository } from '#src/app/user/use-cases/get-current-user/get-current-user.repository.js'
 import { GetCurrentUserUseCase } from '#src/app/user/use-cases/get-current-user/get-current-user.use-case.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
-import { asUuid } from '#src/utils/uuid.js'
+import { generateUuid } from '#src/utils/uuid.js'
 
 describe('GetCurrentUserUseCase', () => {
   before(() => TestBench.setupUnitTest())
@@ -29,8 +29,6 @@ describe('GetCurrentUserUseCase', () => {
 
     const usecase = new GetCurrentUserUseCase(repository)
 
-    await expect(usecase.execute(asUuid('00000000-0000-0000-0000-000000000000'))).rejects.toThrow(
-      UnauthorizedException,
-    )
+    await expect(usecase.execute(generateUuid())).rejects.toThrow(UnauthorizedException)
   })
 })

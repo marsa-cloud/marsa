@@ -1,9 +1,9 @@
 import { EntityManager } from '@mikro-orm/core'
-import { NestFastifyApplication } from '@nestjs/platform-fastify'
+import type { NestFastifyApplication } from '@nestjs/platform-fastify'
 import { TestingModule } from '@nestjs/testing'
 import { Server } from 'http'
 
-import { TestApp } from '#src/test/setup/test-bench.js'
+import type { TestApp } from '#src/test/setup/test-bench.js'
 
 export class TestSetup {
   static async create(app: TestApp): Promise<TestSetup> {

@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
 
+import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { OAuthStateService } from '#src/app/auth/oauth-state.service.js'
 import { CompleteGithubLoginCommandBuilder } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.builder.js'
 import { CompleteGithubLoginRepository } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.repository.js'
@@ -14,8 +15,9 @@ import { UserBuilder } from '#src/app/user/entities/user.builder.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
 import { OctokitGithubClient } from '#src/modules/github-client/octokit-github-client.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
+import { generateUuid } from '#src/utils/uuid.js'
 
-const SESSION_STATE = '00000000-0000-0000-0000-000000000000'
+const SESSION_STATE = generateUuid<OAuthStateUuid>()
 
 const command = () => new CompleteGithubLoginCommandBuilder().withState(SESSION_STATE).build()
 
