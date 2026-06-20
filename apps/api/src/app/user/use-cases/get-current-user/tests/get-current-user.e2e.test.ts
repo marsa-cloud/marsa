@@ -39,12 +39,14 @@ describe('GET /api/v1/auth/me (e2e)', () => {
 
     const beginResponse = await request(setup.httpServer).get('/api/v1/auth/github').expect(302)
     const beginCookie = beginResponse.headers['set-cookie']?.[0]
-    const state = new URL(beginResponse.headers.location).searchParams.get('state')!
+    expect(beginCookie).toBeDefined()
+    const state = new URL(beginResponse.headers.location).searchParams.get('state')
+    expect(state).toBeTruthy()
 
     const loginResponse = await request(setup.httpServer)
       .post('/api/v1/auth/github/session')
       .set('Cookie', beginCookie)
-      .send(new CompleteGithubLoginCommandBuilder().withState(state).build())
+      .send(new CompleteGithubLoginCommandBuilder().withState(state!).build())
       .expect(200)
     const cookie = loginResponse.headers['set-cookie']?.[0]
 

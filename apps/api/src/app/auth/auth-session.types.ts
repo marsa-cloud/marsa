@@ -8,6 +8,6 @@ declare module '@fastify/secure-session' {
   interface SessionData {
     userUuid: Uuid
     /** CSRF state bound at begin-login, consumed (set to `undefined`) at complete-login. */
-    oauthState: string
+    oauthState: string | undefined
   }
 }

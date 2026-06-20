@@ -36,9 +36,15 @@ export class CompleteGithubLoginRepository {
       .withGithubLogin(githubLogin)
       .build()
 
-    // The builder's `uuid` is real but irrelevant on conflict — `onConflictFields`
-    // pins the conflict target to `githubUserId` so a second login for the same
-    // GitHub user updates the existing row instead of racing on the PK.
-    return em.upsert(user, undefined, { onConflictFields: ['githubUserId'] })
+    // `onConflictFields` pins the conflict target to `githubUserId` so a second
+    // login for the same GitHub user updates the existing row instead of racing
+    // on the PK. `onConflictExcludeFields` keeps the builder's freshly-generated
+    // `uuid` out of the conflict-update SET clause, so a repeat login can't
+    // rewrite the existing row's uuid out from under any session that already
+    // references it.
+    return em.upsert(user, undefined, {
+      onConflictFields: ['githubUserId'],
+      onConflictExcludeFields: ['uuid'],
+    })
   }
 }

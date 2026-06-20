@@ -43,16 +43,50 @@ describe('POST /api/v1/auth/github/session (e2e)', () => {
     // rather than issuing one directly — this exercises the login-CSRF binding.
     const beginResponse = await request(setup.httpServer).get('/api/v1/auth/github').expect(302)
     const beginCookie = beginResponse.headers['set-cookie']?.[0]
-    const state = new URL(beginResponse.headers.location).searchParams.get('state')!
+    expect(beginCookie).toBeDefined()
+    const state = new URL(beginResponse.headers.location).searchParams.get('state')
+    expect(state).toBeTruthy()
 
     const response = await request(setup.httpServer)
       .post('/api/v1/auth/github/session')
       .set('Cookie', beginCookie)
-      .send(new CompleteGithubLoginCommandBuilder().withState(state).build())
+      .send(new CompleteGithubLoginCommandBuilder().withState(state!).build())
       .expect(200)
 
     expect(response.body).toMatchObject({ id: '1', login: 'marsa-mock-user' })
     expect(response.headers['set-cookie']?.[0]).toMatch(/marsa_session=/)
+  })
+
+  it('keeps the same user uuid across a repeat login by the same GitHub user', async () => {
+    const app = new GitHubAppBuilder()
+      .withGithubAppId('repeat-login-test')
+      .withSlug('marsa-app-repeat-login-test')
+      .withClientSecretEnc(new SecretCipherService(new ConfigService()).encrypt('shh'))
+      .build()
+    await em.fork().persistAndFlush(app)
+
+    const login = async () => {
+      const beginResponse = await request(setup.httpServer).get('/api/v1/auth/github').expect(302)
+      const beginCookie = beginResponse.headers['set-cookie']?.[0]
+      const state = new URL(beginResponse.headers.location).searchParams.get('state')
+      await request(setup.httpServer)
+        .post('/api/v1/auth/github/session')
+        .set('Cookie', beginCookie)
+        .send(new CompleteGithubLoginCommandBuilder().withState(state!).build())
+        .expect(200)
+    }
+
+    try {
+      await login()
+      const firstUser = await em.fork().findOneOrFail(User, { githubUserId: '1' })
+
+      await login()
+      const secondUser = await em.fork().findOneOrFail(User, { githubUserId: '1' })
+
+      expect(secondUser.uuid).toBe(firstUser.uuid)
+    } finally {
+      await em.fork().nativeDelete(GitHubApp, { githubAppId: 'repeat-login-test' })
+    }
   })
 
   it('rejects a state with no matching session-bound state with 400', async () => {
