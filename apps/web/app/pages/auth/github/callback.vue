@@ -37,7 +37,11 @@ onMounted(async () => {
 
 <template>
   <UCard class="w-full max-w-sm">
-    <div class="flex flex-col items-center gap-4 py-6">
+    <div
+      role="status"
+      aria-live="polite"
+      class="flex flex-col items-center gap-4 py-6"
+    >
       <template v-if="!error">
         <UIcon
           name="i-lucide-loader-circle"
@@ -50,7 +54,7 @@ onMounted(async () => {
       <template v-else>
         <UIcon
           name="i-lucide-circle-x"
-          class="text-2xl text-red-500"
+          class="text-2xl text-error"
         />
         <p class="text-sm">
           {{ error }}
