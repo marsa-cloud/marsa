@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import * as z from 'zod'
 import type { ConvertManifestResponse } from '~/api/types.gen'
 
 const route = useRoute()
@@ -8,9 +9,15 @@ const status = ref<'loading' | 'created' | 'installed' | 'error'>('loading')
 const result = ref<ConvertManifestResponse | null>(null)
 const message = ref('')
 
-function queryString(key: string): string {
-  return typeof route.query[key] === 'string' ? route.query[key] : ''
-}
+const installQuery = z.object({
+  installation_id: z.string().min(1),
+  setup_action: z.string().min(1),
+})
+
+const manifestQuery = z.object({
+  code: z.string().min(1),
+  state: z.string().min(1),
+})
 
 async function completeManifest(code: string, state: string) {
   try {
@@ -36,22 +43,20 @@ onMounted(async () => {
   // GitHub returns here twice in the flow: first from the manifest conversion
   // (code + state), then from the post-install redirect (installation_id +
   // setup_action). Dispatch on which params are present.
-  const installationId = queryString('installation_id')
-  const setupAction = queryString('setup_action')
-  if (installationId && setupAction) {
-    await completeInstall(installationId, setupAction)
+  const install = installQuery.safeParse(route.query)
+  if (install.success) {
+    await completeInstall(install.data.installation_id, install.data.setup_action)
     return
   }
 
-  const code = queryString('code')
-  const state = queryString('state')
-  if (!code || !state) {
+  const manifest = manifestQuery.safeParse(route.query)
+  if (!manifest.success) {
     status.value = 'error'
     message.value = 'Missing authorization code or state from GitHub.'
     return
   }
 
-  await completeManifest(code, state)
+  await completeManifest(manifest.data.code, manifest.data.state)
 })
 </script>
 
