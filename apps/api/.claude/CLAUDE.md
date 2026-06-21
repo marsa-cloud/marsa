@@ -10,7 +10,7 @@ ORM is **MikroORM v6** (`@mikro-orm/postgresql`). Config at `src/sql/mikro-orm.c
 - Naming: `UnderscoreNamingStrategy` is built-in — no plugin needed.
 - `discovery: { warnWhenNoEntities: false }` in the shared config until the first entity exists — remove it then.
 - Use `orm.migrator` not `orm.getMigrator()` (deprecated in v6).
-- `pathTs`/`entitiesTs` are unnecessary — CLI runs against compiled `dist/` output, config path passed via `--config` in each migration script.
+- `entitiesTs` is unnecessary — entity discovery uses `entities: ['dist/src/**/*.entity.js']` against compiled output, config path passed via `--config` in each migration script. `migrations.pathTs` (`src/sql/migrations`) **is** needed alongside `migrations.path` (`dist/src/sql/migrations`) — without it, `migration:create` writes the new `.ts` file straight into `dist/`, where it's lost on the next clean build, instead of into `src/` where it belongs.
 - Feature modules register entities with `MikroOrmModule.forFeature([Entity])`. `DatabaseModule` is global so `MikroORM` and `EntityManager` are available everywhere.
 - **No bare `@Property()`.** Every column declares explicit options — at minimum `type`, plus `nullable` / `length` / `unique` / `default` where they apply — so the entity is the readable source of truth for the table and doesn't silently couple the column to the field's inferred TS type. Handbook: `handbooks/domain/marsa-api/mikroorm-property-options.md`.
 - **UUID primary keys are named `uuid`, not `id`** (and FK columns referencing them are `*_uuid`) so the key type is self-documenting. Handbook: `handbooks/domain/marsa-api/uuid-primary-key-naming.md`.

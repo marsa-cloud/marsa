@@ -1,8 +1,8 @@
-import { randomUUID } from 'node:crypto'
-
 import { Entity, ManyToOne, PrimaryKey, Property, type Ref, Unique } from '@mikro-orm/core'
 
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
+import type { GitHubInstallationUuid } from '#src/app/github-app/entities/github-installation.uuid.js'
+import { generateUuid } from '#src/utils/uuid.js'
 
 /**
  * A GitHub App installation captured after the operator installs the App on
@@ -17,7 +17,7 @@ import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
 @Entity({ tableName: 'github_installation' })
 export class GitHubInstallation {
   @PrimaryKey({ type: 'uuid' })
-  uuid: string = randomUUID()
+  uuid: GitHubInstallationUuid = generateUuid<GitHubInstallationUuid>()
 
   @Property({ type: 'string', length: 255 })
   @Unique()

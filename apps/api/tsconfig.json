@@ -5,6 +5,7 @@
     "target": "esnext",
     "moduleResolution": "NodeNext",
     "outDir": "./dist",
+    "rootDir": "./src",
     "baseUrl": "./",
     "paths": {
       "#src/*": ["./src/*"],
@@ -12,6 +13,7 @@
     },
     "lib": ["ES2023"],
     "types": ["node"],
+    "verbatimModuleSyntax": true,
     "declaration": true,
     "sourceMap": true,
     "incremental": true,

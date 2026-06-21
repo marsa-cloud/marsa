@@ -1,5 +1,6 @@
 import { before, describe, it } from 'node:test'
 
+import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 
 import { GetApiInfoService } from '#src/modules/status/use-cases/get-api-info/get-api-info.service.js'
@@ -9,7 +10,7 @@ describe('GetApiInfoService', () => {
   before(() => TestBench.setupUnitTest())
 
   it('returns api info with expected shape', () => {
-    const service = new GetApiInfoService()
+    const service = new GetApiInfoService(new ConfigService())
 
     const result = service.execute()
 

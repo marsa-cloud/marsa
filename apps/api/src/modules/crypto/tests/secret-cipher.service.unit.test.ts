@@ -1,5 +1,6 @@
 import { afterEach, before, describe, it } from 'node:test'
 
+import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
@@ -14,7 +15,7 @@ function withKey(keyB64: string | undefined): SecretCipherService {
   } else {
     process.env.APP_SECRETS_ENCRYPTION_KEY = keyB64
   }
-  return new SecretCipherService()
+  return new SecretCipherService(new ConfigService())
 }
 
 describe('SecretCipherService', () => {
@@ -68,7 +69,9 @@ describe('SecretCipherService', () => {
   })
 
   it('fails fast when the key is missing', () => {
-    expect(() => withKey(undefined)).toThrow(/not set/)
+    // Presence is guaranteed by the global env schema (AgDR-0020) in production;
+    // this only proves the constructor doesn't silently swallow a missing key.
+    expect(() => withKey(undefined)).toThrow(/does not exist/)
   })
 
   it('fails fast when the key is the wrong length', () => {

@@ -55,6 +55,21 @@ export const zCaptureInstallationResponse = z.object({
   connected: z.boolean(),
 })
 
+export const zCompleteGithubLoginCommand = z.object({
+  code: z.string(),
+  state: z.string(),
+})
+
+export const zCompleteGithubLoginResponse = z.object({
+  id: z.string(),
+  login: z.string(),
+})
+
+export const zGetCurrentUserResponse = z.object({
+  id: z.string(),
+  login: z.string(),
+})
+
 export const zGetApiInfoV1Response = zGetApiInfoResponse
 
 export const zGetGithubAppManifestV1Response = zGetManifestResponse
@@ -66,3 +81,9 @@ export const zConvertGithubAppManifestV1Response = zConvertManifestResponse
 export const zCaptureGithubAppInstallationV1Body = zCaptureInstallationCommand
 
 export const zCaptureGithubAppInstallationV1Response = zCaptureInstallationResponse
+
+export const zCompleteGithubLoginV1Body = zCompleteGithubLoginCommand
+
+export const zCompleteGithubLoginV1Response = zCompleteGithubLoginResponse
+
+export const zGetCurrentUserV1Response = zGetCurrentUserResponse

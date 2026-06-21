@@ -1,4 +1,4 @@
-import { DynamicModule, MiddlewareConsumer, Module, Type } from '@nestjs/common'
+import { type DynamicModule, type MiddlewareConsumer, Module, type Type } from '@nestjs/common'
 
 import { DatabaseModule } from '#src/modules/database/database.module.js'
 

@@ -142,5 +142,8 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
+# MikroORM migration schema snapshot (local dev artifact, not the migration history itself)
+.snapshot-*.json
+
 # Claude
 .claude/.local

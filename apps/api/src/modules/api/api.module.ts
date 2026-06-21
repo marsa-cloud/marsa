@@ -1,15 +1,12 @@
-import { MiddlewareConsumer, Module } from '@nestjs/common'
+import { Module } from '@nestjs/common'
 
 import { AppModule } from '#src/app.module.js'
+import { AuthModule } from '#src/app/auth/auth.module.js'
 import { GitHubAppModule } from '#src/app/github-app/github-app.module.js'
+import { UserModule } from '#src/app/user/user.module.js'
 import { StatusModule } from '#src/modules/status/status.module.js'
 
 @Module({
-  imports: [AppModule.forRoot([StatusModule, GitHubAppModule])],
+  imports: [AppModule.forRoot([StatusModule, GitHubAppModule, AuthModule, UserModule])],
 })
-export class ApiModule {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  configure(_consumer: MiddlewareConsumer): void {
-    //ODO: Apply auth middleware
-  }
-}
+export class ApiModule {}

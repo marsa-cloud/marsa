@@ -89,6 +89,27 @@ export type CaptureInstallationResponse = {
   connected: boolean
 }
 
+export type CompleteGithubLoginCommand = {
+  /**
+   * GitHub's user-OAuth authorization code from the consent redirect.
+   */
+  code: string
+  /**
+   * The CSRF state issued by `GET /auth/github`, echoed back by GitHub.
+   */
+  state: string
+}
+
+export type CompleteGithubLoginResponse = {
+  id: string
+  login: string
+}
+
+export type GetCurrentUserResponse = {
+  id: string
+  login: string
+}
+
 export type GetApiInfoV1Data = {
   body?: never
   path?: never
@@ -165,3 +186,62 @@ export type CaptureGithubAppInstallationV1Responses = {
 
 export type CaptureGithubAppInstallationV1Response =
   CaptureGithubAppInstallationV1Responses[keyof CaptureGithubAppInstallationV1Responses]
+
+export type BeginGithubLoginV1Data = {
+  body?: never
+  path?: never
+  query?: never
+  url: '/api/v1/auth/github'
+}
+
+export type BeginGithubLoginV1Errors = {
+  /**
+   * No provisioned GitHub App — create the App first.
+   */
+  400: unknown
+}
+
+export type CompleteGithubLoginV1Data = {
+  body: CompleteGithubLoginCommand
+  path?: never
+  query?: never
+  url: '/api/v1/auth/github/session'
+}
+
+export type CompleteGithubLoginV1Errors = {
+  /**
+   * Invalid/expired OAuth state, or no provisioned App.
+   */
+  400: unknown
+  /**
+   * Could not complete login with GitHub.
+   */
+  502: unknown
+}
+
+export type CompleteGithubLoginV1Responses = {
+  200: CompleteGithubLoginResponse
+}
+
+export type CompleteGithubLoginV1Response =
+  CompleteGithubLoginV1Responses[keyof CompleteGithubLoginV1Responses]
+
+export type GetCurrentUserV1Data = {
+  body?: never
+  path?: never
+  query?: never
+  url: '/api/v1/auth/me'
+}
+
+export type GetCurrentUserV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+}
+
+export type GetCurrentUserV1Responses = {
+  200: GetCurrentUserResponse
+}
+
+export type GetCurrentUserV1Response = GetCurrentUserV1Responses[keyof GetCurrentUserV1Responses]

@@ -1,4 +1,6 @@
+import fastifySecureSession from '@fastify/secure-session'
 import { ValidationPipe, VersioningType } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { NestFactory } from '@nestjs/core'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import QueryString from 'qs'
@@ -19,6 +21,19 @@ async function bootstrap(): Promise<void> {
     }),
   )
 
+  const config = app.get(ConfigService)
+
+  await app.register(fastifySecureSession, {
+    key: config.getOrThrow<string>('AUTH_SESSION_SECRET_KEY'),
+    cookieName: config.getOrThrow<string>('AUTH_COOKIE_NAME'),
+    cookie: {
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: config.getOrThrow('NODE_ENV') === 'production',
+    },
+  })
+
   app.setGlobalPrefix('api')
   app.enableVersioning({
     type: VersioningType.URI,
@@ -27,7 +42,7 @@ async function bootstrap(): Promise<void> {
     new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }),
   )
 
-  await app.listen(Number(process.env.PORT) || 3000, '0.0.0.0')
+  await app.listen(config.getOrThrow<number>('PORT'), '0.0.0.0')
 }
 
 void bootstrap()

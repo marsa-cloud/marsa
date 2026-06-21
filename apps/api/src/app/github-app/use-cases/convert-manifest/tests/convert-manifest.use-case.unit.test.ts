@@ -1,8 +1,10 @@
 import { afterEach, before, describe, it } from 'node:test'
 
+import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import sinon from 'sinon'
 
+import type { ManifestStateUuid } from '#src/app/github-app/entities/manifest-state.uuid.js'
 import { ManifestStateService } from '#src/app/github-app/manifest-state/manifest-state.service.js'
 import { ConvertManifestCommandBuilder } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.command.builder.js'
 import { ConvertManifestRepository } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.repository.js'
@@ -11,6 +13,7 @@ import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.j
 import type { GitHubAppCredentials } from '#src/modules/github-client/github-client.types.js'
 import { MockGithubClient } from '#src/modules/github-client/mock-github-client.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
+import { generateUuid } from '#src/utils/uuid.js'
 
 const CREDS: GitHubAppCredentials = {
   id: 555,
@@ -32,7 +35,7 @@ describe('ConvertManifestUseCase', () => {
     const manifestState = sinon.createStubInstance(ManifestStateService)
     const repository = sinon.createStubInstance(ConvertManifestRepository)
     const client = sinon.createStubInstance(MockGithubClient)
-    const cipher = new SecretCipherService()
+    const cipher = new SecretCipherService(new ConfigService())
 
     manifestState.consume.resolves(true)
     client.convertManifest.resolves(CREDS)
@@ -40,7 +43,10 @@ describe('ConvertManifestUseCase', () => {
 
     const usecase = new ConvertManifestUseCase(manifestState, repository, client, cipher)
     const result = await usecase.execute(
-      new ConvertManifestCommandBuilder().withCode('code123').withState('valid-state').build(),
+      new ConvertManifestCommandBuilder()
+        .withCode('code123')
+        .withState(generateUuid<ManifestStateUuid>())
+        .build(),
     )
 
     expect(result).toEqual({
@@ -62,7 +68,7 @@ describe('ConvertManifestUseCase', () => {
     const manifestState = sinon.createStubInstance(ManifestStateService)
     const repository = sinon.createStubInstance(ConvertManifestRepository)
     const client = sinon.createStubInstance(MockGithubClient)
-    const cipher = new SecretCipherService()
+    const cipher = new SecretCipherService(new ConfigService())
 
     manifestState.consume.resolves(true)
     client.convertManifest.resolves({ ...CREDS, ownerLogin: null })
@@ -70,7 +76,10 @@ describe('ConvertManifestUseCase', () => {
 
     const usecase = new ConvertManifestUseCase(manifestState, repository, client, cipher)
     await usecase.execute(
-      new ConvertManifestCommandBuilder().withCode('code123').withState('valid-state').build(),
+      new ConvertManifestCommandBuilder()
+        .withCode('code123')
+        .withState(generateUuid<ManifestStateUuid>())
+        .build(),
     )
 
     const app = repository.upsertByGithubAppId.firstCall.args[0]
@@ -81,14 +90,17 @@ describe('ConvertManifestUseCase', () => {
     const manifestState = sinon.createStubInstance(ManifestStateService)
     const repository = sinon.createStubInstance(ConvertManifestRepository)
     const client = sinon.createStubInstance(MockGithubClient)
-    const cipher = new SecretCipherService()
+    const cipher = new SecretCipherService(new ConfigService())
 
     manifestState.consume.resolves(false)
 
     const usecase = new ConvertManifestUseCase(manifestState, repository, client, cipher)
     await expect(
       usecase.execute(
-        new ConvertManifestCommandBuilder().withCode('code123').withState('bad-state').build(),
+        new ConvertManifestCommandBuilder()
+          .withCode('code123')
+          .withState(generateUuid<ManifestStateUuid>())
+          .build(),
       ),
     ).rejects.toThrow(/state/)
 
@@ -99,7 +111,7 @@ describe('ConvertManifestUseCase', () => {
     const manifestState = sinon.createStubInstance(ManifestStateService)
     const repository = sinon.createStubInstance(ConvertManifestRepository)
     const client = sinon.createStubInstance(MockGithubClient)
-    const cipher = new SecretCipherService()
+    const cipher = new SecretCipherService(new ConfigService())
 
     manifestState.consume.resolves(true)
     client.convertManifest.rejects(new Error('boom'))
@@ -107,7 +119,10 @@ describe('ConvertManifestUseCase', () => {
     const usecase = new ConvertManifestUseCase(manifestState, repository, client, cipher)
     await expect(
       usecase.execute(
-        new ConvertManifestCommandBuilder().withCode('x').withState('valid-state').build(),
+        new ConvertManifestCommandBuilder()
+          .withCode('x')
+          .withState(generateUuid<ManifestStateUuid>())
+          .build(),
       ),
     ).rejects.toThrow(/Could not complete GitHub App creation/)
   })

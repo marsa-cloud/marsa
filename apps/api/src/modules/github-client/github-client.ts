@@ -1,6 +1,8 @@
 import type {
   GitHubAppCredentials,
+  GitHubUser,
   InstallationTokenParams,
+  UserOAuthExchangeParams,
 } from '#src/modules/github-client/github-client.types.js'
 
 /**
@@ -15,4 +17,11 @@ export abstract class GithubClient {
 
   /** Mint a short-lived installation access token (#59). */
   abstract getInstallationToken(params: InstallationTokenParams): Promise<string>
+
+  /**
+   * Exchange a user-OAuth `code` for an access token, then fetch the
+   * authenticated user it identifies (#62, AgDR-0016). One seam method, not two
+   * — callers never need the intermediate access token.
+   */
+  abstract loginUser(params: UserOAuthExchangeParams): Promise<GitHubUser>
 }

@@ -1,4 +1,4 @@
-import { DynamicModule, Type } from '@nestjs/common'
+import type { DynamicModule, Type } from '@nestjs/common'
 import { Test } from '@nestjs/testing'
 
 import { TestModule } from '#src/test/test.module.js'

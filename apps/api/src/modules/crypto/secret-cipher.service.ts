@@ -1,6 +1,7 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 
 import { Injectable } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 
 const ALGORITHM = 'aes-256-gcm'
 const KEY_LENGTH = 32
@@ -14,21 +15,19 @@ const AUTH_TAG_LENGTH = 16
  * base64(`iv(12) ‖ authTag(16) ‖ ciphertext`). GCM's auth tag means a wrong
  * key or any tampering throws on decrypt rather than returning garbage.
  *
- * Key: 32 bytes, base64-encoded in `APP_SECRETS_ENCRYPTION_KEY`. The service
- * fails fast at construction if the key is absent or the wrong length.
+ * Key: 32 bytes, base64-encoded in `APP_SECRETS_ENCRYPTION_KEY`. Presence is
+ * guaranteed by the global env schema (AgDR-0020); the service still fails
+ * fast at construction if the decoded key is the wrong length.
  */
 @Injectable()
 export class SecretCipherService {
   private readonly key: Buffer
 
-  constructor() {
-    this.key = SecretCipherService.loadKey(process.env.APP_SECRETS_ENCRYPTION_KEY)
+  constructor(config: ConfigService) {
+    this.key = SecretCipherService.loadKey(config.getOrThrow('APP_SECRETS_ENCRYPTION_KEY'))
   }
 
-  static loadKey(raw: string | undefined): Buffer {
-    if (!raw) {
-      throw new Error('APP_SECRETS_ENCRYPTION_KEY is not set')
-    }
+  static loadKey(raw: string): Buffer {
     const key = Buffer.from(raw, 'base64')
     if (key.length !== KEY_LENGTH) {
       throw new Error(

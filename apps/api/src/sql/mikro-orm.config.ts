@@ -7,6 +7,7 @@ export default defineConfig({
   namingStrategy: UnderscoreNamingStrategy,
   migrations: {
     path: 'dist/src/sql/migrations',
+    pathTs: 'src/sql/migrations',
   },
   entities: ['dist/src/**/*.entity.js'],
   // debug: ['query', 'query-params'],

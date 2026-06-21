@@ -46,6 +46,9 @@ jobs:
           node-version-file: '.nvmrc'
           cache: pnpm
 
+      - name: populate env
+        run: cp ./apps/api/.env.test ./apps/api/.env
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
