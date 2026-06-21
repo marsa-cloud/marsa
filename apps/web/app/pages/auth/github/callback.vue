@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import * as z from 'zod'
 import { zCompleteGithubLoginV1Response } from '~/api/zod.gen'
 
 definePageMeta({ layout: 'auth' })
@@ -9,8 +10,18 @@ const { refresh } = useCurrentUser()
 
 const error = ref<string | null>(null)
 
+const callbackQuery = z.object({
+  code: z.string().min(1),
+  state: z.string().min(1),
+})
+
 onMounted(async () => {
-  const { code, state } = useRoute().query as Record<string, string>
+  const parsed = callbackQuery.safeParse(useRoute().query)
+  if (!parsed.success) {
+    error.value = 'Sign-in failed. Please try again.'
+    return
+  }
+  const { code, state } = parsed.data
 
   try {
     const raw = await $api('/v1/auth/github/session', {

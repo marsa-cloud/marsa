@@ -11,7 +11,7 @@ const { data: apiStatus } = useApiStatus()
 
     <div class="p-6 flex flex-col gap-6">
       <h1 class="text-2xl font-semibold">
-        Welcome, @{{ user?.login }}
+        Welcome<span v-if="user?.login">, @{{ user.login }}</span>
       </h1>
 
       <UCard>

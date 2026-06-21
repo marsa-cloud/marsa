@@ -1,3 +1,4 @@
+import type { FetchError } from 'ofetch'
 import type { GetCurrentUserResponse } from '~/api/types.gen'
 import { zGetCurrentUserResponse } from '~/api/zod.gen'
 
@@ -10,7 +11,10 @@ export function useCurrentUser() {
       try {
         const raw = await $api('/v1/auth/me')
         return zGetCurrentUserResponse.parse(raw)
-      } catch { return null }
+      } catch (error) {
+        if ((error as FetchError).status === 401) return null
+        throw error
+      }
     },
   )
 }
