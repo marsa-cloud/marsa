@@ -11,8 +11,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      // Override at runtime with NUXT_PUBLIC_API_BASE
-      apiBase: 'http://localhost:3000/api',
+      apiBase: '/api',
       version: '0.0.0',
       commit: '',
     },
@@ -20,6 +19,7 @@ export default defineNuxtConfig({
 
   routeRules: {
     '/': { prerender: true },
+    '/api/**': { proxy: `${process.env.NUXT_DEV_API_PROXY ?? 'http://localhost:3000/api'}/**` },
   },
 
   compatibilityDate: '2025-01-15',
