@@ -23,6 +23,8 @@ RUN pnpm build:web
 FROM nginx:alpine AS runner
 
 COPY --from=builder /app/apps/web/.output/public /usr/share/nginx/html
-COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+COPY apps/web/nginx.conf /etc/nginx/templates/default.conf.template
+
+ENV API_UPSTREAM=http://marsa-api:3000
 
 EXPOSE 80
