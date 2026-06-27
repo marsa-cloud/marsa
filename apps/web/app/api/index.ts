@@ -36,4 +36,5 @@ export type {
   GetManifestResponse,
   HookAttributesDto,
   ManifestDto,
+  UserRole,
 } from './types.gen.js'

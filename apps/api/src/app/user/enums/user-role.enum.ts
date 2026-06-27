@@ -4,7 +4,10 @@ import { ApiProperty, type ApiPropertyOptions } from '@nestjs/swagger'
 import { User } from '#src/app/user/entities/user.entity.js'
 
 export enum UserRole {
+  /** Platform owner / admin. Assigned to the first user to complete login. */
   Operator = 'operator',
+  /** Default tier for every user after the first. */
+  Member = 'member',
 }
 
 export const UserRoleApiProperty = (options?: ApiPropertyOptions): PropertyDecorator =>

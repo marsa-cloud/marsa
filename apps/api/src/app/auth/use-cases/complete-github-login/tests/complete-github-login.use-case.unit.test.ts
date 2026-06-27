@@ -12,6 +12,7 @@ import { CompleteGithubLoginUseCase } from '#src/app/auth/use-cases/complete-git
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
 import { UserBuilder } from '#src/app/user/entities/user.builder.js'
+import { UserRole } from '#src/app/user/enums/user-role.enum.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
 import { OctokitGithubClient } from '#src/modules/github-client/octokit-github-client.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
@@ -21,7 +22,7 @@ const SESSION_STATE = generateUuid<OAuthStateUuid>()
 
 const command = () => new CompleteGithubLoginCommandBuilder().withState(SESSION_STATE).build()
 
-function build(options: { app?: GitHubApp | null; stateValid?: boolean } = {}) {
+function build(options: { app?: GitHubApp | null; stateValid?: boolean; userCount?: number } = {}) {
   const cipher = new SecretCipherService(new ConfigService())
   const app =
     options.app === undefined
@@ -31,6 +32,7 @@ function build(options: { app?: GitHubApp | null; stateValid?: boolean } = {}) {
   const repository = createStubInstance(CompleteGithubLoginRepository)
   repository.loadProvisionedApp.resolves(app)
   repository.consumeState.resolves(options.stateValid ?? true)
+  repository.countUsers.resolves(options.userCount ?? 0)
   repository.upsertUser.resolves(
     new UserBuilder().withGithubUserId('1').withGithubLogin('marsa-mock-user').build(),
   )
@@ -57,8 +59,28 @@ describe('CompleteGithubLoginUseCase', () => {
 
     expect(user.githubUserId).toBe('1')
     expect(user.githubLogin).toBe('marsa-mock-user')
-    expect(repository.upsertUser.calledOnceWithExactly('1', 'marsa-mock-user')).toBe(true)
     expect(github.loginUser.calledOnce).toBe(true)
+    expect(repository.upsertUser.calledOnce).toBe(true)
+  })
+
+  it('assigns Operator to the first user (empty users table)', async () => {
+    const { usecase, repository } = build({ userCount: 0 })
+
+    await usecase.execute(command(), SESSION_STATE)
+
+    expect(
+      repository.upsertUser.calledOnceWithExactly('1', 'marsa-mock-user', UserRole.Operator),
+    ).toBe(true)
+  })
+
+  it('assigns Member to every user after the first', async () => {
+    const { usecase, repository } = build({ userCount: 1 })
+
+    await usecase.execute(command(), SESSION_STATE)
+
+    expect(
+      repository.upsertUser.calledOnceWithExactly('1', 'marsa-mock-user', UserRole.Member),
+    ).toBe(true)
   })
 
   it('rejects an invalid or expired state after exchanging the code, without upserting', async () => {

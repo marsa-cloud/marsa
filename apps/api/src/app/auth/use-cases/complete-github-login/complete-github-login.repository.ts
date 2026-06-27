@@ -7,6 +7,7 @@ import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
 import { UserBuilder } from '#src/app/user/entities/user.builder.js'
 import { User } from '#src/app/user/entities/user.entity.js'
+import { UserRole } from '#src/app/user/enums/user-role.enum.js'
 
 @Injectable()
 export class CompleteGithubLoginRepository {
@@ -26,15 +27,24 @@ export class CompleteGithubLoginRepository {
     return deleted === 1
   }
 
-  async upsertUser(githubUserId: string, githubLogin: string): Promise<User> {
+  /** Row count, used to decide whether the next login is the first (→ Operator). */
+  async countUsers(): Promise<number> {
+    return this.users.count()
+  }
+
+  async upsertUser(githubUserId: string, githubLogin: string, role: UserRole): Promise<User> {
     const user = new UserBuilder()
       .withGithubUserId(githubUserId)
       .withGithubLogin(githubLogin)
+      .withRole(role)
       .build()
 
+    // `role` and `createdAt` are insert-only: excluding them from the conflict
+    // update means a returning user keeps their original tier (and creation time)
+    // instead of being silently demoted to the role computed for this login.
     return this.users.upsert(user, {
       onConflictFields: ['githubUserId'],
-      onConflictExcludeFields: ['uuid'],
+      onConflictExcludeFields: ['uuid', 'role', 'createdAt'],
     })
   }
 }

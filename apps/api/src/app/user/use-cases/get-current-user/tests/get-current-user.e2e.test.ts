@@ -33,7 +33,10 @@ describe('GET /api/v1/auth/me (e2e)', () => {
     await setup.teardown()
   })
 
-  it('returns the current user for a valid session cookie', async () => {
+  it('returns the current user (with role) for a valid session cookie', async () => {
+    // Empty users table → this login bootstraps the platform Operator.
+    await em.fork().nativeDelete(User, {})
+
     const cipher = new SecretCipherService(new ConfigService())
     const app = new GitHubAppBuilder().withClientSecretEnc(cipher.encrypt('shh')).build()
     await em.fork().persistAndFlush(app)
@@ -58,7 +61,7 @@ describe('GET /api/v1/auth/me (e2e)', () => {
       .set('Cookie', cookie)
       .expect(200)
 
-    expect(response.body).toMatchObject({ id: '1', login: 'marsa-mock-user' })
+    expect(response.body).toMatchObject({ id: '1', login: 'marsa-mock-user', role: 'operator' })
   })
 
   it('rejects with 401 when no session cookie is present', async () => {

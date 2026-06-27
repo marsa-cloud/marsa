@@ -105,9 +105,12 @@ export type CompleteGithubLoginResponse = {
   login: string
 }
 
+export type UserRole = 'operator' | 'member'
+
 export type GetCurrentUserResponse = {
   id: string
   login: string
+  role: UserRole
 }
 
 export type GetApiInfoV1Data = {

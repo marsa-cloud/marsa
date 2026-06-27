@@ -16,7 +16,9 @@ export class User {
   @Property({ type: 'string', length: 255 })
   githubLogin!: string
 
-  @UserRoleEnum({ default: UserRole.Operator })
+  // Safe-by-default: new users are Members; Operator is assigned explicitly to
+  // the first user at login (never defaulted to, to avoid privilege escalation).
+  @UserRoleEnum({ default: UserRole.Member })
   role!: UserRole
 
   @Property({ type: 'datetime' })
