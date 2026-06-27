@@ -5,6 +5,7 @@ import { User } from '#src/app/user/entities/user.entity.js'
 
 export enum UserRole {
   Operator = 'operator',
+  Member = 'member',
 }
 
 export const UserRoleApiProperty = (options?: ApiPropertyOptions): PropertyDecorator =>

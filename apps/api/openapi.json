@@ -459,6 +459,13 @@
           "login"
         ]
       },
+      "UserRole": {
+        "type": "string",
+        "enum": [
+          "operator",
+          "member"
+        ]
+      },
       "GetCurrentUserResponse": {
         "type": "object",
         "properties": {
@@ -469,11 +476,20 @@
           "login": {
             "type": "string",
             "example": "octocat"
+          },
+          "role": {
+            "example": "operator",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserRole"
+              }
+            ]
           }
         },
         "required": [
           "id",
-          "login"
+          "login",
+          "role"
         ]
       }
     }

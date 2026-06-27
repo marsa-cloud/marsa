@@ -65,9 +65,12 @@ export const zCompleteGithubLoginResponse = z.object({
   login: z.string(),
 })
 
+export const zUserRole = z.enum(['operator', 'member'])
+
 export const zGetCurrentUserResponse = z.object({
   id: z.string(),
   login: z.string(),
+  role: zUserRole,
 })
 
 export const zGetApiInfoV1Response = zGetApiInfoResponse

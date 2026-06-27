@@ -4,6 +4,7 @@ import { BadGatewayException, BadRequestException, Injectable, Logger } from '@n
 import { CompleteGithubLoginCommand } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.js'
 import { CompleteGithubLoginRepository } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.repository.js'
 import { User } from '#src/app/user/entities/user.entity.js'
+import { UserRole } from '#src/app/user/enums/user-role.enum.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
 import { GithubClient } from '#src/modules/github-client/github-client.js'
 
@@ -51,7 +52,9 @@ export class CompleteGithubLoginUseCase {
         throw new BadRequestException('Invalid or expired OAuth state.')
       }
 
-      return this.repository.upsertUser(String(githubUser.id), githubUser.login)
+      const role = (await this.repository.countUsers()) === 0 ? UserRole.Operator : UserRole.Member
+
+      return this.repository.upsertUser(String(githubUser.id), githubUser.login, role)
     })
   }
 }

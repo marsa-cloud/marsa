@@ -16,7 +16,9 @@ export class User {
   @Property({ type: 'string', length: 255 })
   githubLogin!: string
 
-  @UserRoleEnum({ default: UserRole.Operator })
+  // Default to the lower tier; Operator is only ever assigned explicitly, so a
+  // user is never defaulted into admin.
+  @UserRoleEnum({ default: UserRole.Member })
   role!: UserRole
 
   @Property({ type: 'datetime' })

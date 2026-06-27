@@ -8,6 +8,7 @@ export class UserBuilder {
     this.user = new User()
     this.user.githubUserId = '1'
     this.user.githubLogin = 'marsa-user'
+    this.user.role = UserRole.Member
   }
 
   withGithubUserId(githubUserId: string): this {
