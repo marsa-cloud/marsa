@@ -45,6 +45,8 @@ Chosen: **add `member`, default to `member`, assign `operator` to the first user
 
 `ALTER TYPE ... ADD VALUE` adds `'member'`, then `ALTER TABLE "user" ALTER COLUMN "role" SET DEFAULT 'member'` uses it. Postgres forbids using a freshly-added enum value within the same transaction that added it, and MikroORM's migrator wraps migrations in an all-or-nothing transaction by default. The migration therefore overrides `isTransactional()` to return `false`, so each statement runs autocommit and the `ADD VALUE` commits before the `SET DEFAULT` references it.
 
+This also requires disabling the migrator's master transaction (`migrations.allOrNothing: false` in `mikro-orm.config.ts`). Otherwise, on a **fresh** database, the earlier migration that _creates_ `user_role_enum` runs inside the still-open all-or-nothing transaction, and this non-transactional migration — running on a separate connection — cannot see the not-yet-committed type (`type "user_role_enum" does not exist`). With `allOrNothing: false`, each migration commits in sequence, so the type exists by the time this one runs. The trade-off (a mid-batch failure no longer rolls the whole batch back) is acceptable and is the standard configuration for repos that ship enum-value migrations.
+
 ### Race note
 
 `count`-then-insert inside the login transaction is not a hard uniqueness guarantee: two truly simultaneous first logins could both observe `count === 0` and both become `operator`. At bootstrap (a single operator setting up a fresh instance) this is not a realistic concern, and the worst case is two admins rather than data loss. A hard guarantee (a partial unique index allowing one `operator`) is deferred to #63 if the allowlist work needs it.
