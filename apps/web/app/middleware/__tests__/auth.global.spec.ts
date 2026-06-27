@@ -14,7 +14,8 @@ async function runMiddleware(
 
   const user = { value: userValue }
   const error = { value: errorValue }
-  const isAuthRoute = toPath === '/login' || toPath.startsWith('/auth/')
+  const isAuthRoute
+    = toPath === '/login' || toPath.startsWith('/auth/') || toPath.startsWith('/setup/')
 
   if (error.value && !isAuthRoute) {
     return { redirectedTo, thrown: createError({ statusCode: 500, statusMessage: 'Unable to verify session', fatal: true }) }
@@ -47,6 +48,11 @@ describe('auth.global middleware logic', () => {
 
   it('allows unauthenticated users to /auth/* routes', async () => {
     const { redirectedTo } = await runMiddleware('/auth/github/callback', null)
+    expect(redirectedTo).toBeNull()
+  })
+
+  it('allows unauthenticated users to /setup/* routes (first-run bootstrap)', async () => {
+    const { redirectedTo } = await runMiddleware('/setup/github', null)
     expect(redirectedTo).toBeNull()
   })
 

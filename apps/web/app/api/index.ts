@@ -2,7 +2,6 @@
 
 export type {
   BeginGithubLoginV1Data,
-  BeginGithubLoginV1Errors,
   CaptureGithubAppInstallationV1Data,
   CaptureGithubAppInstallationV1Errors,
   CaptureGithubAppInstallationV1Response,

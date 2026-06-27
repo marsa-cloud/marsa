@@ -1,7 +1,10 @@
 export default defineNuxtRouteMiddleware(async (to) => {
   const { data: user, error } = await useCurrentUser()
 
-  const isAuthRoute = to.path === '/login' || to.path.startsWith('/auth/')
+  // `/setup` is public so a first-run operator can reach the GitHub-App
+  // provisioning wizard before any account (and any login) can exist.
+  const isAuthRoute
+    = to.path === '/login' || to.path.startsWith('/auth/') || to.path.startsWith('/setup/')
 
   if (error.value && !isAuthRoute) {
     throw createError({

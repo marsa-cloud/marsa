@@ -42,7 +42,13 @@ describe('GET /api/v1/auth/github (e2e)', () => {
     }
   })
 
-  it('rejects with 400 when no GitHub App has been provisioned', async () => {
-    await request(setup.httpServer).get('/api/v1/auth/github').expect(400)
+  it('redirects to the setup wizard when no GitHub App has been provisioned', async () => {
+    // First-run bootstrap: erroring here would dead-end the operator, who can't
+    // have logged in before the App exists. Send them to provisioning instead.
+    const response = await request(setup.httpServer).get('/api/v1/auth/github').expect(302)
+
+    expect(response.headers.location).toMatch(/\/setup\/github$/)
+    // No OAuth state is issued on the bootstrap path, so no session is bound.
+    expect(response.headers['set-cookie']).toBeUndefined()
   })
 })

@@ -1,16 +1,29 @@
-import { BadRequestException, Injectable } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
 import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { OAuthStateService } from '#src/app/auth/oauth-state.service.js'
 import { GITHUB_OAUTH_AUTHORIZE_URL } from '#src/app/auth/use-cases/begin-github-login/begin-github-login.constant.js'
 import { BeginGithubLoginRepository } from '#src/app/auth/use-cases/begin-github-login/begin-github-login.repository.js'
+import { stripTrailingSlash } from '#src/utils/strip-trailing-slash.js'
 
-export interface BeginGithubLoginResult {
-  authorizeUrl: string
-  /** Bound into the session by the controller, to be matched at complete-login (#62 login-CSRF). */
-  state: OAuthStateUuid
-}
+/** Web route hosting the GitHub-App provisioning wizard (bootstrap entry point). */
+const SETUP_PATH = '/setup/github'
+
+/**
+ * Either begin the OAuth handshake (App provisioned) or send the browser to the
+ * setup wizard (no App yet). The unprovisioned case is the first-run bootstrap:
+ * the operator can't have logged in before the App exists, so erroring would
+ * dead-end them — redirect to provisioning instead.
+ */
+export type BeginGithubLoginResult =
+  | {
+      kind: 'oauth'
+      authorizeUrl: string
+      /** Bound into the session by the controller, to be matched at complete-login (#62 login-CSRF). */
+      state: OAuthStateUuid
+    }
+  | { kind: 'setup'; setupUrl: string }
 
 @Injectable()
 export class BeginGithubLoginUseCase {
@@ -23,7 +36,8 @@ export class BeginGithubLoginUseCase {
   async execute(): Promise<BeginGithubLoginResult> {
     const app = await this.repository.loadProvisionedApp()
     if (!app) {
-      throw new BadRequestException('No provisioned GitHub App — create the App first.')
+      const webUrl = stripTrailingSlash(this.configService.getOrThrow<string>('MARSA_WEB_URL'))
+      return { kind: 'setup', setupUrl: `${webUrl}${SETUP_PATH}` }
     }
 
     const state = await this.oauthState.issue()
@@ -33,6 +47,10 @@ export class BeginGithubLoginUseCase {
       state,
       redirect_uri: this.configService.getOrThrow('MARSA_API_PUBLIC_URL') + '/auth/github/callback',
     })
-    return { authorizeUrl: `${GITHUB_OAUTH_AUTHORIZE_URL}?${params.toString()}`, state }
+    return {
+      kind: 'oauth',
+      authorizeUrl: `${GITHUB_OAUTH_AUTHORIZE_URL}?${params.toString()}`,
+      state,
+    }
   }
 }

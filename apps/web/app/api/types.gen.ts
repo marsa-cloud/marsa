@@ -194,13 +194,6 @@ export type BeginGithubLoginV1Data = {
   url: '/api/v1/auth/github'
 }
 
-export type BeginGithubLoginV1Errors = {
-  /**
-   * No provisioned GitHub App — create the App first.
-   */
-  400: unknown
-}
-
 export type CompleteGithubLoginV1Data = {
   body: CompleteGithubLoginCommand
   path?: never

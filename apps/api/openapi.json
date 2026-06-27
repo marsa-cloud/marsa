@@ -127,10 +127,7 @@
         "parameters": [],
         "responses": {
           "302": {
-            "description": "Redirects to GitHub OAuth consent."
-          },
-          "400": {
-            "description": "No provisioned GitHub App — create the App first."
+            "description": "Redirects to GitHub OAuth consent, or to the setup wizard when no App is provisioned."
           }
         },
         "summary": "",
