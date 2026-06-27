@@ -8,7 +8,6 @@ export class UserBuilder {
     this.user = new User()
     this.user.githubUserId = '1'
     this.user.githubLogin = 'marsa-user'
-    // Mirror the DB default (safe lower tier); tests override via withRole().
     this.user.role = UserRole.Member
   }
 

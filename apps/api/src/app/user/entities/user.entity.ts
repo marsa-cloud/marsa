@@ -16,8 +16,8 @@ export class User {
   @Property({ type: 'string', length: 255 })
   githubLogin!: string
 
-  // Safe-by-default: new users are Members; Operator is assigned explicitly to
-  // the first user at login (never defaulted to, to avoid privilege escalation).
+  // Default to the lower tier; Operator is only ever assigned explicitly, so a
+  // user is never defaulted into admin.
   @UserRoleEnum({ default: UserRole.Member })
   role!: UserRole
 

@@ -52,9 +52,6 @@ export class CompleteGithubLoginUseCase {
         throw new BadRequestException('Invalid or expired OAuth state.')
       }
 
-      // The first user to ever complete login bootstraps the platform Operator;
-      // everyone after is a Member. Counted inside the tx alongside the upsert
-      // so the decision and the insert share one consistent view (AgDR-0024).
       const role = (await this.repository.countUsers()) === 0 ? UserRole.Operator : UserRole.Member
 
       return this.repository.upsertUser(String(githubUser.id), githubUser.login, role)
