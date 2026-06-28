@@ -6,7 +6,7 @@
 
 `apps/web` (Nuxt 4, `ssr: false`, no Nitro server) and `apps/api` (NestJS 11, REST controllers, URI versioning under `/api/v1/...`) need a defined communication contract (issue #11). Whether Marsa will later expose a documented public API (CLI, Terraform provider, CI integrations) is undecided, so the choice must not foreclose that option. Both stacks already lean REST: the API is built on NestJS controllers; Nuxt ships `$fetch`/`useFetch` for REST.
 
-This AgDR is back-filled from the design spec authored during PR #33 (`docs/superpowers/specs/2026-05-26-web-api-communication-design.md`) to record the decision in the canonical AgDR location for portfolio-wide `/agdr search`.
+This AgDR is back-filled from the design spec authored during PR #33 and is now the **canonical** record of this decision; the original `docs/superpowers/` spec + plan were removed when the superpowers tree was consolidated into AgDRs (marsa-cloud/marsa#94).
 
 ## Options Considered
 
@@ -41,6 +41,5 @@ Explicitly deferred (all reversible — the OpenAPI doc remains the source of tr
 
 - PR: marsa-cloud/marsa#33 — `feat: typed REST communication layer between web and api (#11)`
 - Issue: marsa-cloud/marsa#11
-- Design spec: `docs/superpowers/specs/2026-05-26-web-api-communication-design.md`
-- Implementation plan: `docs/superpowers/plans/2026-05-26-web-api-communication.md`
+- Design spec + implementation plan: previously at `docs/superpowers/` — removed in the consolidation (marsa-cloud/marsa#94); this AgDR supersedes them.
 - Key files: `apps/api/src/entrypoints/generate-open-api.ts`, `apps/web/openapi-ts.config.ts`, `apps/web/app/plugins/api.ts`, `apps/web/app/composables/useApiStatus.ts`, `.github/workflows/ci.yml` (drift gate)

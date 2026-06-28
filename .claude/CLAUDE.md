@@ -26,7 +26,7 @@ Dependency versions live in a **pnpm catalog** (root `pnpm-workspace.yaml`). Wor
 
 ## Web ↔ API communication
 
-`apps/web` talks to `apps/api` over **REST**, with an **OpenAPI document as the single source of truth**. The api emits a committed `apps/api/openapi.json` (`@nestjs/swagger`); the web generates TypeScript types + Zod schemas from it (`@hey-api/openapi-ts`, **no SDK/client**) and calls the api through Nuxt's own `$fetch`, validating responses against the generated Zod at the boundary. The contract is regenerated and **drift-checked in CI**, so the committed `openapi.json` and web `app/api/*` must be regenerated and committed whenever endpoints change. Backend details live in `apps/api/.claude/CLAUDE.md` (OpenAPI generation, `operationId` convention); frontend consumption lives in `apps/web/.claude/CLAUDE.md`. Decision record: `docs/superpowers/specs/2026-05-26-web-api-communication-design.md`.
+`apps/web` talks to `apps/api` over **REST**, with an **OpenAPI document as the single source of truth**. The api emits a committed `apps/api/openapi.json` (`@nestjs/swagger`); the web generates TypeScript types + Zod schemas from it (`@hey-api/openapi-ts`, **no SDK/client**) and calls the api through Nuxt's own `$fetch`, validating responses against the generated Zod at the boundary. The contract is regenerated and **drift-checked in CI**, so the committed `openapi.json` and web `app/api/*` must be regenerated and committed whenever endpoints change. Backend details live in `apps/api/.claude/CLAUDE.md` (OpenAPI generation, `operationId` convention); frontend consumption lives in `apps/web/.claude/CLAUDE.md`. Decision record: `docs/agdr/AgDR-0001-web-api-communication.md`.
 
 ## Common commands
 
