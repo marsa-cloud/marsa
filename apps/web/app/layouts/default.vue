@@ -3,7 +3,7 @@ const { data: user } = useCurrentUser()
 </script>
 
 <template>
-  <UDashboardLayout>
+  <UDashboardGroup>
     <UDashboardSidebar>
       <template #header>
         <NuxtLink to="/">
@@ -35,5 +35,5 @@ const { data: user } = useCurrentUser()
     </UDashboardSidebar>
 
     <slot />
-  </UDashboardLayout>
+  </UDashboardGroup>
 </template>
