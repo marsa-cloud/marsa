@@ -1,0 +1,70 @@
+name: Deploy
+
+# Rolls the running Marsa cluster to an image tag. Two paths:
+#   - automatic: after the `CD` workflow succeeds on main, deploy that commit's
+#     sha image (no human action).
+#   - manual: workflow_dispatch with an image_tag, to roll back or to deploy a
+#     PR's preview image for testing.
+# The build (`cd.yml`) and this deploy are intentionally separate workflows.
+on:
+  workflow_run:
+    workflows: ["CD"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (e.g. sha-abc1234)"
+        required: true
+
+# Serialise deploys so two rolls never race; never cancel an in-flight deploy.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  deploy:
+    # Manual dispatch always runs. The automatic (workflow_run) path runs only
+    # when the triggering CD run succeeded AND was on main — so PR `preview`
+    # builds (which also run CD) never auto-deploy; they wait for a manual dispatch.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve image tag
+        id: tag
+        env:
+          EVENT: ${{ github.event_name }}
+          DISPATCH_TAG: ${{ inputs.image_tag }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            tag="$DISPATCH_TAG"
+          else
+            # docker/metadata-action's `type=sha,format=short` is the 7-char short SHA.
+            tag="sha-$(printf '%s' "$HEAD_SHA" | cut -c1-7)"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Deploying tag: $tag"
+
+      - name: Roll cluster over SSH
+        env:
+          SSH_KEY: ${{ secrets.CD_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.CD_SSH_KNOWN_HOSTS }}
+          SSH_USER: ${{ secrets.CD_SSH_USER }}
+          VPS_HOST: ${{ secrets.CD_VPS_HOST }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # The remote command is just the tag; the VPS's forced-command key
+          # ignores it and passes it to cd-deploy.sh as $SSH_ORIGINAL_COMMAND,
+          # which validates it is a sha- tag before rolling. Host key is pinned
+          # via known_hosts (no StrictHostKeyChecking=no).
+          ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes \
+            "$SSH_USER@$VPS_HOST" "$TAG"
