@@ -26,11 +26,13 @@ permissions: {}
 jobs:
   deploy:
     # Manual dispatch always runs. The automatic (workflow_run) path runs only
-    # when the triggering CD run succeeded AND was on main — so PR `preview`
-    # builds (which also run CD) never auto-deploy; they wait for a manual dispatch.
+    # for a push to main that succeeded — the `event == 'push'` guard excludes
+    # PR `preview` builds (which also run CD) even if a fork's head branch is
+    # named `main`, so an unmerged PR can never reach this secret-bearing job.
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
+      (github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     steps:

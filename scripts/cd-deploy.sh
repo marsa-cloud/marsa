@@ -26,11 +26,13 @@ tag="${SSH_ORIGINAL_COMMAND:-${1:-}}"
 
 # Only ever accept an immutable image SHA tag (sha-<hex>). This is the guard that
 # makes the forced-command key safe: anything else — including a shell command
-# slipped into SSH_ORIGINAL_COMMAND — is refused.
-case "$tag" in
-  sha-[0-9a-f]*) ;;
-  *) echo "cd-deploy: refusing tag '$tag' (expected sha-<hex>)" >&2; exit 1 ;;
-esac
+# slipped into SSH_ORIGINAL_COMMAND — is refused. The regex is fully anchored so
+# no trailing characters (e.g. `sha-a,foo=bar`) can leak into `helm --set`, where
+# commas would be parsed as extra key=value pairs.
+if [[ ! "$tag" =~ ^sha-[0-9a-f]+$ ]]; then
+  echo "cd-deploy: refusing tag '$tag' (expected sha-<hex>)" >&2
+  exit 1
+fi
 
 export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
 

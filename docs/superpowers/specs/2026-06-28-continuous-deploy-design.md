@@ -108,26 +108,37 @@ installer). Set up once, by hand, on the cluster's server node:
    ```bash
    ssh-keygen -t ed25519 -C cd@marsa -f marsa-cd
    ```
-2. **Install the deploy script** on the VPS:
+2. **Install the deploy script** on the VPS (root-only read; it still runs as
+   root via the forced command):
    ```bash
-   sudo install -m 0755 scripts/cd-deploy.sh /usr/local/bin/marsa-cd-deploy.sh
+   sudo install -m 0750 -o root -g root scripts/cd-deploy.sh /usr/local/bin/marsa-cd-deploy.sh
    ```
 3. **Pin the key to the deploy command** in `/root/.ssh/authorized_keys`:
-   ```
+   ```text
    command="/usr/local/bin/marsa-cd-deploy.sh",no-pty,no-port-forwarding,no-agent-forwarding,no-X11-forwarding ssh-ed25519 AAAA...cd@marsa
    ```
 4. **Restrict root login to forced commands** in `/etc/ssh/sshd_config`:
-   ```
+
+   ```text
    PermitRootLogin forced-commands-only
    ```
+
    then `sudo systemctl reload sshd`.
+
+   > This restricts only **direct** root SSH login (to forced-command keys like
+   > the CD key). It does **not** affect a normal user logging in and using
+   > `sudo` — keep a non-root sudo user for interactive / emergency / DR access
+   > and don't rely on direct root login.
+
 5. **Add GitHub repo secrets:**
-   | Secret | Value |
-   | ------ | ----- |
-   | `CD_SSH_PRIVATE_KEY` | contents of `marsa-cd` (private half) |
-   | `CD_SSH_USER` | `root` |
-   | `CD_VPS_HOST` | the server's host/IP |
+
+   | Secret               | Value                                                    |
+   | -------------------- | -------------------------------------------------------- |
+   | `CD_SSH_PRIVATE_KEY` | contents of `marsa-cd` (private half)                    |
+   | `CD_SSH_USER`        | `root`                                                   |
+   | `CD_VPS_HOST`        | the server's host/IP                                     |
    | `CD_SSH_KNOWN_HOSTS` | `ssh-keyscan -H <host>` output, **verified out-of-band** |
+
 6. **Create the `preview` label** in the repo (`gh label create preview`).
 
 ## Verification
