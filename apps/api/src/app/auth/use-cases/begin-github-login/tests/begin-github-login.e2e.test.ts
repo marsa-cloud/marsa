@@ -32,6 +32,12 @@ describe('GET /api/v1/auth/github (e2e)', () => {
       const location = response.headers.location
       expect(location).toMatch(/^https:\/\/github\.com\/login\/oauth\/authorize\?/)
       expect(new URL(location).searchParams.get('client_id')).toBe(app.clientId)
+      // redirect_uri must point at the web app's callback route (where the SPA
+      // reads code+state and POSTs them to complete-login) — NOT the api host,
+      // and it must match the URL registered in the GitHub App manifest.
+      expect(new URL(location).searchParams.get('redirect_uri')).toBe(
+        'https://demo.marsa.cc/auth/github/callback',
+      )
       // The state is bound into the session cookie so complete-login can verify
       // the callback came from the same browser that began the flow (#62).
       expect(response.headers['set-cookie']?.[0]).toMatch(/marsa_session=/)

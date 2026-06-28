@@ -11,6 +11,13 @@ import { stripTrailingSlash } from '#src/utils/strip-trailing-slash.js'
 const SETUP_PATH = '/setup/github'
 
 /**
+ * Web route GitHub redirects to after OAuth consent. The SPA there reads
+ * code+state and POSTs them to complete-login. Must stay in lockstep with the
+ * `oauthCallbackUrl` registered in the GitHub App manifest (get-manifest).
+ */
+const OAUTH_CALLBACK_PATH = '/auth/github/callback'
+
+/**
  * Either begin the OAuth handshake (App provisioned) or send the browser to the
  * setup wizard (no App yet). The unprovisioned case is the first-run bootstrap:
  * the operator can't have logged in before the App exists, so erroring would
@@ -34,9 +41,10 @@ export class BeginGithubLoginUseCase {
   ) {}
 
   async execute(): Promise<BeginGithubLoginResult> {
+    const webUrl = stripTrailingSlash(this.configService.getOrThrow<string>('MARSA_WEB_URL'))
+
     const app = await this.repository.loadProvisionedApp()
     if (!app) {
-      const webUrl = stripTrailingSlash(this.configService.getOrThrow<string>('MARSA_WEB_URL'))
       return { kind: 'setup', setupUrl: `${webUrl}${SETUP_PATH}` }
     }
 
@@ -45,7 +53,7 @@ export class BeginGithubLoginUseCase {
     const params = new URLSearchParams({
       client_id: app.clientId,
       state,
-      redirect_uri: this.configService.getOrThrow('MARSA_API_PUBLIC_URL') + '/auth/github/callback',
+      redirect_uri: `${webUrl}${OAUTH_CALLBACK_PATH}`,
     })
     return {
       kind: 'oauth',
