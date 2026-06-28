@@ -8,12 +8,12 @@ name: Deploy
 # The build (`cd.yml`) and this deploy are intentionally separate workflows.
 on:
   workflow_run:
-    workflows: ["CD"]
+    workflows: ['CD']
     types: [completed]
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "Image tag to deploy (e.g. sha-abc1234)"
+        description: 'Image tag to deploy (e.g. sha-abc1234)'
         required: true
 
 # Serialise deploys so two rolls never race; never cancel an in-flight deploy.

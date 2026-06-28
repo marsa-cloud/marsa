@@ -18,10 +18,10 @@ Build and deploy are kept as **two separate workflows**: `cd.yml` makes images,
 
 ## Two tracks (why deploys don't touch the chart)
 
-| Track | Trigger | What ships | Path |
-| ----- | ------- | ---------- | ---- |
-| **A — continuous deploy** (this doc) | push to `main` / manual dispatch | a new app **image** onto the team's running cluster | `deploy.yml` → SSH → `helm upgrade --set image.tag` |
-| **B — versioned release** (existing) | `v*` tag | a versioned **chart + image** for external self-hosters | `marsa-charts/chart-release.yml` + `install.sh` |
+| Track                                | Trigger                          | What ships                                              | Path                                                |
+| ------------------------------------ | -------------------------------- | ------------------------------------------------------- | --------------------------------------------------- |
+| **A — continuous deploy** (this doc) | push to `main` / manual dispatch | a new app **image** onto the team's running cluster     | `deploy.yml` → SSH → `helm upgrade --set image.tag` |
+| **B — versioned release** (existing) | `v*` tag                         | a versioned **chart + image** for external self-hosters | `marsa-charts/chart-release.yml` + `install.sh`     |
 
 `install.sh` remains the production **bootstrap + upgrade** path. Because prod
 upgrades happen in lockstep with chart bumps (Track B), pulling the chart +
@@ -30,13 +30,13 @@ Track A's image-only rolls.
 
 ## Decisions
 
-| Decision | Choice | Rationale |
-| -------- | ------ | --------- |
-| Build vs deploy | Two workflows (`cd.yml`, `deploy.yml`) | Decouples "make image" from "deploy image"; deploy runs standalone |
-| Cluster access | Hosted runner **SSHes into the VPS** | Keeps the K3s API (6443) private; avoids the public-repo self-hosted-runner risk; single secret |
-| Roll mechanism | `helm upgrade` with chart version **pinned to the currently-installed release**, `--reuse-values --set image.tag=<sha>` | App deploys never drag in chart changes; Helm stays source of truth; preserves tls/domain/email set at bootstrap |
-| SSH key scoping | **Forced-command-restricted root key** (`PermitRootLogin forced-commands-only`) | Canonical OpenSSH pattern; a leaked CI key can only ever roll Marsa to a `sha-` tag |
-| PR test images | **Label-gated** (`preview`) PR builds + manual dispatch deploy | Opt-in preview at this scale; no churn on routine PRs; first half of future preview environments |
+| Decision        | Choice                                                                                                                  | Rationale                                                                                                        |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Build vs deploy | Two workflows (`cd.yml`, `deploy.yml`)                                                                                  | Decouples "make image" from "deploy image"; deploy runs standalone                                               |
+| Cluster access  | Hosted runner **SSHes into the VPS**                                                                                    | Keeps the K3s API (6443) private; avoids the public-repo self-hosted-runner risk; single secret                  |
+| Roll mechanism  | `helm upgrade` with chart version **pinned to the currently-installed release**, `--reuse-values --set image.tag=<sha>` | App deploys never drag in chart changes; Helm stays source of truth; preserves tls/domain/email set at bootstrap |
+| SSH key scoping | **Forced-command-restricted root key** (`PermitRootLogin forced-commands-only`)                                         | Canonical OpenSSH pattern; a leaked CI key can only ever roll Marsa to a `sha-` tag                              |
+| PR test images  | **Label-gated** (`preview`) PR builds + manual dispatch deploy                                                          | Opt-in preview at this scale; no churn on routine PRs; first half of future preview environments                 |
 
 ## Flows
 
@@ -57,7 +57,7 @@ add `preview` label → cd.yml builds that PR commit's sha- image (stays in GHCR
 rollback: dispatch with an older main sha-; restore after a test: dispatch main's sha- (or merge)
 ```
 
-**PR builds never auto-deploy** — a PR build also runs `cd.yml`, which *would*
+**PR builds never auto-deploy** — a PR build also runs `cd.yml`, which _would_
 trip `deploy.yml`'s `workflow_run`, but the `head_branch == 'main'` filter drops
 PR-triggered events. The image waits in GHCR until a manual dispatch. This is the
 property that keeps an unmerged PR from hijacking the shared cluster.
@@ -137,7 +137,7 @@ installer). Set up once, by hand, on the cluster's server node:
   `ssh -i marsa-cd root@<host> "whoami"` is **refused** (proves the key can't run
   arbitrary commands).
 - **Auto:** merge a no-op to `main`; `CD` → `Deploy`; `helm history marsa -n
-  marsa` shows a new revision on the new `sha-` tag.
+marsa` shows a new revision on the new `sha-` tag.
 - **PR test:** label a PR `preview` → image builds; dispatch `deploy.yml` with the
   sha → cluster rolls to it.
 - **Rollback:** dispatch with a broken tag → `--wait` fails → `--rollback-on-failure`
@@ -145,7 +145,7 @@ installer). Set up once, by hand, on the cluster's server node:
 
 ## Out of scope / follow-ups
 
-- **PR preview *environments*** (per-PR isolated namespace + URL + auto-teardown) —
+- **PR preview _environments_** (per-PR isolated namespace + URL + auto-teardown) —
   the fully-idiomatic end-state; the label-gated build here is the first half.
 - **GitHub `environment: production`** on the deploy job — enables protection rules
   / required reviewers; easy to add later.
