@@ -18,11 +18,11 @@ ticket: marsa-cloud/marsa#94
 
 ## Options Considered
 
-| Option | Pros | Cons |
-| ------ | ---- | ---- |
+| Option                                                                           | Pros                                                                                                                                                                                                                                      | Cons                                                                                                                       |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | **Vitest + `@nuxt/test-utils` + happy-dom + Playwright-via-test-utils** (chosen) | First-party Vite/Nuxt integration; `mountSuspended`/`mockNuxtImport`/`setup`/`createPage` are the sanctioned Nuxt test APIs; happy-dom ~3× faster than jsdom; Playwright driven as a library (not a second runner) keeps one test surface | Per-file `// @vitest-environment nuxt` directive is easy to forget; Playwright downloads Chromium (~150MB) on first CI run |
-| Jest + standalone Playwright | Familiar; mature | Non-idiomatic in the Vue/Nuxt ecosystem; no first-party Nuxt integration; two disjoint runners |
-| jsdom instead of happy-dom | Slightly broader DOM spec coverage | Nuxt/Vitest default is happy-dom; ~3× slower; spec coverage gap irrelevant for component tests |
+| Jest + standalone Playwright                                                     | Familiar; mature                                                                                                                                                                                                                          | Non-idiomatic in the Vue/Nuxt ecosystem; no first-party Nuxt integration; two disjoint runners                             |
+| jsdom instead of happy-dom                                                       | Slightly broader DOM spec coverage                                                                                                                                                                                                        | Nuxt/Vitest default is happy-dom; ~3× slower; spec coverage gap irrelevant for component tests                             |
 
 ## Decision
 

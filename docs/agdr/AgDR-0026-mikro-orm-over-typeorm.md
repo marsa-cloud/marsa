@@ -18,11 +18,11 @@ TypeORM was the initial ORM choice. The snake_case column convention requires `t
 
 ## Options Considered
 
-| Option | Pros | Cons |
-| ------ | ---- | ---- |
-| **MikroORM** (chosen) | Built-in `UnderscoreNamingStrategy` (no unmaintained plugin); actively maintained; `defineConfig` type-safe config; first-class NestJS integration (`MikroOrmModule`, `@InjectRepository`); forked-EM transaction-per-suite test isolation | A switch (remove `@nestjs/typeorm`/`typeorm`, add four `@mikro-orm/*` packages); team learns MikroORM's EM/migrator semantics |
-| Stay on TypeORM + `typeorm-naming-strategies` | No change | Depends on a package unmaintained ~6 years for a core concern (column naming); maintenance risk grows with the schema |
-| Stay on TypeORM, hand-roll a naming strategy | Drops the dead dependency | Reinvents a solved problem; ongoing maintenance burden on us |
+| Option                                        | Pros                                                                                                                                                                                                                                       | Cons                                                                                                                          |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| **MikroORM** (chosen)                         | Built-in `UnderscoreNamingStrategy` (no unmaintained plugin); actively maintained; `defineConfig` type-safe config; first-class NestJS integration (`MikroOrmModule`, `@InjectRepository`); forked-EM transaction-per-suite test isolation | A switch (remove `@nestjs/typeorm`/`typeorm`, add four `@mikro-orm/*` packages); team learns MikroORM's EM/migrator semantics |
+| Stay on TypeORM + `typeorm-naming-strategies` | No change                                                                                                                                                                                                                                  | Depends on a package unmaintained ~6 years for a core concern (column naming); maintenance risk grows with the schema         |
+| Stay on TypeORM, hand-roll a naming strategy  | Drops the dead dependency                                                                                                                                                                                                                  | Reinvents a solved problem; ongoing maintenance burden on us                                                                  |
 
 ## Decision
 

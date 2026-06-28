@@ -14,17 +14,17 @@ ticket: marsa-cloud/marsa#94
 
 ## Context
 
-`cd.yml` already builds and pushes `marsa-api`/`marsa-web` images to GHCR on every `main` push (see AgDR-0027), but nothing told the running K3s cluster to roll to the new image. This adds the **deploy half**. Two tracks are kept distinct: **Track A** (this AgDR) continuously deploys a new app *image* onto the team's running cluster; **Track B** (existing) cuts versioned *chart + image* releases for external self-hosters via `marsa-charts` + `install.sh`. `install.sh` stays the production bootstrap/upgrade path (chart + appVersion move in lockstep there), so there is no conflict with Track A's image-only rolls.
+`cd.yml` already builds and pushes `marsa-api`/`marsa-web` images to GHCR on every `main` push (see AgDR-0027), but nothing told the running K3s cluster to roll to the new image. This adds the **deploy half**. Two tracks are kept distinct: **Track A** (this AgDR) continuously deploys a new app _image_ onto the team's running cluster; **Track B** (existing) cuts versioned _chart + image_ releases for external self-hosters via `marsa-charts` + `install.sh`. `install.sh` stays the production bootstrap/upgrade path (chart + appVersion move in lockstep there), so there is no conflict with Track A's image-only rolls.
 
 ## Options Considered
 
-| Decision axis | Chosen | Rationale / rejected alternative |
-| ------------- | ------ | -------------------------------- |
-| Build vs deploy | **Two workflows** (`cd.yml` makes images, `deploy.yml` deploys) | Decouples "make image" from "deploy image"; deploy can run standalone (manual dispatch). Rejected: one combined workflow — couples concerns. |
-| Cluster access | **Hosted runner SSHes into the VPS** | Keeps the K3s API (6443) private; avoids public-repo self-hosted-runner risk; single secret. Rejected: exposing the cluster API to the runner. |
-| Roll mechanism | **`helm upgrade` chart-pinned to the installed release, `--reuse-values --set image.tag=<sha>`** | App deploys never drag in chart changes; Helm stays source of truth; preserves tls/domain/email set at bootstrap. One `--set image.tag` covers both containers (shared `.Values.image.tag`, same commit → same `sha-` tag). |
-| SSH key scoping | **Forced-command-restricted root key** (`PermitRootLogin forced-commands-only`) | Canonical OpenSSH pattern; a leaked CI key can only ever roll Marsa to a validated `sha-` tag. |
-| PR test images | **Label-gated (`preview`) builds + manual-dispatch deploy** | Opt-in preview at this scale; no churn on routine PRs; first half of future preview environments. |
+| Decision axis   | Chosen                                                                                           | Rationale / rejected alternative                                                                                                                                                                                            |
+| --------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Build vs deploy | **Two workflows** (`cd.yml` makes images, `deploy.yml` deploys)                                  | Decouples "make image" from "deploy image"; deploy can run standalone (manual dispatch). Rejected: one combined workflow — couples concerns.                                                                                |
+| Cluster access  | **Hosted runner SSHes into the VPS**                                                             | Keeps the K3s API (6443) private; avoids public-repo self-hosted-runner risk; single secret. Rejected: exposing the cluster API to the runner.                                                                              |
+| Roll mechanism  | **`helm upgrade` chart-pinned to the installed release, `--reuse-values --set image.tag=<sha>`** | App deploys never drag in chart changes; Helm stays source of truth; preserves tls/domain/email set at bootstrap. One `--set image.tag` covers both containers (shared `.Values.image.tag`, same commit → same `sha-` tag). |
+| SSH key scoping | **Forced-command-restricted root key** (`PermitRootLogin forced-commands-only`)                  | Canonical OpenSSH pattern; a leaked CI key can only ever roll Marsa to a validated `sha-` tag.                                                                                                                              |
+| PR test images  | **Label-gated (`preview`) builds + manual-dispatch deploy**                                      | Opt-in preview at this scale; no churn on routine PRs; first half of future preview environments.                                                                                                                           |
 
 ## Decision
 
@@ -35,7 +35,7 @@ Chosen: **a standalone `deploy.yml` driving a forced-command SSH roll.**
 - **`cd.yml`** (modified): `pull_request` (`labeled`/`synchronize`) trigger + job-level `if` so PR commits build only under the `preview` label. Fork PRs can't push to GHCR (`packages: write` withheld), so this is effectively team PRs only.
 - **One-time VPS setup** (manual ops, **not** in the public `install.sh`): generate an ed25519 deploy key, install the script `0750 root:root`, pin it via `command="…",no-pty,…` in `authorized_keys`, set `PermitRootLogin forced-commands-only` (direct root only — interactive `sudo` access unaffected), add repo secrets (`CD_SSH_PRIVATE_KEY/USER`, `CD_VPS_HOST`, `CD_SSH_KNOWN_HOSTS`), create the `preview` label.
 
-Out of scope / follow-ups: per-PR preview *environments*, GitHub `environment: production` protection on the deploy job, flipping `marsa-charts` `values.yaml` `tag` default to `""`, GitOps (Argo/Flux) pull-based deploy, per-image tags (web+api release in lockstep from one commit — YAGNI).
+Out of scope / follow-ups: per-PR preview _environments_, GitHub `environment: production` protection on the deploy job, flipping `marsa-charts` `values.yaml` `tag` default to `""`, GitOps (Argo/Flux) pull-based deploy, per-image tags (web+api release in lockstep from one commit — YAGNI).
 
 ## Consequences
 

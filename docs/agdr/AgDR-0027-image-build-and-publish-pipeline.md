@@ -20,11 +20,11 @@ The repo needed container images for `apps/api` (NestJS) and `apps/web` (Nuxt SP
 
 ## Options Considered
 
-| Option | Pros | Cons |
-| ------ | ---- | ---- |
-| **Dedicated `cd.yml`, multi-stage builds, GHCR, parallel api/web jobs** (chosen) | Decouples "make image" from "test code"; multi-stage keeps runtime images lean (api: node-alpine runner; web: nginx static, no Node at runtime); `GITHUB_TOKEN` needs no extra secrets; `docker/metadata-action` derives tags; gha layer cache (`mode=max`) makes rebuilds fast | `cd.yml` doesn't itself wait on CI — relies on branch protection for correctness |
-| `cd.yml` gates on / waits for `ci.yml` to pass | Build can't run on un-tested code | Workflow-to-workflow waits are brittle; duplicates the guarantee branch protection already gives on PR merge |
-| Single combined CI+build workflow | One file | Couples slow image builds to every CI run; muddies failure attribution |
+| Option                                                                           | Pros                                                                                                                                                                                                                                                                            | Cons                                                                                                         |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Dedicated `cd.yml`, multi-stage builds, GHCR, parallel api/web jobs** (chosen) | Decouples "make image" from "test code"; multi-stage keeps runtime images lean (api: node-alpine runner; web: nginx static, no Node at runtime); `GITHUB_TOKEN` needs no extra secrets; `docker/metadata-action` derives tags; gha layer cache (`mode=max`) makes rebuilds fast | `cd.yml` doesn't itself wait on CI — relies on branch protection for correctness                             |
+| `cd.yml` gates on / waits for `ci.yml` to pass                                   | Build can't run on un-tested code                                                                                                                                                                                                                                               | Workflow-to-workflow waits are brittle; duplicates the guarantee branch protection already gives on PR merge |
+| Single combined CI+build workflow                                                | One file                                                                                                                                                                                                                                                                        | Couples slow image builds to every CI run; muddies failure attribution                                       |
 
 ## Decision
 
