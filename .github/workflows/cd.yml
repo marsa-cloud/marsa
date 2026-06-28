@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
     tags: ['v*']
+  # Build a PR's image only when it carries the `preview` label (opt-in preview).
+  # Job-level `if` enforces the gate; this just narrows which PR events run at all.
+  pull_request:
+    types: [labeled, synchronize]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -11,6 +15,10 @@ concurrency:
 
 jobs:
   publish-api:
+    # Pushes to main / tags always build; PRs build only when labelled `preview`.
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'preview')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -59,6 +67,10 @@ jobs:
           cache-to: type=gha,mode=max,scope=api
 
   publish-web:
+    # Pushes to main / tags always build; PRs build only when labelled `preview`.
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'preview')
     runs-on: ubuntu-latest
     permissions:
       contents: read
