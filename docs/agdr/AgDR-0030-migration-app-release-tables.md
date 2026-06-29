@@ -24,24 +24,24 @@ ticket: marsa-cloud/marsa#97
 
 Two shapes are deliberately non-flat and are the reason this migration needs thought even though it's additive:
 
-- `release.triggered_by` is an **enum** with only `'manual'` populated now; `'webhook'` is reserved for #21's build step so that increment is a new enum *value*, not a new column or code path (AgDR-0015).
+- `release.triggered_by` is an **enum** with only `'manual'` populated now; `'webhook'` is reserved for #21's build step so that increment is a new enum _value_, not a new column or code path (AgDR-0015).
 - `app.domain` is a **discriminated shape** `{ type: 'subdomain' }` now, with `{ type: 'custom', host }` reserved on the same field so custom-domain support never forces a schema redo (AgDR-0015).
 
 Desired state lives on `app` (`image` / `replicas` / `env` / `port` / `domain`), not low-level handles like `deployment_id` — keeps the rendering/applying seam swappable (AgDR-0029).
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
-| **Two additive tables now (`app`, `release`) with the extensible enum + discriminated-domain shapes (chosen)** | Matches AgDR-0015's load-bearing shapes; zero blast radius (new tables); #21/#78 build additively on top | Slightly more upfront modelling than a flat string column |
-| Single `deployment` table (flatten App + Release into one row) | Fewer tables | Loses the "one row per deploy event" history; re-couples "how we got an image" with "deploying it" — exactly what AgDR-0015 separates |
-| Flat `triggered_by` / `domain` as plain `varchar` | Marginally simpler migration | Reopens the retrofit risk AgDR-0015 exists to avoid; #21 would need a follow-up migration |
+| Option                                                                                                         | Pros                                                                                                     | Cons                                                                                                                                  |
+| -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **Two additive tables now (`app`, `release`) with the extensible enum + discriminated-domain shapes (chosen)** | Matches AgDR-0015's load-bearing shapes; zero blast radius (new tables); #21/#78 build additively on top | Slightly more upfront modelling than a flat string column                                                                             |
+| Single `deployment` table (flatten App + Release into one row)                                                 | Fewer tables                                                                                             | Loses the "one row per deploy event" history; re-couples "how we got an image" with "deploying it" — exactly what AgDR-0015 separates |
+| Flat `triggered_by` / `domain` as plain `varchar`                                                              | Marginally simpler migration                                                                             | Reopens the retrofit risk AgDR-0015 exists to avoid; #21 would need a follow-up migration                                             |
 
 ## Decision
 
 Chosen: **two additive tables with the extensible shapes**, because it is the minimal schema that satisfies AgDR-0015's constraints, carries zero blast radius (nothing reads these tables until the deploy feature ships), and lets #21/#78 extend by adding enum values rather than altering columns.
 
-`release.status` is a column whose value is *derived from an injectable status source* in the use-case layer (AgDR-0029), not hardcoded — the migration just provides the column + enum.
+`release.status` is a column whose value is _derived from an injectable status source_ in the use-case layer (AgDR-0029), not hardcoded — the migration just provides the column + enum.
 
 ## Rollback Plan
 
@@ -80,7 +80,7 @@ Deploy-order constraint (if any):
 - The `app.image_pull_credentials` column is added **nullable** now and populated (encrypted) by #99 — no second migration needed for private images.
 - Keeps #21 (git-build) and #78 (self-hosted registry) additive: they add a `triggered_by` enum value / config, not new columns.
 - Commits Marsa to the discriminated `app.domain` shape — custom domains later are a value addition, not a schema change.
-- **Project & Environment deferred to v0.2 (decision recorded on #24).** The target isolation model is **one K8s namespace per (project × environment)** — soft isolation (namespace + default-deny `NetworkPolicy` + per-namespace `ResourceQuota`), appropriate because Marsa is self-hosted (operator's own workloads, not hostile tenants). V0.1 ships this schema **flat** (App + Release) and deploys into a single derived namespace (default project, `production` env). `Project` and `Environment` become first-class entities later as **additive nullable FKs + default backfill** — no retrofit. Per AgDR-0029, the namespace name is *derived* from project+env, never stored on the entity.
+- **Project & Environment deferred to v0.2 (decision recorded on #24).** The target isolation model is **one K8s namespace per (project × environment)** — soft isolation (namespace + default-deny `NetworkPolicy` + per-namespace `ResourceQuota`), appropriate because Marsa is self-hosted (operator's own workloads, not hostile tenants). V0.1 ships this schema **flat** (App + Release) and deploys into a single derived namespace (default project, `production` env). `Project` and `Environment` become first-class entities later as **additive nullable FKs + default backfill** — no retrofit. Per AgDR-0029, the namespace name is _derived_ from project+env, never stored on the entity.
 
 ## Artifacts
 
