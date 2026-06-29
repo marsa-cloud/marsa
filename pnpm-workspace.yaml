@@ -51,6 +51,9 @@ catalog:
   '@octokit/auth-app': ^8.2.0
   '@octokit/request': ^10.0.10
 
+  # Kubernetes (api)
+  '@kubernetes/client-node': ^1.4.0
+
   # Node / test tooling (api)
   '@types/express': ^5.0.0
   '@types/node': ^24.0.0

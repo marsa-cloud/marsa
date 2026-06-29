@@ -73,6 +73,23 @@ export const zGetCurrentUserResponse = z.object({
   role: zUserRole,
 })
 
+export const zDeployAppCommand = z.object({
+  slug: z.string(),
+  image: z.string(),
+  containerPort: z.number(),
+  replicas: z.number().optional(),
+  env: z.record(z.string(), z.string()).optional(),
+})
+
+export const zReleaseStatus = z.enum(['pending', 'in_progress', 'succeeded', 'failed'])
+
+export const zDeployAppResponse = z.object({
+  appSlug: z.string(),
+  url: z.string(),
+  releaseUuid: z.string(),
+  status: zReleaseStatus,
+})
+
 export const zGetApiInfoV1Response = zGetApiInfoResponse
 
 export const zGetGithubAppManifestV1Response = zGetManifestResponse
@@ -90,3 +107,7 @@ export const zCompleteGithubLoginV1Body = zCompleteGithubLoginCommand
 export const zCompleteGithubLoginV1Response = zCompleteGithubLoginResponse
 
 export const zGetCurrentUserV1Response = zGetCurrentUserResponse
+
+export const zDeployAppV1Body = zDeployAppCommand
+
+export const zDeployAppV1Response = zDeployAppResponse

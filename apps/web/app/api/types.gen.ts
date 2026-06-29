@@ -113,6 +113,43 @@ export type GetCurrentUserResponse = {
   role: UserRole
 }
 
+export type DeployAppCommand = {
+  /**
+   * Public subdomain label + K8s object name.
+   */
+  slug: string
+  /**
+   * Fully-qualified public image ref.
+   */
+  image: string
+  /**
+   * Port the container listens on.
+   */
+  containerPort: number
+  /**
+   * Replica count (defaults to 1).
+   */
+  replicas?: number
+  /**
+   * Plain (non-secret) environment variables for the container.
+   */
+  env?: {
+    [key: string]: string
+  }
+}
+
+export type ReleaseStatus = 'pending' | 'in_progress' | 'succeeded' | 'failed'
+
+export type DeployAppResponse = {
+  appSlug: string
+  url: string
+  /**
+   * The Release created for this deploy.
+   */
+  releaseUuid: string
+  status: ReleaseStatus
+}
+
 export type GetApiInfoV1Data = {
   body?: never
   path?: never
@@ -241,3 +278,23 @@ export type GetCurrentUserV1Responses = {
 }
 
 export type GetCurrentUserV1Response = GetCurrentUserV1Responses[keyof GetCurrentUserV1Responses]
+
+export type DeployAppV1Data = {
+  body: DeployAppCommand
+  path?: never
+  query?: never
+  url: '/api/v1/deployments/deploy'
+}
+
+export type DeployAppV1Errors = {
+  /**
+   * Malformed body, or an invalid slug / image / port.
+   */
+  400: unknown
+}
+
+export type DeployAppV1Responses = {
+  200: DeployAppResponse
+}
+
+export type DeployAppV1Response = DeployAppV1Responses[keyof DeployAppV1Responses]
