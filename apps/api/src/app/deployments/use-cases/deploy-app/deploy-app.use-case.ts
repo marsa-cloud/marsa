@@ -1,3 +1,4 @@
+import { EntityManager } from '@mikro-orm/postgresql'
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 
@@ -18,6 +19,7 @@ export class DeployAppUseCase {
     private readonly repository: DeployAppRepository,
     private readonly deployBackend: DeployBackend,
     private readonly config: ConfigService,
+    private readonly em: EntityManager,
   ) {}
 
   async execute(command: DeployAppCommand): Promise<DeployAppResponse> {
@@ -39,30 +41,17 @@ export class DeployAppUseCase {
       .withStatus(ReleaseStatus.Pending)
       .build()
 
-    await this.repository.upsertAppAndCreateRelease(app, release)
+    await this.em.transactional(async () => {
+      await this.repository.upsertApp(app)
+      await this.repository.createRelease(release)
+    })
 
     const manifests = renderManifests(app, release, baseDomain)
 
-    // Desired state is already persisted; the cluster apply is the side effect
-    // that can still fail. On failure, mark the Release Failed and rethrow —
-    // there is no cross-cluster transaction to roll apply() back. Deriving the
-    // eventual terminal status of a *successful* rollout (Deploying → Deployed)
-    // is deferred to the status-reconciliation follow-up; the Release stays
-    // Pending here on purpose. See marsa-cloud/marsa#77 sub-issue.
     try {
       await this.deployBackend.apply(OPERATOR_APPS_NAMESPACE, manifests)
     } catch (error) {
-      release.status = ReleaseStatus.Failed
-      try {
-        await this.repository.setReleaseStatus(release.uuid, ReleaseStatus.Failed)
-      } catch (persistError) {
-        // Don't let a status-write failure mask the real (apply) failure —
-        // surface it as the cause and note the persistence miss.
-        const detail = persistError instanceof Error ? persistError.message : String(persistError)
-        throw new Error(`cluster apply failed; also failed to persist Failed status: ${detail}`, {
-          cause: error,
-        })
-      }
+      await this.repository.setReleaseStatus(release.uuid, ReleaseStatus.Failed)
       throw error
     }
 
