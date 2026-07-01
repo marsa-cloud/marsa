@@ -14,7 +14,7 @@ ticket: marsa-cloud/marsa#98
 
 ## Context
 
-[AgDR-0029](AgDR-0029-gitops-argo-flux-for-operator-app-deploy.md) decided the *shape* of V0.1 operator-app deploy — an imperative `DeployApp` primitive behind a `DeployBackend` port with a `DirectApply` adapter, DB-as-desired-state, GitOps deferred to a V0.2 spike. It did **not** pick the concrete library the adapter uses to reach the cluster. #98 (the first end-to-end deploy slice) forces that choice.
+[AgDR-0029](AgDR-0029-gitops-argo-flux-for-operator-app-deploy.md) decided the _shape_ of V0.1 operator-app deploy — an imperative `DeployApp` primitive behind a `DeployBackend` port with a `DirectApply` adapter, DB-as-desired-state, GitOps deferred to a V0.2 spike. It did **not** pick the concrete library the adapter uses to reach the cluster. #98 (the first end-to-end deploy slice) forces that choice.
 
 Constraints that shape it:
 
@@ -25,12 +25,12 @@ Constraints that shape it:
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
-| **`@kubernetes/client-node` (official, chosen)** | Official SDK; typed core models; `loadFromDefault()` resolves in-cluster SA **and** local kubeconfig with no branching; `KubernetesObjectApi` applies arbitrary objects incl. CRDs and supports server-side apply; ESM-compatible | Heavy transitive dependency surface (request stack, ws); generated typings are verbose; we couple to its API shape (mitigated by the seam) |
-| Shell out to `kubectl apply` | Trivial to reason about; CRD-agnostic | Adds a runtime **binary** dependency to the api image; stringly-typed; error handling is exit-code + stderr parsing; no typed status reads for `Release.status` |
-| `helm upgrade --install` per app | We already maintain `marsa-charts`; templating exists | Re-introduces a binary dep + imperative upgrade semantics; a release-per-app is heavier than rendering four objects; couples app deploy to chart packaging |
-| Hand-rolled REST via `fetch` | Zero dependency; full control | Re-implements auth (in-cluster token + CA, kubeconfig exec plugins), ret/watch, and SSA content negotiation — exactly the undifferentiated work the official client already does |
+| Option                                           | Pros                                                                                                                                                                                                                              | Cons                                                                                                                                                                             |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`@kubernetes/client-node` (official, chosen)** | Official SDK; typed core models; `loadFromDefault()` resolves in-cluster SA **and** local kubeconfig with no branching; `KubernetesObjectApi` applies arbitrary objects incl. CRDs and supports server-side apply; ESM-compatible | Heavy transitive dependency surface (request stack, ws); generated typings are verbose; we couple to its API shape (mitigated by the seam)                                       |
+| Shell out to `kubectl apply`                     | Trivial to reason about; CRD-agnostic                                                                                                                                                                                             | Adds a runtime **binary** dependency to the api image; stringly-typed; error handling is exit-code + stderr parsing; no typed status reads for `Release.status`                  |
+| `helm upgrade --install` per app                 | We already maintain `marsa-charts`; templating exists                                                                                                                                                                             | Re-introduces a binary dep + imperative upgrade semantics; a release-per-app is heavier than rendering four objects; couples app deploy to chart packaging                       |
+| Hand-rolled REST via `fetch`                     | Zero dependency; full control                                                                                                                                                                                                     | Re-implements auth (in-cluster token + CA, kubeconfig exec plugins), ret/watch, and SSA content negotiation — exactly the undifferentiated work the official client already does |
 
 ## Decision
 
