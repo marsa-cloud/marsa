@@ -69,4 +69,16 @@ describe('DeployAppUseCase', () => {
     const [, status] = repository.setReleaseStatus.firstCall.args
     expect(status).toBe(ReleaseStatus.Failed)
   })
+
+  it('preserves the apply error as cause when persisting Failed also fails', async () => {
+    const { usecase, repository, deployBackend } = build()
+    const applyError = new Error('cluster unreachable')
+    deployBackend.apply.rejects(applyError)
+    repository.setReleaseStatus.rejects(new Error('db down'))
+
+    const thrown = await usecase.execute(command()).catch((error: unknown) => error)
+
+    expect((thrown as Error).cause).toBe(applyError)
+    expect(String((thrown as Error).message)).toMatch(/db down/)
+  })
 })

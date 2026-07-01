@@ -52,8 +52,17 @@ export class DeployAppUseCase {
     try {
       await this.deployBackend.apply(OPERATOR_APPS_NAMESPACE, manifests)
     } catch (error) {
-      await this.repository.setReleaseStatus(release.uuid, ReleaseStatus.Failed)
       release.status = ReleaseStatus.Failed
+      try {
+        await this.repository.setReleaseStatus(release.uuid, ReleaseStatus.Failed)
+      } catch (persistError) {
+        // Don't let a status-write failure mask the real (apply) failure —
+        // surface it as the cause and note the persistence miss.
+        const detail = persistError instanceof Error ? persistError.message : String(persistError)
+        throw new Error(`cluster apply failed; also failed to persist Failed status: ${detail}`, {
+          cause: error,
+        })
+      }
       throw error
     }
 
