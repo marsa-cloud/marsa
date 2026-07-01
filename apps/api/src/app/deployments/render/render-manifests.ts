@@ -2,18 +2,11 @@ import type { V1Deployment, V1Service } from '@kubernetes/client-node'
 
 import type { App } from '#src/app/deployments/entities/app.entity.js'
 import type { Release } from '#src/app/deployments/entities/release.entity.js'
-import type { IngressRoute, RenderedManifests } from '#src/modules/kubernetes/deploy-backend.types.js'
+import type {
+  IngressRoute,
+  RenderedManifests,
+} from '#src/modules/kubernetes/deploy-backend.types.js'
 
-/**
- * Pure: `App` + `Release` → the Kubernetes manifest bundle (no cluster I/O).
- * Keeping rendering separable from applying is the #77 review checkpoint that
- * keeps the V0.2 deploy-backend swap contained (AgDR-0029). `baseDomain` is
- * passed in (from `MARSA_BASE_DOMAIN`) rather than read here so the function
- * stays a pure, unit-testable mapping.
- *
- * V0.1 addresses every app as `<slug>.<baseDomain>` over HTTPS, reusing the
- * Traefik `IngressRoute` + `certResolver: le` shape from marsa-charts.
- */
 export function renderManifests(app: App, release: Release, baseDomain: string): RenderedManifests {
   const name = app.slug
   const host = `${app.slug}.${baseDomain}`

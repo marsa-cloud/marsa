@@ -74,10 +74,13 @@ export const zGetCurrentUserResponse = z.object({
 })
 
 export const zDeployAppCommand = z.object({
-  slug: z.string(),
+  slug: z
+    .string()
+    .max(63)
+    .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/),
   image: z.string(),
-  containerPort: z.number(),
-  replicas: z.number().optional(),
+  containerPort: z.int().gte(1).lte(65535),
+  replicas: z.int().gte(1).optional(),
   env: z.record(z.string(), z.string()).optional(),
 })
 

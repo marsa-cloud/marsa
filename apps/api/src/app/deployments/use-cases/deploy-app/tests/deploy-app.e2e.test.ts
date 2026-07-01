@@ -40,4 +40,13 @@ describe('POST /api/v1/deployments/deploy (e2e)', () => {
 
     expect(String(response.body.message)).toMatch(/slug/)
   })
+
+  it('rejects a non-string env value with 400', async () => {
+    const command = new DeployAppCommandBuilder().build()
+
+    await request(setup.httpServer)
+      .post('/api/v1/deployments/deploy')
+      .send({ ...command, env: { LOG_LEVEL: 1 } })
+      .expect(400)
+  })
 })

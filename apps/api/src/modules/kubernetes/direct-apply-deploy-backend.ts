@@ -17,14 +17,14 @@ import {
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
 import type { RenderedManifests } from '#src/modules/kubernetes/deploy-backend.types.js'
 
-/**
- * Applies the manifest bundle directly to the cluster via Kubernetes
- * server-side apply (AgDR-0032). Each object is applied with a fixed field
- * manager and `force: true`, so first-deploy and re-deploy (#100) are the same
- * call — no exists-check, no `clusterIP` salvage. `loadFromDefault()` resolves
- * the in-cluster service account in prod and `~/.kube/config` locally
- * (AgDR-0031).
- */
+function requireName(object: { metadata?: { name?: string } }, kind: string): string {
+  const name = object.metadata?.name
+  if (!name) {
+    throw new Error(`rendered ${kind} manifest is missing metadata.name`)
+  }
+  return name
+}
+
 @Injectable()
 export class DirectApplyDeployBackend extends DeployBackend {
   private readonly apps: AppsV1Api
@@ -46,7 +46,7 @@ export class DirectApplyDeployBackend extends DeployBackend {
 
     await this.apps.patchNamespacedDeployment(
       {
-        name: deployment.metadata!.name!,
+        name: requireName(deployment, 'Deployment'),
         namespace,
         body: deployment,
         fieldManager: DEPLOY_FIELD_MANAGER,
@@ -57,7 +57,7 @@ export class DirectApplyDeployBackend extends DeployBackend {
 
     await this.core.patchNamespacedService(
       {
-        name: service.metadata!.name!,
+        name: requireName(service, 'Service'),
         namespace,
         body: service,
         fieldManager: DEPLOY_FIELD_MANAGER,
@@ -72,7 +72,7 @@ export class DirectApplyDeployBackend extends DeployBackend {
         version: TRAEFIK_VERSION,
         namespace,
         plural: INGRESS_ROUTE_PLURAL,
-        name: ingressRoute.metadata!.name!,
+        name: requireName(ingressRoute, 'IngressRoute'),
         body: ingressRoute,
         fieldManager: DEPLOY_FIELD_MANAGER,
         force: true,

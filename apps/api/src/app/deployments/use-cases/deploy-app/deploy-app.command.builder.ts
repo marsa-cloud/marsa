@@ -2,9 +2,10 @@ import { DeployAppCommand } from '#src/app/deployments/use-cases/deploy-app/depl
 
 /** Test-side builder for {@link DeployAppCommand}; on the request path Nest deserialises the DTO. */
 export class DeployAppCommandBuilder {
-  private readonly command = new DeployAppCommand()
+  private readonly command: DeployAppCommand
 
   constructor() {
+    this.command = new DeployAppCommand()
     this.command.slug = 'my-app'
     this.command.image = 'nginx:1.27'
     this.command.containerPort = 80
