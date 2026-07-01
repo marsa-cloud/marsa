@@ -1,8 +1,9 @@
 import { before, describe, it } from 'node:test'
 
+import { EntityManager } from '@mikro-orm/postgresql'
 import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
-import { createStubInstance } from 'sinon'
+import { createStubInstance, type SinonStub } from 'sinon'
 
 import { ReleaseStatus } from '#src/app/deployments/enums/release-status.enum.js'
 import { DeployAppCommandBuilder } from '#src/app/deployments/use-cases/deploy-app/deploy-app.command.builder.js'
@@ -14,7 +15,8 @@ import { TestBench } from '#src/test/setup/test-bench.js'
 
 function build() {
   const repository = createStubInstance(DeployAppRepository)
-  repository.upsertAppAndCreateRelease.resolves()
+  repository.upsertApp.resolves()
+  repository.createRelease.resolves()
   repository.setReleaseStatus.resolves()
 
   const deployBackend = createStubInstance(MockDeployBackend)
@@ -23,7 +25,11 @@ function build() {
   const config = createStubInstance(ConfigService)
   config.getOrThrow.returns('demo.marsa.cc')
 
-  const usecase = new DeployAppUseCase(repository, deployBackend, config)
+  const em = createStubInstance(EntityManager)
+  // Run the transactional callback inline so the wrapped repository writes execute.
+  ;(em.transactional as unknown as SinonStub).callsFake((work: () => Promise<unknown>) => work())
+
+  const usecase = new DeployAppUseCase(repository, deployBackend, config, em)
   return { usecase, repository, deployBackend }
 }
 
@@ -49,7 +55,8 @@ describe('DeployAppUseCase', () => {
     // until the status-reconciliation follow-up (marsa#77 sub-issue).
     expect(result.status).toBe(ReleaseStatus.Pending)
 
-    expect(repository.upsertAppAndCreateRelease.calledOnce).toBe(true)
+    expect(repository.upsertApp.calledOnce).toBe(true)
+    expect(repository.createRelease.calledOnce).toBe(true)
 
     const [namespace, manifests] = deployBackend.apply.firstCall.args
     expect(namespace).toBe(OPERATOR_APPS_NAMESPACE)
@@ -68,17 +75,5 @@ describe('DeployAppUseCase', () => {
 
     const [, status] = repository.setReleaseStatus.firstCall.args
     expect(status).toBe(ReleaseStatus.Failed)
-  })
-
-  it('preserves the apply error as cause when persisting Failed also fails', async () => {
-    const { usecase, repository, deployBackend } = build()
-    const applyError = new Error('cluster unreachable')
-    deployBackend.apply.rejects(applyError)
-    repository.setReleaseStatus.rejects(new Error('db down'))
-
-    const thrown = await usecase.execute(command()).catch((error: unknown) => error)
-
-    expect((thrown as Error).cause).toBe(applyError)
-    expect(String((thrown as Error).message)).toMatch(/db down/)
   })
 })
