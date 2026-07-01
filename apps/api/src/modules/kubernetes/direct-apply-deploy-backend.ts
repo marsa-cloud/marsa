@@ -15,7 +15,7 @@ import {
   TRAEFIK_VERSION,
 } from '#src/modules/kubernetes/deploy-backend.constants.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
-import type { RenderedManifests, RolloutPhase } from '#src/modules/kubernetes/deploy-backend.types.js'
+import type { RenderedManifests } from '#src/modules/kubernetes/deploy-backend.types.js'
 
 /**
  * Applies the manifest bundle directly to the cluster via Kubernetes
@@ -79,13 +79,5 @@ export class DirectApplyDeployBackend extends DeployBackend {
       },
       ssa,
     )
-  }
-
-  async rolloutStatus(namespace: string, deploymentName: string): Promise<RolloutPhase> {
-    const deployment = await this.apps.readNamespacedDeployment({ name: deploymentName, namespace })
-    const desired = deployment.spec?.replicas ?? 0
-    const available = deployment.status?.availableReplicas ?? 0
-
-    return desired > 0 && available >= desired ? 'available' : 'progressing'
   }
 }

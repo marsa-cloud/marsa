@@ -9,18 +9,16 @@ import { DeployAppCommandBuilder } from '#src/app/deployments/use-cases/deploy-a
 import { DeployAppRepository } from '#src/app/deployments/use-cases/deploy-app/deploy-app.repository.js'
 import { DeployAppUseCase } from '#src/app/deployments/use-cases/deploy-app/deploy-app.use-case.js'
 import { OPERATOR_APPS_NAMESPACE } from '#src/modules/kubernetes/deploy-backend.constants.js'
-import type { RolloutPhase } from '#src/modules/kubernetes/deploy-backend.types.js'
 import { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
-function build(phase: RolloutPhase = 'available') {
+function build() {
   const repository = createStubInstance(DeployAppRepository)
   repository.upsertAppAndCreateRelease.resolves()
   repository.setReleaseStatus.resolves()
 
   const deployBackend = createStubInstance(MockDeployBackend)
   deployBackend.apply.resolves()
-  deployBackend.rolloutStatus.resolves(phase)
 
   const config = createStubInstance(ConfigService)
   config.getOrThrow.returns('demo.marsa.cc')
@@ -41,13 +39,15 @@ describe('DeployAppUseCase', () => {
   before(() => TestBench.setupUnitTest())
 
   it('persists the deploy, applies the rendered bundle, and returns the public URL', async () => {
-    const { usecase, repository, deployBackend } = build('available')
+    const { usecase, repository, deployBackend } = build()
 
     const result = await usecase.execute(command())
 
     expect(result.appSlug).toBe('my-app')
     expect(result.url).toBe('https://my-app.demo.marsa.cc')
-    expect(result.status).toBe(ReleaseStatus.Succeeded)
+    // Rollout status is not read on the deploy path — the Release stays Pending
+    // until the status-reconciliation follow-up (marsa#77 sub-issue).
+    expect(result.status).toBe(ReleaseStatus.Pending)
 
     expect(repository.upsertAppAndCreateRelease.calledOnce).toBe(true)
 
@@ -56,19 +56,17 @@ describe('DeployAppUseCase', () => {
     expect(manifests.deployment.spec?.template.spec?.containers[0].image).toBe('nginx:1.27')
     expect(manifests.ingressRoute.spec.routes[0].match).toBe('Host(`my-app.demo.marsa.cc`)')
 
-    expect(repository.setReleaseStatus.calledOnceWith(result.releaseUuid, ReleaseStatus.Succeeded)).toBe(
-      true,
-    )
+    expect(repository.setReleaseStatus.called).toBe(false)
   })
 
-  it('maps a still-progressing rollout to InProgress', async () => {
-    const { usecase, repository } = build('progressing')
+  it('marks the Release Failed and rethrows when the cluster apply fails', async () => {
+    const { usecase, repository, deployBackend } = build()
+    const applyError = new Error('cluster unreachable')
+    deployBackend.apply.rejects(applyError)
 
-    const result = await usecase.execute(command())
+    await expect(usecase.execute(command())).rejects.toThrow(applyError)
 
-    expect(result.status).toBe(ReleaseStatus.InProgress)
-    expect(repository.setReleaseStatus.calledOnceWith(result.releaseUuid, ReleaseStatus.InProgress)).toBe(
-      true,
-    )
+    const [, status] = repository.setReleaseStatus.firstCall.args
+    expect(status).toBe(ReleaseStatus.Failed)
   })
 })

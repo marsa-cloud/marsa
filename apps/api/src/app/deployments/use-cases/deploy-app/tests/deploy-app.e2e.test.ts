@@ -26,8 +26,9 @@ describe('POST /api/v1/deployments/deploy (e2e)', () => {
 
     expect(response.body.appSlug).toBe('e2e-app')
     expect(response.body.url).toBe('https://e2e-app.demo.marsa.cc')
-    // The fake DeployBackend reports a healthy rollout, so the Release succeeds.
-    expect(response.body.status).toBe('succeeded')
+    // Rollout status is not read on the deploy path — the Release stays Pending
+    // until the status-reconciliation follow-up (marsa#77 sub-issue).
+    expect(response.body.status).toBe('pending')
     expect(typeof response.body.releaseUuid).toBe('string')
   })
 

@@ -11,14 +11,6 @@ import { DeployAppRepository } from '#src/app/deployments/use-cases/deploy-app/d
 import { DeployAppResponse } from '#src/app/deployments/use-cases/deploy-app/deploy-app.response.js'
 import { OPERATOR_APPS_NAMESPACE } from '#src/modules/kubernetes/deploy-backend.constants.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
-import type { RolloutPhase } from '#src/modules/kubernetes/deploy-backend.types.js'
-
-/** Maps a cluster rollout phase to the persisted Release status (AgDR-0029). */
-const PHASE_TO_STATUS: Record<RolloutPhase, ReleaseStatus> = {
-  available: ReleaseStatus.Succeeded,
-  progressing: ReleaseStatus.InProgress,
-  failed: ReleaseStatus.Failed,
-}
 
 @Injectable()
 export class DeployAppUseCase {
@@ -50,12 +42,20 @@ export class DeployAppUseCase {
     await this.repository.upsertAppAndCreateRelease(app, release)
 
     const manifests = renderManifests(app, release, baseDomain)
-    await this.deployBackend.apply(OPERATOR_APPS_NAMESPACE, manifests)
 
-    const phase = await this.deployBackend.rolloutStatus(OPERATOR_APPS_NAMESPACE, app.slug)
-    const status = PHASE_TO_STATUS[phase]
-    await this.repository.setReleaseStatus(release.uuid, status)
-    release.status = status
+    // Desired state is already persisted; the cluster apply is the side effect
+    // that can still fail. On failure, mark the Release Failed and rethrow —
+    // there is no cross-cluster transaction to roll apply() back. Deriving the
+    // eventual terminal status of a *successful* rollout (Deploying → Deployed)
+    // is deferred to the status-reconciliation follow-up; the Release stays
+    // Pending here on purpose. See marsa-cloud/marsa#77 sub-issue.
+    try {
+      await this.deployBackend.apply(OPERATOR_APPS_NAMESPACE, manifests)
+    } catch (error) {
+      await this.repository.setReleaseStatus(release.uuid, ReleaseStatus.Failed)
+      release.status = ReleaseStatus.Failed
+      throw error
+    }
 
     return new DeployAppResponse(app, release, baseDomain)
   }

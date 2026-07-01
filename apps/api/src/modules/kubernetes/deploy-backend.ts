@@ -1,4 +1,4 @@
-import type { RenderedManifests, RolloutPhase } from '#src/modules/kubernetes/deploy-backend.types.js'
+import type { RenderedManifests } from '#src/modules/kubernetes/deploy-backend.types.js'
 
 /**
  * Single seam for applying an operator app's manifest bundle to the cluster
@@ -12,7 +12,4 @@ import type { RenderedManifests, RolloutPhase } from '#src/modules/kubernetes/de
 export abstract class DeployBackend {
   /** Server-side-apply the Deployment + Service + IngressRoute bundle into `namespace`. */
   abstract apply(namespace: string, manifests: RenderedManifests): Promise<void>
-
-  /** Read the named Deployment's rollout and report its phase. */
-  abstract rolloutStatus(namespace: string, deploymentName: string): Promise<RolloutPhase>
 }

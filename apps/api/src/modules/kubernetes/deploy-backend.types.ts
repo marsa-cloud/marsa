@@ -1,12 +1,5 @@
 import type { KubernetesObject, V1Deployment, V1Service } from '@kubernetes/client-node'
 
-/**
- * Outcome of reading a Deployment's rollout, decoupled from the persistence enum
- * so this support module never imports feature code (the deploy use-case maps
- * this to `ReleaseStatus`, per AgDR-0029's "status from an injectable source").
- */
-export type RolloutPhase = 'progressing' | 'available' | 'failed'
-
 /** Spec of a Traefik `IngressRoute` (traefik.io/v1alpha1) — a CRD with no typed model. */
 export interface IngressRouteSpec {
   entryPoints: string[]
