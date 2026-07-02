@@ -12,6 +12,7 @@ import {
 
 import {
   MAX_CONTAINER_PORT,
+  MAX_REPLICAS,
   MIN_CONTAINER_PORT,
   MIN_REPLICAS,
   SLUG_MAX_LENGTH,
@@ -59,10 +60,12 @@ export class DeployAppCommand {
     example: 1,
     description: 'Replica count (defaults to 1).',
     minimum: MIN_REPLICAS,
+    maximum: MAX_REPLICAS,
   })
   @IsOptional()
   @IsInt()
   @Min(MIN_REPLICAS)
+  @Max(MAX_REPLICAS)
   replicas?: number
 
   @ApiPropertyOptional({

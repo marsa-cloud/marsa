@@ -30,13 +30,13 @@ The bundle is four objects derived (purely) from the `App`/`Release` model: a `D
 
 ## Decision
 
-Chosen: **server-side apply**, because the operator-app bundle is written repeatedly (every deploy and re-deploy) and SSA collapses first-deploy and re-deploy into a single idempotent `apply()` call. We already construct the full desired object for rendering, so SSA reuses that object directly — the idempotency is essentially free relative to imperative create-or-replace, which would need per-object exists-checks and `Service` field salvage. This directly serves #100 (re-deploy = re-apply) and keeps `Release.status` derived from a post-apply rollout read (per AgDR-0029), not from the apply call's return.
+Chosen: **server-side apply**, because the operator-app bundle is written repeatedly (every deploy and re-deploy) and SSA collapses first-deploy and re-deploy into a single idempotent `apply()` call. We already construct the full desired object for rendering, so SSA reuses that object directly — the idempotency is essentially free relative to imperative create-or-replace, which would need per-object exists-checks and `Service` field salvage. This directly serves a future re-deploy (re-apply = the same `apply()` call). Status handling in this slice is intentionally minimal: `apply()` returns `void`, so on success the `Release` stays `Pending` — deriving `Release.status` from a post-apply rollout read (per AgDR-0029) is deferred to #100 (honest status reconciliation), not implemented here.
 
 Mechanics: `KubernetesObjectApi.patch(obj, …, fieldManager='marsa-deployer', force=true, { headers: { 'Content-Type': 'application/apply-patch+yaml' } })` for each of the three objects, into the derived namespace.
 
 ## Consequences
 
-- #100 (re-deploy) is implemented by calling the same `DeployBackend.apply()` — no new create-vs-update branch, materially less code and test surface than imperative would need.
+- A future re-deploy is implemented by calling the same `DeployBackend.apply()` — no new create-vs-update branch, materially less code and test surface than imperative would need.
 - A fixed field manager (`marsa-deployer`) owns the fields Marsa sets; `force: true` takes ownership on conflict, which is correct because Marsa is the sole controller of these objects in V0.1.
 - `Service.clusterIP` and other server-populated fields are preserved across re-applies without salvage code.
 - Couples the adapter to cluster SSA support — fine for K3s; noted as a constraint if a non-SSA target is ever introduced.

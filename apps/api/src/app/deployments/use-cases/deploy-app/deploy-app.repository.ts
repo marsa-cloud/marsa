@@ -14,6 +14,11 @@ export class DeployAppRepository {
     @InjectRepository(Release) private readonly releases: EntityRepository<Release>,
   ) {}
 
+  // First-deploy only: no slug conflict, so the in-memory `app.uuid` is the
+  // persisted identity. Re-deploy (a slug conflict) keeps the DB's original
+  // `uuid` via onConflictExcludeFields — at which point the caller must bind
+  // the Release to the persisted App identity, not the freshly generated one,
+  // to avoid an app_uuid FK mismatch. Deferred until re-deploy is implemented.
   async upsertApp(app: App): Promise<void> {
     await this.apps.upsert(app, {
       onConflictFields: ['slug'],

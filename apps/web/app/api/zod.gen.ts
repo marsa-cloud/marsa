@@ -80,7 +80,7 @@ export const zDeployAppCommand = z.object({
     .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/),
   image: z.string(),
   containerPort: z.number().int().gte(1).lte(65535),
-  replicas: z.number().int().gte(1).optional(),
+  replicas: z.number().int().gte(1).lte(100).optional(),
   env: z.record(z.string()).optional(),
 })
 

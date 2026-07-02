@@ -226,6 +226,9 @@
           },
           "400": {
             "description": "Malformed body, or an invalid slug / image / port."
+          },
+          "401": {
+            "description": "No active session."
           }
         },
         "summary": "",
@@ -553,7 +556,8 @@
             "type": "integer",
             "example": 1,
             "description": "Replica count (defaults to 1).",
-            "minimum": 1
+            "minimum": 1,
+            "maximum": 100
           },
           "env": {
             "type": "object",

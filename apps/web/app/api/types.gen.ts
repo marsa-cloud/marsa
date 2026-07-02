@@ -291,6 +291,10 @@ export type DeployAppV1Errors = {
    * Malformed body, or an invalid slug / image / port.
    */
   400: unknown
+  /**
+   * No active session.
+   */
+  401: unknown
 }
 
 export type DeployAppV1Responses = {
