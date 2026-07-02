@@ -20,23 +20,39 @@ jobs:
     name: SAST (Semgrep)
     runs-on: ubuntu-latest
     container:
-      image: semgrep/semgrep
+      # Pinned to a version + digest (#110 / AgDR-0033). The engine pin alone
+      # does NOT freeze rules — `--config p/…` packs are fetched live from the
+      # registry — so PRs also scan diff-aware (see the scan step). Renovate
+      # keeps this digest current.
+      image: semgrep/semgrep:1.167.0@sha256:06938c1f365d3f67b8cedd8bc117607ae64253f88a0e768e9da9408548927dd6
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          # Full history so --baseline-commit can diff against the PR base.
+          fetch-depth: 0
 
       - name: Semgrep scan
-        run: >-
-          semgrep scan
-          --config p/owasp-top-ten
-          --config p/typescript
-          --config p/nodejs
-          --exclude node_modules
-          --exclude .nuxt
-          --exclude dist
-          --exclude '*.gen.ts'
-          --error
-          --metrics off
+        # On a PR, scan diff-aware against the base commit so a newly-added
+        # registry rule can only fail on code THIS PR introduces — never
+        # retroactively on a pre-existing file (the #103 failure mode). On
+        # push to main, full-scan (baseline is remediated to 0 findings).
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          set -- \
+            --config p/owasp-top-ten \
+            --config p/typescript \
+            --config p/nodejs \
+            --exclude node_modules \
+            --exclude .nuxt \
+            --exclude dist \
+            --exclude '*.gen.ts' \
+            --error \
+            --metrics off
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            set -- "$@" --baseline-commit "${{ github.event.pull_request.base.sha }}"
+          fi
+          semgrep scan "$@"
 
   # Secret detection over full git history. Blocking: --fail exits non-zero
   # on any verified secret. --only-verified keeps false positives near-zero
@@ -46,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
 
@@ -63,13 +79,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: '.nvmrc'
           cache: pnpm
