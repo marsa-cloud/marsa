@@ -1,17 +1,31 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
   "automerge": true,
   "platformAutomerge": true,
   "packageRules": [
-    { "matchUpdateTypes": ["major"], "automerge": false },
-    { "groupName": "NestJS", "matchPackagePatterns": ["^@nestjs/"] },
-    { "groupName": "Nuxt", "matchPackagePatterns": ["^nuxt$", "^@nuxt/"] },
-    { "groupName": "MikroORM", "matchPackagePatterns": ["^@mikro-orm/"] },
+    { "matchPackageNames": ["*"], "minimumReleaseAge": "7 days" },
+    { "matchUpdateTypes": ["major"], "automerge": false, "minimumReleaseAge": "7 days" },
+    {
+      "groupName": "NestJS",
+      "matchPackagePatterns": ["^@nestjs/"],
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "groupName": "Nuxt",
+      "matchPackagePatterns": ["^nuxt$", "^@nuxt/"],
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "groupName": "MikroORM",
+      "matchPackagePatterns": ["^@mikro-orm/"],
+      "minimumReleaseAge": "7 days"
+    },
     {
       "groupName": "Node.js runtime",
       "matchPackageNames": ["node"],
-      "matchManagers": ["dockerfile", "nvm"]
+      "matchManagers": ["dockerfile", "nvm"],
+      "minimumReleaseAge": "7 days"
     }
   ]
 }
