@@ -19,6 +19,10 @@ export const envValidationSchema = Joi.object({
   AUTH_COOKIE_NAME: Joi.string().default(DEFAULT_AUTH_COOKIE_NAME),
   MARSA_WEB_URL: Joi.string().uri().required(),
   MARSA_API_PUBLIC_URL: Joi.string().uri().required(),
+  // Base domain operator apps are exposed under: `<slug>.<MARSA_BASE_DOMAIN>`
+  // (e.g. `demo.marsa.cc`). Bare host, no scheme. Used to render the
+  // Traefik IngressRoute Host rule for deployed apps (#98).
+  MARSA_BASE_DOMAIN: Joi.string().hostname().required(),
   VERSION: Joi.string().default('0.0.0'),
   COMMIT: Joi.string().optional(),
 })

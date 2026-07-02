@@ -17,7 +17,7 @@ Use a single GitHub Project for the entire Marsa roadmap.
 
 Project name:
 
-- Marsa
+- Marsa Roadmap
 
 ---
 
@@ -25,22 +25,21 @@ Project name:
 
 Milestones represent delivery targets/releases.
 
-Examples:
+Current milestones:
 
-- Init
-- v0.1
-- MVP
-- Public Beta
+- Marsa V0.1
+- Marsa V0.2
+- Future
 
 Do NOT create issues for releases/phases.
 
 BAD:
 
-- Issue: Marsa v0.1
+- Issue: Marsa V0.1
 
 GOOD:
 
-- Milestone: v0.1
+- Milestone: Marsa V0.1
 
 ---
 
@@ -62,35 +61,22 @@ Example:
 
 Use GitHub **sub-issues** to attach Tasks to their parent Feature (Feature issue → "Add sub-issue"). This gives native progress tracking and survives reordering.
 
-A Task issue inherits the `type:*` and `area:*` labels of its parent Feature unless it genuinely belongs to a different area.
+A Task issue inherits the labels of its parent Feature unless it genuinely belongs to a different area.
 
 ---
 
 ## Labels
 
-### Type
+Marsa keeps the label set small. The GitHub defaults (`bug`, `documentation`, `enhancement`, `question`, `duplicate`, `invalid`, `wontfix`, `help wanted`, `good first issue`) plus a few custom ones:
 
-- type:feature
-- type:bug
-- type:refactor
-- type:docs
-- type:research
-
-### Area
-
-- area:auth
-- area:deployments
-- area:runtime
-- area:database
-- area:dashboard
-- area:cli
-- area:networking
+- `Research` — spike / figure-out-the-options-first work
+- `migration` — DB/schema/data migration (gated by `require-migration-ticket.sh`)
+- `preview` — build a preview image for a PR (label-gated CD build)
 
 ### Priority
 
-- P0
-- P1
-- P2
+- P1 — important, schedule soon
+- P2 — normal
 
 ---
 

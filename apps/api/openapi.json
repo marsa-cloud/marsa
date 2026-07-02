@@ -198,6 +198,44 @@
           "auth"
         ]
       }
+    },
+    "/api/v1/deployments/deploy": {
+      "post": {
+        "operationId": "deployAppV1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeployAppCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeployAppResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body, or an invalid slug / image / port."
+          },
+          "401": {
+            "description": "No active session."
+          }
+        },
+        "summary": "",
+        "tags": [
+          "deployments"
+        ]
+      }
     }
   },
   "info": {
@@ -490,6 +528,93 @@
           "id",
           "login",
           "role"
+        ]
+      },
+      "DeployAppCommand": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "example": "my-app",
+            "description": "Public subdomain label + K8s object name.",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "maxLength": 63
+          },
+          "image": {
+            "type": "string",
+            "example": "nginx:1.27",
+            "description": "Fully-qualified public image ref."
+          },
+          "containerPort": {
+            "type": "integer",
+            "example": 80,
+            "description": "Port the container listens on.",
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "replicas": {
+            "type": "integer",
+            "example": 1,
+            "description": "Replica count (defaults to 1).",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "example": {
+              "LOG_LEVEL": "info"
+            },
+            "description": "Plain (non-secret) environment variables for the container."
+          }
+        },
+        "required": [
+          "slug",
+          "image",
+          "containerPort"
+        ]
+      },
+      "ReleaseStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "in_progress",
+          "succeeded",
+          "failed"
+        ]
+      },
+      "DeployAppResponse": {
+        "type": "object",
+        "properties": {
+          "appSlug": {
+            "type": "string",
+            "example": "my-app"
+          },
+          "url": {
+            "type": "string",
+            "example": "https://my-app.demo.marsa.cc"
+          },
+          "releaseUuid": {
+            "type": "string",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "description": "The Release created for this deploy."
+          },
+          "status": {
+            "example": "succeeded",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReleaseStatus"
+              }
+            ]
+          }
+        },
+        "required": [
+          "appSlug",
+          "url",
+          "releaseUuid",
+          "status"
         ]
       }
     }

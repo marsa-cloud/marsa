@@ -15,6 +15,7 @@ const VALID_ENV = {
   AUTH_SESSION_SECRET_KEY: FAKE_BASE64_PLACEHOLDER,
   MARSA_WEB_URL: 'https://demo.marsa.cc',
   MARSA_API_PUBLIC_URL: 'https://api.demo.marsa.cc',
+  MARSA_BASE_DOMAIN: 'demo.marsa.cc',
 }
 
 describe('envValidationSchema', () => {
@@ -49,5 +50,14 @@ describe('envValidationSchema', () => {
     const { error } = envValidationSchema.validate({ ...VALID_ENV, MARSA_WEB_URL: 'not-a-url' })
 
     expect(error?.message).toMatch(/MARSA_WEB_URL/)
+  })
+
+  it('rejects a non-hostname MARSA_BASE_DOMAIN', () => {
+    const { error } = envValidationSchema.validate({
+      ...VALID_ENV,
+      MARSA_BASE_DOMAIN: 'https://demo.marsa.cc',
+    })
+
+    expect(error?.message).toMatch(/MARSA_BASE_DOMAIN/)
   })
 })
