@@ -84,13 +84,36 @@ export const zDeployAppCommand = z.object({
   env: z.record(z.string()).optional(),
 })
 
-export const zReleaseStatus = z.enum(['pending', 'in_progress', 'succeeded', 'failed'])
+export const zDeployStatus = z.enum(['pending', 'in_progress', 'succeeded', 'failed'])
 
 export const zDeployAppResponse = z.object({
   appSlug: z.string(),
   url: z.string(),
   releaseUuid: z.string(),
-  status: zReleaseStatus,
+  deployStatus: zDeployStatus,
+})
+
+export const zReleaseTrigger = z.enum(['manual', 'webhook'])
+
+export const zReleaseSummary = z.object({
+  uuid: z.string(),
+  imageRef: z.string(),
+  triggeredBy: zReleaseTrigger,
+  deployStatus: zDeployStatus,
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+})
+
+export const zListAppReleasesResponse = z.object({
+  releases: z.array(zReleaseSummary),
+})
+
+export const zAppHealthStatus = z.enum(['healthy', 'degraded', 'unavailable', 'not_found'])
+
+export const zGetAppHealthResponse = z.object({
+  status: zAppHealthStatus,
+  availableReplicas: z.number(),
+  desiredReplicas: z.number(),
 })
 
 export const zGetApiInfoV1Response = zGetApiInfoResponse
@@ -114,3 +137,15 @@ export const zGetCurrentUserV1Response = zGetCurrentUserResponse
 export const zDeployAppV1Body = zDeployAppCommand
 
 export const zDeployAppV1Response = zDeployAppResponse
+
+export const zListAppReleasesV1Path = z.object({
+  slug: z.string(),
+})
+
+export const zListAppReleasesV1Response = zListAppReleasesResponse
+
+export const zGetAppHealthV1Path = z.object({
+  slug: z.string(),
+})
+
+export const zGetAppHealthV1Response = zGetAppHealthResponse

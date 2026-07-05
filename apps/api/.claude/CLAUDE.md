@@ -35,6 +35,14 @@ The api is the source of truth for the web↔api contract. `src/entrypoints/gene
 
 - Because the SWC build ignores the `@nestjs/swagger` CLI plugin, response shapes must come from **explicit `@ApiProperty` decorators on a DTO class** (an exported `interface` produces no schema). Annotate controllers with `@ApiOperation({ operationId })` + `@ApiOkResponse({ type: Dto })`.
 - **`operationId` convention: version-suffix it** (e.g. `getApiInfoV1`, not `getApiInfo`). The web's generator names the operation-response type after the operationId; without the version suffix it collides with the DTO schema type and emits an ugly `…Response2` alias. Suffixing keeps the schema type (`GetApiInfoResponse`) and the operation type (`GetApiInfoV1Response`) distinct, and mirrors the URI version.
+- **Enums surfaced in a DTO expose a co-located `<Enum>ApiProperty` decorator** — every `*.enum.ts` that appears in an API response/DTO exports a decorator factory alongside the enum, e.g.
+
+  ```ts
+  export const DeployStatusApiProperty = (options?: ApiPropertyOptions): PropertyDecorator =>
+    ApiProperty({ ...options, enum: DeployStatus, enumName: 'DeployStatus' })
+  ```
+
+  DTO fields then use `@DeployStatusApiProperty()`, **never** an inline `@ApiProperty({ enum: DeployStatus, enumName: 'DeployStatus' })`. This keeps the `enum` + `enumName` pairing defined once in the enum's own file so it can't drift (a bare `@ApiProperty({ enum })` missing `enumName` makes the web generator emit an anonymous inline union instead of a named type). Mirrors the co-located MikroORM `<Enum>Enum` mapping decorator already in the same file. When an enum lives only in a response file today (e.g. a health-verdict enum), promote it to its own `*.enum.ts` if it needs the decorator.
 
 ## Source layout
 

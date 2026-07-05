@@ -24,3 +24,16 @@ export interface RenderedManifests {
   service: V1Service
   ingressRoute: IngressRoute
 }
+
+/**
+ * Neutral, live runtime-health snapshot of an app's Deployment (#100). Never
+ * stored — read on request. Keeps k8s types inside the kubernetes module: the
+ * feature maps this to its own health verdict. `found: false` means the
+ * Deployment does not exist (yet, or was deleted).
+ */
+export interface AppHealth {
+  found: boolean
+  desiredReplicas: number
+  availableReplicas: number
+  updatedReplicas: number
+}

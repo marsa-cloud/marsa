@@ -2,7 +2,7 @@ import { Entity, ManyToOne, PrimaryKey, Property, type Ref } from '@mikro-orm/co
 
 import { App } from '#src/app/deployments/entities/app.entity.js'
 import type { ReleaseUuid } from '#src/app/deployments/entities/release.uuid.js'
-import { ReleaseStatus, ReleaseStatusEnum } from '#src/app/deployments/enums/release-status.enum.js'
+import { DeployStatus, DeployStatusEnum } from '#src/app/deployments/enums/deploy-status.enum.js'
 import {
   ReleaseTrigger,
   ReleaseTriggerEnum,
@@ -29,8 +29,8 @@ export class Release {
   @ReleaseTriggerEnum({ default: ReleaseTrigger.Manual })
   triggeredBy: ReleaseTrigger = ReleaseTrigger.Manual
 
-  @ReleaseStatusEnum({ default: ReleaseStatus.Pending })
-  status: ReleaseStatus = ReleaseStatus.Pending
+  @DeployStatusEnum({ default: DeployStatus.Pending })
+  deployStatus: DeployStatus = DeployStatus.Pending
 
   @Property({ type: 'datetime' })
   createdAt: Date = new Date()

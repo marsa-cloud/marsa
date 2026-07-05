@@ -236,6 +236,74 @@
           "deployments"
         ]
       }
+    },
+    "/api/v1/deployments/apps/{slug}/releases": {
+      "get": {
+        "operationId": "listAppReleasesV1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListAppReleasesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          }
+        },
+        "summary": "",
+        "tags": [
+          "deployments"
+        ]
+      }
+    },
+    "/api/v1/deployments/apps/{slug}/health": {
+      "get": {
+        "operationId": "getAppHealthV1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAppHealthResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          }
+        },
+        "summary": "",
+        "tags": [
+          "deployments"
+        ]
+      }
     }
   },
   "info": {
@@ -576,7 +644,7 @@
           "containerPort"
         ]
       },
-      "ReleaseStatus": {
+      "DeployStatus": {
         "type": "string",
         "enum": [
           "pending",
@@ -601,11 +669,10 @@
             "example": "00000000-0000-0000-0000-000000000000",
             "description": "The Release created for this deploy."
           },
-          "status": {
-            "example": "succeeded",
+          "deployStatus": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/ReleaseStatus"
+                "$ref": "#/components/schemas/DeployStatus"
               }
             ]
           }
@@ -614,7 +681,108 @@
           "appSlug",
           "url",
           "releaseUuid",
-          "status"
+          "deployStatus"
+        ]
+      },
+      "ReleaseTrigger": {
+        "type": "string",
+        "enum": [
+          "manual",
+          "webhook"
+        ]
+      },
+      "ReleaseSummary": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "example": "00000000-0000-0000-0000-000000000000"
+          },
+          "imageRef": {
+            "type": "string",
+            "example": "nginx:1.27"
+          },
+          "triggeredBy": {
+            "example": "manual",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReleaseTrigger"
+              }
+            ]
+          },
+          "deployStatus": {
+            "example": "succeeded",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeployStatus"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "uuid",
+          "imageRef",
+          "triggeredBy",
+          "deployStatus",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ListAppReleasesResponse": {
+        "type": "object",
+        "properties": {
+          "releases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReleaseSummary"
+            }
+          }
+        },
+        "required": [
+          "releases"
+        ]
+      },
+      "AppHealthStatus": {
+        "type": "string",
+        "enum": [
+          "healthy",
+          "degraded",
+          "unavailable",
+          "not_found"
+        ]
+      },
+      "GetAppHealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "example": "healthy",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AppHealthStatus"
+              }
+            ]
+          },
+          "availableReplicas": {
+            "type": "number",
+            "example": 1
+          },
+          "desiredReplicas": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "status",
+          "availableReplicas",
+          "desiredReplicas"
         ]
       }
     }

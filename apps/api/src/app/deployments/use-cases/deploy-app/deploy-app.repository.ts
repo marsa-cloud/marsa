@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common'
 import { App } from '#src/app/deployments/entities/app.entity.js'
 import { Release } from '#src/app/deployments/entities/release.entity.js'
 import type { ReleaseUuid } from '#src/app/deployments/entities/release.uuid.js'
-import type { ReleaseStatus } from '#src/app/deployments/enums/release-status.enum.js'
+import type { DeployStatus } from '#src/app/deployments/enums/deploy-status.enum.js'
 
 @Injectable()
 export class DeployAppRepository {
@@ -30,7 +30,7 @@ export class DeployAppRepository {
     await this.releases.insert(release)
   }
 
-  async setReleaseStatus(uuid: ReleaseUuid, status: ReleaseStatus): Promise<void> {
-    await this.releases.nativeUpdate({ uuid }, { status })
+  async setReleaseDeployStatus(uuid: ReleaseUuid, deployStatus: DeployStatus): Promise<void> {
+    await this.releases.nativeUpdate({ uuid }, { deployStatus })
   }
 }

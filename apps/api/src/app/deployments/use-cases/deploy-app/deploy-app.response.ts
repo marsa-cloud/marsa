@@ -2,7 +2,10 @@ import { ApiProperty } from '@nestjs/swagger'
 
 import type { App } from '#src/app/deployments/entities/app.entity.js'
 import type { Release } from '#src/app/deployments/entities/release.entity.js'
-import { ReleaseStatus } from '#src/app/deployments/enums/release-status.enum.js'
+import {
+  DeployStatus,
+  DeployStatusApiProperty,
+} from '#src/app/deployments/enums/deploy-status.enum.js'
 
 export class DeployAppResponse {
   @ApiProperty({ type: String, example: 'my-app' })
@@ -18,13 +21,13 @@ export class DeployAppResponse {
   })
   readonly releaseUuid: string
 
-  @ApiProperty({ enum: ReleaseStatus, enumName: 'ReleaseStatus', example: ReleaseStatus.Succeeded })
-  readonly status: ReleaseStatus
+  @DeployStatusApiProperty()
+  readonly deployStatus: DeployStatus
 
   constructor(app: App, release: Release, baseDomain: string) {
     this.appSlug = app.slug
     this.url = `https://${app.slug}.${baseDomain}`
     this.releaseUuid = release.uuid
-    this.status = release.status
+    this.deployStatus = release.deployStatus
   }
 }

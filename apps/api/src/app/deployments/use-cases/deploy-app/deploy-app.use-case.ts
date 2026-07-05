@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config'
 
 import { AppBuilder } from '#src/app/deployments/entities/app.builder.js'
 import { ReleaseBuilder } from '#src/app/deployments/entities/release.builder.js'
-import { ReleaseStatus } from '#src/app/deployments/enums/release-status.enum.js'
+import { DeployStatus } from '#src/app/deployments/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/deployments/enums/release-trigger.enum.js'
 import { renderManifests } from '#src/app/deployments/render/render-manifests.js'
 import { DeployAppCommand } from '#src/app/deployments/use-cases/deploy-app/deploy-app.command.js'
@@ -38,7 +38,7 @@ export class DeployAppUseCase {
       .withApp(app)
       .withImageRef(command.image)
       .withTriggeredBy(ReleaseTrigger.Manual)
-      .withStatus(ReleaseStatus.Pending)
+      .withDeployStatus(DeployStatus.Pending)
       .build()
 
     await this.em.transactional(async () => {
@@ -51,7 +51,7 @@ export class DeployAppUseCase {
     try {
       await this.deployBackend.apply(OPERATOR_APPS_NAMESPACE, manifests)
     } catch (error) {
-      await this.repository.setReleaseStatus(release.uuid, ReleaseStatus.Failed)
+      await this.repository.setReleaseDeployStatus(release.uuid, DeployStatus.Failed)
       throw error
     }
 

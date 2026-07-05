@@ -3,7 +3,7 @@ import { ref } from '@mikro-orm/core'
 import { AppBuilder } from '#src/app/deployments/entities/app.builder.js'
 import type { App } from '#src/app/deployments/entities/app.entity.js'
 import { Release } from '#src/app/deployments/entities/release.entity.js'
-import { ReleaseStatus } from '#src/app/deployments/enums/release-status.enum.js'
+import { DeployStatus } from '#src/app/deployments/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/deployments/enums/release-trigger.enum.js'
 
 /** Fluent builder for {@link Release}; constructor seeds valid defaults so `new ReleaseBuilder().build()` is always usable. */
@@ -15,7 +15,7 @@ export class ReleaseBuilder {
     this.release.app = ref(new AppBuilder().build())
     this.release.imageRef = 'nginx:1.27'
     this.release.triggeredBy = ReleaseTrigger.Manual
-    this.release.status = ReleaseStatus.Pending
+    this.release.deployStatus = DeployStatus.Pending
   }
 
   withApp(app: App): this {
@@ -33,8 +33,8 @@ export class ReleaseBuilder {
     return this
   }
 
-  withStatus(status: ReleaseStatus): this {
-    this.release.status = status
+  withDeployStatus(deployStatus: DeployStatus): this {
+    this.release.deployStatus = deployStatus
     return this
   }
 

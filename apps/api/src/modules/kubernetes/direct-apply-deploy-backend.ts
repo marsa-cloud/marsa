@@ -1,10 +1,12 @@
 import {
+  ApiException,
   AppsV1Api,
   CoreV1Api,
   CustomObjectsApi,
   KubeConfig,
   PatchStrategy,
   setHeaderOptions,
+  type V1Deployment,
 } from '@kubernetes/client-node'
 import { Injectable } from '@nestjs/common'
 
@@ -15,7 +17,13 @@ import {
   TRAEFIK_VERSION,
 } from '#src/modules/kubernetes/deploy-backend.constants.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
-import type { RenderedManifests } from '#src/modules/kubernetes/deploy-backend.types.js'
+import type { AppHealth, RenderedManifests } from '#src/modules/kubernetes/deploy-backend.types.js'
+import { mapRolloutStatus } from '#src/modules/kubernetes/map-rollout-status.js'
+import { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
+
+function isNotFound(error: unknown): boolean {
+  return error instanceof ApiException && error.code === 404
+}
 
 function requireName(object: { metadata?: { name?: string } }, kind: string): string {
   const name = object.metadata?.name
@@ -79,5 +87,38 @@ export class DirectApplyDeployBackend extends DeployBackend {
       },
       ssa,
     )
+  }
+
+  async readRolloutStatus(namespace: string, deploymentName: string): Promise<RolloutStatus> {
+    const deployment = await this.readDeployment(namespace, deploymentName)
+    return mapRolloutStatus(deployment)
+  }
+
+  async readAppHealth(namespace: string, deploymentName: string): Promise<AppHealth> {
+    const deployment = await this.readDeployment(namespace, deploymentName)
+    if (deployment === null) {
+      return { found: false, desiredReplicas: 0, availableReplicas: 0, updatedReplicas: 0 }
+    }
+    const status = deployment.status
+    return {
+      found: true,
+      desiredReplicas: deployment.spec?.replicas ?? 0,
+      availableReplicas: status?.availableReplicas ?? 0,
+      updatedReplicas: status?.updatedReplicas ?? 0,
+    }
+  }
+
+  private async readDeployment(
+    namespace: string,
+    deploymentName: string,
+  ): Promise<V1Deployment | null> {
+    try {
+      return await this.apps.readNamespacedDeployment({ name: deploymentName, namespace })
+    } catch (error) {
+      if (isNotFound(error)) {
+        return null
+      }
+      throw error
+    }
   }
 }
