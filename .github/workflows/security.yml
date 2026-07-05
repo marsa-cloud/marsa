@@ -59,8 +59,11 @@ jobs:
           fetch-depth: 0
 
       - name: TruffleHog scan
+        # Pinned to a version + digest (#110 / AgDR-0033) so a force-moved
+        # `:latest` can't change scan behaviour. Renovate keeps it current.
         run: |
-          docker run --rm -v "$PWD:/repo" trufflesecurity/trufflehog:latest \
+          docker run --rm -v "$PWD:/repo" \
+            trufflesecurity/trufflehog:3.95.8@sha256:d52e62fe0237bf0199cb79f94593051300b0989d9aeab8b431001d9f75e469c1 \
             git file:///repo --only-verified --fail --no-update
 
   dependency-audit:
