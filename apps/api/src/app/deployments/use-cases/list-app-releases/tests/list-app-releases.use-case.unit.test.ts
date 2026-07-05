@@ -103,4 +103,17 @@ describe('ListAppReleasesUseCase', () => {
     const [uuid] = repository.setReleaseDeployStatus.firstCall.args
     expect(uuid).toBe(releases[0].uuid)
   })
+
+  it('leaves an older non-terminal release untouched when the newest is terminal', async () => {
+    // A superseded Pending release (older) must not be stamped with the current
+    // Deployment's outcome — only the head (Succeeded, terminal) maps to it.
+    const releases = [release(DeployStatus.Succeeded), release(DeployStatus.Pending)]
+    const { usecase, repository, deployBackend } = build(releases)
+
+    await usecase.execute(SLUG)
+
+    expect(deployBackend.readRolloutStatus.called).toBe(false)
+    expect(repository.setReleaseDeployStatus.called).toBe(false)
+    expect(releases[1].deployStatus).toBe(DeployStatus.Pending)
+  })
 })

@@ -37,13 +37,15 @@ export class ListAppReleasesUseCase {
   async execute(slug: string): Promise<ListAppReleasesResponse> {
     const releases = await this.repository.findByAppSlug(slug)
 
-    // Refresh-on-read (AgDR-0034): reconcile only the latest non-terminal
-    // release. The cluster Deployment is named per-app, so its live rollout
-    // reflects the most recent deploy — older non-terminal releases are
-    // superseded and left as-is.
-    const latestPending = releases.find((release) => !TERMINAL_STATUSES.has(release.deployStatus))
-    if (latestPending) {
-      await this.reconcile(latestPending, slug)
+    // Refresh-on-read (AgDR-0034): only the newest release (releases[0], desc
+    // by createdAt) maps to the current per-app Deployment, so only it is
+    // eligible. If the head is already terminal there is nothing to reconcile;
+    // an older non-terminal release is superseded by a newer deploy and must be
+    // left untouched — reconciling it would stamp it with the newer rollout's
+    // outcome.
+    const [latest] = releases
+    if (latest && !TERMINAL_STATUSES.has(latest.deployStatus)) {
+      await this.reconcile(latest, slug)
     }
 
     return new ListAppReleasesResponse(releases)

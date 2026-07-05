@@ -1,8 +1,14 @@
 import { EntityManager, MikroORM } from '@mikro-orm/core'
+import { ConfigService } from '@nestjs/config'
 import type { NestFastifyApplication } from '@nestjs/platform-fastify'
 import { TestingModule } from '@nestjs/testing'
 import { Server } from 'http'
+import request from 'supertest'
 
+import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
+import { CompleteGithubLoginCommandBuilder } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.builder.js'
+import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
+import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
 import type { TestApp } from '#src/test/setup/test-bench.js'
 
 export class TestSetup {
@@ -36,5 +42,31 @@ export class TestSetup {
 
   public get httpServer(): Server {
     return this.app.getHttpServer()
+  }
+
+  /**
+   * Run the GitHub-login dance and return a valid session cookie for
+   * `SessionAuthGuard`-protected e2e requests. Seeds a GitHubApp, begins the
+   * OAuth flow to capture the state, then completes login. Reused across
+   * deployment e2e suites so the boilerplate lives in one place.
+   */
+  public async authenticate(): Promise<string> {
+    const cipher = new SecretCipherService(new ConfigService())
+    const githubApp = new GitHubAppBuilder().withClientSecretEnc(cipher.encrypt('shh')).build()
+    await this.orm.em.fork().persistAndFlush(githubApp)
+
+    const beginResponse = await request(this.httpServer).get('/api/v1/auth/github').expect(302)
+    const beginCookie = beginResponse.headers['set-cookie']?.[0]
+    const state = new URL(beginResponse.headers.location).searchParams.get(
+      'state',
+    ) as OAuthStateUuid
+
+    const loginResponse = await request(this.httpServer)
+      .post('/api/v1/auth/github/session')
+      .set('Cookie', beginCookie)
+      .send(new CompleteGithubLoginCommandBuilder().withState(state).build())
+      .expect(200)
+
+    return loginResponse.headers['set-cookie']?.[0]
   }
 }
