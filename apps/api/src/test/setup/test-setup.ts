@@ -57,6 +57,9 @@ export class TestSetup {
 
     const beginResponse = await request(this.httpServer).get('/api/v1/auth/github').expect(302)
     const beginCookie = beginResponse.headers['set-cookie']?.[0]
+    if (!beginCookie) {
+      throw new Error('Expected a Set-Cookie header from GET /api/v1/auth/github')
+    }
     const state = new URL(beginResponse.headers.location).searchParams.get(
       'state',
     ) as OAuthStateUuid
@@ -67,6 +70,10 @@ export class TestSetup {
       .send(new CompleteGithubLoginCommandBuilder().withState(state).build())
       .expect(200)
 
-    return loginResponse.headers['set-cookie']?.[0]
+    const sessionCookie = loginResponse.headers['set-cookie']?.[0]
+    if (!sessionCookie) {
+      throw new Error('Expected a Set-Cookie header from POST /api/v1/auth/github/session')
+    }
+    return sessionCookie
   }
 }

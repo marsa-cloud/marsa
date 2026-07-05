@@ -670,7 +670,6 @@
             "description": "The Release created for this deploy."
           },
           "deployStatus": {
-            "example": "succeeded",
             "allOf": [
               {
                 "$ref": "#/components/schemas/DeployStatus"

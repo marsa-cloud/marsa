@@ -1,7 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger'
 
 import type { Release } from '#src/app/deployments/entities/release.entity.js'
-import { DeployStatus } from '#src/app/deployments/enums/deploy-status.enum.js'
+import {
+  DeployStatus,
+  DeployStatusApiProperty,
+} from '#src/app/deployments/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/deployments/enums/release-trigger.enum.js'
 
 export class ReleaseSummary {
@@ -14,7 +17,7 @@ export class ReleaseSummary {
   @ApiProperty({ enum: ReleaseTrigger, enumName: 'ReleaseTrigger', example: ReleaseTrigger.Manual })
   readonly triggeredBy: ReleaseTrigger
 
-  @ApiProperty({ enum: DeployStatus, enumName: 'DeployStatus', example: DeployStatus.Succeeded })
+  @DeployStatusApiProperty({ example: DeployStatus.Succeeded })
   readonly deployStatus: DeployStatus
 
   @ApiProperty({ type: String, format: 'date-time' })
