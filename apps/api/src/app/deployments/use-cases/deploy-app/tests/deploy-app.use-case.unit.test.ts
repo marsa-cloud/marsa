@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import { createStubInstance, type SinonStub } from 'sinon'
 
-import { ReleaseStatus } from '#src/app/deployments/enums/release-status.enum.js'
+import { DeployStatus } from '#src/app/deployments/enums/deploy-status.enum.js'
 import { DeployAppCommandBuilder } from '#src/app/deployments/use-cases/deploy-app/deploy-app.command.builder.js'
 import { DeployAppRepository } from '#src/app/deployments/use-cases/deploy-app/deploy-app.repository.js'
 import { DeployAppUseCase } from '#src/app/deployments/use-cases/deploy-app/deploy-app.use-case.js'
@@ -17,7 +17,7 @@ function build() {
   const repository = createStubInstance(DeployAppRepository)
   repository.upsertApp.resolves()
   repository.createRelease.resolves()
-  repository.setReleaseStatus.resolves()
+  repository.setReleaseDeployStatus.resolves()
 
   const deployBackend = createStubInstance(MockDeployBackend)
   deployBackend.apply.resolves()
@@ -52,8 +52,8 @@ describe('DeployAppUseCase', () => {
     expect(result.appSlug).toBe('my-app')
     expect(result.url).toBe('https://my-app.demo.marsa.cc')
     // Rollout status is not read on the deploy path — the Release stays Pending
-    // until the status-reconciliation follow-up (marsa#77 sub-issue).
-    expect(result.status).toBe(ReleaseStatus.Pending)
+    // until the refresh-on-read reconciliation on the list endpoint (marsa#100).
+    expect(result.deployStatus).toBe(DeployStatus.Pending)
 
     expect(repository.upsertApp.calledOnce).toBe(true)
     expect(repository.createRelease.calledOnce).toBe(true)
@@ -63,7 +63,7 @@ describe('DeployAppUseCase', () => {
     expect(manifests.deployment.spec?.template.spec?.containers[0].image).toBe('nginx:1.27')
     expect(manifests.ingressRoute.spec.routes[0].match).toBe('Host(`my-app.demo.marsa.cc`)')
 
-    expect(repository.setReleaseStatus.called).toBe(false)
+    expect(repository.setReleaseDeployStatus.called).toBe(false)
   })
 
   it('marks the Release Failed and rethrows when the cluster apply fails', async () => {
@@ -73,7 +73,7 @@ describe('DeployAppUseCase', () => {
 
     await expect(usecase.execute(command())).rejects.toThrow(applyError)
 
-    const [, status] = repository.setReleaseStatus.firstCall.args
-    expect(status).toBe(ReleaseStatus.Failed)
+    const [, deployStatus] = repository.setReleaseDeployStatus.firstCall.args
+    expect(deployStatus).toBe(DeployStatus.Failed)
   })
 })

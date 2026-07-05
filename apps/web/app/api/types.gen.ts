@@ -138,7 +138,7 @@ export type DeployAppCommand = {
   }
 }
 
-export type ReleaseStatus = 'pending' | 'in_progress' | 'succeeded' | 'failed'
+export type DeployStatus = 'pending' | 'in_progress' | 'succeeded' | 'failed'
 
 export type DeployAppResponse = {
   appSlug: string
@@ -147,7 +147,30 @@ export type DeployAppResponse = {
    * The Release created for this deploy.
    */
   releaseUuid: string
-  status: ReleaseStatus
+  deployStatus: DeployStatus
+}
+
+export type ReleaseTrigger = 'manual' | 'webhook'
+
+export type ReleaseSummary = {
+  uuid: string
+  imageRef: string
+  triggeredBy: ReleaseTrigger
+  deployStatus: DeployStatus
+  createdAt: string
+  updatedAt: string
+}
+
+export type ListAppReleasesResponse = {
+  releases: Array<ReleaseSummary>
+}
+
+export type AppHealthStatus = 'healthy' | 'degraded' | 'unavailable' | 'not_found'
+
+export type GetAppHealthResponse = {
+  status: AppHealthStatus
+  availableReplicas: number
+  desiredReplicas: number
 }
 
 export type GetApiInfoV1Data = {
@@ -302,3 +325,47 @@ export type DeployAppV1Responses = {
 }
 
 export type DeployAppV1Response = DeployAppV1Responses[keyof DeployAppV1Responses]
+
+export type ListAppReleasesV1Data = {
+  body?: never
+  path: {
+    slug: string
+  }
+  query?: never
+  url: '/api/v1/deployments/apps/{slug}/releases'
+}
+
+export type ListAppReleasesV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+}
+
+export type ListAppReleasesV1Responses = {
+  200: ListAppReleasesResponse
+}
+
+export type ListAppReleasesV1Response = ListAppReleasesV1Responses[keyof ListAppReleasesV1Responses]
+
+export type GetAppHealthV1Data = {
+  body?: never
+  path: {
+    slug: string
+  }
+  query?: never
+  url: '/api/v1/deployments/apps/{slug}/health'
+}
+
+export type GetAppHealthV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+}
+
+export type GetAppHealthV1Responses = {
+  200: GetAppHealthResponse
+}
+
+export type GetAppHealthV1Response = GetAppHealthV1Responses[keyof GetAppHealthV1Responses]

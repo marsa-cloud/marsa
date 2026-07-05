@@ -1,4 +1,5 @@
-import type { RenderedManifests } from '#src/modules/kubernetes/deploy-backend.types.js'
+import type { AppHealth, RenderedManifests } from '#src/modules/kubernetes/deploy-backend.types.js'
+import type { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
 
 /**
  * Single seam for applying an operator app's manifest bundle to the cluster
@@ -12,4 +13,13 @@ import type { RenderedManifests } from '#src/modules/kubernetes/deploy-backend.t
 export abstract class DeployBackend {
   /** Server-side-apply the Deployment + Service + IngressRoute bundle into `namespace`. */
   abstract apply(namespace: string, manifests: RenderedManifests): Promise<void>
+
+  /**
+   * Read a Deployment's rollout outcome (#100). Returns a neutral
+   * {@link RolloutStatus}; `NotFound` when the Deployment does not exist.
+   */
+  abstract readRolloutStatus(namespace: string, deploymentName: string): Promise<RolloutStatus>
+
+  /** Live runtime-health snapshot of a Deployment (#100) — never stored. */
+  abstract readAppHealth(namespace: string, deploymentName: string): Promise<AppHealth>
 }
