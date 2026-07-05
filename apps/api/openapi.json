@@ -725,6 +725,17 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "failureReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Why the deploy failed (live-derived, only on a failed release).",
+            "example": "ImagePullBackOff"
+          },
+          "failureMessage": {
+            "type": "string",
+            "nullable": true,
+            "example": "Back-off pulling image \"nginx:doesnotexist\""
           }
         },
         "required": [

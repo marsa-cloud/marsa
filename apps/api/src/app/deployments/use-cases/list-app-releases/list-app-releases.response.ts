@@ -6,6 +6,7 @@ import {
   DeployStatusApiProperty,
 } from '#src/app/deployments/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/deployments/enums/release-trigger.enum.js'
+import type { DeployFailure } from '#src/modules/kubernetes/deploy-backend.types.js'
 
 export class ReleaseSummary {
   @ApiProperty({ type: String, example: '00000000-0000-0000-0000-000000000000' })
@@ -26,13 +27,34 @@ export class ReleaseSummary {
   @ApiProperty({ type: String, format: 'date-time' })
   readonly updatedAt: string
 
-  constructor(release: Release) {
+  @ApiProperty({
+    type: String,
+    required: false,
+    nullable: true,
+    description: 'Why the deploy failed (live-derived, only on a failed release).',
+    example: 'ImagePullBackOff',
+  })
+  readonly failureReason?: string
+
+  @ApiProperty({
+    type: String,
+    required: false,
+    nullable: true,
+    example: 'Back-off pulling image "nginx:doesnotexist"',
+  })
+  readonly failureMessage?: string
+
+  constructor(release: Release, failure?: DeployFailure | null) {
     this.uuid = release.uuid
     this.imageRef = release.imageRef
     this.triggeredBy = release.triggeredBy
     this.deployStatus = release.deployStatus
     this.createdAt = release.createdAt.toISOString()
     this.updatedAt = release.updatedAt.toISOString()
+    if (failure) {
+      this.failureReason = failure.reason
+      this.failureMessage = failure.message
+    }
   }
 }
 
@@ -40,7 +62,14 @@ export class ListAppReleasesResponse {
   @ApiProperty({ type: [ReleaseSummary] })
   readonly releases: ReleaseSummary[]
 
-  constructor(releases: Release[]) {
-    this.releases = releases.map((release) => new ReleaseSummary(release))
+  /**
+   * `headFailure` (when present) is attached to the newest release only — it's
+   * the sole release that maps to the live Deployment, so a failure reason read
+   * from the cluster can only be about it.
+   */
+  constructor(releases: Release[], headFailure?: DeployFailure | null) {
+    this.releases = releases.map(
+      (release, index) => new ReleaseSummary(release, index === 0 ? headFailure : undefined),
+    )
   }
 }

@@ -159,6 +159,11 @@ export type ReleaseSummary = {
   deployStatus: DeployStatus
   createdAt: string
   updatedAt: string
+  /**
+   * Why the deploy failed (live-derived, only on a failed release).
+   */
+  failureReason?: string | null
+  failureMessage?: string | null
 }
 
 export type ListAppReleasesResponse = {
