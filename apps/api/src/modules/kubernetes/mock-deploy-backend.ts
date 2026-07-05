@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common'
 
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
-import type { AppHealth, RenderedManifests } from '#src/modules/kubernetes/deploy-backend.types.js'
+import type {
+  AppHealth,
+  DeployEvent,
+  RenderedManifests,
+} from '#src/modules/kubernetes/deploy-backend.types.js'
 import { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
 
 /**
@@ -31,5 +35,18 @@ export class MockDeployBackend extends DeployBackend {
       availableReplicas: 1,
       updatedReplicas: 1,
     })
+  }
+
+  readDeployEvents(_namespace: string, deploymentName: string): Promise<DeployEvent[]> {
+    return Promise.resolve([
+      {
+        type: 'Normal',
+        reason: 'ScalingReplicaSet',
+        message: `Scaled up replica set ${deploymentName}-mock to 1`,
+        count: 1,
+        lastSeen: new Date().toISOString(),
+        involvedObject: { kind: 'Deployment', name: deploymentName },
+      },
+    ])
   }
 }

@@ -173,6 +173,27 @@ export type GetAppHealthResponse = {
   desiredReplicas: number
 }
 
+export type DeployEventObject = {
+  kind: string
+  name: string
+}
+
+export type DeployEventDto = {
+  /**
+   * `Normal` or `Warning`.
+   */
+  type: string
+  reason: string
+  message: string
+  count: number
+  lastSeen: string
+  involvedObject: DeployEventObject
+}
+
+export type GetAppDeployEventsResponse = {
+  events: Array<DeployEventDto>
+}
+
 export type GetApiInfoV1Data = {
   body?: never
   path?: never
@@ -369,3 +390,26 @@ export type GetAppHealthV1Responses = {
 }
 
 export type GetAppHealthV1Response = GetAppHealthV1Responses[keyof GetAppHealthV1Responses]
+
+export type GetAppDeployEventsV1Data = {
+  body?: never
+  path: {
+    slug: string
+  }
+  query?: never
+  url: '/api/v1/deployments/apps/{slug}/deploy-events'
+}
+
+export type GetAppDeployEventsV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+}
+
+export type GetAppDeployEventsV1Responses = {
+  200: GetAppDeployEventsResponse
+}
+
+export type GetAppDeployEventsV1Response =
+  GetAppDeployEventsV1Responses[keyof GetAppDeployEventsV1Responses]

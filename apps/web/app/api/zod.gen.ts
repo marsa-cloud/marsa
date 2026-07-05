@@ -116,6 +116,24 @@ export const zGetAppHealthResponse = z.object({
   desiredReplicas: z.number(),
 })
 
+export const zDeployEventObject = z.object({
+  kind: z.string(),
+  name: z.string(),
+})
+
+export const zDeployEventDto = z.object({
+  type: z.string(),
+  reason: z.string(),
+  message: z.string(),
+  count: z.number(),
+  lastSeen: z.string(),
+  involvedObject: zDeployEventObject,
+})
+
+export const zGetAppDeployEventsResponse = z.object({
+  events: z.array(zDeployEventDto),
+})
+
 export const zGetApiInfoV1Response = zGetApiInfoResponse
 
 export const zGetGithubAppManifestV1Response = zGetManifestResponse
@@ -149,3 +167,9 @@ export const zGetAppHealthV1Path = z.object({
 })
 
 export const zGetAppHealthV1Response = zGetAppHealthResponse
+
+export const zGetAppDeployEventsV1Path = z.object({
+  slug: z.string(),
+})
+
+export const zGetAppDeployEventsV1Response = zGetAppDeployEventsResponse

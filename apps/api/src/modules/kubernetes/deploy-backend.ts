@@ -1,4 +1,8 @@
-import type { AppHealth, RenderedManifests } from '#src/modules/kubernetes/deploy-backend.types.js'
+import type {
+  AppHealth,
+  DeployEvent,
+  RenderedManifests,
+} from '#src/modules/kubernetes/deploy-backend.types.js'
 import type { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
 
 /**
@@ -22,4 +26,11 @@ export abstract class DeployBackend {
 
   /** Live runtime-health snapshot of a Deployment (#100) — never stored. */
   abstract readAppHealth(namespace: string, deploymentName: string): Promise<AppHealth>
+
+  /**
+   * Read the rollout events for a Deployment (#115) — Deployment, its current
+   * ReplicaSet(s) and their Pods. Neutral {@link DeployEvent}s, never stored; an
+   * empty list means no events (or the Deployment does not exist).
+   */
+  abstract readDeployEvents(namespace: string, deploymentName: string): Promise<DeployEvent[]>
 }

@@ -17,7 +17,12 @@ import {
   TRAEFIK_VERSION,
 } from '#src/modules/kubernetes/deploy-backend.constants.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
-import type { AppHealth, RenderedManifests } from '#src/modules/kubernetes/deploy-backend.types.js'
+import type {
+  AppHealth,
+  DeployEvent,
+  RenderedManifests,
+} from '#src/modules/kubernetes/deploy-backend.types.js'
+import { mapDeployEvents } from '#src/modules/kubernetes/map-deploy-events.js'
 import { mapRolloutStatus } from '#src/modules/kubernetes/map-rollout-status.js'
 import { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
 
@@ -106,6 +111,66 @@ export class DirectApplyDeployBackend extends DeployBackend {
       availableReplicas: status?.availableReplicas ?? 0,
       updatedReplicas: status?.updatedReplicas ?? 0,
     }
+  }
+
+  async readDeployEvents(namespace: string, deploymentName: string): Promise<DeployEvent[]> {
+    const deployment = await this.readDeployment(namespace, deploymentName)
+    if (deployment === null) {
+      return []
+    }
+
+    // A rollout's events are spread across the Deployment, its current
+    // ReplicaSet(s), and their Pods. Resolve that object set by ownerRef uid so a
+    // sibling app that shares a name prefix can't bleed into these results, then
+    // list the namespace's events once and keep only the relevant ones.
+    const names = await this.collectRolloutObjectNames(namespace, deployment)
+    const { items } = await this.core.listNamespacedEvent({ namespace })
+    const relevant = items.filter((event) => names.has(event.involvedObject?.name ?? ''))
+    return mapDeployEvents(relevant)
+  }
+
+  private async collectRolloutObjectNames(
+    namespace: string,
+    deployment: V1Deployment,
+  ): Promise<Set<string>> {
+    const names = new Set<string>()
+    const deploymentName = deployment.metadata?.name
+    if (deploymentName) {
+      names.add(deploymentName)
+    }
+    const deploymentUid = deployment.metadata?.uid
+
+    const { items: replicaSets } = await this.apps.listNamespacedReplicaSet({ namespace })
+    const ownedReplicaSetUids = new Set<string>()
+    for (const replicaSet of replicaSets) {
+      const ownsThis = replicaSet.metadata?.ownerReferences?.some(
+        (ref) => ref.uid === deploymentUid,
+      )
+      if (!ownsThis) {
+        continue
+      }
+      const name = replicaSet.metadata?.name
+      if (name) {
+        names.add(name)
+      }
+      const uid = replicaSet.metadata?.uid
+      if (uid) {
+        ownedReplicaSetUids.add(uid)
+      }
+    }
+
+    const { items: pods } = await this.core.listNamespacedPod({ namespace })
+    for (const pod of pods) {
+      const ownedByRollout = pod.metadata?.ownerReferences?.some((ref) =>
+        ownedReplicaSetUids.has(ref.uid),
+      )
+      const name = pod.metadata?.name
+      if (ownedByRollout && name) {
+        names.add(name)
+      }
+    }
+
+    return names
   }
 
   private async readDeployment(

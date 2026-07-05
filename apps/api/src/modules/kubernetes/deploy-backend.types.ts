@@ -37,3 +37,24 @@ export interface AppHealth {
   availableReplicas: number
   updatedReplicas: number
 }
+
+/**
+ * One neutral rollout event for an app (#105 / #115). Deploy "logs" are K8s
+ * `Event` objects (Deployment → ReplicaSet → Pod), *not* a line stream — read
+ * on request, never stored. Keeps k8s types inside the kubernetes module: the
+ * feature maps this to its own response DTO. An empty list means the Deployment
+ * has no events (yet) or does not exist.
+ */
+export interface DeployEvent {
+  /** `Normal` or `Warning` — the K8s event type. */
+  type: string
+  /** Short machine reason, e.g. `ScalingReplicaSet`, `BackOff`. */
+  reason: string
+  message: string
+  /** How many times this event has fired (K8s coalesces repeats). */
+  count: number
+  /** ISO-8601 timestamp of the most recent occurrence. */
+  lastSeen: string
+  /** The object the event is about (Deployment / ReplicaSet / Pod). */
+  involvedObject: { kind: string; name: string }
+}

@@ -304,6 +304,40 @@
           "deployments"
         ]
       }
+    },
+    "/api/v1/deployments/apps/{slug}/deploy-events": {
+      "get": {
+        "operationId": "getAppDeployEventsV1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAppDeployEventsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          }
+        },
+        "summary": "",
+        "tags": [
+          "deployments"
+        ]
+      }
     }
   },
   "info": {
@@ -783,6 +817,74 @@
           "status",
           "availableReplicas",
           "desiredReplicas"
+        ]
+      },
+      "DeployEventObject": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "example": "Deployment"
+          },
+          "name": {
+            "type": "string",
+            "example": "my-app"
+          }
+        },
+        "required": [
+          "kind",
+          "name"
+        ]
+      },
+      "DeployEventDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "example": "Warning",
+            "description": "`Normal` or `Warning`."
+          },
+          "reason": {
+            "type": "string",
+            "example": "BackOff"
+          },
+          "message": {
+            "type": "string",
+            "example": "Back-off restarting failed container"
+          },
+          "count": {
+            "type": "number",
+            "example": 4
+          },
+          "lastSeen": {
+            "type": "string",
+            "example": "2026-07-05T10:05:00.000Z"
+          },
+          "involvedObject": {
+            "$ref": "#/components/schemas/DeployEventObject"
+          }
+        },
+        "required": [
+          "type",
+          "reason",
+          "message",
+          "count",
+          "lastSeen",
+          "involvedObject"
+        ]
+      },
+      "GetAppDeployEventsResponse": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeployEventDto"
+            }
+          }
+        },
+        "required": [
+          "events"
         ]
       }
     }
