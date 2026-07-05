@@ -22,7 +22,9 @@ function replicaSet(name: string, uid: string, ownerUid: string): V1ReplicaSet {
     metadata: {
       name,
       uid,
-      ownerReferences: [{ apiVersion: 'apps/v1', kind: 'Deployment', name: 'owner', uid: ownerUid }],
+      ownerReferences: [
+        { apiVersion: 'apps/v1', kind: 'Deployment', name: 'owner', uid: ownerUid },
+      ],
     },
   }
 }
@@ -45,7 +47,11 @@ describe('resolveRolloutObjectNames', () => {
     // Same name prefix, but owned by a DIFFERENT deployment — must not bleed in.
     const sibling = replicaSet('my-app-2-def456', 'rs-sibling', OTHER_DEPLOYMENT_UID)
 
-    const names = resolveRolloutObjectNames(deployment('my-app', DEPLOYMENT_UID), [owned, sibling], [])
+    const names = resolveRolloutObjectNames(
+      deployment('my-app', DEPLOYMENT_UID),
+      [owned, sibling],
+      [],
+    )
 
     expect(names.has('my-app-abc123')).toBe(true)
     expect(names.has('my-app-2-def456')).toBe(false)
@@ -71,11 +77,7 @@ describe('resolveRolloutObjectNames', () => {
     const namelessRs: V1ReplicaSet = { metadata: { uid: 'rs-x', ownerReferences: [] } }
     const namelessPod: V1Pod = { metadata: {} }
 
-    const names = resolveRolloutObjectNames(
-      { metadata: {} },
-      [namelessRs],
-      [namelessPod],
-    )
+    const names = resolveRolloutObjectNames({ metadata: {} }, [namelessRs], [namelessPod])
 
     expect(names.size).toBe(0)
   })
