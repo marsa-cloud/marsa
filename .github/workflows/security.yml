@@ -20,23 +20,18 @@ jobs:
     name: SAST (Semgrep)
     runs-on: ubuntu-latest
     container:
-      # Pinned to a version + digest (#110 / AgDR-0033). The engine pin alone
-      # does NOT freeze rules — `--config p/…` packs are fetched live from the
-      # registry — so PRs also scan diff-aware (see the scan step). Renovate
+      # Pinned to a version + digest (#110 / AgDR-0033). Renovate
       # keeps this digest current.
       image: semgrep/semgrep:1.167.0@sha256:06938c1f365d3f67b8cedd8bc117607ae64253f88a0e768e9da9408548927dd6
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          # Full history so --baseline-commit can diff against the PR base.
           fetch-depth: 0
 
       - name: Semgrep scan
         # On a PR, scan diff-aware against the base commit so a newly-added
-        # registry rule can only fail on code THIS PR introduces — never
-        # retroactively on a pre-existing file (the #103 failure mode). On
-        # push to main, full-scan (baseline is remediated to 0 findings).
+        # registry rule can only fail on code THIS PR introduces
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           set -- \
@@ -54,9 +49,6 @@ jobs:
           fi
           semgrep scan "$@"
 
-  # Secret detection over full git history. Blocking: --fail exits non-zero
-  # on any verified secret. --only-verified keeps false positives near-zero
-  # (a secret is reported only after it's confirmed live against its provider).
   secrets:
     name: Secret scan (TruffleHog)
     runs-on: ubuntu-latest
@@ -71,9 +63,6 @@ jobs:
           docker run --rm -v "$PWD:/repo" trufflesecurity/trufflehog:latest \
             git file:///repo --only-verified --fail --no-update
 
-  # Dependency vulnerability audit.
-  # BLOCKING on critical only (high findings are written to the job
-  # summary for visibility but do not fail the build).
   dependency-audit:
     name: Dependency audit (pnpm)
     runs-on: ubuntu-latest

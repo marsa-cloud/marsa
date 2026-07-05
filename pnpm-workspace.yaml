@@ -2,11 +2,6 @@ packages:
   - 'apps/*'
   - 'packages/*'
 
-# Supply-chain hardening (#110 / AgDR-0033). Enforced by pnpm >= 10; declared
-# now so the SAST supply-chain rules pass and the policy activates on the pnpm 10
-# upgrade. minimumReleaseAge (minutes) holds off installing a just-published
-# version — 10080 = 7 days — defending against the publish-then-yank compromise
-# pattern. minimumReleaseAgeExclude can carve out exceptions if a bump is urgent.
 minimumReleaseAge: 10080
 blockExoticSubdeps: true
 trustPolicy: no-downgrade
