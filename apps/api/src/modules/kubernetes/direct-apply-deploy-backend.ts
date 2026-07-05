@@ -24,6 +24,7 @@ import type {
 } from '#src/modules/kubernetes/deploy-backend.types.js'
 import { mapDeployEvents } from '#src/modules/kubernetes/map-deploy-events.js'
 import { mapRolloutStatus } from '#src/modules/kubernetes/map-rollout-status.js'
+import { resolveRolloutObjectNames } from '#src/modules/kubernetes/resolve-rollout-object-names.js'
 import { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
 
 function isNotFound(error: unknown): boolean {
@@ -133,44 +134,11 @@ export class DirectApplyDeployBackend extends DeployBackend {
     namespace: string,
     deployment: V1Deployment,
   ): Promise<Set<string>> {
-    const names = new Set<string>()
-    const deploymentName = deployment.metadata?.name
-    if (deploymentName) {
-      names.add(deploymentName)
-    }
-    const deploymentUid = deployment.metadata?.uid
-
-    const { items: replicaSets } = await this.apps.listNamespacedReplicaSet({ namespace })
-    const ownedReplicaSetUids = new Set<string>()
-    for (const replicaSet of replicaSets) {
-      const ownsThis = replicaSet.metadata?.ownerReferences?.some(
-        (ref) => ref.uid === deploymentUid,
-      )
-      if (!ownsThis) {
-        continue
-      }
-      const name = replicaSet.metadata?.name
-      if (name) {
-        names.add(name)
-      }
-      const uid = replicaSet.metadata?.uid
-      if (uid) {
-        ownedReplicaSetUids.add(uid)
-      }
-    }
-
-    const { items: pods } = await this.core.listNamespacedPod({ namespace })
-    for (const pod of pods) {
-      const ownedByRollout = pod.metadata?.ownerReferences?.some((ref) =>
-        ownedReplicaSetUids.has(ref.uid),
-      )
-      const name = pod.metadata?.name
-      if (ownedByRollout && name) {
-        names.add(name)
-      }
-    }
-
-    return names
+    const [{ items: replicaSets }, { items: pods }] = await Promise.all([
+      this.apps.listNamespacedReplicaSet({ namespace }),
+      this.core.listNamespacedPod({ namespace }),
+    ])
+    return resolveRolloutObjectNames(deployment, replicaSets, pods)
   }
 
   private async readDeployment(

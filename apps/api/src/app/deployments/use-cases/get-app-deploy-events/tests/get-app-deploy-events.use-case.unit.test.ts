@@ -3,10 +3,8 @@ import { before, describe, it } from 'node:test'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
 
-import {
-  GetAppDeployEventsUseCase,
-  MAX_DEPLOY_EVENTS,
-} from '#src/app/deployments/use-cases/get-app-deploy-events/get-app-deploy-events.use-case.js'
+import { MAX_DEPLOY_EVENTS } from '#src/app/deployments/use-cases/get-app-deploy-events/get-app-deploy-events.constants.js'
+import { GetAppDeployEventsUseCase } from '#src/app/deployments/use-cases/get-app-deploy-events/get-app-deploy-events.use-case.js'
 import type { DeployEvent } from '#src/modules/kubernetes/deploy-backend.types.js'
 import { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
 import { TestBench } from '#src/test/setup/test-bench.js'

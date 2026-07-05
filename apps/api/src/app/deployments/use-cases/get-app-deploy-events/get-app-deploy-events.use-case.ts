@@ -1,11 +1,9 @@
 import { Injectable } from '@nestjs/common'
 
+import { MAX_DEPLOY_EVENTS } from '#src/app/deployments/use-cases/get-app-deploy-events/get-app-deploy-events.constants.js'
 import { GetAppDeployEventsResponse } from '#src/app/deployments/use-cases/get-app-deploy-events/get-app-deploy-events.response.js'
 import { OPERATOR_APPS_NAMESPACE } from '#src/modules/kubernetes/deploy-backend.constants.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
-
-/** Newest-first cap on rollout events returned to the client (#115). */
-export const MAX_DEPLOY_EVENTS = 50
 
 @Injectable()
 export class GetAppDeployEventsUseCase {
