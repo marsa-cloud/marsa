@@ -178,6 +178,14 @@ export type GetAppHealthResponse = {
   desiredReplicas: number
 }
 
+export type GetAppRunLogsResponse = {
+  /**
+   * Pod the log was read from; null when no pod was found.
+   */
+  podName: string | null
+  logs: string
+}
+
 export type GetApiInfoV1Data = {
   body?: never
   path?: never
@@ -374,3 +382,30 @@ export type GetAppHealthV1Responses = {
 }
 
 export type GetAppHealthV1Response = GetAppHealthV1Responses[keyof GetAppHealthV1Responses]
+
+export type GetAppRunLogsV1Data = {
+  body?: never
+  path: {
+    slug: string
+  }
+  query?: {
+    /**
+     * Trailing log lines to return (default 100).
+     */
+    tailLines?: number
+  }
+  url: '/api/v1/deployments/apps/{slug}/logs'
+}
+
+export type GetAppRunLogsV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+}
+
+export type GetAppRunLogsV1Responses = {
+  200: GetAppRunLogsResponse
+}
+
+export type GetAppRunLogsV1Response = GetAppRunLogsV1Responses[keyof GetAppRunLogsV1Responses]

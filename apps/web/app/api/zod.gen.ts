@@ -118,6 +118,11 @@ export const zGetAppHealthResponse = z.object({
   desiredReplicas: z.number(),
 })
 
+export const zGetAppRunLogsResponse = z.object({
+  podName: z.string().nullable(),
+  logs: z.string(),
+})
+
 export const zGetApiInfoV1Response = zGetApiInfoResponse
 
 export const zGetGithubAppManifestV1Response = zGetManifestResponse
@@ -151,3 +156,13 @@ export const zGetAppHealthV1Path = z.object({
 })
 
 export const zGetAppHealthV1Response = zGetAppHealthResponse
+
+export const zGetAppRunLogsV1Path = z.object({
+  slug: z.string(),
+})
+
+export const zGetAppRunLogsV1Query = z.object({
+  tailLines: z.number().int().gte(1).lte(1000).optional(),
+})
+
+export const zGetAppRunLogsV1Response = zGetAppRunLogsResponse

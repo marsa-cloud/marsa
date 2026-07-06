@@ -48,3 +48,19 @@ export interface DeployFailure {
   reason: string
   message: string
 }
+
+/**
+ * A recent run-log snapshot for an app (#114) — the tail of one live pod's
+ * stdout/stderr. Live-read, never stored. The port returns `null` when the
+ * Deployment or its pods can't be found.
+ */
+export interface RunLogs {
+  /** Name of the pod the log was read from (the newest pod of the app's Deployment). */
+  podName: string
+  logs: string
+}
+
+/** Bounds for a run-log read (#114). `tailLines` caps how many trailing lines are returned. */
+export interface RunLogsOptions {
+  tailLines: number
+}

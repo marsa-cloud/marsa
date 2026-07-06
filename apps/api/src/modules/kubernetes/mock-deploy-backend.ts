@@ -5,6 +5,8 @@ import type {
   AppHealth,
   DeployFailure,
   RenderedManifests,
+  RunLogs,
+  RunLogsOptions,
 } from '#src/modules/kubernetes/deploy-backend.types.js'
 import { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
 
@@ -41,4 +43,17 @@ export class MockDeployBackend extends DeployBackend {
   readDeployFailure(_namespace: string, _deploymentName: string): Promise<DeployFailure | null> {
     return Promise.resolve(null)
   }
+
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+  readRunLogs(
+    _namespace: string,
+    _deploymentName: string,
+    _options: RunLogsOptions,
+  ): Promise<RunLogs | null> {
+    return Promise.resolve({
+      podName: 'mock-pod-abc123',
+      logs: 'mock log line 1\nmock log line 2\n',
+    })
+  }
+  /* eslint-enable @typescript-eslint/no-unused-vars */
 }

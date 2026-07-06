@@ -304,6 +304,52 @@
           "deployments"
         ]
       }
+    },
+    "/api/v1/deployments/apps/{slug}/logs": {
+      "get": {
+        "operationId": "getAppRunLogsV1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tailLines",
+            "required": false,
+            "in": "query",
+            "description": "Trailing log lines to return (default 100).",
+            "schema": {
+              "minimum": 1,
+              "maximum": 1000,
+              "example": 100,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAppRunLogsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          }
+        },
+        "summary": "",
+        "tags": [
+          "deployments"
+        ]
+      }
     }
   },
   "info": {
@@ -794,6 +840,25 @@
           "status",
           "availableReplicas",
           "desiredReplicas"
+        ]
+      },
+      "GetAppRunLogsResponse": {
+        "type": "object",
+        "properties": {
+          "podName": {
+            "type": "string",
+            "nullable": true,
+            "example": "my-app-7d9c8b6f5-abcde",
+            "description": "Pod the log was read from; null when no pod was found."
+          },
+          "logs": {
+            "type": "string",
+            "example": "Listening on :8080\n"
+          }
+        },
+        "required": [
+          "podName",
+          "logs"
         ]
       }
     }

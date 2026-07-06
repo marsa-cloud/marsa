@@ -2,6 +2,8 @@ import type {
   AppHealth,
   DeployFailure,
   RenderedManifests,
+  RunLogs,
+  RunLogsOptions,
 } from '#src/modules/kubernetes/deploy-backend.types.js'
 import type { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
 
@@ -37,4 +39,15 @@ export abstract class DeployBackend {
     namespace: string,
     deploymentName: string,
   ): Promise<DeployFailure | null>
+
+  /**
+   * A recent run-log snapshot from the app's newest pod (#114) — the tail of its
+   * stdout/stderr. Live-read, never stored; `null` when the Deployment or its
+   * pods can't be found.
+   */
+  abstract readRunLogs(
+    namespace: string,
+    deploymentName: string,
+    options: RunLogsOptions,
+  ): Promise<RunLogs | null>
 }

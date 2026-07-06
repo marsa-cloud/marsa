@@ -7,6 +7,7 @@ import {
   PatchStrategy,
   setHeaderOptions,
   type V1Deployment,
+  type V1Pod,
 } from '@kubernetes/client-node'
 import { Injectable } from '@nestjs/common'
 
@@ -21,9 +22,12 @@ import type {
   AppHealth,
   DeployFailure,
   RenderedManifests,
+  RunLogs,
+  RunLogsOptions,
 } from '#src/modules/kubernetes/deploy-backend.types.js'
 import { extractDeployFailure } from '#src/modules/kubernetes/extract-deploy-failure.js'
 import { mapRolloutStatus } from '#src/modules/kubernetes/map-rollout-status.js'
+import { newestPod } from '#src/modules/kubernetes/newest-pod.js'
 import { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
 
 function isNotFound(error: unknown): boolean {
@@ -117,19 +121,49 @@ export class DirectApplyDeployBackend extends DeployBackend {
     namespace: string,
     deploymentName: string,
   ): Promise<DeployFailure | null> {
-    const deployment = await this.readDeployment(namespace, deploymentName)
-    const matchLabels = deployment?.spec?.selector?.matchLabels
-    if (!matchLabels || Object.keys(matchLabels).length === 0) {
+    const pods = await this.listAppPods(namespace, deploymentName)
+    return extractDeployFailure(pods)
+  }
+
+  async readRunLogs(
+    namespace: string,
+    deploymentName: string,
+    options: RunLogsOptions,
+  ): Promise<RunLogs | null> {
+    const pods = await this.listAppPods(namespace, deploymentName)
+    // Newest pod reflects the current rollout; aggregating across replicas is
+    // out of scope for V0.1 (#114).
+    const pod = newestPod(pods)
+    const name = pod?.metadata?.name
+    if (!name) {
       return null
     }
 
-    // The Deployment's own selector picks exactly its pods — no name-prefix
-    // guessing, no sibling bleed.
+    const logs = await this.core.readNamespacedPodLog({
+      name,
+      namespace,
+      tailLines: options.tailLines,
+    })
+    return { podName: name, logs }
+  }
+
+  /**
+   * Pods owned by an app's Deployment, selected by the Deployment's own
+   * `matchLabels` — no name-prefix guessing, no sibling bleed. Empty when the
+   * Deployment (or a usable selector) can't be found.
+   */
+  private async listAppPods(namespace: string, deploymentName: string): Promise<V1Pod[]> {
+    const deployment = await this.readDeployment(namespace, deploymentName)
+    const matchLabels = deployment?.spec?.selector?.matchLabels
+    if (!matchLabels || Object.keys(matchLabels).length === 0) {
+      return []
+    }
+
     const labelSelector = Object.entries(matchLabels)
       .map(([key, value]) => `${key}=${value}`)
       .join(',')
     const { items } = await this.core.listNamespacedPod({ namespace, labelSelector })
-    return extractDeployFailure(items)
+    return items
   }
 
   private async readDeployment(
