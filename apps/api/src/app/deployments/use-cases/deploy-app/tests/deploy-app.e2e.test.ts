@@ -40,6 +40,42 @@ describe('POST /api/v1/deployments/deploy (e2e)', () => {
     expect(typeof response.body.releaseUuid).toBe('string')
   })
 
+  it('deploys a private image with registry credentials (encrypt/decrypt round-trip)', async () => {
+    // A 200 here means the real SecretCipherService encrypted the credentials on
+    // the way in and decrypted them to render the pull Secret — a failed
+    // round-trip would surface as a 500 (#99).
+    const response = await request(setup.httpServer)
+      .post('/api/v1/deployments/deploy')
+      .set('Cookie', sessionCookie)
+      .send(
+        new DeployAppCommandBuilder()
+          .withSlug('e2e-private-app')
+          .withImage('ghcr.io/my-org/app:1.0')
+          .withImagePullCredentials({
+            registry: 'ghcr.io',
+            username: 'my-org',
+            password: 'pw-test',
+          })
+          .build(),
+      )
+      .expect(200)
+
+    expect(response.body.appSlug).toBe('e2e-private-app')
+    expect(response.body.deployStatus).toBe('pending')
+    // The response never echoes the credentials back.
+    expect(JSON.stringify(response.body)).not.toContain('pw-test')
+  })
+
+  it('rejects private-registry credentials missing the password with 400', async () => {
+    const command = new DeployAppCommandBuilder().build()
+
+    await request(setup.httpServer)
+      .post('/api/v1/deployments/deploy')
+      .set('Cookie', sessionCookie)
+      .send({ ...command, imagePullCredentials: { registry: 'ghcr.io', username: 'my-org' } })
+      .expect(400)
+  })
+
   it('rejects an unauthenticated request with 401', async () => {
     await request(setup.httpServer)
       .post('/api/v1/deployments/deploy')

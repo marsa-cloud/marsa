@@ -10,8 +10,10 @@ import { renderManifests } from '#src/app/deployments/render/render-manifests.js
 import { DeployAppCommand } from '#src/app/deployments/use-cases/deploy-app/deploy-app.command.js'
 import { DeployAppRepository } from '#src/app/deployments/use-cases/deploy-app/deploy-app.repository.js'
 import { DeployAppResponse } from '#src/app/deployments/use-cases/deploy-app/deploy-app.response.js'
+import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
 import { OPERATOR_APPS_NAMESPACE } from '#src/modules/kubernetes/deploy-backend.constants.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
+import type { RegistryCredentials } from '#src/modules/kubernetes/deploy-backend.types.js'
 
 @Injectable()
 export class DeployAppUseCase {
@@ -19,12 +21,14 @@ export class DeployAppUseCase {
     private readonly repository: DeployAppRepository,
     private readonly deployBackend: DeployBackend,
     private readonly config: ConfigService,
+    private readonly cipher: SecretCipherService,
     private readonly em: EntityManager,
   ) {}
 
   async execute(command: DeployAppCommand): Promise<DeployAppResponse> {
     const baseDomain = this.config.getOrThrow<string>('MARSA_BASE_DOMAIN')
 
+    const credentials = command.imagePullCredentials
     const app = new AppBuilder()
       .withSlug(command.slug)
       .withDomain({ type: 'subdomain' })
@@ -32,6 +36,9 @@ export class DeployAppUseCase {
       .withContainerPort(command.containerPort)
       .withReplicas(command.replicas ?? 1)
       .withEnv(command.env ?? {})
+      .withImagePullCredentialsEnc(
+        credentials ? this.cipher.encrypt(JSON.stringify(credentials)) : null,
+      )
       .build()
 
     const release = new ReleaseBuilder()
@@ -46,7 +53,11 @@ export class DeployAppUseCase {
       await this.repository.createRelease(release)
     })
 
-    const manifests = renderManifests(app, release, baseDomain)
+    const renderCredentials = app.imagePullCredentialsEnc
+      ? (JSON.parse(this.cipher.decrypt(app.imagePullCredentialsEnc)) as RegistryCredentials)
+      : undefined
+
+    const manifests = renderManifests(app, release, baseDomain, renderCredentials)
 
     try {
       await this.deployBackend.apply(OPERATOR_APPS_NAMESPACE, manifests)

@@ -9,6 +9,12 @@ export const DEPLOY_FIELD_MANAGER = 'marsa-deployer'
  */
 export const OPERATOR_APPS_NAMESPACE = 'marsa-apps'
 
+/**
+ * Suffix for an app's image-pull Secret name (`<slug><suffix>`), materialized
+ * from private-registry credentials and referenced via `imagePullSecrets` (#99).
+ */
+export const REGISTRY_SECRET_SUFFIX = '-registry'
+
 /** Traefik `IngressRoute` CRD coordinates, for applying it via `CustomObjectsApi`. */
 export const TRAEFIK_GROUP = 'traefik.io'
 export const TRAEFIK_VERSION = 'v1alpha1'

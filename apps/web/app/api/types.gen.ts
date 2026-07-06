@@ -113,6 +113,21 @@ export type GetCurrentUserResponse = {
   role: UserRole
 }
 
+export type ImagePullCredentials = {
+  /**
+   * Registry host the credentials authenticate against.
+   */
+  registry: string
+  /**
+   * Registry username — an account username, or a registry sentinel (e.g. `AWS`, `_json_key`).
+   */
+  username: string
+  /**
+   * Password or access token (PAT / API key) — placed in the dockerconfigjson `auth` field.
+   */
+  password: string
+}
+
 export type DeployAppCommand = {
   /**
    * Public subdomain label + K8s object name.
@@ -136,6 +151,10 @@ export type DeployAppCommand = {
   env?: {
     [key: string]: string
   }
+  /**
+   * Registry credentials for a private image; encrypted at rest, omitted for public images.
+   */
+  imagePullCredentials?: ImagePullCredentials
 }
 
 export type DeployStatus = 'pending' | 'in_progress' | 'succeeded' | 'failed'

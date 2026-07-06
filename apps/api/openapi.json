@@ -647,6 +647,32 @@
           "role"
         ]
       },
+      "ImagePullCredentials": {
+        "type": "object",
+        "properties": {
+          "registry": {
+            "type": "string",
+            "example": "ghcr.io",
+            "description": "Registry host the credentials authenticate against."
+          },
+          "username": {
+            "type": "string",
+            "example": "my-org",
+            "description": "Registry username — an account username, or a registry sentinel (e.g. `AWS`, `_json_key`)."
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "example": "ghp_xxxxxxxxxxxxxxxxxxxx",
+            "description": "Password or access token (PAT / API key) — placed in the dockerconfigjson `auth` field."
+          }
+        },
+        "required": [
+          "registry",
+          "username",
+          "password"
+        ]
+      },
       "DeployAppCommand": {
         "type": "object",
         "properties": {
@@ -685,6 +711,14 @@
               "LOG_LEVEL": "info"
             },
             "description": "Plain (non-secret) environment variables for the container."
+          },
+          "imagePullCredentials": {
+            "description": "Registry credentials for a private image; encrypted at rest, omitted for public images.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImagePullCredentials"
+              }
+            ]
           }
         },
         "required": [

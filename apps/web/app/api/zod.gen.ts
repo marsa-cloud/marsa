@@ -73,6 +73,12 @@ export const zGetCurrentUserResponse = z.object({
   role: zUserRole,
 })
 
+export const zImagePullCredentials = z.object({
+  registry: z.string(),
+  username: z.string(),
+  password: z.string(),
+})
+
 export const zDeployAppCommand = z.object({
   slug: z
     .string()
@@ -82,6 +88,7 @@ export const zDeployAppCommand = z.object({
   containerPort: z.number().int().gte(1).lte(65535),
   replicas: z.number().int().gte(1).lte(100).optional(),
   env: z.record(z.string()).optional(),
+  imagePullCredentials: zImagePullCredentials.optional(),
 })
 
 export const zDeployStatus = z.enum(['pending', 'in_progress', 'succeeded', 'failed'])

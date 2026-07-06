@@ -53,6 +53,7 @@ export type {
   GetGithubAppManifestV1Responses,
   GetManifestResponse,
   HookAttributesDto,
+  ImagePullCredentials,
   ListAppReleasesResponse,
   ListAppReleasesV1Data,
   ListAppReleasesV1Errors,
