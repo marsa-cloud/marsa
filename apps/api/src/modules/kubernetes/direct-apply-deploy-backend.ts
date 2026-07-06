@@ -17,7 +17,12 @@ import {
   TRAEFIK_VERSION,
 } from '#src/modules/kubernetes/deploy-backend.constants.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
-import type { AppHealth, RenderedManifests } from '#src/modules/kubernetes/deploy-backend.types.js'
+import type {
+  AppHealth,
+  DeployFailure,
+  RenderedManifests,
+} from '#src/modules/kubernetes/deploy-backend.types.js'
+import { extractDeployFailure } from '#src/modules/kubernetes/extract-deploy-failure.js'
 import { mapRolloutStatus } from '#src/modules/kubernetes/map-rollout-status.js'
 import { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
 
@@ -106,6 +111,25 @@ export class DirectApplyDeployBackend extends DeployBackend {
       availableReplicas: status?.availableReplicas ?? 0,
       updatedReplicas: status?.updatedReplicas ?? 0,
     }
+  }
+
+  async readDeployFailure(
+    namespace: string,
+    deploymentName: string,
+  ): Promise<DeployFailure | null> {
+    const deployment = await this.readDeployment(namespace, deploymentName)
+    const matchLabels = deployment?.spec?.selector?.matchLabels
+    if (!matchLabels || Object.keys(matchLabels).length === 0) {
+      return null
+    }
+
+    // The Deployment's own selector picks exactly its pods — no name-prefix
+    // guessing, no sibling bleed.
+    const labelSelector = Object.entries(matchLabels)
+      .map(([key, value]) => `${key}=${value}`)
+      .join(',')
+    const { items } = await this.core.listNamespacedPod({ namespace, labelSelector })
+    return extractDeployFailure(items)
   }
 
   private async readDeployment(

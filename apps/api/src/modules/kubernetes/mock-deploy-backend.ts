@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common'
 
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
-import type { AppHealth, RenderedManifests } from '#src/modules/kubernetes/deploy-backend.types.js'
+import type {
+  AppHealth,
+  DeployFailure,
+  RenderedManifests,
+} from '#src/modules/kubernetes/deploy-backend.types.js'
 import { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
 
 /**
@@ -31,5 +35,10 @@ export class MockDeployBackend extends DeployBackend {
       availableReplicas: 1,
       updatedReplicas: 1,
     })
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  readDeployFailure(_namespace: string, _deploymentName: string): Promise<DeployFailure | null> {
+    return Promise.resolve(null)
   }
 }

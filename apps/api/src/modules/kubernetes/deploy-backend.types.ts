@@ -37,3 +37,14 @@ export interface AppHealth {
   availableReplicas: number
   updatedReplicas: number
 }
+
+/**
+ * Why a deploy failed (#115) — the first failing container state found on an
+ * app's pods (image pull, crash, config error). Live-derived on read, never
+ * stored. The port returns `null` when no failing container is observed.
+ */
+export interface DeployFailure {
+  /** K8s waiting/terminated reason, e.g. `ImagePullBackOff`, `CrashLoopBackOff`. */
+  reason: string
+  message: string
+}

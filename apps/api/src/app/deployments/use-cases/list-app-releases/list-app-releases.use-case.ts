@@ -48,7 +48,15 @@ export class ListAppReleasesUseCase {
       await this.reconcile(latest, slug)
     }
 
-    return new ListAppReleasesResponse(releases)
+    // A failed head release carries a *why*: read it live from the pods (never
+    // stored, #115). Only the head maps to the live Deployment, so this is the
+    // only release a cluster-read failure reason can describe.
+    const headFailure =
+      latest?.deployStatus === DeployStatus.Failed
+        ? await this.deployBackend.readDeployFailure(OPERATOR_APPS_NAMESPACE, slug)
+        : null
+
+    return new ListAppReleasesResponse(releases, headFailure)
   }
 
   private async reconcile(release: Release, slug: string): Promise<void> {

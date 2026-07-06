@@ -48,11 +48,36 @@ describe('ListAppReleasesUseCase', () => {
   it('persists Failed when the rollout has Failed', async () => {
     const { usecase, repository, deployBackend } = build()
     deployBackend.readRolloutStatus.resolves(RolloutStatus.Failed)
+    deployBackend.readDeployFailure.resolves(null)
 
     await usecase.execute(SLUG)
 
     const [, status] = repository.setReleaseDeployStatus.firstCall.args
     expect(status).toBe(DeployStatus.Failed)
+  })
+
+  it('attaches the live failure reason to the head release when the deploy has failed', async () => {
+    const { usecase, deployBackend } = build()
+    deployBackend.readRolloutStatus.resolves(RolloutStatus.Failed)
+    deployBackend.readDeployFailure.resolves({
+      reason: 'ImagePullBackOff',
+      message: 'Back-off pulling image "nginx:doesnotexist"',
+    })
+
+    const result = await usecase.execute(SLUG)
+
+    expect(result.releases[0].failureReason).toBe('ImagePullBackOff')
+    expect(result.releases[0].failureMessage).toBe('Back-off pulling image "nginx:doesnotexist"')
+  })
+
+  it('does not read a failure reason when the rollout has not failed', async () => {
+    const { usecase, deployBackend } = build()
+    deployBackend.readRolloutStatus.resolves(RolloutStatus.Complete)
+
+    const result = await usecase.execute(SLUG)
+
+    expect(deployBackend.readDeployFailure.called).toBe(false)
+    expect(result.releases[0].failureReason).toBeUndefined()
   })
 
   it('advances Pending to InProgress while the rollout is Progressing', async () => {

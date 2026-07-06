@@ -102,6 +102,8 @@ export const zReleaseSummary = z.object({
   deployStatus: zDeployStatus,
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+  failureReason: z.string().nullish(),
+  failureMessage: z.string().nullish(),
 })
 
 export const zListAppReleasesResponse = z.object({

@@ -1,4 +1,8 @@
-import type { AppHealth, RenderedManifests } from '#src/modules/kubernetes/deploy-backend.types.js'
+import type {
+  AppHealth,
+  DeployFailure,
+  RenderedManifests,
+} from '#src/modules/kubernetes/deploy-backend.types.js'
 import type { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
 
 /**
@@ -22,4 +26,15 @@ export abstract class DeployBackend {
 
   /** Live runtime-health snapshot of a Deployment (#100) — never stored. */
   abstract readAppHealth(namespace: string, deploymentName: string): Promise<AppHealth>
+
+  /**
+   * Why the app's current pods are failing (#115) — image pull, crash, config.
+   * Live-derived, never stored; `null` when nothing is failing (or the
+   * Deployment / its pods can't be found). Read only when a rollout has already
+   * failed, to explain *why*.
+   */
+  abstract readDeployFailure(
+    namespace: string,
+    deploymentName: string,
+  ): Promise<DeployFailure | null>
 }
