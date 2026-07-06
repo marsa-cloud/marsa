@@ -139,12 +139,21 @@ export class DirectApplyDeployBackend extends DeployBackend {
       return null
     }
 
-    const logs = await this.core.readNamespacedPodLog({
-      name,
-      namespace,
-      tailLines: options.tailLines,
-    })
-    return { podName: name, logs }
+    try {
+      const logs = await this.core.readNamespacedPodLog({
+        name,
+        namespace,
+        tailLines: options.tailLines,
+      })
+      return { podName: name, logs }
+    } catch (error) {
+      // The pod can vanish between the list and this read (eviction, rollout
+      // churn); a 404 here is the same "not found → null" case, not a failure.
+      if (isNotFound(error)) {
+        return null
+      }
+      throw error
+    }
   }
 
   /**

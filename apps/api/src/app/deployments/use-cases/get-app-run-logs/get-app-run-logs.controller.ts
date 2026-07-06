@@ -1,5 +1,11 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common'
-import { ApiOkResponse, ApiOperation, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger'
+import {
+  ApiBadRequestResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger'
 
 import { SessionAuthGuard } from '#src/app/auth/guards/session-auth.guard.js'
 import { GetAppRunLogsQuery } from '#src/app/deployments/use-cases/get-app-run-logs/get-app-run-logs.query.js'
@@ -15,6 +21,7 @@ export class GetAppRunLogsController {
   @UseGuards(SessionAuthGuard)
   @ApiOperation({ operationId: 'getAppRunLogsV1' })
   @ApiOkResponse({ type: GetAppRunLogsResponse })
+  @ApiBadRequestResponse({ description: 'tailLines out of range (1–1000) or not an integer.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   handle(
     @Param('slug') slug: string,

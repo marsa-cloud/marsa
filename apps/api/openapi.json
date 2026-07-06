@@ -341,6 +341,9 @@
               }
             }
           },
+          "400": {
+            "description": "tailLines out of range (1–1000) or not an integer."
+          },
           "401": {
             "description": "No active session."
           }

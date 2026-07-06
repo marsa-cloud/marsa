@@ -35,10 +35,21 @@ describe('newestPod', () => {
     expect(newestPod(pods)?.metadata?.name).toBe('has-ts')
   })
 
-  it('still returns a pod when none carry a timestamp', () => {
-    const result = newestPod([pod('a'), pod('b')])
+  it('breaks equal-timestamp ties deterministically on the greater pod name', () => {
+    const ts = '2026-01-01T00:00:00Z'
+    const forward = newestPod([pod('app-a', ts), pod('app-b', ts)])
+    const reversed = newestPod([pod('app-b', ts), pod('app-a', ts)])
 
-    expect(result).not.toBeNull()
-    expect(result?.metadata?.name).toBe('b')
+    // Same winner regardless of list order — the property that matters.
+    expect(forward?.metadata?.name).toBe('app-b')
+    expect(reversed?.metadata?.name).toBe('app-b')
+  })
+
+  it('returns a pod (order-independent) when none carry a timestamp', () => {
+    const forward = newestPod([pod('a'), pod('b')])
+    const reversed = newestPod([pod('b'), pod('a')])
+
+    expect(forward?.metadata?.name).toBe('b')
+    expect(reversed?.metadata?.name).toBe('b')
   })
 })

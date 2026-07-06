@@ -399,6 +399,10 @@ export type GetAppRunLogsV1Data = {
 
 export type GetAppRunLogsV1Errors = {
   /**
+   * tailLines out of range (1–1000) or not an integer.
+   */
+  400: unknown
+  /**
    * No active session.
    */
   401: unknown
