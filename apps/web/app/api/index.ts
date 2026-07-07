@@ -2,6 +2,7 @@
 
 export type {
   AppHealthStatus,
+  AppSummary,
   BeginGithubLoginV1Data,
   CaptureGithubAppInstallationV1Data,
   CaptureGithubAppInstallationV1Errors,
@@ -61,6 +62,11 @@ export type {
   ListAppReleasesV1Errors,
   ListAppReleasesV1Response,
   ListAppReleasesV1Responses,
+  ListAppsResponse,
+  ListAppsV1Data,
+  ListAppsV1Errors,
+  ListAppsV1Response,
+  ListAppsV1Responses,
   ManifestDto,
   ReleaseSummary,
   ReleaseTrigger,

@@ -165,6 +165,22 @@ export type DeployAppResponse = {
   deployStatus: DeployStatus
 }
 
+export type AppSummary = {
+  slug: string
+  image: string
+  url: string
+  /**
+   * Current deploy status — the newest release’s stored status (not a live read).
+   */
+  deployStatus: DeployStatus
+  createdAt: string
+  updatedAt: string
+}
+
+export type ListAppsResponse = {
+  apps: Array<AppSummary>
+}
+
 export type ReleaseTrigger = 'manual' | 'webhook'
 
 export type ReleaseSummary = {
@@ -397,6 +413,26 @@ export type DeployAppV1Responses = {
 }
 
 export type DeployAppV1Response = DeployAppV1Responses[keyof DeployAppV1Responses]
+
+export type ListAppsV1Data = {
+  body?: never
+  path?: never
+  query?: never
+  url: '/api/v1/deployments/apps'
+}
+
+export type ListAppsV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+}
+
+export type ListAppsV1Responses = {
+  200: ListAppsResponse
+}
+
+export type ListAppsV1Response = ListAppsV1Responses[keyof ListAppsV1Responses]
 
 export type ListAppReleasesV1Data = {
   body?: never
