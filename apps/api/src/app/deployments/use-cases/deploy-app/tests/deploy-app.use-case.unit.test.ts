@@ -80,7 +80,6 @@ describe('DeployAppUseCase', () => {
     const credentials = { registry: 'ghcr.io', username: 'my-org', password: 'pw-test' }
     const credentialsJson = JSON.stringify(credentials)
     cipher.encrypt.returns('opaque-cipher-token')
-    cipher.decrypt.returns(credentialsJson)
 
     const privateCommand = new DeployAppCommandBuilder()
       .withSlug('my-app')
@@ -96,8 +95,8 @@ describe('DeployAppUseCase', () => {
     expect(app.imagePullCredentialsEnc).toBe('opaque-cipher-token')
     expect(app.imagePullCredentialsEnc).not.toContain('pw-test')
 
-    // Render reads back from the persisted ciphertext, not the raw command.
-    expect(cipher.decrypt.calledOnceWithExactly('opaque-cipher-token')).toBe(true)
+    // Render reuses the in-memory credentials — no decrypt round-trip on the deploy path.
+    expect(cipher.decrypt.called).toBe(false)
     const [, manifests] = deployBackend.apply.firstCall.args
     expect(manifests.imagePullSecret?.metadata?.name).toBe('my-app-registry')
     expect(manifests.deployment.spec?.template.spec?.imagePullSecrets).toEqual([

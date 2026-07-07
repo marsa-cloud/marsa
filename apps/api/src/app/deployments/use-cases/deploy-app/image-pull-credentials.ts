@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
-import { IsNotEmpty, IsString } from 'class-validator'
+import { IsNotEmpty, IsString, MaxLength } from 'class-validator'
 
 /**
  * Operator-supplied registry credentials for pulling a private image (#99).
@@ -13,31 +13,38 @@ import { IsNotEmpty, IsString } from 'class-validator'
 export class ImagePullCredentials {
   @ApiProperty({
     type: String,
+    maxLength: 253,
     example: 'ghcr.io',
     description: 'Registry host the credentials authenticate against.',
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(253)
   registry!: string
 
   @ApiProperty({
     type: String,
+    maxLength: 255,
     example: 'my-org',
     description:
       'Registry username — an account username, or a registry sentinel (e.g. `AWS`, `_json_key`).',
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(255)
   username!: string
 
   @ApiProperty({
     type: String,
     format: 'password',
+    writeOnly: true,
+    maxLength: 4096,
     example: 'ghp_xxxxxxxxxxxxxxxxxxxx',
     description:
       'Password or access token (PAT / API key) — placed in the dockerconfigjson `auth` field.',
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(4096)
   password!: string
 }

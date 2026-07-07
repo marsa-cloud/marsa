@@ -13,7 +13,6 @@ import { DeployAppResponse } from '#src/app/deployments/use-cases/deploy-app/dep
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
 import { OPERATOR_APPS_NAMESPACE } from '#src/modules/kubernetes/deploy-backend.constants.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
-import type { RegistryCredentials } from '#src/modules/kubernetes/deploy-backend.types.js'
 
 @Injectable()
 export class DeployAppUseCase {
@@ -53,13 +52,8 @@ export class DeployAppUseCase {
       await this.repository.createRelease(release)
     })
 
-    const renderCredentials = app.imagePullCredentialsEnc
-      ? (JSON.parse(this.cipher.decrypt(app.imagePullCredentialsEnc)) as RegistryCredentials)
-      : undefined
-
-    const manifests = renderManifests(app, release, baseDomain, renderCredentials)
-
     try {
+      const manifests = renderManifests(app, release, baseDomain, credentials)
       await this.deployBackend.apply(OPERATOR_APPS_NAMESPACE, manifests)
     } catch (error) {
       await this.repository.setReleaseDeployStatus(release.uuid, DeployStatus.Failed)

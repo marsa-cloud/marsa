@@ -652,17 +652,21 @@
         "properties": {
           "registry": {
             "type": "string",
+            "maxLength": 253,
             "example": "ghcr.io",
             "description": "Registry host the credentials authenticate against."
           },
           "username": {
             "type": "string",
+            "maxLength": 255,
             "example": "my-org",
             "description": "Registry username — an account username, or a registry sentinel (e.g. `AWS`, `_json_key`)."
           },
           "password": {
             "type": "string",
             "format": "password",
+            "writeOnly": true,
+            "maxLength": 4096,
             "example": "ghp_xxxxxxxxxxxxxxxxxxxx",
             "description": "Password or access token (PAT / API key) — placed in the dockerconfigjson `auth` field."
           }
