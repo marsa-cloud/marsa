@@ -58,8 +58,23 @@ export class DirectApplyDeployBackend extends DeployBackend {
   }
 
   async apply(namespace: string, manifests: RenderedManifests): Promise<void> {
-    const { deployment, service, ingressRoute } = manifests
+    const { deployment, service, ingressRoute, imagePullSecret } = manifests
     const ssa = setHeaderOptions('Content-Type', PatchStrategy.ServerSideApply)
+
+    // The pull Secret must exist before the Deployment's pods schedule, or the
+    // first pull races ahead of its credentials (#99).
+    if (imagePullSecret) {
+      await this.core.patchNamespacedSecret(
+        {
+          name: requireName(imagePullSecret, 'Secret'),
+          namespace,
+          body: imagePullSecret,
+          fieldManager: DEPLOY_FIELD_MANAGER,
+          force: true,
+        },
+        ssa,
+      )
+    }
 
     await this.apps.patchNamespacedDeployment(
       {

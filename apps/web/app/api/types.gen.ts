@@ -113,6 +113,17 @@ export type GetCurrentUserResponse = {
   role: UserRole
 }
 
+export type ImagePullCredentials = {
+  /**
+   * Registry host the credentials authenticate against.
+   */
+  registry: string
+  /**
+   * Registry username — an account username, or a registry sentinel (e.g. `AWS`, `_json_key`).
+   */
+  username: string
+}
+
 export type DeployAppCommand = {
   /**
    * Public subdomain label + K8s object name.
@@ -136,6 +147,10 @@ export type DeployAppCommand = {
   env?: {
     [key: string]: string
   }
+  /**
+   * Registry credentials for a private image; encrypted at rest, omitted for public images.
+   */
+  imagePullCredentials?: ImagePullCredentials
 }
 
 export type DeployStatus = 'pending' | 'in_progress' | 'succeeded' | 'failed'
@@ -184,6 +199,50 @@ export type GetAppRunLogsResponse = {
    */
   podName: string | null
   logs: string
+}
+
+export type ImagePullCredentialsWritable = {
+  /**
+   * Registry host the credentials authenticate against.
+   */
+  registry: string
+  /**
+   * Registry username — an account username, or a registry sentinel (e.g. `AWS`, `_json_key`).
+   */
+  username: string
+  /**
+   * Password or access token (PAT / API key) — placed in the dockerconfigjson `auth` field.
+   */
+  password: string
+}
+
+export type DeployAppCommandWritable = {
+  /**
+   * Public subdomain label + K8s object name.
+   */
+  slug: string
+  /**
+   * Fully-qualified public image ref.
+   */
+  image: string
+  /**
+   * Port the container listens on.
+   */
+  containerPort: number
+  /**
+   * Replica count (defaults to 1).
+   */
+  replicas?: number
+  /**
+   * Plain (non-secret) environment variables for the container.
+   */
+  env?: {
+    [key: string]: string
+  }
+  /**
+   * Registry credentials for a private image; encrypted at rest, omitted for public images.
+   */
+  imagePullCredentials?: ImagePullCredentialsWritable
 }
 
 export type GetApiInfoV1Data = {
@@ -316,7 +375,7 @@ export type GetCurrentUserV1Responses = {
 export type GetCurrentUserV1Response = GetCurrentUserV1Responses[keyof GetCurrentUserV1Responses]
 
 export type DeployAppV1Data = {
-  body: DeployAppCommand
+  body: DeployAppCommandWritable
   path?: never
   query?: never
   url: '/api/v1/deployments/deploy'

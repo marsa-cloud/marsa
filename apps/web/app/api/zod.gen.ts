@@ -73,6 +73,11 @@ export const zGetCurrentUserResponse = z.object({
   role: zUserRole,
 })
 
+export const zImagePullCredentials = z.object({
+  registry: z.string().max(253),
+  username: z.string().max(255),
+})
+
 export const zDeployAppCommand = z.object({
   slug: z
     .string()
@@ -82,6 +87,7 @@ export const zDeployAppCommand = z.object({
   containerPort: z.number().int().gte(1).lte(65535),
   replicas: z.number().int().gte(1).lte(100).optional(),
   env: z.record(z.string()).optional(),
+  imagePullCredentials: zImagePullCredentials.optional(),
 })
 
 export const zDeployStatus = z.enum(['pending', 'in_progress', 'succeeded', 'failed'])
@@ -123,6 +129,24 @@ export const zGetAppRunLogsResponse = z.object({
   logs: z.string(),
 })
 
+export const zImagePullCredentialsWritable = z.object({
+  registry: z.string().max(253),
+  username: z.string().max(255),
+  password: z.string().max(4096),
+})
+
+export const zDeployAppCommandWritable = z.object({
+  slug: z
+    .string()
+    .max(63)
+    .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/),
+  image: z.string(),
+  containerPort: z.number().int().gte(1).lte(65535),
+  replicas: z.number().int().gte(1).lte(100).optional(),
+  env: z.record(z.string()).optional(),
+  imagePullCredentials: zImagePullCredentialsWritable.optional(),
+})
+
 export const zGetApiInfoV1Response = zGetApiInfoResponse
 
 export const zGetGithubAppManifestV1Response = zGetManifestResponse
@@ -141,7 +165,7 @@ export const zCompleteGithubLoginV1Response = zCompleteGithubLoginResponse
 
 export const zGetCurrentUserV1Response = zGetCurrentUserResponse
 
-export const zDeployAppV1Body = zDeployAppCommand
+export const zDeployAppV1Body = zDeployAppCommandWritable
 
 export const zDeployAppV1Response = zDeployAppResponse
 

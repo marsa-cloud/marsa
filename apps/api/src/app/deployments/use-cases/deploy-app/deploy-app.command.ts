@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { Type } from 'class-transformer'
 import {
   IsInt,
   IsNotEmpty,
@@ -8,6 +9,7 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator'
 
 import {
@@ -18,6 +20,7 @@ import {
   SLUG_MAX_LENGTH,
   SLUG_PATTERN,
 } from '#src/app/deployments/use-cases/deploy-app/deploy-app.constants.js'
+import { ImagePullCredentials } from '#src/app/deployments/use-cases/deploy-app/image-pull-credentials.js'
 import { IsStringRecord } from '#src/app/deployments/use-cases/deploy-app/is-string-record.validator.js'
 
 export class DeployAppCommand {
@@ -77,4 +80,14 @@ export class DeployAppCommand {
   @IsOptional()
   @IsStringRecord()
   env?: Record<string, string>
+
+  @ApiPropertyOptional({
+    type: ImagePullCredentials,
+    description:
+      'Registry credentials for a private image; encrypted at rest, omitted for public images.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ImagePullCredentials)
+  imagePullCredentials?: ImagePullCredentials
 }

@@ -1,4 +1,5 @@
 import { DeployAppCommand } from '#src/app/deployments/use-cases/deploy-app/deploy-app.command.js'
+import type { ImagePullCredentials } from '#src/app/deployments/use-cases/deploy-app/image-pull-credentials.js'
 
 /** Test-side builder for {@link DeployAppCommand}; on the request path Nest deserialises the DTO. */
 export class DeployAppCommandBuilder {
@@ -33,6 +34,11 @@ export class DeployAppCommandBuilder {
 
   withEnv(env: Record<string, string>): this {
     this.command.env = env
+    return this
+  }
+
+  withImagePullCredentials(imagePullCredentials: ImagePullCredentials): this {
+    this.command.imagePullCredentials = imagePullCredentials
     return this
   }
 

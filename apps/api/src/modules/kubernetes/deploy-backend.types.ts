@@ -1,4 +1,4 @@
-import type { KubernetesObject, V1Deployment, V1Service } from '@kubernetes/client-node'
+import type { KubernetesObject, V1Deployment, V1Secret, V1Service } from '@kubernetes/client-node'
 
 /** Spec of a Traefik `IngressRoute` (traefik.io/v1alpha1) — a CRD with no typed model. */
 export interface IngressRouteSpec {
@@ -15,14 +15,28 @@ export interface IngressRouteSpec {
 export type IngressRoute = KubernetesObject & { spec: IngressRouteSpec }
 
 /**
- * The fixed manifest bundle for one operator-app deploy (AgDR-0029). Rendered
- * purely from the `App`/`Release` model, then applied as a unit by a
- * `DeployBackend`. The three objects are always written together.
+ * Decrypted registry credentials, held in memory only while rendering a private
+ * image's pull Secret (#99, AgDR-0036). At rest these are AES-256-GCM ciphertext
+ * on `App.imagePullCredentialsEnc`; this shape is the decrypted form the render
+ * step consumes. `password` carries a password or access token (PAT / API key).
+ */
+export interface RegistryCredentials {
+  registry: string
+  username: string
+  password: string
+}
+
+/**
+ * The manifest bundle for one operator-app deploy (AgDR-0029). Rendered purely
+ * from the `App`/`Release` model, then applied as a unit by a `DeployBackend`.
+ * The Deployment + Service + IngressRoute are always written together; the
+ * `imagePullSecret` is present only for private images (#99, AgDR-0036).
  */
 export interface RenderedManifests {
   deployment: V1Deployment
   service: V1Service
   ingressRoute: IngressRoute
+  imagePullSecret?: V1Secret
 }
 
 /**
