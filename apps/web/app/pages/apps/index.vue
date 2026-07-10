@@ -23,6 +23,7 @@ useSeoMeta({ title: 'Apps — Marsa' })
         title="Deploy your first app"
         description="Deploy a container image and get a public URL. The list of running apps will appear here."
         icon="i-lucide-box"
+        class="max-w-2xl"
       >
         <template #footer>
           <UButton

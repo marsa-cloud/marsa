@@ -110,39 +110,44 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
     <template #body>
       <div class="max-w-2xl">
-        <UAlert
-          v-if="result"
-          color="success"
-          icon="i-lucide-check"
-          title="Deploy started"
-          class="mb-6"
-        >
-          <template #description>
-            <div class="space-y-1">
-              <p>
-                <span class="font-medium">{{ result.appSlug }}</span> — status
-                <span class="font-medium">{{ result.deployStatus }}</span>
-              </p>
-              <p>
-                <ULink
-                  :to="result.url"
-                  target="_blank"
-                  class="text-primary underline"
-                >
-                  {{ result.url }}
-                </ULink>
-              </p>
-            </div>
-          </template>
-        </UAlert>
+        <!-- aria-live so screen readers announce the deploy result/error even
+             when the submit button is scrolled away from the alert. -->
+        <div aria-live="polite">
+          <UAlert
+            v-if="result"
+            color="success"
+            icon="i-lucide-check"
+            title="Deploy started"
+            class="mb-6"
+          >
+            <template #description>
+              <div class="space-y-1">
+                <p>
+                  <span class="font-medium">{{ result.appSlug }}</span> — status
+                  <span class="font-medium">{{ result.deployStatus }}</span>
+                </p>
+                <p>
+                  <ULink
+                    :to="result.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-primary underline"
+                  >
+                    {{ result.url }}
+                  </ULink>
+                </p>
+              </div>
+            </template>
+          </UAlert>
 
-        <UAlert
-          v-if="error"
-          color="error"
-          icon="i-lucide-triangle-alert"
-          :title="error"
-          class="mb-6"
-        />
+          <UAlert
+            v-if="error"
+            color="error"
+            icon="i-lucide-triangle-alert"
+            :title="error"
+            class="mb-6"
+          />
+        </div>
 
         <UForm
           :schema="schema"
@@ -181,6 +186,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           <UFormField
             label="Container port"
             name="containerPort"
+            description="Port the container listens on"
             required
           >
             <UInputNumber
@@ -234,7 +240,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
                   icon="i-lucide-x"
                   variant="ghost"
                   color="neutral"
-                  aria-label="Remove environment variable"
+                  :aria-label="`Remove environment variable ${index + 1}`"
                   @click="removeEnvRow(index)"
                 />
               </div>
