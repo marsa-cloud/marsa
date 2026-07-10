@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import type { DeployStatus } from '~/api/types.gen'
+import type { AppHealthStatus, DeployStatus } from '~/api/types.gen'
 
 // useAppReleases / useAppHealth / useAppRunLogs are Nuxt auto-imports
 // (app/composables/*) — left un-imported so tests can mock them via
 // mockNuxtImport, matching the deploy-form page convention.
+
+// Remount per slug so navigating /apps/a → /apps/b re-runs setup with fresh
+// reads (setup snapshots slug.value; without a per-path key a reused page
+// instance would show stale data once app→app linking lands).
+definePageMeta({ key: route => route.fullPath })
 
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
@@ -25,7 +30,7 @@ const deployStatusColor: Record<DeployStatus, BadgeColor> = {
   failed: 'error',
 }
 
-const healthStatusColor: Record<string, BadgeColor> = {
+const healthStatusColor: Record<AppHealthStatus, BadgeColor> = {
   healthy: 'success',
   degraded: 'warning',
   unavailable: 'error',
@@ -91,6 +96,12 @@ function formatTime(iso: string) {
               {{ health.availableReplicas }} / {{ health.desiredReplicas }} replicas available
             </span>
           </div>
+          <p
+            v-else
+            class="text-sm text-muted"
+          >
+            No health data yet.
+          </p>
         </UCard>
 
         <!-- Release history -->

@@ -94,9 +94,19 @@ describe('apps/[slug] detail page', () => {
     expect(wrapper.text()).toContain('No logs available.')
   })
 
-  it('shows an error state when a section fails to load', async () => {
+  it('shows a per-section error state when each section fails to load', async () => {
     s.health.error = new Error('boom')
+    s.releases.error = new Error('boom')
+    s.logs.error = new Error('boom')
     const wrapper = await mountSuspended(Detail)
     expect(wrapper.text()).toContain('Couldn\'t load health')
+    expect(wrapper.text()).toContain('Couldn\'t load releases')
+    expect(wrapper.text()).toContain('Couldn\'t load logs')
+  })
+
+  it('shows the health empty-state when no health data is returned', async () => {
+    s.health.data = null
+    const wrapper = await mountSuspended(Detail)
+    expect(wrapper.text()).toContain('No health data yet.')
   })
 })

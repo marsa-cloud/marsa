@@ -21,7 +21,7 @@ export function useAppReleases(slug: string) {
   const { $api } = useNuxtApp()
   return useAsyncData<ListAppReleasesResponse>(
     `app-releases-${slug}`,
-    () => $api(`/v1/deployments/apps/${slug}/releases`),
+    () => $api(`/v1/deployments/apps/${encodeURIComponent(slug)}/releases`),
     { transform: (raw): ListAppReleasesResponse => zListAppReleasesResponse.parse(raw) },
   )
 }
@@ -31,7 +31,7 @@ export function useAppHealth(slug: string) {
   const { $api } = useNuxtApp()
   return useAsyncData<GetAppHealthResponse>(
     `app-health-${slug}`,
-    () => $api(`/v1/deployments/apps/${slug}/health`),
+    () => $api(`/v1/deployments/apps/${encodeURIComponent(slug)}/health`),
     { transform: (raw): GetAppHealthResponse => zGetAppHealthResponse.parse(raw) },
   )
 }
@@ -41,7 +41,7 @@ export function useAppRunLogs(slug: string) {
   const { $api } = useNuxtApp()
   return useAsyncData<GetAppRunLogsResponse>(
     `app-logs-${slug}`,
-    () => $api(`/v1/deployments/apps/${slug}/logs`),
+    () => $api(`/v1/deployments/apps/${encodeURIComponent(slug)}/logs`),
     { transform: (raw): GetAppRunLogsResponse => zGetAppRunLogsResponse.parse(raw) },
   )
 }
