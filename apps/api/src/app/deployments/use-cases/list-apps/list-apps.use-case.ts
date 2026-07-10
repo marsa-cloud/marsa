@@ -13,7 +13,7 @@ export class ListAppsUseCase {
 
   async execute(): Promise<ListAppsResponse> {
     const baseDomain = this.config.getOrThrow<string>('MARSA_BASE_DOMAIN')
-    const rows = await this.repository.listAppsWithLatestRelease()
-    return new ListAppsResponse(rows, baseDomain)
+    const apps = await this.repository.listApps()
+    return new ListAppsResponse(apps, baseDomain)
   }
 }

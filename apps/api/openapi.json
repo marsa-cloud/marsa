@@ -811,15 +811,6 @@
             "type": "string",
             "example": "https://my-app.demo.marsa.cc"
           },
-          "deployStatus": {
-            "example": "succeeded",
-            "description": "Current deploy status — the newest release’s stored status (not a live read).",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DeployStatus"
-              }
-            ]
-          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -833,7 +824,6 @@
           "slug",
           "image",
           "url",
-          "deployStatus",
           "createdAt",
           "updatedAt"
         ]

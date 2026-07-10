@@ -103,7 +103,6 @@ export const zAppSummary = z.object({
   slug: z.string(),
   image: z.string(),
   url: z.string(),
-  deployStatus: zDeployStatus,
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 })

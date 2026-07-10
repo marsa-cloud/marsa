@@ -169,10 +169,6 @@ export type AppSummary = {
   slug: string
   image: string
   url: string
-  /**
-   * Current deploy status — the newest release’s stored status (not a live read).
-   */
-  deployStatus: DeployStatus
   createdAt: string
   updatedAt: string
 }
