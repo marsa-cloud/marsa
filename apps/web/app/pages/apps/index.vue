@@ -4,17 +4,19 @@ useSeoMeta({ title: 'Apps — Marsa' })
 
 <template>
   <UDashboardPanel>
-    <UDashboardNavbar title="Apps">
-      <template #right>
-        <UButton
-          to="/apps/new"
-          icon="i-lucide-plus"
-          label="Deploy app"
-        />
-      </template>
-    </UDashboardNavbar>
+    <template #header>
+      <UDashboardNavbar title="Apps">
+        <template #right>
+          <UButton
+            to="/apps/new"
+            icon="i-lucide-plus"
+            label="Deploy app"
+          />
+        </template>
+      </UDashboardNavbar>
+    </template>
 
-    <div class="p-6">
+    <template #body>
       <!-- The app list lands here in #128. For now the shell just routes to the
            deploy form so an app can be created from the dashboard. -->
       <UPageCard
@@ -30,6 +32,6 @@ useSeoMeta({ title: 'Apps — Marsa' })
           />
         </template>
       </UPageCard>
-    </div>
+    </template>
   </UDashboardPanel>
 </template>

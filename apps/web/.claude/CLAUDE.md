@@ -8,6 +8,11 @@ Nuxt 4 with `@nuxt/ui` (Tailwind 4). **SPA-only:** `ssr: false` in `nuxt.config.
 
 Always prefer Nuxt's first-party / batteries-included options when adding tooling (testing, state, fetching, etc.). The point of choosing Nuxt is to skip the wiring; symmetry with `apps/api`'s choices is not a tiebreaker.
 
+### Nuxt UI dashboard gotchas
+
+- **`UDashboardPanel`: put the navbar in `#header` and page content in `#body`** — never the default slot. The `#body` slot ships the scroll wrapper (`flex-1 overflow-y-auto`); the default slot has none, and since the dashboard root is `fixed inset-0 overflow-hidden`, content taller than the viewport gets clipped and becomes unreachable (no scrollbar). Symptom: a long form's submit button can't be scrolled to.
+- **`UDashboardSidebarItem` does not exist in Nuxt UI v4.** Build sidebar navigation with `UNavigationMenu` (`:items` of `NavigationMenuItem`, `orientation="vertical"`, `:collapsed`). Make the sidebar `collapsible` and place `UDashboardSidebarCollapse` (a button) in the `#header` slot so the collapse toggle works. Using the non-existent component renders an empty sidebar silently.
+
 ## Testing
 
 Three layers, all driven by Vitest + `@nuxt/test-utils`:
@@ -36,6 +41,10 @@ pnpm --filter web test:e2e:install     # one-time Playwright browser install
 - `vitest.config.ts` — uses `defineVitestConfig` from `@nuxt/test-utils/config`; happy-dom is the DOM env for the Nuxt environment; e2e is excluded.
 - `vitest.e2e.config.ts` — plain Vitest config, longer timeouts, `pool: 'forks'` so each e2e file gets a fresh Nuxt instance.
 - `playwright.config.ts` — minimal; Playwright is used as a library through `@nuxt/test-utils`, not as a standalone runner.
+
+### Visual / browser testing
+
+To visually verify a UI change or reproduce a UI bug, drive the running dev server (`pnpm dev:web`) with the **Playwright or chrome-devtools MCP** — navigate, click, snapshot, measure layout (scroll height, element reachability). Requires system **Google Chrome** installed (the MCPs launch it by default; on Ubuntu install the `.deb` from `dl.google.com`). Prefer the MCP over ad-hoc node/playwright scripts.
 
 ## File layout
 

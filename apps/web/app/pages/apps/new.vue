@@ -94,163 +94,167 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
 <template>
   <UDashboardPanel>
-    <UDashboardNavbar title="Deploy an app">
-      <template #leading>
-        <UButton
-          to="/apps"
-          icon="i-lucide-arrow-left"
-          variant="ghost"
-          color="neutral"
-          aria-label="Back to apps"
-        />
-      </template>
-    </UDashboardNavbar>
-
-    <div class="p-6 max-w-2xl">
-      <UAlert
-        v-if="result"
-        color="success"
-        icon="i-lucide-check"
-        title="Deploy started"
-        class="mb-6"
-      >
-        <template #description>
-          <div class="space-y-1">
-            <p>
-              <span class="font-medium">{{ result.appSlug }}</span> — status
-              <span class="font-medium">{{ result.deployStatus }}</span>
-            </p>
-            <p>
-              <ULink
-                :to="result.url"
-                target="_blank"
-                class="text-primary underline"
-              >
-                {{ result.url }}
-              </ULink>
-            </p>
-          </div>
+    <template #header>
+      <UDashboardNavbar title="Deploy an app">
+        <template #leading>
+          <UButton
+            to="/apps"
+            icon="i-lucide-arrow-left"
+            variant="ghost"
+            color="neutral"
+            aria-label="Back to apps"
+          />
         </template>
-      </UAlert>
+      </UDashboardNavbar>
+    </template>
 
-      <UAlert
-        v-if="error"
-        color="error"
-        icon="i-lucide-triangle-alert"
-        :title="error"
-        class="mb-6"
-      />
-
-      <UForm
-        :schema="schema"
-        :state="state"
-        class="space-y-4"
-        @submit="onSubmit"
-      >
-        <UFormField
-          label="Slug"
-          name="slug"
-          description="Public subdomain label — becomes https://<slug>.<base>"
-          required
+    <template #body>
+      <div class="max-w-2xl">
+        <UAlert
+          v-if="result"
+          color="success"
+          icon="i-lucide-check"
+          title="Deploy started"
+          class="mb-6"
         >
-          <UInput
-            id="slug"
-            v-model="state.slug"
-            placeholder="my-app"
-            class="w-full"
-          />
-        </UFormField>
+          <template #description>
+            <div class="space-y-1">
+              <p>
+                <span class="font-medium">{{ result.appSlug }}</span> — status
+                <span class="font-medium">{{ result.deployStatus }}</span>
+              </p>
+              <p>
+                <ULink
+                  :to="result.url"
+                  target="_blank"
+                  class="text-primary underline"
+                >
+                  {{ result.url }}
+                </ULink>
+              </p>
+            </div>
+          </template>
+        </UAlert>
 
-        <UFormField
-          label="Image"
-          name="image"
-          description="Fully-qualified container image reference"
-          required
-        >
-          <UInput
-            id="image"
-            v-model="state.image"
-            placeholder="nginx:1.27"
-            class="w-full"
-          />
-        </UFormField>
+        <UAlert
+          v-if="error"
+          color="error"
+          icon="i-lucide-triangle-alert"
+          :title="error"
+          class="mb-6"
+        />
 
-        <UFormField
-          label="Container port"
-          name="containerPort"
-          required
+        <UForm
+          :schema="schema"
+          :state="state"
+          class="space-y-4"
+          @submit="onSubmit"
         >
-          <UInputNumber
-            id="containerPort"
-            v-model="state.containerPort"
-            :min="1"
-            :max="65535"
-            placeholder="80"
-            class="w-full"
-          />
-        </UFormField>
+          <UFormField
+            label="Slug"
+            name="slug"
+            description="Public subdomain label — becomes https://<slug>.<base>"
+            required
+          >
+            <UInput
+              id="slug"
+              v-model="state.slug"
+              placeholder="my-app"
+              class="w-full"
+            />
+          </UFormField>
 
-        <UFormField
-          label="Replicas"
-          name="replicas"
-          description="Defaults to 1"
-        >
-          <UInputNumber
-            id="replicas"
-            v-model="state.replicas"
-            :min="1"
-            :max="100"
-            placeholder="1"
-            class="w-full"
-          />
-        </UFormField>
+          <UFormField
+            label="Image"
+            name="image"
+            description="Fully-qualified container image reference"
+            required
+          >
+            <UInput
+              id="image"
+              v-model="state.image"
+              placeholder="nginx:1.27"
+              class="w-full"
+            />
+          </UFormField>
 
-        <UFormField
-          label="Environment variables"
-          description="Plain (non-secret) variables passed to the container"
-        >
-          <div class="space-y-2">
-            <div
-              v-for="(row, index) in envRows"
-              :key="row.id"
-              class="flex items-center gap-2"
-            >
-              <UInput
-                v-model="row.key"
-                placeholder="KEY"
-                class="flex-1"
-                :aria-label="`env key ${index + 1}`"
-              />
-              <UInput
-                v-model="row.value"
-                placeholder="value"
-                class="flex-1"
-                :aria-label="`env value ${index + 1}`"
-              />
+          <UFormField
+            label="Container port"
+            name="containerPort"
+            required
+          >
+            <UInputNumber
+              id="containerPort"
+              v-model="state.containerPort"
+              :min="1"
+              :max="65535"
+              placeholder="80"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField
+            label="Replicas"
+            name="replicas"
+            description="Defaults to 1"
+          >
+            <UInputNumber
+              id="replicas"
+              v-model="state.replicas"
+              :min="1"
+              :max="100"
+              placeholder="1"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField
+            label="Environment variables"
+            description="Plain (non-secret) variables passed to the container"
+          >
+            <div class="space-y-2">
+              <div
+                v-for="(row, index) in envRows"
+                :key="row.id"
+                class="flex items-center gap-2"
+              >
+                <UInput
+                  v-model="row.key"
+                  placeholder="KEY"
+                  class="flex-1"
+                  :aria-label="`env key ${index + 1}`"
+                />
+                <UInput
+                  v-model="row.value"
+                  placeholder="value"
+                  class="flex-1"
+                  :aria-label="`env value ${index + 1}`"
+                />
+                <UButton
+                  icon="i-lucide-x"
+                  variant="ghost"
+                  color="neutral"
+                  aria-label="Remove environment variable"
+                  @click="removeEnvRow(index)"
+                />
+              </div>
               <UButton
-                icon="i-lucide-x"
+                icon="i-lucide-plus"
                 variant="ghost"
-                color="neutral"
-                aria-label="Remove environment variable"
-                @click="removeEnvRow(index)"
+                size="sm"
+                label="Add variable"
+                @click="addEnvRow"
               />
             </div>
-            <UButton
-              icon="i-lucide-plus"
-              variant="ghost"
-              size="sm"
-              label="Add variable"
-              @click="addEnvRow"
-            />
-          </div>
-        </UFormField>
+          </UFormField>
 
-        <UButton
-          type="submit"
-          :loading="submitting"
-          label="Deploy"
-        />
-      </UForm>
-    </div>
+          <UButton
+            type="submit"
+            :loading="submitting"
+            label="Deploy"
+          />
+        </UForm>
+      </div>
+    </template>
   </UDashboardPanel>
 </template>

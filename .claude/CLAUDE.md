@@ -19,7 +19,7 @@ When proposing options (tooling, structure, naming, libraries, patterns), the **
 pnpm monorepo (`pnpm-workspace.yaml`, packages under `apps/*` and `packages/*`). Node >= 22, pnpm 9.15.0.
 
 - `apps/api` — NestJS 11 backend on Fastify. **See `apps/api/CLAUDE.md`** for backend-specific architecture, build pipeline, test harness, and import conventions.
-- `apps/web` — Nuxt 4 + Nuxt UI + Tailwind 4 frontend, SPA-only (`ssr: false`). **See `apps/web/.claude/CLAUDE.md`** for frontend-specific testing setup and conventions.
+- `apps/web` — Nuxt 4 + Nuxt UI + Tailwind 4 frontend, SPA-only (`ssr: false`). **See `apps/web/.claude/CLAUDE.md`** for frontend-specific testing setup and conventions, incl. Nuxt UI dashboard gotchas (panel/sidebar slots) and MCP-driven visual/browser testing.
 - `packages/` — currently empty; reserved for shared libs.
 
 Dependency versions live in a **pnpm catalog** (root `pnpm-workspace.yaml`). Workspace packages reference them as `"foo": "catalog:"` — bump versions in the catalog, not in package.json files.
