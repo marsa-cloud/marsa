@@ -17,6 +17,11 @@ const { data: user } = useCurrentUser()
           icon="i-lucide-layout-dashboard"
           to="/"
         />
+        <UDashboardSidebarItem
+          label="Apps"
+          icon="i-lucide-box"
+          to="/apps"
+        />
       </UDashboardSidebarCollapse>
 
       <template #footer>

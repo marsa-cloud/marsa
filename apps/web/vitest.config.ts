@@ -4,6 +4,11 @@ export default defineVitestConfig({
   test: {
     globals: true,
     environment: 'node',
+    // Each *.nuxt.spec.ts boots a Nuxt environment in a beforeAll hook; the
+    // 10s default is too tight when several boot in parallel on a loaded
+    // machine (intermittent "Hook timed out in 10000ms" in setupNuxt). The
+    // Nuxt setup is legitimately slow, not hung — give it headroom.
+    hookTimeout: 30_000,
     include: ['app/**/__tests__/**/*.spec.ts'],
     exclude: ['tests/e2e/**', 'node_modules', '.nuxt', '.output'],
     environmentOptions: {
