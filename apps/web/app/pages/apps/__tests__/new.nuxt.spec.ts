@@ -78,6 +78,30 @@ describe('apps/new deploy form', () => {
     })
   })
 
+  it('includes replicas in the command when set', async () => {
+    deploy.mockResolvedValueOnce({
+      appSlug: 'my-app',
+      url: 'https://my-app.marsa.cc',
+      releaseUuid: 'r1',
+      deployStatus: 'pending',
+    })
+
+    const wrapper = await mountSuspended(New)
+    await fillValidForm(wrapper)
+    const replicas = wrapper.find('input#replicas')
+    await replicas.setValue('3')
+    await replicas.trigger('blur')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flush()
+
+    expect(deploy).toHaveBeenCalledWith({
+      slug: 'my-app',
+      image: 'nginx:1.27',
+      containerPort: 80,
+      replicas: 3,
+    })
+  })
+
   it('surfaces a useful message when the API rejects with a 400', async () => {
     deploy.mockRejectedValueOnce({
       data: { statusCode: 400, message: 'slug must be a valid DNS-1123 label', error: 'Bad Request' },

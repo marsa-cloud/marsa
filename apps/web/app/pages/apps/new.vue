@@ -13,7 +13,8 @@ useSeoMeta({ title: 'Deploy an app — Marsa' })
 const { deploy } = useDeployApp()
 
 // Mirror the API contract (zDeployAppCommandWritable) so invalid input is caught
-// inline before we ever hit the network. Env rows are validated separately below.
+// inline before we ever hit the network. Env rows aren't schema-validated — they
+// are collapsed into the `env` record by buildEnvRecord (blank keys dropped).
 const schema = z.object({
   slug: z
     .string()
@@ -47,10 +48,17 @@ const state = reactive<{
   replicas: undefined,
 })
 
-const envRows = ref<{ key: string, value: string }[]>([{ key: '', value: '' }])
+// Stable per-row id so :key survives removals — index keys would shift and
+// let v-model bind to the wrong row after a middle row is deleted.
+let nextEnvId = 0
+function makeEnvRow() {
+  return { id: nextEnvId++, key: '', value: '' }
+}
+
+const envRows = ref<{ id: number, key: string, value: string }[]>([makeEnvRow()])
 
 function addEnvRow() {
-  envRows.value.push({ key: '', value: '' })
+  envRows.value.push(makeEnvRow())
 }
 
 function removeEnvRow(index: number) {
@@ -204,7 +212,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           <div class="space-y-2">
             <div
               v-for="(row, index) in envRows"
-              :key="index"
+              :key="row.id"
               class="flex items-center gap-2"
             >
               <UInput
