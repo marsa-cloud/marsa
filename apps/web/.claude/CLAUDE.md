@@ -65,6 +65,29 @@ apps/web/
     e2e/                        # @nuxt/test-utils setup() + Playwright
 ```
 
+## Architecture & structure
+
+**Verdict: idiomatic Nuxt 4 — no restructuring needed.** `app/` is the srcDir (the Nuxt 4 default), and every convention directory sits where Nuxt expects it: `components/`, `composables/`, `pages/` (file-based routing), `layouts/`, `middleware/` (`auth.global.ts`), `plugins/`, `assets/`, plus `app.vue`, `error.vue`, `app.config.ts`. Tests colocate in `__tests__/` with the `*.nuxt.spec.ts` naming v4 requires. The only departures from a vanilla scaffold are deliberate and documented: SPA-only (`ssr: false`, so no `server/` dir / BFF) and the committed generated client under `app/api/` (a plain module dir imported via `~/api`, not convention-scanned).
+
+### Shared state — `useState`, then Pinia
+
+Nuxt's idiomatic shared-state primitive is **`useState()` wrapped in a composable** (hydration-safe reactive state keyed by string — the "store without a library"). Server data is already shared and cached by `useAsyncData` keys, so most state needs are covered by the API composables above. Reach for **Pinia** only when a store outgrows `useState` (complex mutations, cross-store composition, devtools). Note: the Nuxt **hooks** system (`useNuxtApp().hook()` / `callHook()`) is for *event signaling / lifecycle*, **not** state — don't use it as a data store.
+
+### Naming conventions (Nuxt-native)
+
+| Kind | Convention | Note |
+|---|---|---|
+| Components | PascalCase `.vue` (`AppLogo.vue`) | auto-imported by path; nested dirs prefix the name (`components/app/Logo.vue` → `<AppLogo />`) |
+| Composables | flat `useXxx.ts` in `app/composables/` | **only top-level files are auto-scanned** — nested files need re-export via an `index.ts` |
+| Pages | route-named by filename (`pages/apps/[slug].vue` → `/apps/:slug`) | the filename **is** the URL segment |
+| Plain TS modules | any suffix — e.g. `*.model.ts` / `*.transformer.ts` if a boundary type emerges | not convention-scanned, so naming is a free team choice |
+
+**Do not** introduce plain-Vue-isms that fight Nuxt's auto-import: `*View.vue` screens (pages are route-named, not PascalCase component files), a `.composable.ts` suffix or per-feature nested composables (breaks the top-level scan), or TanStack-style `.query.ts` / `.mutation.ts` files (we use `useAsyncData`, not TanStack Query).
+
+### Scaling to multiple domains — Nuxt Layers, not `modules/`
+
+Today the frontend is one domain ("apps"), so the flat `components/` / `composables/` / `pages/` layout is correct — don't pre-abstract. When a **second real domain** appears (billing, teams, …), group it as a **Nuxt Layer**: `layers/<domain>/` with its own `nuxt.config.ts` + `app/` (its own scanned `components/`, `composables/`, `pages/`), auto-registered or listed in `extends`. Do **not** reach for a `src/modules/<feature>/` folder — Nuxt only auto-scans the *top-level* `app/composables/`, so composables nested under a `modules/` dir silently fail to import. Layers give per-feature isolation while keeping auto-imports working. Adopt the heavier per-domain structure **lazily**: add an explicit model/transformer boundary only when an entity's API shape and UI shape genuinely diverge (until then the generated Zod parsed at the `useAsyncData` `transform` hook is enough). Trigger + path tracked in **marsa#136**.
+
 ## Backend coupling
 
 Every backend call goes to `apps/api` (NestJS on Fastify, prefix `/api`, URI versioning). Base URL is `runtimeConfig.public.apiBase` (default `http://localhost:3000/api`, override at runtime with `NUXT_PUBLIC_API_BASE`) — it **includes** the `/api` prefix, so call sites use version-relative paths like `/v1/status`. Never put backend logic in a Nuxt server route (SPA, no BFF).
