@@ -20,12 +20,12 @@ ticket: marsa-cloud/marsa#101
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
+| Option                                                     | Pros                                                                                                                                                                      | Cons                                                                                                      |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | **Scheduled `gh api` script, keep latest+semver** (chosen) | No third-party action / supply-chain surface; full control over keep-logic; `GITHUB_TOKEN` needs no extra secret; readable and testable via a `workflow_dispatch` dry-run | We own the tag-matching + safety logic; a future multi-arch move would need manifest-child handling added |
-| `dataaxiom/ghcr-cleanup-action` | Purpose-built; handles multi-arch manifests; age + keep-tags filters out of the box | Adds a third-party action requiring a token with delete rights; less transparent than a few lines of `gh` |
-| `snok/container-retention-policy` | Fast; `--cut-off` age + tag selection | Same third-party-dependency trade-off; more config for tag filtering |
-| Native GHCR retention policy | Zero code | Does not exist for container packages |
+| `dataaxiom/ghcr-cleanup-action`                            | Purpose-built; handles multi-arch manifests; age + keep-tags filters out of the box                                                                                       | Adds a third-party action requiring a token with delete rights; less transparent than a few lines of `gh` |
+| `snok/container-retention-policy`                          | Fast; `--cut-off` age + tag selection                                                                                                                                     | Same third-party-dependency trade-off; more config for tag filtering                                      |
+| Native GHCR retention policy                               | Zero code                                                                                                                                                                 | Does not exist for container packages                                                                     |
 
 ## Decision
 
