@@ -13,8 +13,11 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: 'Image tag to deploy (e.g. sha-abc1234)'
-        required: true
+        description: 'Image tag to deploy (e.g. sha-abc1234). Ignored when chart_version is set.'
+        required: false
+      chart_version:
+        description: 'Chart version to bump to (e.g. 0.0.1-alpha.3). Rolls the chart, keeping the running image. Leave empty for an image-only deploy.'
+        required: false
 
 # Serialise deploys so two rolls never race; never cancel an in-flight deploy.
 concurrency:
@@ -36,21 +39,32 @@ jobs:
        github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     steps:
-      - name: Resolve image tag
-        id: tag
+      - name: Resolve deploy argument
+        id: resolve
         env:
           EVENT: ${{ github.event_name }}
           DISPATCH_TAG: ${{ inputs.image_tag }}
+          DISPATCH_CHART: ${{ inputs.chart_version }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
+          # The resolved arg is what we SSH to the VPS; cd-deploy.sh dispatches on
+          # its prefix: `chart:<semver>` bumps the chart, `sha-<hex>` rolls the image.
           if [ "$EVENT" = "workflow_dispatch" ]; then
-            tag="$DISPATCH_TAG"
+            if [ -n "$DISPATCH_CHART" ]; then
+              # chart bump takes precedence when both inputs are supplied
+              arg="chart:$DISPATCH_CHART"
+            elif [ -n "$DISPATCH_TAG" ]; then
+              arg="$DISPATCH_TAG"
+            else
+              echo "::error::provide either image_tag or chart_version"
+              exit 1
+            fi
           else
             # docker/metadata-action's `type=sha,format=short` is the 7-char short SHA.
-            tag="sha-$(printf '%s' "$HEAD_SHA" | cut -c1-7)"
+            arg="sha-$(printf '%s' "$HEAD_SHA" | cut -c1-7)"
           fi
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "Deploying tag: $tag"
+          echo "arg=$arg" >> "$GITHUB_OUTPUT"
+          echo "Deploy argument: $arg"
 
       - name: Roll cluster over SSH
         env:
@@ -58,15 +72,15 @@ jobs:
           KNOWN_HOSTS: ${{ secrets.CD_SSH_KNOWN_HOSTS }}
           SSH_USER: ${{ secrets.CD_SSH_USER }}
           VPS_HOST: ${{ secrets.CD_VPS_HOST }}
-          TAG: ${{ steps.tag.outputs.tag }}
+          ARG: ${{ steps.resolve.outputs.arg }}
         run: |
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-          # The remote command is just the tag; the VPS's forced-command key
+          # The remote command is just the argument; the VPS's forced-command key
           # ignores it and passes it to cd-deploy.sh as $SSH_ORIGINAL_COMMAND,
-          # which validates it is a sha- tag before rolling. Host key is pinned
-          # via known_hosts (no StrictHostKeyChecking=no).
+          # which validates it is a `sha-<hex>` or `chart:<semver>` before acting.
+          # Host key is pinned via known_hosts (no StrictHostKeyChecking=no).
           ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes \
-            "$SSH_USER@$VPS_HOST" "$TAG"
+            "$SSH_USER@$VPS_HOST" "$ARG"
