@@ -1,0 +1,109 @@
+name: GHCR cleanup
+
+# Prunes accumulated per-commit container images from GHCR.
+#
+# Marsa's cd.yml publishes `sha-<commit>` + `latest` on every push to main and
+# semver tags (`1.2.3`, `1.2`) on `v*` tags. The `sha-*` images accumulate
+# forever. This workflow deletes any version older than RETENTION_DAYS UNLESS it
+# still carries a `latest` or semver tag — i.e. we keep the versioned ones and
+# whatever `latest` currently points at, and reap the stale per-commit builds.
+#
+# GHCR has no native age-based retention policy (only manual deletion or the
+# REST/GraphQL delete API), so a scheduled workflow calling the REST API is the
+# GitHub-native way to automate this. See docs/agdr/AgDR-0037.
+
+on:
+  schedule:
+    # Weekly, Sundays 03:00 UTC. Matches the issue's "every few days/week".
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'List what would be deleted without deleting it'
+        type: boolean
+        default: false
+
+concurrency:
+  group: ghcr-cleanup
+  cancel-in-progress: false
+
+# GITHUB_TOKEN with packages:write can delete versions of packages linked to
+# this repo. If org-owned package permissions block it (403 on DELETE), swap in
+# a PAT with delete:packages via a repo secret — see the AgDR for the fallback.
+permissions:
+  packages: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    strategy:
+      # Independent per package; one 403 shouldn't hide the other's result.
+      fail-fast: false
+      matrix:
+        package: [marsa-api, marsa-web]
+    steps:
+      - name: Prune stale GHCR versions (keep latest + semver)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ORG: marsa-cloud
+          PACKAGE: ${{ matrix.package }}
+          RETENTION_DAYS: '14'
+          # dry-run only when manually dispatched with the box ticked; scheduled
+          # runs are always armed.
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+
+          cutoff=$(date -u -d "${RETENTION_DAYS} days ago" +%s)
+          echo "Package : ghcr.io/${ORG}/${PACKAGE}"
+          echo "Cutoff  : $(date -u -d "@${cutoff}" --iso-8601=seconds) (older-than = ${RETENTION_DAYS}d)"
+          echo "Dry-run : ${DRY_RUN}"
+
+          # All versions across pages. gh --paginate merges array pages into one
+          # array. Each element: { id, created_at, metadata.container.tags[] }.
+          versions_json=$(gh api --paginate \
+            -H "Accept: application/vnd.github+json" \
+            "/orgs/${ORG}/packages/container/${PACKAGE}/versions")
+
+          # Deletion candidates: created before the cutoff AND holding no tag that
+          # is `latest` or semver-like (^v?N.N[.N]$). This keeps every released
+          # image and the current `latest` regardless of age, and reaps stale
+          # `sha-*`-only and untagged versions. Emits "id<TAB>created<TAB>tags".
+          mapfile -t candidates < <(printf '%s' "$versions_json" | jq -r --argjson cutoff "$cutoff" '
+            .[]
+            | select((.created_at | fromdateiso8601) < $cutoff)
+            | . as $v
+            | (($v.metadata.container.tags) // []) as $tags
+            | select(($tags | map(test("^(latest|v?[0-9]+(\\.[0-9]+){1,2})$")) | any) | not)
+            | "\($v.id)\t\($v.created_at)\t\(if ($tags | length) == 0 then "<untagged>" else ($tags | join(",")) end)"
+          ')
+
+          if [ "${#candidates[@]}" -eq 0 ]; then
+            echo "Nothing to prune."
+            exit 0
+          fi
+
+          echo "Pruning ${#candidates[@]} version(s):"
+          printf '  id=%s\n' "${candidates[@]}"
+
+          failures=0
+          for row in "${candidates[@]}"; do
+            id="${row%%$'\t'*}"
+            if [ "${DRY_RUN}" = "true" ]; then
+              echo "[dry-run] would delete version id=${id}"
+              continue
+            fi
+            echo "Deleting version id=${id} ..."
+            if ! gh api -X DELETE \
+              -H "Accept: application/vnd.github+json" \
+              "/orgs/${ORG}/packages/container/${PACKAGE}/versions/${id}"; then
+              echo "::error::Failed to delete version id=${id} for ${PACKAGE}. If this is a 403, GITHUB_TOKEN lacks delete rights on this org-owned package — provide a PAT with delete:packages (see AgDR-0037)."
+              failures=$((failures + 1))
+            fi
+          done
+
+          if [ "${failures}" -gt 0 ]; then
+            echo "::error::${failures} deletion(s) failed for ${PACKAGE}."
+            exit 1
+          fi
+          echo "Done."
