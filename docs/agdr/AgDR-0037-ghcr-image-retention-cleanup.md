@@ -14,7 +14,9 @@ ticket: marsa-cloud/marsa#101
 
 ## Context
 
-`cd.yml` tags every `main` build `sha-<short>` + `latest`, and `v*` tags get semver (`1.2.3`, `1.2`). The `sha-*` images accumulate indefinitely; issue #101 asks to "delete everything older than 14 days, keep versioned ones." GHCR (unlike some registries) exposes **no native age-based retention policy** — GitHub only offers manual per-version deletion in the UI or programmatic deletion via the REST (`DELETE .../packages/container/<name>/versions/<id>`) and GraphQL (`deletePackageVersion`) APIs. Images are single-arch (arm64 is out of scope per AgDR-0027), so there are no multi-arch manifest-list children whose deletion could break a tagged image.
+`cd.yml` tags every `main` build `sha-<short>` + `latest`, and `v*` tags get semver (`1.2.3`, `1.2`). The `sha-*` images accumulate indefinitely; issue #101 asks to "delete everything older than 14 days, keep versioned ones." GHCR (unlike some registries) exposes **no native age-based retention policy** — GitHub only offers manual per-version deletion in the UI or programmatic deletion via the REST (`DELETE .../packages/container/<name>/versions/<id>`) and GraphQL (`deletePackageVersion`) APIs.
+
+**Untagged manifest children exist even though images are single-arch.** `cd.yml` builds with `docker/build-push-action` on the buildx docker-container driver without `provenance: false`, so buildx attaches **provenance/SBOM attestation manifests as untagged children** of the tagged image index — independent of `linux/arm64` being out of scope (AgDR-0027). Blindly deleting untagged versions could orphan the attestation of a kept `latest`/semver image and break `docker pull` / cosign verification. The cleanup therefore only deletes **tagged** non-release versions and leaves untagged versions in place. (Found in the code review of PR #147 — the original design wrongly assumed single-arch ⇒ no manifest children.)
 
 ## Options Considered
 
@@ -32,7 +34,7 @@ Chosen: **a hand-rolled scheduled workflow calling the GHCR REST API.**
 - **File:** `.github/workflows/ghcr-cleanup.yml`.
 - **Schedule:** weekly cron `0 3 * * 0` (Sundays 03:00 UTC); armed on every scheduled run.
 - **Packages:** matrix over `marsa-api`, `marsa-web` (`fail-fast: false`).
-- **Keep rule:** a version is deleted only if `created_at` is older than **14 days** AND it carries no tag matching `^(latest|v?[0-9]+(\.[0-9]+){1,2})$`. Semver-tagged images and the current `latest` are kept regardless of age; stale `sha-*`-only and untagged versions are reaped.
+- **Keep rule:** a version is deleted only if `created_at` is older than **14 days** AND it has ≥1 tag AND it carries no tag matching `^(latest|v?[0-9]+(\.[0-9]+){1,2}([-+][0-9A-Za-z.-]+)?)$`. The SemVer pattern includes the pre-release/build suffix so released RC/beta tags (`1.2.3-rc.1`) are kept, not just clean releases. Semver-tagged images and the current `latest` are kept regardless of age; stale tagged non-release versions (chiefly `sha-*`) are reaped. **Untagged versions are never deleted** (attestation-child safety — see Context).
 - **Auth:** `GITHUB_TOKEN` with `permissions: packages: write`.
 - **Safety:** a `workflow_dispatch` `dry_run` input logs candidates without deleting; a failed DELETE surfaces a `::error::` hinting at the PAT fallback and fails the job.
 
@@ -41,7 +43,7 @@ Chosen: **a hand-rolled scheduled workflow calling the GHCR REST API.**
 - Stale per-commit images are pruned weekly with no manual intervention; released (semver) images and `latest` are never touched.
 - If `GITHUB_TOKEN` cannot delete these **org-owned** packages (403 on DELETE), the fallback is a classic/fine-grained **PAT with `delete:packages`** stored as a repo secret (e.g. `GHCR_CLEANUP_TOKEN`), swapped into the `GH_TOKEN` env. The first manual dry-run (or first scheduled run) will reveal whether this is needed.
 - The keep-regex is coupled to the tag shapes `cd.yml` produces (`docker/metadata-action`); if the tag scheme changes, this regex must change with it.
-- A future move to multi-arch (`linux/arm64`) would introduce untagged manifest children — the delete-untagged behaviour would then need manifest-list awareness (or a switch to `dataaxiom/ghcr-cleanup-action`).
+- **Untagged versions accumulate.** Because untagged versions are never deleted (to protect attestation children of kept images), orphaned attestation/cache manifests are left behind. They are far smaller than image layers, so this is an accepted trade-off. To reclaim them safely, a follow-up could set `provenance: false` / `sbom: false` in `cd.yml` (removing untagged children entirely) and then re-enable untagged deletion, or switch to a manifest-graph-aware tool (`dataaxiom/ghcr-cleanup-action`). Deferred — not in scope for #101.
 
 ## Artifacts
 

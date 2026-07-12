@@ -65,23 +65,39 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "/orgs/${ORG}/packages/container/${PACKAGE}/versions")
 
-          # Deletion candidates: created before the cutoff AND holding no tag that
-          # is `latest` or semver-like (^v?N.N[.N]$). This keeps every released
-          # image and the current `latest` regardless of age, and reaps stale
-          # `sha-*`-only and untagged versions. Emits "id<TAB>created<TAB>tags".
-          mapfile -t candidates < <(printf '%s' "$versions_json" | jq -r --argjson cutoff "$cutoff" '
+          # Deletion candidates: created before the cutoff, HAVING at least one tag,
+          # and holding no tag that is `latest` or SemVer (incl. pre-release/build
+          # suffix, e.g. 1.2.3-rc.1). This keeps every released image and the
+          # current `latest` regardless of age, and reaps stale `sha-*`-only (and
+          # other non-release-tagged) versions. Emits "id<TAB>created<TAB>tags".
+          #
+          # Untagged versions are deliberately NOT deleted: buildx (via
+          # build-push-action, no `provenance: false` in cd.yml) attaches
+          # provenance/SBOM attestation manifests as *untagged children* of the
+          # tagged index — even single-arch. Deleting an untagged version could
+          # orphan the attestation of a kept `latest`/semver image and break
+          # `docker pull` / cosign verification. Reaping untagged safely would
+          # need manifest-graph awareness (or `provenance: false` in cd.yml) —
+          # see AgDR-0037-ghcr-image-retention-cleanup.
+          jq_prog='
             .[]
             | select((.created_at | fromdateiso8601) < $cutoff)
             | . as $v
             | (($v.metadata.container.tags) // []) as $tags
-            | select(($tags | map(test("^(latest|v?[0-9]+(\\.[0-9]+){1,2})$")) | any) | not)
-            | "\($v.id)\t\($v.created_at)\t\(if ($tags | length) == 0 then "<untagged>" else ($tags | join(",")) end)"
-          ')
+            | select(($tags | length) > 0)
+            | select(($tags | map(test("^(latest|v?[0-9]+(\\.[0-9]+){1,2}([-+][0-9A-Za-z.-]+)?)$")) | any) | not)
+            | "\($v.id)\t\($v.created_at)\t\($tags | join(","))"
+          '
+          # Capture into a variable first so a jq failure propagates under
+          # `set -e`/`pipefail` instead of being masked by process substitution
+          # (which would silently degrade to "Nothing to prune").
+          candidates_raw=$(printf '%s' "$versions_json" | jq -r --argjson cutoff "$cutoff" "$jq_prog")
 
-          if [ "${#candidates[@]}" -eq 0 ]; then
+          if [ -z "$candidates_raw" ]; then
             echo "Nothing to prune."
             exit 0
           fi
+          mapfile -t candidates <<< "$candidates_raw"
 
           echo "Pruning ${#candidates[@]} version(s):"
           printf '  id=%s\n' "${candidates[@]}"
