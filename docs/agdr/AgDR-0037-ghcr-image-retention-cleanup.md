@@ -4,9 +4,12 @@ timestamp: 2026-07-12T00:00:00Z
 agent: claude
 model: claude-opus-4-8
 trigger: user-prompt
-status: accepted
+status: superseded
+superseded_by: AgDR-0038
 ticket: marsa-cloud/marsa#101
 ---
+
+> **Superseded by [AgDR-0038](AgDR-0038-ghcr-cleanup-action-supersedes-0037.md)** (#150) — the hand-rolled script's "never delete untagged" rule leaks orphaned attestations; replaced by the manifest-graph-aware `dataaxiom/ghcr-cleanup-action`. This record is kept intact for history.
 
 # GHCR image retention: scheduled `gh api` cleanup, keep latest + semver
 
