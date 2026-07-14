@@ -2,19 +2,26 @@ name: GHCR cleanup
 
 # Prunes accumulated per-commit container images from GHCR.
 #
-# Marsa's cd.yml publishes `sha-<commit>` + `latest` on every push to main and
-# semver tags (`1.2.3`, `1.2`) on `v*` tags. The `sha-*` images accumulate
-# forever. This workflow deletes any version older than RETENTION_DAYS UNLESS it
-# still carries a `latest` or semver tag — i.e. we keep the versioned ones and
-# whatever `latest` currently points at, and reap the stale per-commit builds.
+# cd.yml publishes `sha-<commit>` + `latest` on every push to main, and v-less
+# semver tags (`1.2.3`, `1.2`) on `v*` tags. buildx (build-push-action, no
+# `provenance: false` in cd.yml) also attaches a provenance attestation as an
+# *untagged child manifest* of each tagged image index. The `sha-*` images and
+# their attestation children accumulate forever.
 #
-# GHCR has no native age-based retention policy (only manual deletion or the
-# REST/GraphQL delete API), so a scheduled workflow calling the REST API is the
-# GitHub-native way to automate this. See docs/agdr/AgDR-0037.
+# This workflow uses dataaxiom/ghcr-cleanup-action, which is manifest-graph
+# aware: it deletes an image's attestation/multi-arch children together with the
+# image, reaps orphaned (`sha256-…`) attestation artifacts left by previously
+# deleted images, and preserves the children of images it keeps. That fixes the
+# orphan-accumulation leak of the previous hand-rolled `gh api` script.
+#
+# Keep rule: `latest` + numeric semver tags are excluded from every rule; the 10
+# most-recent `sha-*` images are kept as a rollback window; anything else older
+# than 14 days is eligible for deletion. See docs/agdr/AgDR-0038 (supersedes
+# AgDR-0037).
 
 on:
   schedule:
-    # Weekly, Sundays 03:00 UTC. Matches the issue's "every few days/week".
+    # Weekly, Sundays 03:00 UTC.
     - cron: '0 3 * * 0'
   workflow_dispatch:
     inputs:
@@ -28,8 +35,8 @@ concurrency:
   cancel-in-progress: false
 
 # GITHUB_TOKEN with packages:write can delete versions of packages linked to
-# this repo. If org-owned package permissions block it (403 on DELETE), swap in
-# a PAT with delete:packages via a repo secret — see the AgDR for the fallback.
+# this repo. If org-owned package permissions block it (403), swap in a PAT with
+# delete:packages via a repo secret — see the AgDR for the fallback.
 permissions:
   packages: write
 
@@ -42,84 +49,31 @@ jobs:
       matrix:
         package: [marsa-api, marsa-web]
     steps:
-      - name: Prune stale GHCR versions (keep latest + semver)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ORG: marsa-cloud
-          PACKAGE: ${{ matrix.package }}
-          RETENTION_DAYS: '14'
+      - name: Prune stale GHCR versions (keep latest + semver + N recent sha-*)
+        # Pinned by commit SHA (v1.2.2). Bumping the pin is a deliberate,
+        # reviewable change — verify the SHA against the release tag on any bump.
+        uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1.2.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          owner: marsa-cloud
+          package: ${{ matrix.package }}
+          # Protect `latest` and v-less numeric semver tags (`1.2`, `1.2.3`,
+          # incl. pre-release suffixes) from every rule. cd.yml emits v-less
+          # semver, so a `v*` glob would miss them — hence the numeric regex.
+          use-regex: true
+          exclude-tags: '^latest$,^\d+\.\d+.*$'
+          # Keep the 10 most-recent sha-* images (rollback window); their
+          # attestation children are preserved with them.
+          keep-n-tagged: 10
+          # Only reap things older than 14 days (preserves AgDR-0037's intent).
+          older-than: '14 days'
+          # Reap untagged versions AND orphaned sha256-… attestation artifacts
+          # left behind by previously deleted images.
+          delete-untagged: true
+          delete-orphaned-images: true
+          # Assert kept multi-arch images still have their children after the
+          # run — guards against orphaning a live attestation.
+          validate: true
           # dry-run only when manually dispatched with the box ticked; scheduled
           # runs are always armed.
-          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
-        run: |
-          set -euo pipefail
-
-          cutoff=$(date -u -d "${RETENTION_DAYS} days ago" +%s)
-          echo "Package : ghcr.io/${ORG}/${PACKAGE}"
-          echo "Cutoff  : $(date -u -d "@${cutoff}" --iso-8601=seconds) (older-than = ${RETENTION_DAYS}d)"
-          echo "Dry-run : ${DRY_RUN}"
-
-          # All versions across pages. gh --paginate merges array pages into one
-          # array. Each element: { id, created_at, metadata.container.tags[] }.
-          versions_json=$(gh api --paginate \
-            -H "Accept: application/vnd.github+json" \
-            "/orgs/${ORG}/packages/container/${PACKAGE}/versions")
-
-          # Deletion candidates: created before the cutoff, HAVING at least one tag,
-          # and holding no tag that is `latest` or SemVer (incl. pre-release/build
-          # suffix, e.g. 1.2.3-rc.1). This keeps every released image and the
-          # current `latest` regardless of age, and reaps stale `sha-*`-only (and
-          # other non-release-tagged) versions. Emits "id<TAB>created<TAB>tags".
-          #
-          # Untagged versions are deliberately NOT deleted: buildx (via
-          # build-push-action, no `provenance: false` in cd.yml) attaches
-          # provenance/SBOM attestation manifests as *untagged children* of the
-          # tagged index — even single-arch. Deleting an untagged version could
-          # orphan the attestation of a kept `latest`/semver image and break
-          # `docker pull` / cosign verification. Reaping untagged safely would
-          # need manifest-graph awareness (or `provenance: false` in cd.yml) —
-          # see AgDR-0037-ghcr-image-retention-cleanup.
-          jq_prog='
-            .[]
-            | select((.created_at | fromdateiso8601) < $cutoff)
-            | . as $v
-            | (($v.metadata.container.tags) // []) as $tags
-            | select(($tags | length) > 0)
-            | select(($tags | map(test("^(latest|v?[0-9]+(\\.[0-9]+){1,2}([-+][0-9A-Za-z.-]+)?)$")) | any) | not)
-            | "\($v.id)\t\($v.created_at)\t\($tags | join(","))"
-          '
-          # Capture into a variable first so a jq failure propagates under
-          # `set -e`/`pipefail` instead of being masked by process substitution
-          # (which would silently degrade to "Nothing to prune").
-          candidates_raw=$(printf '%s' "$versions_json" | jq -r --argjson cutoff "$cutoff" "$jq_prog")
-
-          if [ -z "$candidates_raw" ]; then
-            echo "Nothing to prune."
-            exit 0
-          fi
-          mapfile -t candidates <<< "$candidates_raw"
-
-          echo "Pruning ${#candidates[@]} version(s):"
-          printf '  id=%s\n' "${candidates[@]}"
-
-          failures=0
-          for row in "${candidates[@]}"; do
-            id="${row%%$'\t'*}"
-            if [ "${DRY_RUN}" = "true" ]; then
-              echo "[dry-run] would delete version id=${id}"
-              continue
-            fi
-            echo "Deleting version id=${id} ..."
-            if ! gh api -X DELETE \
-              -H "Accept: application/vnd.github+json" \
-              "/orgs/${ORG}/packages/container/${PACKAGE}/versions/${id}"; then
-              echo "::error::Failed to delete version id=${id} for ${PACKAGE}. If this is a 403, GITHUB_TOKEN lacks delete rights on this org-owned package — provide a PAT with delete:packages (see AgDR-0037)."
-              failures=$((failures + 1))
-            fi
-          done
-
-          if [ "${failures}" -gt 0 ]; then
-            echo "::error::${failures} deletion(s) failed for ${PACKAGE}."
-            exit 1
-          fi
-          echo "Done."
+          dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
