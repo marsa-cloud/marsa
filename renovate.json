@@ -6,13 +6,22 @@
   "packageRules": [
     { "matchPackageNames": ["*"], "minimumReleaseAge": "7 days" },
     { "matchUpdateTypes": ["major"], "automerge": false },
-    { "groupName": "NestJS", "matchPackagePatterns": ["^@nestjs/"] },
-    { "groupName": "Nuxt", "matchPackagePatterns": ["^nuxt$", "^@nuxt/"] },
-    { "groupName": "MikroORM", "matchPackagePatterns": ["^@mikro-orm/"] },
+    { "groupName": "NestJS", "matchPackagePatterns": ["^@nestjs/"], "minimumReleaseAge": "7 days" },
+    {
+      "groupName": "Nuxt",
+      "matchPackagePatterns": ["^nuxt$", "^@nuxt/"],
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "groupName": "MikroORM",
+      "matchPackagePatterns": ["^@mikro-orm/"],
+      "minimumReleaseAge": "7 days"
+    },
     {
       "groupName": "Node.js runtime",
       "matchPackageNames": ["node"],
-      "matchManagers": ["dockerfile", "nvm"]
+      "matchManagers": ["dockerfile", "nvm"],
+      "minimumReleaseAge": "7 days"
     }
   ]
 }
