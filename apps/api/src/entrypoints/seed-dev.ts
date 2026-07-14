@@ -75,7 +75,11 @@ async function rawDogFe(): Promise<void> {
       if (await em.findOne(App, { slug })) {
         continue
       }
-      const app = new AppBuilder().withSlug(slug).withImage('nginx:1.27').withContainerPort(80).build()
+      const app = new AppBuilder()
+        .withSlug(slug)
+        .withImage('nginx:1.27')
+        .withContainerPort(80)
+        .build()
       em.persist(app)
       em.persist(
         new ReleaseBuilder()
@@ -96,7 +100,9 @@ async function rawDogFe(): Promise<void> {
     )
 
     console.log(`\nSeeded @${user.githubLogin} + ${SAMPLE_APP_SLUGS.length} sample apps.`)
-    console.log('Set this cookie for the web origin (DevTools → Application → Cookies), then reload:\n')
+    console.log(
+      'Set this cookie for the web origin (DevTools → Application → Cookies), then reload:\n',
+    )
     console.log(`  ${cookie}\n`)
   } finally {
     await context.close()
