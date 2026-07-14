@@ -8,7 +8,7 @@ Marsa is an open-source, self-hostable PaaS (Heroku/Railway-style) that deploys 
 
 ## Project management
 
-GitHub issues, milestones, labels, and project workflow follow the conventions in **`.claude/project-management.md`**. Read it before creating or grooming issues — it defines the Milestone → Feature → Task hierarchy (via sub-issues), the label taxonomy, status entry criteria, and the issue template.
+GitHub issues, PRs, branch/commit conventions, and SDLC gates follow the **ApexYard** framework that governs this repo — not a marsa-local process doc. Use its structured skills (`/feature`, `/bug`, `/task`, `/spike`, `/migration`) to create issues, and follow its ticket/PR conventions (title prefixes, branch naming, merge gates). Milestones and labels live in GitHub itself.
 
 ## Recommendations: lead with best practice, flag anti-patterns
 
