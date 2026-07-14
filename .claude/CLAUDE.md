@@ -83,6 +83,8 @@ Always branch off `main` for any feature, bug fix, or chore — never commit dir
 
 Releases are cut by tagging `main` with `v<semver>` (e.g. `v1.0.0`); the CD workflow (`.github/workflows/cd.yml`) triggers on `v*` tags and publishes semver-tagged images to GHCR.
 
+Additional git-workflow rules live in `.claude/rules/git-workflow.md`, which Claude Code auto-loads from `.claude/rules/` at session start (no import needed).
+
 ## CI
 
 `.github/workflows/ci.yml` runs on push/PR to `main`: `format:check` → `lint` → typecheck (`api` + `web`) → `build:web` → `pnpm --filter api test` → web unit/component tests → web e2e. The API is type-checked (`tsc --noEmit`) rather than built separately, since `pnpm --filter api test` rebuilds internally. CI uses `pnpm install --frozen-lockfile`, so commit `pnpm-lock.yaml` updates alongside dependency changes.
