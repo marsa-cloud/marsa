@@ -1,6 +1,5 @@
 import { EntityManager } from '@mikro-orm/core'
 import { Injectable } from '@nestjs/common'
-
 import { User } from '#src/app/user/entities/user.entity.js'
 import type { UserUuid } from '#src/app/user/entities/user.uuid.js'
 

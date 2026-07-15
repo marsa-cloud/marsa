@@ -6,7 +6,6 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger'
-
 import { CaptureInstallationCommand } from '#src/app/github-app/use-cases/capture-installation/capture-installation.command.js'
 import { CaptureInstallationResponse } from '#src/app/github-app/use-cases/capture-installation/capture-installation.response.js'
 import { CaptureInstallationUseCase } from '#src/app/github-app/use-cases/capture-installation/capture-installation.use-case.js'

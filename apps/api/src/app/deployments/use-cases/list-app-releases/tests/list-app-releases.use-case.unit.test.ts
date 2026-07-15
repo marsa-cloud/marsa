@@ -1,8 +1,6 @@
 import { before, describe, it } from 'node:test'
-
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
-
 import { AppBuilder } from '#src/app/deployments/entities/app.builder.js'
 import { ReleaseBuilder } from '#src/app/deployments/entities/release.builder.js'
 import { DeployStatus } from '#src/app/deployments/enums/deploy-status.enum.js'

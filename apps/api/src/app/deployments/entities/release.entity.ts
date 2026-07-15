@@ -1,5 +1,4 @@
 import { Entity, ManyToOne, PrimaryKey, Property, type Ref } from '@mikro-orm/core'
-
 import { App } from '#src/app/deployments/entities/app.entity.js'
 import type { ReleaseUuid } from '#src/app/deployments/entities/release.uuid.js'
 import { DeployStatus, DeployStatusEnum } from '#src/app/deployments/enums/deploy-status.enum.js'

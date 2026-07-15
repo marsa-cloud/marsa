@@ -1,7 +1,5 @@
 import { after, before, describe, it } from 'node:test'
-
 import { expect } from 'expect'
-
 import { createOpenApiDocument } from '#src/modules/swagger/create-open-api-document.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'

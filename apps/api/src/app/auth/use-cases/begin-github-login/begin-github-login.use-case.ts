@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-
 import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { OAuthStateService } from '#src/app/auth/oauth-state.service.js'
 import { GITHUB_OAUTH_AUTHORIZE_URL } from '#src/app/auth/use-cases/begin-github-login/begin-github-login.constant.js'

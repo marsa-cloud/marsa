@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
 import { IsNotEmpty, IsString } from 'class-validator'
-
 import type { ManifestStateUuid } from '#src/app/github-app/entities/manifest-state.uuid.js'
 
 export class ConvertManifestCommand {

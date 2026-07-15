@@ -1,5 +1,4 @@
 import type { V1ContainerStatus, V1Pod } from '@kubernetes/client-node'
-
 import type { DeployFailure } from '#src/modules/kubernetes/deploy-backend.types.js'
 
 /**

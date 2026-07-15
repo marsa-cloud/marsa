@@ -1,8 +1,6 @@
 import { before, describe, it } from 'node:test'
-
 import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
-
 import { GetApiInfoService } from '#src/modules/status/use-cases/get-api-info/get-api-info.service.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 

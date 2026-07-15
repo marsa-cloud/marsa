@@ -41,7 +41,11 @@ export default tseslint.config(
       'simple-import-sort/imports': [
         'error',
         {
-          groups: [['^\\u0000'], ['^node:'], ['^@?\\w'], ['^#src/'], ['^#test/'], ['^']],
+          // Single group: keep the deterministic order
+          // (side-effects → node: → packages → #src → #test → other) but emit NO
+          // blank lines between sub-groups. GH-69: the enforced group-separator
+          // blank line (notably before the #src/ group) read as jarring.
+          groups: [['^\\u0000', '^node:', '^@?\\w', '^#src/', '^#test/', '^']],
         },
       ],
     },

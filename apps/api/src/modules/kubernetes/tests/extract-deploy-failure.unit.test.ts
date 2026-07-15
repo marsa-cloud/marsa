@@ -1,8 +1,6 @@
 import { before, describe, it } from 'node:test'
-
 import type { V1Pod } from '@kubernetes/client-node'
 import { expect } from 'expect'
-
 import { extractDeployFailure } from '#src/modules/kubernetes/extract-deploy-failure.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 

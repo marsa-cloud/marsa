@@ -146,8 +146,8 @@ If you add a new TS compiler option that affects emit (e.g. target, module resol
 
 - **Subpath imports**, not relative paths: `#src/*` → `./src/*`, `#test/*` → `./src/test/*`. Mapped in `tsconfig.json` `paths`, `package.json` `imports` (which points at `dist/` for runtime resolution), and `.swcrc` `jsc.paths`. Relative imports (`./*`, `../*`) are an ESLint error.
 - Always include the **`.js` extension** in import specifiers (`#src/foo/bar.js`), even when importing a `.ts` file. NodeNext ESM resolution requires it.
-- Import order (enforced by `simple-import-sort`): side-effects → `node:` → packages → `#src/*` → `#test/*` → other.
-- A blank line is required after the last import (`padding-line-between-statements`).
+- Import order (enforced by `simple-import-sort`): side-effects → `node:` → packages → `#src/*` → `#test/*` → other. The block is a **single group with no blank lines between sub-groups** — imports are sorted into that order but not visually separated (GH-69).
+- A blank line is required after the last import block, before the first statement (`padding-line-between-statements`).
 - Unused imports/vars are errors. Prefix intentionally-unused args with `_`.
 
 ## Scripts

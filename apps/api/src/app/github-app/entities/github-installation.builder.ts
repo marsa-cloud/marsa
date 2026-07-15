@@ -1,5 +1,4 @@
 import type { Ref } from '@mikro-orm/core'
-
 import type { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
 import { GitHubInstallation } from '#src/app/github-app/entities/github-installation.entity.js'
 

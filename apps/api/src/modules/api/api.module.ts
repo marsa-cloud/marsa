@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common'
-
 import { AppModule } from '#src/app.module.js'
 import { AuthModule } from '#src/app/auth/auth.module.js'
 import { DeploymentsModule } from '#src/app/deployments/deployments.module.js'

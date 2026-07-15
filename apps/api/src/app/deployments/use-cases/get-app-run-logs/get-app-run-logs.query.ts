@@ -1,7 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
 import { IsInt, IsOptional, Max, Min } from 'class-validator'
-
 import {
   DEFAULT_TAIL_LINES,
   MAX_TAIL_LINES,

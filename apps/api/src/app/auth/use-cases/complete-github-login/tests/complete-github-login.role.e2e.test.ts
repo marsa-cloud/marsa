@@ -1,11 +1,9 @@
 import { after, before, describe, it } from 'node:test'
-
 import { EntityManager } from '@mikro-orm/core'
 import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import { Server } from 'http'
 import request from 'supertest'
-
 import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { CompleteGithubLoginCommandBuilder } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.builder.js'
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'

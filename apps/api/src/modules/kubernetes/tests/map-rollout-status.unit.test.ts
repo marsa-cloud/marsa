@@ -1,8 +1,6 @@
 import { before, describe, it } from 'node:test'
-
 import type { V1Deployment, V1DeploymentCondition } from '@kubernetes/client-node'
 import { expect } from 'expect'
-
 import { mapRolloutStatus } from '#src/modules/kubernetes/map-rollout-status.js'
 import { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
 import { TestBench } from '#src/test/setup/test-bench.js'

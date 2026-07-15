@@ -1,5 +1,4 @@
 import { MikroORM } from '@mikro-orm/core'
-
 import { compileTestModule } from '#src/test/setup/compile-test-module.js'
 
 async function globalTestSetup(): Promise<void> {

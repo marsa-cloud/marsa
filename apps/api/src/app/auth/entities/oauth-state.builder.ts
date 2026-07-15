@@ -1,5 +1,4 @@
 import dayjs from 'dayjs'
-
 import { OAuthState } from '#src/app/auth/entities/oauth-state.entity.js'
 
 export class OAuthStateBuilder {

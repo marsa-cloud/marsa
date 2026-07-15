@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger'
-
 import { ManifestDto } from '#src/app/github-app/github-app.types.js'
 
 export class GetManifestResponse {

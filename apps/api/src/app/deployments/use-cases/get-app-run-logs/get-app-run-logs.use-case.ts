@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common'
-
 import { DEFAULT_TAIL_LINES } from '#src/app/deployments/use-cases/get-app-run-logs/get-app-run-logs.constants.js'
 import { GetAppRunLogsResponse } from '#src/app/deployments/use-cases/get-app-run-logs/get-app-run-logs.response.js'
 import { OPERATOR_APPS_NAMESPACE } from '#src/modules/kubernetes/deploy-backend.constants.js'

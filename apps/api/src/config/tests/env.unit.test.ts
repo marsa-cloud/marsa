@@ -1,7 +1,5 @@
 import { before, describe, it } from 'node:test'
-
 import { expect } from 'expect'
-
 import { DEFAULT_AUTH_COOKIE_NAME, envValidationSchema } from '#src/config/env.config.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 

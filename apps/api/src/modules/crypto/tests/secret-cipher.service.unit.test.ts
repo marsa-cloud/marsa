@@ -1,8 +1,6 @@
 import { afterEach, before, describe, it } from 'node:test'
-
 import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
-
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 

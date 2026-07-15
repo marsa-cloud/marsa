@@ -1,6 +1,5 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common'
 import { ApiOkResponse, ApiOperation, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger'
-
 import { SessionAuthGuard } from '#src/app/auth/guards/session-auth.guard.js'
 import { GetAppHealthResponse } from '#src/app/deployments/use-cases/get-app-health/get-app-health.response.js'
 import { GetAppHealthUseCase } from '#src/app/deployments/use-cases/get-app-health/get-app-health.use-case.js'

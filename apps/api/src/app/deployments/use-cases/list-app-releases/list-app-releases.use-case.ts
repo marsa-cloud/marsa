@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common'
-
 import type { Release } from '#src/app/deployments/entities/release.entity.js'
 import { DeployStatus } from '#src/app/deployments/enums/deploy-status.enum.js'
 import { ListAppReleasesRepository } from '#src/app/deployments/use-cases/list-app-releases/list-app-releases.repository.js'

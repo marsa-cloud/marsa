@@ -1,6 +1,5 @@
 import { Enum, type EnumOptions } from '@mikro-orm/core'
 import { ApiProperty, type ApiPropertyOptions } from '@nestjs/swagger'
-
 import { User } from '#src/app/user/entities/user.entity.js'
 
 export enum UserRole {

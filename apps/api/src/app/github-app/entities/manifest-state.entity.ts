@@ -1,5 +1,4 @@
 import { Entity, PrimaryKey, Property } from '@mikro-orm/core'
-
 import type { ManifestStateUuid } from '#src/app/github-app/entities/manifest-state.uuid.js'
 import { generateUuid } from '#src/utils/uuid.js'
 
