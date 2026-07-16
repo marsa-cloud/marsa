@@ -76,6 +76,7 @@ Then paste the printed `marsa_session=…` cookie into the browser (DevTools →
 - Prettier is the source of truth for formatting (`pnpm format`). It is **not** wired into ESLint — running lint will not flag formatting; CI runs `format:check` and `lint` as separate steps.
 - ESLint flat config at the root (`eslint.config.mjs`) sets shared rules: `simple-import-sort`, `unused-imports`, padding between imports, and `eslint-config-prettier` to disable conflicting style rules. Each package extends this with its own `eslint.config.mjs`.
 - Editor save-on-fix is wired up in `.vscode/settings.json` (works in VS Code and Windsurf) using the unified `js/ts.*` setting keys. Auto-import prefers non-relative module specifiers.
+- Write the absolute minimum number of comments — see `.claude/rules/comments.md`, auto-loaded from `.claude/rules/`.
 
 ## Git workflow
 
