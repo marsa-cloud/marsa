@@ -25,9 +25,11 @@
 ### Task 1: AgDR for the key technical decisions
 
 **Files:**
+
 - Create: `docs/agdr/AgDR-NNNN-least-mocks-e2e-harness.md` (next free NNNN in `docs/agdr/`)
 
 **Interfaces:**
+
 - Produces: the decision record the merge gate (`require-agdr-for-arch-pr.sh`) expects to be linked from the PR.
 
 - [ ] **Step 1: Find the next AgDR number**
@@ -53,12 +55,14 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ### Task 2: `DEPLOY_BACKEND` selector (decouple real/mock from `NODE_ENV`)
 
 **Files:**
+
 - Create: `apps/api/src/modules/kubernetes/deploy-backend.selector.ts`
 - Create: `apps/api/src/modules/kubernetes/tests/deploy-backend.selector.unit.test.ts`
 - Modify: `apps/api/src/modules/kubernetes/kubernetes.module.ts`
 - Modify: `apps/api/src/config/env.config.ts` (add `DEPLOY_BACKEND` to Joi schema)
 
 **Interfaces:**
+
 - Produces: `selectDeployBackend(deployBackendEnv: string | undefined, nodeEnv: string): 'mock' | 'direct'` — used by the module factory.
 
 - [ ] **Step 1: Write the failing test**
@@ -160,11 +164,13 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ### Task 3: `seed-dev --user-only`
 
 **Files:**
+
 - Create: `apps/api/src/entrypoints/seed-dev.args.ts`
 - Create: `apps/api/src/entrypoints/tests/seed-dev.args.unit.test.ts`
 - Modify: `apps/api/src/entrypoints/seed-dev.ts`
 
 **Interfaces:**
+
 - Produces: `parseSeedDevArgs(argv: string[]): { userOnly: boolean }` — consumed by `seed-dev.ts`.
 
 - [ ] **Step 1: Write the failing test**
@@ -251,10 +257,12 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ### Task 4: `install.sh --skip-k3s` (install into an existing cluster)
 
 **Files:**
+
 - Modify: `scripts/install.sh`
 - Create: `scripts/tests/test-install-skip-k3s.sh`
 
 **Interfaces:**
+
 - Produces: `install.sh --skip-k3s` — skips the K3s bootstrap, requires a reachable cluster via `$KUBECONFIG`, runs only Helm-install + `deploy_marsa`.
 
 - [ ] **Step 1: Write the failing test** (PATH-stubbed helm/kubectl/curl; asserts `get.k3s.io` is NOT fetched and helm IS called)
@@ -302,6 +310,7 @@ Expected: FAIL — `--skip-k3s` unknown argument (`die "Unknown argument"`).
 # scripts/install.sh — in Defaults block
 SKIP_K3S="false"          # --skip-k3s: install into an existing cluster (honor $KUBECONFIG)
 ```
+
 ```bash
 # scripts/install.sh — in the arg-parsing case, before the *) catch-all
     --skip-k3s)      SKIP_K3S="true"; shift ;;
@@ -356,11 +365,13 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ### Task 5: k3d E2E wrapper (`scripts/e2e-up.sh` + `Makefile`)
 
 **Files:**
+
 - Create: `scripts/e2e-up.sh`
 - Create: `scripts/e2e-down.sh`
 - Create/Modify: `Makefile` (`make e2e`, `make e2e-down`)
 
 **Interfaces:**
+
 - Consumes: `install.sh --skip-k3s` (Task 4), `seed-dev --user-only` (Task 3), `DEPLOY_BACKEND=direct` (Task 2).
 - Produces: `scripts/e2e-up.sh [--image-tag <tag>]` — brings the full stack up and runs the positive assertions; exit 0 = pass.
 
@@ -454,9 +465,11 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ### Task 6: `e2e.yml` GitHub Actions workflow (real K3s, after CD)
 
 **Files:**
+
 - Create: `.github/workflows/e2e.yml`
 
 **Interfaces:**
+
 - Consumes: `cd.yml` (its completion event + the `…:<sha>` image it publishes), `scripts/e2e-up.sh` (Task 5), `scripts/install.sh --skip-k3s` (Task 4).
 
 > Study `.github/workflows/deploy.yml` first — it already reads a CD-built image via `workflow_run`; mirror how it derives the head SHA and gates on `conclusion == 'success'`.
@@ -513,11 +526,13 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ### Task 7: `docs/local-dev.md` + `pnpm` aliases + README pointer (#134 tail)
 
 **Files:**
+
 - Create: `docs/local-dev.md`
 - Modify: root `package.json` (add `seed` + combined `dev` scripts)
 - Modify: `README.md` (pointer)
 
 **Interfaces:**
+
 - Consumes: the no-cluster flow already documented in root `.claude/CLAUDE.md`; the `make e2e` flow (Task 5).
 
 - [ ] **Step 1: Add `pnpm` aliases** to root `package.json` `scripts`:

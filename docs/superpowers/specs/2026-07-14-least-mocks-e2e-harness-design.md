@@ -16,13 +16,13 @@ Nothing exercises Marsa's real deploy path end-to-end:
 - `install.sh` (the production VPS installer) has **no automated test** — a regression in its K3s bootstrap or chart install ships silently.
 - The fast local stack (#134) deliberately skips Kubernetes for inner-loop speed.
 
-**Goal: E2E-test Marsa with the least amount of mocks** — and, because a least-mocks test environment *is* a real dev environment, have that same artifact double as the on-demand "test a deploy + dummy domain locally" workflow.
+**Goal: E2E-test Marsa with the least amount of mocks** — and, because a least-mocks test environment _is_ a real dev environment, have that same artifact double as the on-demand "test a deploy + dummy domain locally" workflow.
 
 ## Key insight
 
 The **least-mocks E2E environment** and the **real local dev environment** are the same artifact. Both need: a real cluster, a real Marsa install, real deploys through the API, and real (dummy) domains over HTTPS. Build it once; CI and a developer at a laptop are two callers of the same spine.
 
-The three tickets don't need three harnesses — they need **one spine with three consumers** that differ only in *which cluster substrate* they use and *how many assertions* run after bring-up.
+The three tickets don't need three harnesses — they need **one spine with three consumers** that differ only in _which cluster substrate_ they use and _how many assertions_ run after bring-up.
 
 ---
 
@@ -32,17 +32,17 @@ The three tickets don't need three harnesses — they need **one spine with thre
 
 1. **`install.sh`** — cluster (optional) + Helm + `helm upgrade --install` of the Marsa chart. The single chart-install path; never duplicated.
 2. **`seed-dev.ts`** — seed a dev operator + mint a valid `@fastify/secure-session` cookie (the auth bypass), reused across consumers.
-3. **`scripts/e2e-up.sh` / `make e2e`** — thin wrapper holding all test-*only* concerns (k3d creation + port map, nip.io domain, PR image tag, `curl -k` assertions, teardown).
+3. **`scripts/e2e-up.sh` / `make e2e`** — thin wrapper holding all test-_only_ concerns (k3d creation + port map, nip.io domain, PR image tag, `curl -k` assertions, teardown).
 
 **Consumers:**
 
-| Consumer | Cluster | `install.sh` path | Seeder | Proves |
-|---|---|---|---|---|
-| **CI E2E** (collapsed #55 + #122) | real K3s | **full** (`curl\|sh` K3s bootstrap + helm) | user-only | installer works end-to-end **+** least-mocks deploy + HTTPS |
-| **Local dev / on-demand E2E** | k3d (disposable) | `--skip-k3s` (into existing k3d) | user-only | fast disposable deploy/domain testing; poke-around |
-| **#134 no-cluster inner loop** | none | — | full (user + sample apps) | FE inner loop against mock backends |
+| Consumer                          | Cluster          | `install.sh` path                          | Seeder                    | Proves                                                      |
+| --------------------------------- | ---------------- | ------------------------------------------ | ------------------------- | ----------------------------------------------------------- |
+| **CI E2E** (collapsed #55 + #122) | real K3s         | **full** (`curl\|sh` K3s bootstrap + helm) | user-only                 | installer works end-to-end **+** least-mocks deploy + HTTPS |
+| **Local dev / on-demand E2E**     | k3d (disposable) | `--skip-k3s` (into existing k3d)           | user-only                 | fast disposable deploy/domain testing; poke-around          |
+| **#134 no-cluster inner loop**    | none             | —                                          | full (user + sample apps) | FE inner loop against mock backends                         |
 
-The load-bearing move: **CI runs the *full* `install.sh` on real K3s** so a single job transitively proves *both* "the installer works" (#55's re-scoped purpose) **and** "least-mocks deploy + HTTPS" (#122). If CI instead used `--skip-k3s`+k3d, it would never execute the installer's own K3s bootstrap — silently dropping #55's whole point. `--skip-k3s` therefore exists for **local disposability + a real user feature** (install onto an existing cluster), *not* as the CI path.
+The load-bearing move: **CI runs the _full_ `install.sh` on real K3s** so a single job transitively proves _both_ "the installer works" (#55's re-scoped purpose) **and** "least-mocks deploy + HTTPS" (#122). If CI instead used `--skip-k3s`+k3d, it would never execute the installer's own K3s bootstrap — silently dropping #55's whole point. `--skip-k3s` therefore exists for **local disposability + a real user feature** (install onto an existing cluster), _not_ as the CI path.
 
 ---
 
@@ -60,17 +60,17 @@ CI = full real K3s (via `install.sh`); local dev = k3d + `install.sh --skip-k3s`
 
 Guardrail: **only add installer flags that serve a real user, never test-only ones.**
 
-- **`--skip-k3s`** (a.k.a. `--use-existing-cluster`): skip the `curl|sh` K3s bootstrap, honor `$KUBECONFIG`, run only install-Helm + `deploy_marsa`. Real-user value: "deploy Marsa onto a cluster I already run." Lets local dev reuse the *exact* helm path against k3d.
+- **`--skip-k3s`** (a.k.a. `--use-existing-cluster`): skip the `curl|sh` K3s bootstrap, honor `$KUBECONFIG`, run only install-Helm + `deploy_marsa`. Real-user value: "deploy Marsa onto a cluster I already run." Lets local dev reuse the _exact_ helm path against k3d.
 
 No TLS flag is needed — see § TLS. Test-only concerns stay in the wrapper. `--skip-k3s` is AgDR-worthy (see § Governance).
 
 ### D4 — Decouple deploy-backend selection from `NODE_ENV`
 
-`kubernetes.module.ts` currently welds `MockDeployBackend` to `NODE_ENV==='test'`. The E2E needs `NODE_ENV=test` conveniences *with* `DirectApplyDeployBackend`. Introduce an explicit selector (`DEPLOY_BACKEND=direct|mock`) that defaults to the current behaviour when unset (mock under test, direct otherwise) so nothing regresses.
+`kubernetes.module.ts` currently welds `MockDeployBackend` to `NODE_ENV==='test'`. The E2E needs `NODE_ENV=test` conveniences _with_ `DirectApplyDeployBackend`. Introduce an explicit selector (`DEPLOY_BACKEND=direct|mock`) that defaults to the current behaviour when unset (mock under test, direct otherwise) so nothing regresses.
 
 ### D5 — `seed-dev --user-only`
 
-`seed-dev.ts` seeds a user + cookie **and** inserts sample `App`/`Release` rows with a *faked* `DeployStatus.Succeeded`. That fake is correct for #134 (no cluster) but is the opposite of "least mocks" for the E2E. Add `--user-only` so the E2E reuses the auth bypass, then deploys apps *for real* through the API.
+`seed-dev.ts` seeds a user + cookie **and** inserts sample `App`/`Release` rows with a _faked_ `DeployStatus.Succeeded`. That fake is correct for #134 (no cluster) but is the opposite of "least mocks" for the E2E. Add `--user-only` so the E2E reuses the auth bypass, then deploys apps _for real_ through the API.
 
 ### D6 — CI trigger: `workflow_run` after CD only
 
@@ -89,19 +89,19 @@ The chart already gives the E2E real HTTPS:
 
 - `ingress-route.yml` always listens on `websecure` (443). With `tls.enabled: false` it emits **no `certResolver`** → **Traefik serves its default self-signed cert** (per the template's own comment). With `tls.enabled: true` it sets `certResolver: le` (ACME tlsChallenge), which **fails on `*.nip.io`** (not publicly reachable) and **falls back to the same self-signed cert**.
 
-So the E2E installs with **`--no-tls`** (existing flag → `tls.enabled=false`, deterministic self-signed) and asserts with **`curl -k https://…`**. Testing real Let's Encrypt *issuance* is impossible in CI (needs public DNS) and is explicitly out of scope. **No `--tls` flag, no mkcert, no marsa-charts ticket.**
+So the E2E installs with **`--no-tls`** (existing flag → `tls.enabled=false`, deterministic self-signed) and asserts with **`curl -k https://…`**. Testing real Let's Encrypt _issuance_ is impossible in CI (needs public DNS) and is explicitly out of scope. **No `--tls` flag, no mkcert, no marsa-charts ticket.**
 
 ---
 
 ## Mock boundary ("least mocks")
 
-| Concern | E2E | Note |
-|---|---|---|
-| Deploy backend | **REAL** (`DirectApplyDeployBackend` → cluster) | the whole point (D4) |
-| DB / Redis / secret cipher | **REAL** | already real in e2e |
-| Ingress / TLS / domain | **REAL** ingress on 443, **self-signed** (`curl -k`) | LE issuance itself un-testable in CI, accepted (§ TLS) |
-| App-under-test image | **PR/CD-built `…:<sha>`** (deploy target = trivial public image, e.g. `nginx`) | build-from-source out of scope until #31 |
-| GitHub OAuth login | **Seeded** (`seed-dev --user-only`) | interactive OAuth can't run in CI (D5) |
+| Concern                    | E2E                                                                            | Note                                                   |
+| -------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| Deploy backend             | **REAL** (`DirectApplyDeployBackend` → cluster)                                | the whole point (D4)                                   |
+| DB / Redis / secret cipher | **REAL**                                                                       | already real in e2e                                    |
+| Ingress / TLS / domain     | **REAL** ingress on 443, **self-signed** (`curl -k`)                           | LE issuance itself un-testable in CI, accepted (§ TLS) |
+| App-under-test image       | **PR/CD-built `…:<sha>`** (deploy target = trivial public image, e.g. `nginx`) | build-from-source out of scope until #31               |
+| GitHub OAuth login         | **Seeded** (`seed-dev --user-only`)                                            | interactive OAuth can't run in CI (D5)                 |
 
 ---
 
@@ -109,9 +109,9 @@ So the E2E installs with **`--no-tls`** (existing flag → `tls.enabled=false`, 
 
 **CI E2E (one job, positive assertions):**
 
-1. `install.sh` (full) completes → Marsa release **Ready** + API `/health` responds. *(← #55's assertion.)*
+1. `install.sh` (full) completes → Marsa release **Ready** + API `/health` responds. _(← #55's assertion.)_
 2. Deploy a sample app through Marsa's API → its Deployment + ClusterIP Service + Traefik IngressRoute are applied to the cluster.
-3. The deployed app is **reachable over its domain via HTTPS** (`curl -k https://<slug>.127.0.0.1.nip.io`). *(← #122's assertion.)*
+3. The deployed app is **reachable over its domain via HTTPS** (`curl -k https://<slug>.127.0.0.1.nip.io`). _(← #122's assertion.)_
 
 **Negative probe (one-time, dev-time — not a standing job):** during implementation, deliberately break a template/validation, run `make e2e`, confirm it goes **red**, revert. Proves the assertions actually assert (TDD: see it fail before trusting green). Satisfies #122's "red on a broken probe" AC without a recurring CI matrix.
 
@@ -121,15 +121,15 @@ So the E2E installs with **`--no-tls`** (existing flag → `tls.enabled=false`, 
 
 ## Components / artifacts
 
-| Artifact | Change |
-|---|---|
-| `scripts/install.sh` | `--skip-k3s` (D3) |
-| `apps/api/src/modules/kubernetes/kubernetes.module.ts` | `DEPLOY_BACKEND` selector (D4) |
-| `apps/api/src/entrypoints/seed-dev.ts` | `--user-only` flag (D5) |
+| Artifact                                                        | Change                                                                              |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `scripts/install.sh`                                            | `--skip-k3s` (D3)                                                                   |
+| `apps/api/src/modules/kubernetes/kubernetes.module.ts`          | `DEPLOY_BACKEND` selector (D4)                                                      |
+| `apps/api/src/entrypoints/seed-dev.ts`                          | `--user-only` flag (D5)                                                             |
 | `scripts/e2e-up.sh` + `Makefile` (`make e2e` / `make e2e-down`) | new wrapper (spine #3); k3d create + port map, install, `curl -k` asserts, teardown |
-| `.github/workflows/e2e.yml` | new; `workflow_run` after CD + `workflow_dispatch` (D6) |
-| `docs/local-dev.md` | new; documents both the no-cluster loop (#134 tail) and the with-cluster E2E |
-| `README` pointer | link to `docs/local-dev.md` |
+| `.github/workflows/e2e.yml`                                     | new; `workflow_run` after CD + `workflow_dispatch` (D6)                             |
+| `docs/local-dev.md`                                             | new; documents both the no-cluster loop (#134 tail) and the with-cluster E2E        |
+| `README` pointer                                                | link to `docs/local-dev.md`                                                         |
 
 ---
 
@@ -138,7 +138,7 @@ So the E2E installs with **`--no-tls`** (existing flag → `tls.enabled=false`, 
 - **Real Let's Encrypt issuance** — needs public DNS; un-testable in CI (§ TLS).
 - **Multi-node agent-join** testing (`install.sh --agent`) — needs real separate hosts.
 - **Build-from-source** deploys — until #31 (example todo-app) exists, deploy a trivial public image.
-- `install.sh` arg-validation / `shellcheck` unit-testing — explicitly dropped from the re-scoped #55 (goal is "does the installer *work*"). Re-addable as a cheap first CI step if ever wanted.
+- `install.sh` arg-validation / `shellcheck` unit-testing — explicitly dropped from the re-scoped #55 (goal is "does the installer _work_"). Re-addable as a cheap first CI step if ever wanted.
 
 ## Governance (apexyard)
 
