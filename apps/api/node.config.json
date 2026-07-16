@@ -1,0 +1,20 @@
+{
+  "$schema": "https://nodejs.org/dist/v24.15.0/docs/node-config-schema.json",
+  "nodeOptions": {
+    "enable-source-maps": true
+  },
+  "testRunner": {
+    "test-isolation": "none",
+    "experimental-test-coverage": true,
+    "test-coverage-lines": 80,
+    "test-coverage-branches": 75,
+    "test-coverage-functions": 75,
+    "test-coverage-exclude": [
+      "src/test/**",
+      "**/*.test.ts",
+      "src/sql/migrations/**",
+      "src/modules/github-client/mock-github-client.ts",
+      "src/modules/kubernetes/mock-deploy-backend.ts"
+    ]
+  }
+}

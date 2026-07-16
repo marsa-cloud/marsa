@@ -162,7 +162,7 @@ pnpm lint:fix
 
 pnpm test               # clean → build → test:setup → test:run
 pnpm test:setup         # global-setup against compiled output
-pnpm test:run           # node --test with source maps
+pnpm test:run           # node --test; coverage config in node.config.json
 ```
 
 `pnpm test` runs the full pipeline. There is no ts-node / watch test mode — change code, rebuild, rerun.
