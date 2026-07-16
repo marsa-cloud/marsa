@@ -4,7 +4,7 @@
 
 **Tickets:** collapses **#55** into **#122**; closes **#134** (folding its doc/script tail here). **Marsa-only — no chart change** (see § TLS).
 
-**Status:** design approved (brainstorm); revised after verifying chart + workflows. Pending spec review → implementation plan.
+**Status:** design approved; open questions resolved. Ready for implementation plan.
 
 ---
 
@@ -72,14 +72,14 @@ No TLS flag is needed — see § TLS. Test-only concerns stay in the wrapper. `-
 
 `seed-dev.ts` seeds a user + cookie **and** inserts sample `App`/`Release` rows with a *faked* `DeployStatus.Succeeded`. That fake is correct for #134 (no cluster) but is the opposite of "least mocks" for the E2E. Add `--user-only` so the E2E reuses the auth bypass, then deploys apps *for real* through the API.
 
-### D6 — CI trigger: after-build + manual only
+### D6 — CI trigger: `workflow_run` after CD only
 
-The E2E must run **after** the images it tests exist:
+The E2E triggers on **`workflow_run` when `cd.yml` completes** (mirrors `deploy.yml`), and derives the image tag from the triggering run's head SHA. Since `cd.yml` builds on push to `main`, tags, **and** PRs labelled `preview`, this single trigger covers both cases with no extra wiring:
 
-- **`workflow_run` on CD completion** (mirrors `deploy.yml`) — on `main`, after `cd.yml` builds+pushes the commit's `…:<sha>` images, the E2E installs that sha.
-- **`workflow_dispatch`** — opt-in pre-flight; for a PR, label it **`preview`** so `cd.yml` publishes `…:<sha>`, then dispatch the E2E with that tag.
+- **on `main`** — after CD builds the commit's `…:<sha>`, the E2E installs and asserts that sha.
+- **PR pre-flight** — label the PR `preview` → CD builds `…:<sha>` → CD completion fires the E2E on that sha.
 
-**No raw per-PR `push` trigger** — the full real-K3s E2E is heavy and the image wouldn't exist yet. The E2E **never builds images itself**; it consumes the `preview`/CD-built sha via `helm --set image.tag=<sha>`.
+**No raw `push` / `pull_request` trigger, no `workflow_dispatch`** — the image must exist first, and CD completion is the one event that guarantees it. The E2E **never builds images itself**; it consumes the CD-built sha via `helm --set image.tag=<sha>`.
 
 ---
 
@@ -150,7 +150,7 @@ So the E2E installs with **`--no-tls`** (existing flag → `tls.enabled=false`, 
 - **GHCR image pull in-cluster** — the E2E cluster must pull `…:<sha>` from GHCR (login / imagePullSecret if private); wrapper concern.
 - **Local/CI substrate divergence** — local k3d vs CI real K3s; both K3s, both go through `deploy_marsa`, so low risk.
 
-## Open questions (for spec review)
+## Resolved (spec review)
 
-1. Spec location — `docs/superpowers/specs/` (superpowers default, current) vs a marsa-native `docs/` location?
-2. CI trigger — `workflow_run` after CD (proposed) vs a nightly schedule vs both?
+1. **Spec location** — kept in `docs/superpowers/specs/` for now.
+2. **CI trigger** — `workflow_run` after CD only (D6).
