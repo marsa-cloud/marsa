@@ -1,6 +1,5 @@
 import { deepStrictEqual } from 'node:assert/strict'
 import { describe, it } from 'node:test'
-
 import { parseSeedDevArgs } from '#src/entrypoints/seed-dev.args.js'
 
 describe('parseSeedDevArgs', () => {
