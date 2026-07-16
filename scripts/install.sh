@@ -33,6 +33,7 @@ TOKEN="${MARSA_K3S_TOKEN:-}"  # agent mode: cluster node-token (env avoids it la
 CHART_VERSION=""        # empty → Helm pulls the latest published version (incl. pre-releases)
 MIN_HELM_MINOR=18       # 3.18+: --rollback-on-failure (also covers OCI's 3.8 floor)
 K3S_KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
+SKIP_K3S="false"          # --skip-k3s: install into an existing cluster (honor $KUBECONFIG)
 # Helm's official get-helm-3 installer, pinned to a release tag rather than the
 # moving `main` branch (supply-chain hygiene — see AgDR-0003). Overridable for
 # testing. The pinned script still installs the latest stable Helm by default;
@@ -130,6 +131,7 @@ while [ $# -gt 0 ]; do
     --namespace)     require_arg_value "$1" "${2:-}"; NAMESPACE="$2"; shift 2 ;;
     --release)       require_arg_value "$1" "${2:-}"; RELEASE_NAME="$2"; shift 2 ;;
     --no-tls)        TLS_ENABLED="false"; shift ;;
+    --skip-k3s)      SKIP_K3S="true"; shift ;;
     -h|--help)       usage; exit 0 ;;
     *)               die "Unknown argument: $1 (run --help for usage)" ;;
   esac
@@ -144,6 +146,7 @@ if [ "$MODE" = "agent" ]; then
   [ -z "$EMAIL" ]         || die "--email is not valid in --agent mode"
   [ -z "$CHART_VERSION" ] || die "--chart-version is not valid in --agent mode"
   [ "$TLS_ENABLED" = "true" ] || die "--no-tls is not valid in --agent mode"
+  [ "$SKIP_K3S" = "false" ] || die "--skip-k3s is not valid in --agent mode"
 
   [ -n "$SERVER_URL" ] || { usage; echo; die "--agent requires --server-url"; }
   [ -n "$TOKEN" ]      || die "--agent requires --token (or set MARSA_K3S_TOKEN)"
@@ -275,7 +278,7 @@ install_helm() {
 # --- Marsa --------------------------------------------------------------------
 
 deploy_marsa() {
-  export KUBECONFIG="$K3S_KUBECONFIG"
+  export KUBECONFIG="${KUBECONFIG:-$K3S_KUBECONFIG}"
   [ -r "$KUBECONFIG" ] || die "kubeconfig not readable at $KUBECONFIG"
 
   info "Deploying Marsa release '${RELEASE_NAME}' into namespace '${NAMESPACE}'"
@@ -374,7 +377,13 @@ main() {
   fi
 
   preflight "$@"
-  install_k3s
+  if [ "$SKIP_K3S" = "true" ]; then
+    info "Skipping K3s install (--skip-k3s); using existing cluster via \$KUBECONFIG"
+    export KUBECONFIG="${KUBECONFIG:-$K3S_KUBECONFIG}"
+    kubectl get nodes >/dev/null 2>&1 || die "No reachable cluster at KUBECONFIG=$KUBECONFIG"
+  else
+    install_k3s
+  fi
   install_helm
   deploy_marsa
   summary
