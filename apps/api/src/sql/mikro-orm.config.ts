@@ -15,6 +15,18 @@ export default defineConfig({
     // separate connection and can't see types/tables created by earlier,
     // not-yet-committed migrations in the same batch.
     allOrNothing: false,
+    // Require every migration to carry a descriptive name (marsa#73). Without a
+    // `--name`, MikroORM would silently produce a timestamp-only file; throwing
+    // here forces `migration:create --name=<describe_the_change>`. Keep the
+    // timestamp prefix so filenames stay sortable by execution order.
+    fileName: (timestamp: string, name?: string) => {
+      if (!name) {
+        throw new Error(
+          'Migration name is required — run `pnpm --filter api migration:create --name=<describe_the_change>`',
+        )
+      }
+      return `Migration${timestamp}_${name}`
+    },
   },
   entities: ['dist/src/**/*.entity.js'],
   // debug: ['query', 'query-params'],
