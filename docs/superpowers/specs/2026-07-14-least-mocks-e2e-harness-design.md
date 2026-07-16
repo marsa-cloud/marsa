@@ -72,14 +72,13 @@ No TLS flag is needed — see § TLS. Test-only concerns stay in the wrapper. `-
 
 `seed-dev.ts` seeds a user + cookie **and** inserts sample `App`/`Release` rows with a _faked_ `DeployStatus.Succeeded`. That fake is correct for #134 (no cluster) but is the opposite of "least mocks" for the E2E. Add `--user-only` so the E2E reuses the auth bypass, then deploys apps _for real_ through the API.
 
-### D6 — CI trigger: `workflow_run` after CD only
+### D6 — CI trigger: `workflow_run` after CD, **merged `main` only**
 
-The E2E triggers on **`workflow_run` when `cd.yml` completes** (mirrors `deploy.yml`), and derives the image tag from the triggering run's head SHA. Since `cd.yml` builds on push to `main`, tags, **and** PRs labelled `preview`, this single trigger covers both cases with no extra wiring:
+The E2E triggers on **`workflow_run` when `cd.yml` completes** (mirrors `deploy.yml`) and derives the image tag from the triggering run's head SHA, but the job is gated to `workflow_run.event == 'push' && head_branch == 'main' && conclusion == 'success'`.
 
-- **on `main`** — after CD builds the commit's `…:<sha>`, the E2E installs and asserts that sha.
-- **PR pre-flight** — label the PR `preview` → CD builds `…:<sha>` → CD completion fires the E2E on that sha.
+**Why main-only (security).** A `workflow_run` job runs in the target-repo context _with repo secrets_. The E2E checks out repo code and runs shell scripts (`install.sh`, `e2e-up.sh`); if it ran on a PR-preview build and checked out the **PR's** head, an untrusted PR could rewrite those scripts and exfiltrate the token (the "pwn-request" vector — flagged by Semgrep `workflow-run-target-code-checkout`). So the E2E runs **only post-merge on `main`**, checks out **trusted `main`** (not the PR head), and uses `head_sha` solely as the image tag. Pre-merge validation is via a local `make e2e`, not CI.
 
-**No raw `push` / `pull_request` trigger, no `workflow_dispatch`** — the image must exist first, and CD completion is the one event that guarantees it. The E2E **never builds images itself**; it consumes the CD-built sha via `helm --set image.tag=<sha>`.
+**No raw `push` / `pull_request` trigger, no `workflow_dispatch`, no PR-preview run** — the image must exist first (CD guarantees it) and the checked-out code must be trusted (main guarantees it). The E2E **never builds images itself**; it consumes the CD-built sha via `helm --set image.tag=<sha>`.
 
 ---
 
