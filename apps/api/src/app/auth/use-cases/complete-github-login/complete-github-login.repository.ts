@@ -1,7 +1,6 @@
 import type { EntityRepository } from '@mikro-orm/core'
 import { InjectRepository } from '@mikro-orm/nestjs'
 import { Injectable } from '@nestjs/common'
-
 import { OAuthState } from '#src/app/auth/entities/oauth-state.entity.js'
 import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'

@@ -1,8 +1,6 @@
 import { after, before, describe, it } from 'node:test'
-
 import { expect } from 'expect'
 import request from 'supertest'
-
 import { DeployAppCommandBuilder } from '#src/app/deployments/use-cases/deploy-app/deploy-app.command.builder.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'

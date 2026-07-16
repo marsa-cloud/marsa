@@ -1,5 +1,4 @@
 import { buildMessage, registerDecorator, type ValidationOptions } from 'class-validator'
-
 import { ENV_KEY_PATTERN } from '#src/app/deployments/use-cases/deploy-app/deploy-app.constants.js'
 
 /**

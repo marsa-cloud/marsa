@@ -1,7 +1,6 @@
 import { type EntityRepository } from '@mikro-orm/core'
 import { InjectRepository } from '@mikro-orm/nestjs'
 import { Injectable } from '@nestjs/common'
-
 import { App } from '#src/app/deployments/entities/app.entity.js'
 
 @Injectable()

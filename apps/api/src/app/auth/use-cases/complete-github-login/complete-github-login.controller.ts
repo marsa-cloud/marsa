@@ -7,7 +7,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger'
 import type { FastifyRequest } from 'fastify'
-
 import { CompleteGithubLoginCommand } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.js'
 import { CompleteGithubLoginResponse } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.response.js'
 import { CompleteGithubLoginUseCase } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.use-case.js'

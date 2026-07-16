@@ -1,8 +1,6 @@
 import { before, describe, it } from 'node:test'
-
 import { expect } from 'expect'
 import { createStubInstance, stub } from 'sinon'
-
 import type { ManifestStateUuid } from '#src/app/github-app/entities/manifest-state.uuid.js'
 import { ManifestStateService } from '#src/app/github-app/manifest-state/manifest-state.service.js'
 import { GetManifestUseCase } from '#src/app/github-app/use-cases/get-manifest/get-manifest.use-case.js'

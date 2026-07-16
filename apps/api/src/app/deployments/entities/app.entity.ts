@@ -1,5 +1,4 @@
 import { Entity, PrimaryKey, Property, Unique } from '@mikro-orm/core'
-
 import type { AppUuid } from '#src/app/deployments/entities/app.uuid.js'
 import type { AppDomain } from '#src/app/deployments/entities/app-domain.types.js'
 import { generateUuid } from '#src/utils/uuid.js'

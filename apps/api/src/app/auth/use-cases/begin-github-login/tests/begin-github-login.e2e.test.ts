@@ -1,9 +1,7 @@
 import { after, before, describe, it } from 'node:test'
-
 import { EntityManager } from '@mikro-orm/core'
 import { expect } from 'expect'
 import request from 'supertest'
-
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
 import { TestBench } from '#src/test/setup/test-bench.js'

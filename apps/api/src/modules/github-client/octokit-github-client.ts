@@ -1,9 +1,7 @@
 import { createHash } from 'node:crypto'
-
 import { Injectable, Logger } from '@nestjs/common'
 import { createAppAuth } from '@octokit/auth-app'
 import { request } from '@octokit/request'
-
 import {
   GITHUB_OAUTH_TOKEN_URL,
   GITHUB_REQUEST_TIMEOUT_MS,

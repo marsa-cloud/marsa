@@ -1,8 +1,6 @@
 import { describe, it } from 'node:test'
-
 import type { V1Pod } from '@kubernetes/client-node'
 import { expect } from 'expect'
-
 import { newestPod } from '#src/modules/kubernetes/newest-pod.js'
 
 function pod(name: string, creationTimestamp?: string): V1Pod {

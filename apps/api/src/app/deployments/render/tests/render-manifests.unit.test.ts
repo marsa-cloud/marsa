@@ -1,7 +1,5 @@
 import { describe, it } from 'node:test'
-
 import { expect } from 'expect'
-
 import { AppBuilder } from '#src/app/deployments/entities/app.builder.js'
 import { ReleaseBuilder } from '#src/app/deployments/entities/release.builder.js'
 import { renderManifests } from '#src/app/deployments/render/render-manifests.js'

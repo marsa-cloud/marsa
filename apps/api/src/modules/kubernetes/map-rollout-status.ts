@@ -1,5 +1,4 @@
 import type { V1Deployment } from '@kubernetes/client-node'
-
 import { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
 
 /**

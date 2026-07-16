@@ -1,8 +1,6 @@
 import { before, describe, it } from 'node:test'
-
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
-
 import { AppHealthStatus } from '#src/app/deployments/use-cases/get-app-health/get-app-health.response.js'
 import { GetAppHealthUseCase } from '#src/app/deployments/use-cases/get-app-health/get-app-health.use-case.js'
 import type { AppHealth } from '#src/modules/kubernetes/deploy-backend.types.js'

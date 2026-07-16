@@ -1,9 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
-
 import { Logger, VersioningType } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
-
 import { ApiModule } from '#src/modules/api/api.module.js'
 import { createOpenApiDocument } from '#src/modules/swagger/create-open-api-document.js'
 

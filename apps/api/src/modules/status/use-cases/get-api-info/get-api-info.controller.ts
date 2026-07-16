@@ -1,6 +1,5 @@
 import { Controller, Get } from '@nestjs/common'
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger'
-
 import { GetApiInfoResponse } from '#src/modules/status/use-cases/get-api-info/get-api-info.response.js'
 import { GetApiInfoService } from '#src/modules/status/use-cases/get-api-info/get-api-info.service.js'
 

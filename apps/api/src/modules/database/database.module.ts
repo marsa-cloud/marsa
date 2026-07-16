@@ -1,7 +1,6 @@
 import { MikroORM } from '@mikro-orm/core'
 import { MikroOrmModule } from '@mikro-orm/nestjs'
 import { Global, Module, type OnModuleInit } from '@nestjs/common'
-
 import config from '#src/sql/mikro-orm.config.js'
 
 @Global()

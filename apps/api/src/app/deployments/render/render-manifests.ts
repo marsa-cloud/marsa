@@ -1,5 +1,4 @@
 import type { V1Deployment, V1Secret, V1Service } from '@kubernetes/client-node'
-
 import type { App } from '#src/app/deployments/entities/app.entity.js'
 import type { Release } from '#src/app/deployments/entities/release.entity.js'
 import { REGISTRY_SECRET_SUFFIX } from '#src/modules/kubernetes/deploy-backend.constants.js'

@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
 import { IsIn, IsNotEmpty, IsString, Matches } from 'class-validator'
-
 import { INSTALL_SETUP_ACTION } from '#src/app/github-app/use-cases/capture-installation/capture-installation.constant.js'
 
 export class CaptureInstallationCommand {

@@ -1,5 +1,4 @@
 import { Entity, ManyToOne, PrimaryKey, Property, type Ref, Unique } from '@mikro-orm/core'
-
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
 import type { GitHubInstallationUuid } from '#src/app/github-app/entities/github-installation.uuid.js'
 import { generateUuid } from '#src/utils/uuid.js'

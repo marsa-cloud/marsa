@@ -1,9 +1,7 @@
 import { before, describe, it } from 'node:test'
-
 import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
-
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
 import { GitHubInstallationBuilder } from '#src/app/github-app/entities/github-installation.builder.js'

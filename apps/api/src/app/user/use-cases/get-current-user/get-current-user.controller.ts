@@ -1,6 +1,5 @@
 import { Controller, Get, UseGuards } from '@nestjs/common'
 import { ApiOkResponse, ApiOperation, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger'
-
 import { SessionAuthGuard } from '#src/app/auth/guards/session-auth.guard.js'
 import { CurrentUser } from '#src/app/user/decorators/current-user.decorator.js'
 import type { UserUuid } from '#src/app/user/entities/user.uuid.js'

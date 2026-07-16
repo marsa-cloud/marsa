@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
 import { IsNotEmpty, IsString, IsUUID } from 'class-validator'
-
 import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 
 export class CompleteGithubLoginCommand {

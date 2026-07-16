@@ -1,9 +1,7 @@
 import { before, describe, it } from 'node:test'
-
 import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
-
 import { AppBuilder } from '#src/app/deployments/entities/app.builder.js'
 import type { App } from '#src/app/deployments/entities/app.entity.js'
 import { ListAppsRepository } from '#src/app/deployments/use-cases/list-apps/list-apps.repository.js'

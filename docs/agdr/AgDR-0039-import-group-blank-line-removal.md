@@ -1,0 +1,60 @@
+---
+id: AgDR-0039
+timestamp: 2026-07-14T00:00:00Z
+agent: claude
+model: claude-opus-4-8
+trigger: user-prompt
+status: accepted
+ticket: marsa-cloud/marsa#69
+---
+
+# Import blocks: single sorted group, no blank lines between sub-groups
+
+> In the context of `simple-import-sort` splitting each file's imports into blank-line-separated groups (side-effects, `node:`, packages, `#src/`, `#test/`, other), facing a reviewer complaint (PR #64) that the enforced group-separator blank line — notably the one before the `#src/` group — reads as cosmetically jarring, I decided to **collapse the `groups` config into a single sorted group so imports keep their deterministic order but are no longer visually separated by blank lines**, to achieve a tighter import block, accepting a large one-time mechanical reformat (139 `apps/api` source files) and the loss of visual grouping between external and internal imports.
+
+## Context
+
+Surfaced in the PR #64 review. `apps/api/eslint.config.mjs` configured `simple-import-sort/imports` with six top-level groups (regexes shown with the NUL escape written literally):
+
+```
+groups: [ [^\u0000], [^node:], [^@?\w], [^#src/], [^#test/], [^] ]
+```
+
+`simple-import-sort` inserts a **blank line between each top-level sub-array**; within a sub-array imports are sorted with no separation ([plugin docs](https://github.com/lydell/eslint-plugin-simple-import-sort#custom-grouping)). In practice a controller had a blank line between the external-packages group and the `#src/` group:
+
+```
+import type { FastifyReply, FastifyRequest } from 'fastify'
+                        <- group-separator blank line (the "ugly" one)
+import { BeginGithubLoginUseCase } from '#src/app/auth/...'
+```
+
+The separate `padding-line-between-statements` rule (blank line **after** the whole import block, before the first statement) is unrelated and is **kept** — that blank line is a near-universal convention and was never the complaint.
+
+The root `eslint.config.mjs` (`simple-import-sort/imports: 'error'`, default groups) has no CI consumer (`lint:root` is not in `ci.yml`; `apps/api` overrides `groups`, `apps/web` uses its own `withNuxt` config), so its change is documentary — applied for decision consistency and to prevent re-litigation if a future root-linted package inherits it.
+
+## Options Considered
+
+| Option                                                   | Pros                                                                                                               | Cons                                                                        |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| **Single flat group — no blank lines anywhere** (chosen) | Kills the jarring separator; simplest config; uniform across every file                                            | Loses visual separation of side-effect imports too; large one-time reformat |
+| Merge non-side-effect groups, keep side-effects apart    | Removes the complained-of blank line; side-effect imports stay visually distinct (they run on load, order matters) | Two-tier config; still one blank line in the rare side-effect-import file   |
+| Keep 6 groups, document rationale                        | Zero churn; preserves external/internal visual boundary                                                            | Doesn't address the complaint; invites per-PR re-litigation                 |
+
+## Decision
+
+Chosen: **single flat group** in both configs, because the CEO explicitly chose "flatten everything" over the side-effects-separated variant. Import **order** is unchanged; only the inter-group blank lines are removed. Concretely:
+
+- `apps/api/eslint.config.mjs` — one group: side-effects, `node:`, packages, `#src/`, `#test/`, other.
+- root `eslint.config.mjs` — one group: side-effects, `node:`, packages, other, relative.
+
+## Consequences
+
+- 139 `apps/api` source files reformatted (verified pure blank-line deletion — 0 content lines added). `apps/web` untouched (independent Nuxt config).
+- `apps/api/.claude/CLAUDE.md` import-convention note updated to describe the single-group shape.
+- The after-imports blank line (`padding-line-between-statements`) is retained.
+- Future files auto-conform on `eslint --fix`; the rule is no longer a per-PR discussion.
+
+## Artifacts
+
+- Issue: marsa-cloud/marsa#69
+- PR: _(this PR)_
