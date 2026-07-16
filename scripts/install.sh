@@ -31,6 +31,7 @@ EMAIL=""
 SERVER_URL=""             # agent mode: K3s server URL, e.g. https://10.0.0.5:6443
 TOKEN="${MARSA_K3S_TOKEN:-}"  # agent mode: cluster node-token (env avoids it landing in shell history / ps)
 CHART_VERSION=""        # empty → Helm pulls the latest published version (incl. pre-releases)
+IMAGE_TAG="${MARSA_IMAGE_TAG:-}"  # empty → chart default image tag; overridable to pin a build
 MIN_HELM_MINOR=18       # 3.18+: --rollback-on-failure (also covers OCI's 3.8 floor)
 K3S_KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
 SKIP_K3S="false"          # --skip-k3s: install into an existing cluster (honor $KUBECONFIG)
@@ -92,6 +93,7 @@ ${C_BOLD}Agent mode${C_RESET} — join this machine to an existing cluster as a 
 
 ${C_BOLD}Environment overrides${C_RESET}
   MARSA_CHART_REF       Marsa chart reference. Default: ${CHART_REF}
+  MARSA_IMAGE_TAG       Pin the marsa-api/web image tag (chart image.tag). Default: chart's own.
   MARSA_RELEASE_NAME    Install/release name (same as --release).
   MARSA_K3S_TOKEN       Agent-mode node-token (alternative to --token; keeps it out of ps).
 
@@ -295,6 +297,7 @@ deploy_marsa() {
     --wait --timeout 10m --rollback-on-failure
   )
   [ -n "$EMAIL" ] && args+=(--set "email=${EMAIL}")
+  [ -n "$IMAGE_TAG" ] && args+=(--set "image.tag=${IMAGE_TAG}")
 
   if [ -n "$CHART_VERSION" ]; then
     args+=(--version "$CHART_VERSION")

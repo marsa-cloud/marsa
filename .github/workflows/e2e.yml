@@ -1,0 +1,32 @@
+name: E2E
+
+on:
+  workflow_run:
+    workflows: ['CD']
+    types: [completed]
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  e2e:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Install Marsa (full real K3s) with the CD-built image
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          tag="sha-$(printf '%s' "$HEAD_SHA" | cut -c1-7)"
+          sudo MARSA_IMAGE_TAG="$tag" bash scripts/install.sh --domain 127.0.0.1.nip.io --no-tls
+
+      - name: E2E deploy + HTTPS assertions
+        run: sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml bash scripts/e2e-up.sh --skip-cluster
