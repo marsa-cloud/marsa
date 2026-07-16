@@ -11,7 +11,7 @@ echo "curl \$*" >>"$log"
 case "\$*" in *get.k3s.io*) echo "FAIL: k3s bootstrap attempted under --skip-k3s" >&2; exit 99;; esac
 exit 0
 EOF
-for c in helm kubectl k3s systemctl apt-get; do
+for c in helm kubectl k3s apt-get; do
   cat >"$stub/$c" <<EOF
 #!/usr/bin/env bash
 echo "$c \$*" >>"$log"
@@ -19,6 +19,18 @@ case "$c:\$1" in helm:version) echo 'v3.18.0';; kubectl:get) echo 'node Ready';;
 exit 0
 EOF
 done
+
+# systemctl: `is-active --quiet k3s` must exit NON-zero — i.e. the cluster is
+# NOT already running. This makes install_k3s()'s internal short-circuit
+# (`require_cmd k3s && systemctl is-active --quiet k3s`) fall through to
+# `curl ... get.k3s.io`, so IF main() ever calls install_k3s() despite
+# --skip-k3s, the stubbed curl (exit 99 on get.k3s.io) makes the test fail
+# for real instead of vacuously passing on the short-circuit.
+cat >"$stub/systemctl" <<EOF
+#!/usr/bin/env bash
+echo "systemctl \$*" >>"$log"
+exit 1
+EOF
 
 # `id` is stubbed too: install.sh's preflight() calls require_root(), which
 # shells out to `id -u` and dies unless it's 0. The test runs as the invoking
