@@ -83,7 +83,7 @@ catalog:
 
   # Web ↔ API contract codegen
   '@hey-api/openapi-ts': ^0.97.3
-  zod: ^3.25.76
+  zod: ^4.4.3
 
   # Test stack (web)
   vitest: ^4.1.0
