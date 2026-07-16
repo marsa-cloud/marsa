@@ -278,17 +278,12 @@ install_helm() {
 # --- Marsa --------------------------------------------------------------------
 
 deploy_marsa() {
-  # Only honor an ambient $KUBECONFIG in --skip-k3s mode (deploying into an
-  # existing cluster the caller pointed us at). On the normal path a freshly
-  # bootstrapped K3s cluster must always be the deploy target — an ambient
-  # exported $KUBECONFIG left over from the caller's shell must not silently
-  # redirect the deploy to the wrong cluster.
   if [ "$SKIP_K3S" = "true" ]; then
     export KUBECONFIG="${KUBECONFIG:-$K3S_KUBECONFIG}"
   else
     export KUBECONFIG="$K3S_KUBECONFIG"
+    [ -r "$KUBECONFIG" ] || die "kubeconfig not readable at $KUBECONFIG"
   fi
-  [ -r "$KUBECONFIG" ] || die "kubeconfig not readable at $KUBECONFIG"
 
   info "Deploying Marsa release '${RELEASE_NAME}' into namespace '${NAMESPACE}'"
 

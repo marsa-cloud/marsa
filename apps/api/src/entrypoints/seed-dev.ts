@@ -13,7 +13,6 @@ import { UserBuilder } from '#src/app/user/entities/user.builder.js'
 import { User } from '#src/app/user/entities/user.entity.js'
 import { UserRole } from '#src/app/user/enums/user-role.enum.js'
 import { DEFAULT_AUTH_COOKIE_NAME } from '#src/config/env.config.js'
-import { parseSeedDevArgs } from '#src/entrypoints/seed-dev.args.js'
 
 /**
  * Seed a dev operator + sample apps and print a ready-to-paste
@@ -51,7 +50,7 @@ async function mintSessionCookie(
 }
 
 async function rawDogFe(): Promise<void> {
-  const { userOnly } = parseSeedDevArgs(process.argv.slice(2))
+  const userOnly = process.argv.includes('--user-only')
 
   const context = await NestFactory.createApplicationContext(AppModule.forRoot([]), {
     logger: ['error', 'warn'],
@@ -103,7 +102,9 @@ async function rawDogFe(): Promise<void> {
       user.uuid,
     )
 
-    console.log(`\nSeeded @${user.githubLogin} + ${SAMPLE_APP_SLUGS.length} sample apps.`)
+    console.log(
+      `\nSeeded @${user.githubLogin}${userOnly ? '' : ` + ${SAMPLE_APP_SLUGS.length} sample apps`}.`,
+    )
     console.log(
       'Set this cookie for the web origin (DevTools → Application → Cookies), then reload:\n',
     )

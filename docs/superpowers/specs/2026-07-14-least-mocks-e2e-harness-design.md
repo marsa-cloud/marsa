@@ -60,13 +60,13 @@ CI = full real K3s (via `install.sh`); local dev = k3d + `install.sh --skip-k3s`
 
 Guardrail: **only add installer flags that serve a real user, never test-only ones.**
 
-- **`--skip-k3s`** (a.k.a. `--use-existing-cluster`): skip the `curl|sh` K3s bootstrap, honor `$KUBECONFIG`, run only install-Helm + `deploy_marsa`. Real-user value: "deploy Marsa onto a cluster I already run." Lets local dev reuse the _exact_ helm path against k3d.
+- **`--skip-k3s`**: skip the `curl|sh` K3s bootstrap, honor `$KUBECONFIG`, run only install-Helm + `deploy_marsa`. Real-user value: "deploy Marsa onto a cluster I already run." Lets local dev reuse the _exact_ helm path against k3d.
 
 No TLS flag is needed — see § TLS. Test-only concerns stay in the wrapper. `--skip-k3s` is AgDR-worthy (see § Governance).
 
 ### D4 — Decouple deploy-backend selection from `NODE_ENV`
 
-`kubernetes.module.ts` currently welds `MockDeployBackend` to `NODE_ENV==='test'`. The E2E needs `NODE_ENV=test` conveniences _with_ `DirectApplyDeployBackend`. Introduce an explicit selector (`DEPLOY_BACKEND=direct|mock`) that defaults to the current behaviour when unset (mock under test, direct otherwise) so nothing regresses.
+`kubernetes.module.ts` currently welds `MockDeployBackend` to `NODE_ENV==='test'`. The E2E needs `NODE_ENV=test` conveniences _with_ `DirectApplyDeployBackend`. Replace the `NODE_ENV` coupling with a `DEPLOY_BACKEND` env var that defaults to `direct`; `.env.test` sets `DEPLOY_BACKEND=mock` so the suite stays on the mock. No selector abstraction — the module reads the var directly.
 
 ### D5 — `seed-dev --user-only`
 
@@ -95,13 +95,14 @@ So the E2E installs with **`--no-tls`** (existing flag → `tls.enabled=false`, 
 
 ## Mock boundary ("least mocks")
 
-| Concern                    | E2E                                                                            | Note                                                   |
-| -------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------ |
-| Deploy backend             | **REAL** (`DirectApplyDeployBackend` → cluster)                                | the whole point (D4)                                   |
-| DB / Redis / secret cipher | **REAL**                                                                       | already real in e2e                                    |
-| Ingress / TLS / domain     | **REAL** ingress on 443, **self-signed** (`curl -k`)                           | LE issuance itself un-testable in CI, accepted (§ TLS) |
-| App-under-test image       | **PR/CD-built `…:<sha>`** (deploy target = trivial public image, e.g. `nginx`) | build-from-source out of scope until #31               |
-| GitHub OAuth login         | **Seeded** (`seed-dev --user-only`)                                            | interactive OAuth can't run in CI (D5)                 |
+| Concern                    | E2E                                                            | Note                                                              |
+| -------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Deploy backend             | **REAL** (`DirectApplyDeployBackend` → cluster)                | the whole point (D4)                                              |
+| DB / Redis / secret cipher | **REAL**                                                       | already real in e2e                                               |
+| Ingress / TLS / domain     | **REAL** ingress on 443, **self-signed** (`curl -k`)           | LE issuance itself un-testable in CI, accepted (§ TLS)            |
+| App-under-test image       | **fixed public image** (e.g. `nginx`)                          | the deployed sample app; build-from-source out of scope until #31 |
+| Marsa's own api/web image  | **CD-built `…:<sha>`** via `helm --set image.tag=<sha>` (§ D6) | the code under test — not the sample app's image                  |
+| GitHub OAuth login         | **Seeded** (`seed-dev --user-only`)                            | interactive OAuth can't run in CI (D5)                            |
 
 ---
 
@@ -127,7 +128,7 @@ So the E2E installs with **`--no-tls`** (existing flag → `tls.enabled=false`, 
 | `apps/api/src/modules/kubernetes/kubernetes.module.ts`          | `DEPLOY_BACKEND` selector (D4)                                                      |
 | `apps/api/src/entrypoints/seed-dev.ts`                          | `--user-only` flag (D5)                                                             |
 | `scripts/e2e-up.sh` + `Makefile` (`make e2e` / `make e2e-down`) | new wrapper (spine #3); k3d create + port map, install, `curl -k` asserts, teardown |
-| `.github/workflows/e2e.yml`                                     | new; `workflow_run` after CD + `workflow_dispatch` (D6)                             |
+| `.github/workflows/e2e.yml`                                     | new; `workflow_run` after CD (D6)                                                   |
 | `docs/local-dev.md`                                             | new; documents both the no-cluster loop (#134 tail) and the with-cluster E2E        |
 | `README` pointer                                                | link to `docs/local-dev.md`                                                         |
 
