@@ -16,7 +16,7 @@ When proposing options (tooling, structure, naming, libraries, patterns), the **
 
 ## Repo layout
 
-pnpm monorepo (`pnpm-workspace.yaml`, packages under `apps/*` and `packages/*`). Node >= 22, pnpm 9.15.0.
+pnpm monorepo (`pnpm-workspace.yaml`, packages under `apps/*` and `packages/*`). Node >= 24 (pinned to 24.15.0 in `.nvmrc`; `apps/api` `test:run` loads `node.config.json` via `--experimental-default-config-file`, which needs Node 23.10.0+), pnpm 9.15.0.
 
 - `apps/api` — NestJS 11 backend on Fastify. **See `apps/api/CLAUDE.md`** for backend-specific architecture, build pipeline, test harness, and import conventions.
 - `apps/web` — Nuxt 4 + Nuxt UI + Tailwind 4 frontend, SPA-only (`ssr: false`). **See `apps/web/.claude/CLAUDE.md`** for frontend-specific testing setup and conventions, incl. Nuxt UI dashboard gotchas (panel/sidebar slots) and MCP-driven visual/browser testing.
