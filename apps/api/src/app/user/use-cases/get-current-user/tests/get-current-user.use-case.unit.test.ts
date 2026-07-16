@@ -1,9 +1,7 @@
 import { before, describe, it } from 'node:test'
-
 import { UnauthorizedException } from '@nestjs/common'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
-
 import { UserBuilder } from '#src/app/user/entities/user.builder.js'
 import { GetCurrentUserRepository } from '#src/app/user/use-cases/get-current-user/get-current-user.repository.js'
 import { GetCurrentUserUseCase } from '#src/app/user/use-cases/get-current-user/get-current-user.use-case.js'

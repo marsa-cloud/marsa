@@ -1,5 +1,4 @@
 import { Enum, type EnumOptions } from '@mikro-orm/core'
-
 import type { Release } from '#src/app/deployments/entities/release.entity.js'
 
 /**

@@ -1,6 +1,5 @@
 import { MikroOrmModule } from '@mikro-orm/nestjs'
 import { Module } from '@nestjs/common'
-
 import { App } from '#src/app/deployments/entities/app.entity.js'
 import { ListAppsController } from '#src/app/deployments/use-cases/list-apps/list-apps.controller.js'
 import { ListAppsRepository } from '#src/app/deployments/use-cases/list-apps/list-apps.repository.js'

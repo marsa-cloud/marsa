@@ -1,6 +1,5 @@
 import { createParamDecorator, type ExecutionContext } from '@nestjs/common'
 import type { FastifyRequest } from 'fastify'
-
 import type { UserUuid } from '#src/app/user/entities/user.uuid.js'
 
 /**

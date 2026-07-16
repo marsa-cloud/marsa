@@ -1,5 +1,4 @@
 import { Entity, PrimaryKey, Property, Unique } from '@mikro-orm/core'
-
 import type { UserUuid } from '#src/app/user/entities/user.uuid.js'
 import { UserRole, UserRoleEnum } from '#src/app/user/enums/user-role.enum.js'
 import { generateUuid } from '#src/utils/uuid.js'

@@ -1,8 +1,6 @@
 import { after, before, describe, it } from 'node:test'
-
 import { EntityManager } from '@mikro-orm/core'
 import { expect } from 'expect'
-
 import { ManifestState } from '#src/app/github-app/entities/manifest-state.entity.js'
 import type { ManifestStateUuid } from '#src/app/github-app/entities/manifest-state.uuid.js'
 import { ManifestStateModule } from '#src/app/github-app/manifest-state/manifest-state.module.js'

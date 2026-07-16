@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger'
-
 import type { AppHealth } from '#src/modules/kubernetes/deploy-backend.types.js'
 
 /** Live runtime-health verdict for an app (#100) — derived, never stored. */

@@ -2,7 +2,6 @@ import { EntityManager } from '@mikro-orm/core'
 import { Injectable } from '@nestjs/common'
 import { isUUID } from 'class-validator'
 import dayjs from 'dayjs'
-
 import { OAuthStateBuilder } from '#src/app/auth/entities/oauth-state.builder.js'
 import { OAuthState } from '#src/app/auth/entities/oauth-state.entity.js'
 import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'

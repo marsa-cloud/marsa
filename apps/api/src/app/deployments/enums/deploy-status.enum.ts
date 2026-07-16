@@ -1,6 +1,5 @@
 import { Enum, type EnumOptions } from '@mikro-orm/core'
 import { ApiProperty, type ApiPropertyOptions } from '@nestjs/swagger'
-
 import type { Release } from '#src/app/deployments/entities/release.entity.js'
 
 /**

@@ -1,6 +1,5 @@
 import { EntityManager } from '@mikro-orm/core'
 import { BadGatewayException, BadRequestException, Injectable, Logger } from '@nestjs/common'
-
 import { CompleteGithubLoginCommand } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.js'
 import { CompleteGithubLoginRepository } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.repository.js'
 import { User } from '#src/app/user/entities/user.entity.js'

@@ -4,7 +4,6 @@ import type { NestFastifyApplication } from '@nestjs/platform-fastify'
 import { TestingModule } from '@nestjs/testing'
 import { Server } from 'http'
 import request from 'supertest'
-
 import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { CompleteGithubLoginCommandBuilder } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.builder.js'
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'

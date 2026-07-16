@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger'
-
 import { User } from '#src/app/user/entities/user.entity.js'
 
 export class CompleteGithubLoginResponse {

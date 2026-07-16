@@ -1,5 +1,4 @@
 import { ref } from '@mikro-orm/core'
-
 import { AppBuilder } from '#src/app/deployments/entities/app.builder.js'
 import type { App } from '#src/app/deployments/entities/app.entity.js'
 import { Release } from '#src/app/deployments/entities/release.entity.js'

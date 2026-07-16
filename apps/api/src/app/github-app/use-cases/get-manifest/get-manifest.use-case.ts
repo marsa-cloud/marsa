@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-
 import { ManifestDto } from '#src/app/github-app/github-app.types.js'
 import { ManifestStateService } from '#src/app/github-app/manifest-state/manifest-state.service.js'
 import { GetManifestResponse } from '#src/app/github-app/use-cases/get-manifest/get-manifest.response.js'

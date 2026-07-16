@@ -1,8 +1,6 @@
 import { before, describe, it } from 'node:test'
-
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
-
 import { DEFAULT_TAIL_LINES } from '#src/app/deployments/use-cases/get-app-run-logs/get-app-run-logs.constants.js'
 import { GetAppRunLogsUseCase } from '#src/app/deployments/use-cases/get-app-run-logs/get-app-run-logs.use-case.js'
 import { OPERATOR_APPS_NAMESPACE } from '#src/modules/kubernetes/deploy-backend.constants.js'

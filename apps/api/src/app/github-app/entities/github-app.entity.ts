@@ -1,5 +1,4 @@
 import { Entity, PrimaryKey, Property, Unique } from '@mikro-orm/core'
-
 import type { GitHubAppUuid } from '#src/app/github-app/entities/github-app.uuid.js'
 import { generateUuid } from '#src/utils/uuid.js'
 

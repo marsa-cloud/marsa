@@ -1,6 +1,5 @@
 import { EntityManager, UniqueConstraintViolationException } from '@mikro-orm/core'
 import { Injectable } from '@nestjs/common'
-
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
 
 /**

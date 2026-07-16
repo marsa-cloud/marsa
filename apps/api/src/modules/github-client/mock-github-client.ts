@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common'
-
 import { GithubClient } from '#src/modules/github-client/github-client.js'
 import type {
   GitHubAppCredentials,

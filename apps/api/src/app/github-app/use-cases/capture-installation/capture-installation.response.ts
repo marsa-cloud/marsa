@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger'
-
 import { GitHubInstallation } from '#src/app/github-app/entities/github-installation.entity.js'
 
 export class CaptureInstallationResponse {

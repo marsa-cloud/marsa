@@ -4,7 +4,6 @@ import { Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { NestFactory } from '@nestjs/core'
 import Fastify from 'fastify'
-
 import { AppModule } from '#src/app.module.js'
 import { AppBuilder } from '#src/app/deployments/entities/app.builder.js'
 import { App } from '#src/app/deployments/entities/app.entity.js'

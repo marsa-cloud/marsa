@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger'
-
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
 
 export class ConvertManifestResponse {

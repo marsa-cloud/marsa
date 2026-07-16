@@ -1,6 +1,5 @@
 import { EntityManager } from '@mikro-orm/core'
 import { Injectable } from '@nestjs/common'
-
 import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
 import type { GitHubAppUuid } from '#src/app/github-app/entities/github-app.uuid.js'
 import { GitHubInstallationBuilder } from '#src/app/github-app/entities/github-installation.builder.js'

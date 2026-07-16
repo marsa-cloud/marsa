@@ -1,5 +1,4 @@
 import { BadGatewayException, BadRequestException, Injectable, Logger } from '@nestjs/common'
-
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
 import { ManifestStateService } from '#src/app/github-app/manifest-state/manifest-state.service.js'
 import { ConvertManifestCommand } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.command.js'

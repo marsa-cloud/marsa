@@ -1,7 +1,5 @@
 import { after, before, describe, it } from 'node:test'
-
 import { expect } from 'expect'
-
 import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { OAuthStateModule } from '#src/app/auth/oauth-state.module.js'
 import { OAuthStateService } from '#src/app/auth/oauth-state.service.js'

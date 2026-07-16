@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger'
-
 import type { App } from '#src/app/deployments/entities/app.entity.js'
 
 export class AppSummary {

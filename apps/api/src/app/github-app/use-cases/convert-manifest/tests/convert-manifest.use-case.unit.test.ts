@@ -1,9 +1,7 @@
 import { afterEach, before, describe, it } from 'node:test'
-
 import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import sinon from 'sinon'
-
 import type { ManifestStateUuid } from '#src/app/github-app/entities/manifest-state.uuid.js'
 import { ManifestStateService } from '#src/app/github-app/manifest-state/manifest-state.service.js'
 import { ConvertManifestCommandBuilder } from '#src/app/github-app/use-cases/convert-manifest/convert-manifest.command.builder.js'
