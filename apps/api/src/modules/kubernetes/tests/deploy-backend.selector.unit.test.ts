@@ -1,6 +1,5 @@
-import { describe, it } from 'node:test'
-
 import { strictEqual } from 'node:assert/strict'
+import { describe, it } from 'node:test'
 
 import { selectDeployBackend } from '#src/modules/kubernetes/deploy-backend.selector.js'
 
