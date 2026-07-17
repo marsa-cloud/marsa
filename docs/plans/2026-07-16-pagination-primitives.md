@@ -44,6 +44,7 @@ Expected: install completes, Postgres is up, the existing suite passes (green ba
 ### Task 1: Constants + search/sort scaffolding
 
 **Files:**
+
 - Create: `src/utils/pagination/pagination.constants.ts`
 - Create: `src/utils/pagination/search/sort-direction.ts`
 - Create: `src/utils/pagination/search/sort.query.ts`
@@ -52,6 +53,7 @@ Expected: install completes, Postgres is up, the existing suite passes (green ba
 - Test: `src/utils/pagination/search/tests/search-layer.unit.test.ts`
 
 **Interfaces:**
+
 - Produces: `DEFAULT_LIMIT`, `MIN_LIMIT`, `MAX_LIMIT`, `DEFAULT_OFFSET` (numbers); `enum SortDirection { ASC='asc', DESC='desc' }`; `SortDirectionApiProperty(options?): PropertyDecorator`; `abstract class SortQuery { abstract key: string; abstract order: SortDirection }`; `abstract class FilterQuery {}`; `abstract class SearchQuery { sort?: SortQuery; filter?: FilterQuery; search?: string }`.
 
 - [ ] **Step 1: Write the failing test**
@@ -212,11 +214,13 @@ Expected: lint/typecheck clean, commit created. If lint flags the empty `FilterQ
 ### Task 2: Offset query DTOs
 
 **Files:**
+
 - Create: `src/utils/pagination/offset/paginated-offset.query.ts`
 - Create: `src/utils/pagination/offset/paginated-offset-search.query.ts`
 - Test: `src/utils/pagination/offset/tests/paginated-offset-query.unit.test.ts`
 
 **Interfaces:**
+
 - Consumes: constants from Task 1; `SearchQuery` from Task 1.
 - Produces: `class PaginatedOffsetQuery { limit: number; offset: number }` (defaults 20 / 0); `abstract class PaginatedOffsetSearchQuery extends SearchQuery { pagination: PaginatedOffsetQuery }` (pagination defaults to `new PaginatedOffsetQuery()`).
 
@@ -356,11 +360,13 @@ EOF
 ### Task 3: Offset response DTOs
 
 **Files:**
+
 - Create: `src/utils/pagination/offset/paginated-offset-response-meta.ts`
 - Create: `src/utils/pagination/offset/paginated-offset.response.ts`
 - Test: `src/utils/pagination/offset/tests/paginated-offset-response.unit.test.ts`
 
 **Interfaces:**
+
 - Produces: `class PaginatedOffsetResponseMeta { readonly total; readonly offset; readonly limit; constructor(total, offset, limit) }`; `class PaginatedOffsetResponse<T> { readonly items: T[]; readonly meta: PaginatedOffsetResponseMeta; constructor(items, meta) }`.
 
 - [ ] **Step 1: Write the failing test**
@@ -412,7 +418,10 @@ Expected: FAIL — `ERR_MODULE_NOT_FOUND` for the response modules.
 import { ApiProperty } from '@nestjs/swagger'
 
 export class PaginatedOffsetResponseMeta {
-  @ApiProperty({ type: 'integer', description: 'Total rows matching the query, ignoring limit/offset.' })
+  @ApiProperty({
+    type: 'integer',
+    description: 'Total rows matching the query, ignoring limit/offset.',
+  })
   readonly total: number
 
   @ApiProperty({ type: 'integer', description: 'Offset applied to this page.' })
@@ -485,9 +494,11 @@ EOF
 ### Task 4: Offset DB-backed test (de-risk the no-consumer abstraction)
 
 **Files:**
+
 - Test: `src/utils/pagination/offset/tests/paginated-offset.db.test.ts`
 
 **Interfaces:**
+
 - Consumes: `PaginatedOffsetResponseMeta` (Task 3); `App` + `AppBuilder` + `DeploymentsModule` (existing); `TestBench.setupModuleTest` + `TestSetup` (existing).
 
 - [ ] **Step 1: Write the test (this is the deliverable — it must pass once written; source already exists)**
@@ -572,10 +583,12 @@ EOF
 ### Task 5: Keyset cursor codec
 
 **Files:**
+
 - Create: `src/utils/pagination/keyset/cursor.ts`
 - Test: `src/utils/pagination/keyset/tests/cursor.unit.test.ts`
 
 **Interfaces:**
+
 - Produces: `interface CursorPayload { readonly sortValue: string | number; readonly id: string }`; `encodeCursor(payload: CursorPayload): string`; `decodeCursor(cursor: string): CursorPayload` (throws `BadRequestException` on malformed input).
 
 - [ ] **Step 1: Write the failing test**
@@ -697,10 +710,12 @@ EOF
 ### Task 6: Keyset comparison descriptor
 
 **Files:**
+
 - Create: `src/utils/pagination/keyset/keyset-comparison.ts`
 - Test: `src/utils/pagination/keyset/tests/keyset-comparison.unit.test.ts`
 
 **Interfaces:**
+
 - Consumes: `SortDirection` (Task 1); `CursorPayload` (Task 5).
 - Produces: `type ComparisonOperator = '$lt' | '$gt'`; `interface KeysetComparison { readonly sortField: string; readonly idField: string; readonly operator: ComparisonOperator; readonly sortValue: string | number; readonly id: string }`; `keysetComparison(sortField: string, idField: string, order: SortDirection, cursor: CursorPayload): KeysetComparison`.
 
@@ -735,7 +750,10 @@ describe('keysetComparison', () => {
   })
 
   it('ASC seeks past the cursor with $gt', () => {
-    const cmp = keysetComparison('createdAt', 'uuid', SortDirection.ASC, { sortValue: 'v', id: 'i' })
+    const cmp = keysetComparison('createdAt', 'uuid', SortDirection.ASC, {
+      sortValue: 'v',
+      id: 'i',
+    })
     expect(cmp.operator).toBe('$gt')
   })
 })
@@ -822,6 +840,7 @@ EOF
 ### Task 7: Keyset query + response DTOs
 
 **Files:**
+
 - Create: `src/utils/pagination/keyset/paginated-keyset.query.ts`
 - Create: `src/utils/pagination/keyset/paginated-keyset-search.query.ts`
 - Create: `src/utils/pagination/keyset/paginated-keyset-response-meta.ts`
@@ -829,6 +848,7 @@ EOF
 - Test: `src/utils/pagination/keyset/tests/paginated-keyset.unit.test.ts`
 
 **Interfaces:**
+
 - Consumes: constants (Task 1); `SearchQuery` (Task 1).
 - Produces: `class PaginatedKeysetQuery { limit: number; cursor?: string }` (limit default 20); `abstract class PaginatedKeysetSearchQuery extends SearchQuery { pagination: PaginatedKeysetQuery }`; `class PaginatedKeysetResponseMeta { readonly nextCursor: string | null; readonly hasMore: boolean; readonly limit: number; constructor(nextCursor, hasMore, limit) }`; `class PaginatedKeysetResponse<T> { readonly items: T[]; readonly meta: PaginatedKeysetResponseMeta; constructor(items, meta) }`.
 
@@ -1032,9 +1052,11 @@ EOF
 ### Task 8: Keyset DB-backed test (cursor + descriptor + mid-scan stability)
 
 **Files:**
+
 - Test: `src/utils/pagination/keyset/tests/paginated-keyset.db.test.ts`
 
 **Interfaces:**
+
 - Consumes: `encodeCursor`/`decodeCursor` (Task 5); `keysetComparison` + `KeysetComparison` (Task 6); `SortDirection` (Task 1); `App` + `AppBuilder` + `DeploymentsModule`; `TestBench`/`TestSetup`. Uses MikroORM's `FilterQuery` type **inside the test only** (the demonstrated adoption glue).
 
 - [ ] **Step 1: Write the test**
@@ -1222,6 +1244,7 @@ Not a plan task — done after all tasks pass. Push the branch, open the PR with
 ## Self-Review
 
 **1. Spec coverage:**
+
 - `src/utils/pagination/` layout → Tasks 1–8 create every file in the spec's tree. ✓
 - Offset Query/Response + meta → Tasks 2, 3. ✓
 - Keyset Query/Response + meta + cursor + comparison → Tasks 5, 6, 7. ✓

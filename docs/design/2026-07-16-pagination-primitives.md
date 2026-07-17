@@ -3,7 +3,7 @@
 - **Ticket:** [marsa-cloud/marsa#132](https://github.com/marsa-cloud/marsa/issues/132) — `[Refactor] Add pagination (offset, keyset)`
 - **Date:** 2026-07-16
 - **Scope of this PR:** the reusable primitives + their unit tests **only**. Purely additive — no endpoint changes, no contract change, CI stays green, BE-only.
-- **Explicitly out of scope (follow-up ticket):** migrating `list-apps` end-to-end (BE use-case, regenerated `openapi.json`, regenerated web types, web consumer fix in `pages/apps/index.vue` + `composables/useAppList.ts`, e2e). That is a *breaking* contract change (`{ apps }` → `{ items, meta }`) and must be coordinated across `apps/api` + `apps/web` in its own PR.
+- **Explicitly out of scope (follow-up ticket):** migrating `list-apps` end-to-end (BE use-case, regenerated `openapi.json`, regenerated web types, web consumer fix in `pages/apps/index.vue` + `composables/useAppList.ts`, e2e). That is a _breaking_ contract change (`{ apps }` → `{ items, meta }`) and must be coordinated across `apps/api` + `apps/web` in its own PR.
 
 ## Problem
 
@@ -50,12 +50,14 @@ maps to nested DTOs. Every nested prop carries `@ValidateNested()` + `@Type(() =
 ```ts
 // A future use-case (illustrative — NOT built this PR):
 class ListAppsSort extends SortQuery {
-  @ApiPropertyOptional({ enum: ['createdAt', 'slug'] }) @IsIn(['createdAt', 'slug']) key: 'createdAt' | 'slug' = 'createdAt'
+  @ApiPropertyOptional({ enum: ['createdAt', 'slug'] }) @IsIn(['createdAt', 'slug']) key:
+    | 'createdAt'
+    | 'slug' = 'createdAt'
   @SortDirectionApiProperty() @IsEnum(SortDirection) order: SortDirection = SortDirection.DESC
 }
 class ListAppsQuery extends PaginatedOffsetSearchQuery {
   @ValidateNested() @Type(() => ListAppsSort) sort?: ListAppsSort
-  @IsOptional() @IsString() search?: string   // repo turns into { slug: { $ilike: `%${search}%` } }
+  @IsOptional() @IsString() search?: string // repo turns into { slug: { $ilike: `%${search}%` } }
 }
 ```
 
@@ -75,18 +77,23 @@ This PR ships only the generic base; no endpoint uses it, so there is zero OpenA
 ## The search layer (composable filter / search / sort)
 
 ```ts
-export enum SortDirection { ASC = 'asc', DESC = 'desc' }
+export enum SortDirection {
+  ASC = 'asc',
+  DESC = 'desc',
+}
 export const SortDirectionApiProperty = (options?: ApiPropertyOptions): PropertyDecorator =>
   ApiProperty({ ...options, enum: SortDirection, enumName: 'SortDirection' })
 
-export abstract class SortQuery {           // use-case narrows `key` to its sortable columns
+export abstract class SortQuery {
+  // use-case narrows `key` to its sortable columns
   abstract key: string
   abstract order: SortDirection
 }
 
-export abstract class FilterQuery {}        // class (not interface) so class-transformer can nest it + stay lint-clean
+export abstract class FilterQuery {} // class (not interface) so class-transformer can nest it + stay lint-clean
 
-export abstract class SearchQuery {         // members OPTIONAL so an endpoint opts into only what it needs
+export abstract class SearchQuery {
+  // members OPTIONAL so an endpoint opts into only what it needs
   abstract sort?: SortQuery
   abstract filter?: FilterQuery
   abstract search?: string
@@ -104,7 +111,7 @@ export abstract class SearchQuery {         // members OPTIONAL so an endpoint o
 
 ## Keyset specifics
 
-- UUIDs here are **v4** (`randomUUID()`) — random, *not* time-sortable — so keyset uses a **compound key**: a sort column (e.g. `createdAt`) + `uuid` as the unique tiebreaker.
+- UUIDs here are **v4** (`randomUUID()`) — random, _not_ time-sortable — so keyset uses a **compound key**: a sort column (e.g. `createdAt`) + `uuid` as the unique tiebreaker.
 - `PaginatedKeysetQuery`: `limit` (default 20, 1–100), `cursor?` (opaque string, `@IsOptional` `@IsString`).
 - **Cursor** = `base64url(JSON)` of the last row's compound key, e.g. `{ createdAt, uuid }`. Opaque — clients treat it as a token. `decodeCursor` throws `BadRequestException` on malformed input.
 - `keyset-comparison.ts` (pure, ORM-agnostic) turns `(sort, decodedCursor)` into a normalized descriptor `{ field, order, value, tiebreaker: { field, value } }` capturing the semantics
@@ -137,4 +144,4 @@ The api gate is **80% lines / 80% branches / 90% functions** (`--experimental-te
 ## Risks / notes
 
 - **No live consumer** → the abstraction could drift from real endpoint needs. Mitigated by the real-entity/real-EM tests above; fully closed when `list-apps` adopts it in the follow-up.
-- **Keyset WHERE translation is not reused this PR** — it lands per-repo at adoption. Deliberate: keeps the ORM-swap surface minimal given the possible Drizzle move. The hard *logic* (compound comparison) is still centralized + tested in `keyset-comparison.ts`; only the ORM syntax is per-repo.
+- **Keyset WHERE translation is not reused this PR** — it lands per-repo at adoption. Deliberate: keeps the ORM-swap surface minimal given the possible Drizzle move. The hard _logic_ (compound comparison) is still centralized + tested in `keyset-comparison.ts`; only the ORM syntax is per-repo.
