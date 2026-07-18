@@ -3,7 +3,7 @@
 import { writeFileSync } from 'node:fs';
 
 const P = { R: 50, RI: 33, pad: 10 };
-const COLOR = process.argv[3] || '#10A5C4'; // cyan berth by default
+const COLOR = process.argv[3] || '#1C4EBF'; // deep blue — the primary logo colour
 
 const D = Math.PI / 180;
 const hexVert = (c, R, i) => {
