@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+  <head>
+    <style>
+      body {
+        margin: 0;
+        font-family: sans-serif;
+        background: #fafafa;
+      }
+      h3 {
+        margin: 16px 0 4px 16px;
+        color: #555;
+        font-weight: 600;
+        font-size: 13px;
+      }
+      .row {
+        display: flex;
+        gap: 0;
+      }
+      .p {
+        width: 300px;
+        height: 340px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .l {
+        background: #fff;
+      }
+      .d {
+        background: #0f1729;
+      }
+      .p img {
+        max-width: 210px;
+        max-height: 260px;
+      }
+      .ramp {
+        display: flex;
+        gap: 24px;
+        align-items: flex-end;
+        padding: 16px;
+        background: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <h3>v1 — full mark (light / dark)</h3>
+    <div class="row">
+      <div class="p l"><img src="versions/v1-full-mark.svg" /></div>
+      <div class="p d"><img src="versions/v1-full-mark.svg" /></div>
+      <div class="ramp">
+        <img src="versions/v1-full-mark.svg" style="height: 64px" />
+        <img src="versions/v1-full-mark.svg" style="height: 32px" />
+        <img src="versions/v1-full-mark.svg" style="height: 16px" />
+      </div>
+    </div>
+    <h3>single berth — reduced / favicon candidate</h3>
+    <div class="row">
+      <div class="p l"><img src="single-berth.svg" /></div>
+      <div class="p d"><img src="single-berth.svg" /></div>
+      <div class="ramp">
+        <img src="single-berth.svg" style="height: 48px" />
+        <img src="single-berth.svg" style="height: 32px" />
+        <img src="single-berth.svg" style="height: 16px" />
+      </div>
+    </div>
+    <h3>cluster — best-effort from screenshot</h3>
+    <div class="row">
+      <div class="p d"><img src="cluster.svg" /></div>
+    </div>
+  </body>
+</html>
