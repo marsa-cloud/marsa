@@ -3,7 +3,6 @@ import {
   ApiBadGatewayResponse,
   ApiBadRequestResponse,
   ApiOkResponse,
-  ApiOperation,
   ApiTags,
 } from '@nestjs/swagger'
 import type { FastifyRequest } from 'fastify'
@@ -18,7 +17,6 @@ export class CompleteGithubLoginController {
 
   @Post()
   @HttpCode(200)
-  @ApiOperation({ operationId: 'completeGithubLoginV1' })
   @ApiOkResponse({ type: CompleteGithubLoginResponse })
   @ApiBadRequestResponse({ description: 'Invalid/expired OAuth state, or no provisioned App.' })
   @ApiBadGatewayResponse({ description: 'Could not complete login with GitHub.' })

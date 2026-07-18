@@ -35,4 +35,14 @@ describe('OpenAPI generation', () => {
       'version',
     ])
   })
+
+  it('auto-derives version-suffixed operationIds from the controller class name', () => {
+    const document = createOpenApiDocument(setup.app)
+
+    // Derived, not hand-written: class name minus `Controller`, camel-cased, + `V1`.
+    expect(document.paths['/api/v1/status']?.get?.operationId).toBe('getApiInfoV1')
+    // github-app endpoints now derive from the class name (GetManifestController ->
+    // getManifestV1), deliberately dropping the former hand-written `GithubApp` infix.
+    expect(document.paths['/api/v1/github-app/manifest']?.get?.operationId).toBe('getManifestV1')
+  })
 })
