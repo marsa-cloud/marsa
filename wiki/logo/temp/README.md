@@ -9,7 +9,7 @@ geometry is being tuned before a settled version is promoted out of `temp/`.
 |------|------------|
 | `gen-logo.mjs` | Source of truth for the **full mark**. All geometry (sizes, cube, connectors, colours, spacing) lives in the `P` / `C` objects at the top. |
 | `gen-single.mjs` | Generates the **single cutout hexagon** — the reduced / favicon mark. `node gen-single.mjs single-berth.svg [#hex]`. |
-| `gen-cluster.mjs` | Generates the **honeycomb cluster** (best-effort from the 2026-07-18 screenshot; low-res source, so it's an interpretation). |
+| `gen-cluster.mjs` | Generates the **three-hex cluster** — a compact honeycomb trefoil (no connectors) showing one hexagon of each state: filled control plane, cube-cutout berth, empty berth. Serves as the secondary / system lockup; the single berth is the primary logo. |
 | `marsa-logo.svg` | Current full mark. |
 | `single-berth.svg` | Current reduced mark. |
 | `cluster.svg` | Current cluster. |

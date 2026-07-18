@@ -1,60 +1,54 @@
-// Honeycomb cluster — best-effort reproduction of the 2026-07-18 screenshot.
-// A tight pointy-top hex grid (shared edges), outlined, with small solid inner
-// hexagons ("dots") in some cells, on a dark ground. LOW-RES SOURCE — this is an
-// interpretation; tune CELLS / DOTS below.
+// Three-hex cluster — the compact harbour. Edge-sharing honeycomb, NO connectors.
+// One hexagon of each state: filled control plane, cube-cutout berth, empty berth.
 // node gen-cluster.mjs cluster.svg
 import { writeFileSync } from 'node:fs';
 
-const P = {
-  R: 40,       // cell circumradius
-  SW: 9,       // outline thickness (inside-aligned via ring)
-  RI: 15,      // inner-dot circumradius
-  pad: 10,
-  bg: '#0F1729',
-  ink: '#FFFFFF',
+const P = { R: 50, RI: 33, pad: 12, overlap: 0.75 };
+const C = {
+  deep:  '#1C4EBF', // filled — control plane
+  cyan:  '#10A5C4', // cutout — docked berth
+  light: '#7ED0E5', // outline — empty berth
 };
 
 const D = Math.PI / 180;
-const A = Math.sqrt(3) / 2;             // apothem factor
+const A = Math.sqrt(3) / 2;
 const hexVert = (c, R, i) => {
   const th = i * 60 * D;
   return { x: c.x + R * Math.sin(th), y: c.y - R * Math.cos(th) };
 };
 const hexPts = (c, R) => [0, 1, 2, 3, 4, 5].map((i) => hexVert(c, R, i));
 const path = (pts) => 'M ' + pts.map((p) => `${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' L ') + ' Z';
+// cutout hole = inner hexagon minus the rhombus at corner A (that face stays solid)
+const holePts = (c, R, Acorner) => {
+  const pts = [{ ...c }];
+  for (let k = 1; k <= 5; k++) pts.push(hexVert(c, R, (Acorner + k) % 6));
+  return pts;
+};
 
-// pointy-top hex-grid neighbour offsets (edge-sharing): horiz = √3R, diag = (√3R/2, 1.5R)
-const w = Math.sqrt(3) * P.R, vy = 1.5 * P.R;
-const cell = (col, row) => ({ x: col * (w / 2), y: row * vy });
+const R = P.R;
+// triangular trefoil: control plane on top, two berths below — all edge-sharing
+const TOP = { x: 0, y: -1.5 * R };
+const BL = { x: -A * R, y: 0 };
+const BR = { x: A * R, y: 0 };
 
-// cluster: a centre + ring of 6 (flower), plus the two upper cells cropped like the source
-// axial-ish placement via (col,row) where col steps half-width, row steps 1.5R
-const CELLS = [
-  cell(0, 0),   // centre
-  cell(2, 0),   // right
-  cell(-2, 0),  // left
-  cell(1, 1),   // lower-right
-  cell(-1, 1),  // lower-left
-  cell(1, -1),  // upper-right
-  cell(-1, -1), // upper-left
-];
-const DOTS = [0, 3, 4, 6]; // which cells get an inner-hex dot
+// slightly grow each hex so touching edges overlap a hair (kills antialias seams)
+const Rg = R + P.overlap;
 
-// inside-aligned outline = outer hex minus inner hex (evenodd)
-const ring = (c) => path(hexPts(c, P.R)) + ' ' + path(hexPts(c, P.R - P.SW / A));
+const filled = `<polygon points="${hexPts(TOP, Rg).map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ')}" fill="${C.deep}"/>`;
+const cutout = `<path d="${path(hexPts(BL, Rg))} ${path(holePts(BL, P.RI, 2))}" fill="${C.cyan}" fill-rule="evenodd"/>`;
+// empty berth = inside-aligned ring (outer hex minus inner hex at RI) so wall matches the cutout wall
+const empty = `<path d="${path(hexPts(BR, Rg))} ${path(hexPts(BR, P.RI))}" fill="${C.light}" fill-rule="evenodd"/>`;
 
-const rings = CELLS.map((c) => `<path d="${ring(c)}" fill="${P.ink}" fill-rule="evenodd"/>`).join('\n  ');
-const dots = DOTS.map((i) => `<path d="${path(hexPts(CELLS[i], P.RI))}" fill="${P.ink}"/>`).join('\n  ');
-
-const xs = CELLS.flatMap((c) => [c.x - P.R * A, c.x + P.R * A]);
-const ys = CELLS.flatMap((c) => [c.y - P.R, c.y + P.R]);
+const cs = [TOP, BL, BR];
+const xs = cs.flatMap((c) => [c.x - R * A, c.x + R * A]);
+const ys = cs.flatMap((c) => [c.y - R, c.y + R]);
 const minX = Math.min(...xs) - P.pad, minY = Math.min(...ys) - P.pad;
 const W = Math.max(...xs) - minX + P.pad, H = Math.max(...ys) - minY + P.pad;
 
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${minX.toFixed(1)} ${minY.toFixed(1)} ${W.toFixed(1)} ${H.toFixed(1)}" width="${W.toFixed(0)}" height="${H.toFixed(0)}">
-  <rect x="${minX.toFixed(1)}" y="${minY.toFixed(1)}" width="${W.toFixed(1)}" height="${H.toFixed(1)}" fill="${P.bg}"/>
-  ${rings}
-  ${dots}
+  ${filled}
+  ${cutout}
+  ${empty}
 </svg>
 `;
 writeFileSync(process.argv[2] || '/dev/stdout', svg);
