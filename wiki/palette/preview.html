@@ -1,20 +1,335 @@
-<!doctype html><html><head><meta charset="utf-8"><style>
-  body{margin:0;font-family:ui-sans-serif,system-ui,sans-serif;background:#fff;color:#111;padding:24px}
-  h1{font-size:18px;margin:0 0 2px} p.sub{color:#666;margin:0 0 20px;font-size:13px}
-  .name{font-size:12px;font-weight:600;color:#444;margin:14px 0 6px;text-transform:capitalize}
-  .cells{display:flex;border-radius:8px;overflow:hidden}
-  .sw{flex:1;height:60px;display:flex;flex-direction:column;justify-content:flex-end;padding:6px 8px;font-size:10px}
-  .sw b{font-size:11px}.sw span{opacity:.8}
-  .brand .cells{display:flex;gap:0}.sw.big{height:88px;font-size:12px}
-</style></head><body>
-  <h1>Marsa — colour palette</h1>
-  <p class="sub">Generated from brand anchors. Primary = the deep-blue logo colour. Draft — iterate in <code>gen-palette.mjs</code>.</p>
-  <div class="scale brand"><div class="name">Brand (exact logo colours)</div><div class="cells"><div class="sw big" style="background:#1C4EBF;color:#fff"><b>deep</b><span>#1C4EBF</span></div><div class="sw big" style="background:#3568D4;color:#fff"><b>mid</b><span>#3568D4</span></div><div class="sw big" style="background:#10A5C4;color:#fff"><b>cyan</b><span>#10A5C4</span></div><div class="sw big" style="background:#7ED0E5;color:#111"><b>light</b><span>#7ED0E5</span></div></div></div>
-  <div class="scale"><div class="name">primary</div><div class="cells"><div class="sw" style="background:#f3f6fb;color:#111"><b>50</b><span>#f3f6fb</span></div><div class="sw" style="background:#e4e9f7;color:#111"><b>100</b><span>#e4e9f7</span></div><div class="sw" style="background:#bccef5;color:#111"><b>200</b><span>#bccef5</span></div><div class="sw" style="background:#90adef;color:#111"><b>300</b><span>#90adef</span></div><div class="sw" style="background:#5a86e7;color:#111"><b>400</b><span>#5a86e7</span></div><div class="sw" style="background:#2e65e0;color:#fff"><b>500</b><span>#2e65e0</span></div><div class="sw" style="background:#1d52c8;color:#fff"><b>600</b><span>#1d52c8</span></div><div class="sw" style="background:#1843a5;color:#fff"><b>700</b><span>#1843a5</span></div><div class="sw" style="background:#133581;color:#fff"><b>800</b><span>#133581</span></div><div class="sw" style="background:#132a5e;color:#fff"><b>900</b><span>#132a5e</span></div><div class="sw" style="background:#0c1a3c;color:#fff"><b>950</b><span>#0c1a3c</span></div></div></div>
-  <div class="scale"><div class="name">accent</div><div class="cells"><div class="sw" style="background:#f3fafc;color:#111"><b>50</b><span>#f3fafc</span></div><div class="sw" style="background:#e2f4f8;color:#111"><b>100</b><span>#e2f4f8</span></div><div class="sw" style="background:#b8eef9;color:#111"><b>200</b><span>#b8eef9</span></div><div class="sw" style="background:#89e3f5;color:#111"><b>300</b><span>#89e3f5</span></div><div class="sw" style="background:#51d5f1;color:#111"><b>400</b><span>#51d5f1</span></div><div class="sw" style="background:#21caed;color:#fff"><b>500</b><span>#21caed</span></div><div class="sw" style="background:#11b3d4;color:#fff"><b>600</b><span>#11b3d4</span></div><div class="sw" style="background:#0e93ae;color:#fff"><b>700</b><span>#0e93ae</span></div><div class="sw" style="background:#0b7389;color:#fff"><b>800</b><span>#0b7389</span></div><div class="sw" style="background:#0d5463;color:#fff"><b>900</b><span>#0d5463</span></div><div class="sw" style="background:#08363f;color:#fff"><b>950</b><span>#08363f</span></div></div></div>
-  <div class="scale"><div class="name">neutral</div><div class="cells"><div class="sw" style="background:#f7f7f8;color:#111"><b>50</b><span>#f7f7f8</span></div><div class="sw" style="background:#ecedee;color:#111"><b>100</b><span>#ecedee</span></div><div class="sw" style="background:#d5d7dc;color:#111"><b>200</b><span>#d5d7dc</span></div><div class="sw" style="background:#babdc5;color:#111"><b>300</b><span>#babdc5</span></div><div class="sw" style="background:#989da9;color:#111"><b>400</b><span>#989da9</span></div><div class="sw" style="background:#7c8292;color:#fff"><b>500</b><span>#7c8292</span></div><div class="sw" style="background:#686e7d;color:#fff"><b>600</b><span>#686e7d</span></div><div class="sw" style="background:#565b67;color:#fff"><b>700</b><span>#565b67</span></div><div class="sw" style="background:#434751;color:#fff"><b>800</b><span>#434751</span></div><div class="sw" style="background:#34363d;color:#fff"><b>900</b><span>#34363d</span></div><div class="sw" style="background:#212227;color:#fff"><b>950</b><span>#212227</span></div></div></div>
-  <div class="scale"><div class="name">success</div><div class="cells"><div class="sw" style="background:#f3fcf6;color:#111"><b>50</b><span>#f3fcf6</span></div><div class="sw" style="background:#e3f7eb;color:#111"><b>100</b><span>#e3f7eb</span></div><div class="sw" style="background:#bcf6d1;color:#111"><b>200</b><span>#bcf6d1</span></div><div class="sw" style="background:#8ff0b3;color:#111"><b>300</b><span>#8ff0b3</span></div><div class="sw" style="background:#59e98e;color:#111"><b>400</b><span>#59e98e</span></div><div class="sw" style="background:#2ce26f;color:#fff"><b>500</b><span>#2ce26f</span></div><div class="sw" style="background:#1bca5c;color:#fff"><b>600</b><span>#1bca5c</span></div><div class="sw" style="background:#16a64b;color:#fff"><b>700</b><span>#16a64b</span></div><div class="sw" style="background:#12823b;color:#fff"><b>800</b><span>#12823b</span></div><div class="sw" style="background:#125f2e;color:#fff"><b>900</b><span>#125f2e</span></div><div class="sw" style="background:#0b3c1d;color:#fff"><b>950</b><span>#0b3c1d</span></div></div></div>
-  <div class="scale"><div class="name">warning</div><div class="cells"><div class="sw" style="background:#fdf8f2;color:#111"><b>50</b><span>#fdf8f2</span></div><div class="sw" style="background:#f9eee1;color:#111"><b>100</b><span>#f9eee1</span></div><div class="sw" style="background:#fddbb5;color:#111"><b>200</b><span>#fddbb5</span></div><div class="sw" style="background:#fcc483;color:#111"><b>300</b><span>#fcc483</span></div><div class="sw" style="background:#faa747;color:#111"><b>400</b><span>#faa747</span></div><div class="sw" style="background:#f98f16;color:#fff"><b>500</b><span>#f98f16</span></div><div class="sw" style="background:#df7a06;color:#fff"><b>600</b><span>#df7a06</span></div><div class="sw" style="background:#b86505;color:#fff"><b>700</b><span>#b86505</span></div><div class="sw" style="background:#904f04;color:#fff"><b>800</b><span>#904f04</span></div><div class="sw" style="background:#683b08;color:#fff"><b>900</b><span>#683b08</span></div><div class="sw" style="background:#422605;color:#fff"><b>950</b><span>#422605</span></div></div></div>
-  <div class="scale"><div class="name">error</div><div class="cells"><div class="sw" style="background:#fbf3f3;color:#111"><b>50</b><span>#fbf3f3</span></div><div class="sw" style="background:#f6e4e4;color:#111"><b>100</b><span>#f6e4e4</span></div><div class="sw" style="background:#f4bdbd;color:#111"><b>200</b><span>#f4bdbd</span></div><div class="sw" style="background:#ed9191;color:#111"><b>300</b><span>#ed9191</span></div><div class="sw" style="background:#e55d5d;color:#111"><b>400</b><span>#e55d5d</span></div><div class="sw" style="background:#de3131;color:#fff"><b>500</b><span>#de3131</span></div><div class="sw" style="background:#c62020;color:#fff"><b>600</b><span>#c62020</span></div><div class="sw" style="background:#a21a1a;color:#fff"><b>700</b><span>#a21a1a</span></div><div class="sw" style="background:#7f1515;color:#fff"><b>800</b><span>#7f1515</span></div><div class="sw" style="background:#5d1414;color:#fff"><b>900</b><span>#5d1414</span></div><div class="sw" style="background:#3b0c0c;color:#fff"><b>950</b><span>#3b0c0c</span></div></div></div>
-  <div class="scale"><div class="name">info</div><div class="cells"><div class="sw" style="background:#f2f9fc;color:#111"><b>50</b><span>#f2f9fc</span></div><div class="sw" style="background:#e2f1f9;color:#111"><b>100</b><span>#e2f1f9</span></div><div class="sw" style="background:#b7e6fb;color:#111"><b>200</b><span>#b7e6fb</span></div><div class="sw" style="background:#87d5f8;color:#111"><b>300</b><span>#87d5f8</span></div><div class="sw" style="background:#4dc0f4;color:#111"><b>400</b><span>#4dc0f4</span></div><div class="sw" style="background:#1daff1;color:#fff"><b>500</b><span>#1daff1</span></div><div class="sw" style="background:#0d99d8;color:#fff"><b>600</b><span>#0d99d8</span></div><div class="sw" style="background:#0b7eb2;color:#fff"><b>700</b><span>#0b7eb2</span></div><div class="sw" style="background:#08638c;color:#fff"><b>800</b><span>#08638c</span></div><div class="sw" style="background:#0b4965;color:#fff"><b>900</b><span>#0b4965</span></div><div class="sw" style="background:#072e40;color:#fff"><b>950</b><span>#072e40</span></div></div></div>
-</body></html>
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        background: #fff;
+        color: #111;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 2px;
+      }
+      p.sub {
+        color: #666;
+        margin: 0 0 20px;
+        font-size: 13px;
+      }
+      .name {
+        font-size: 12px;
+        font-weight: 600;
+        color: #444;
+        margin: 14px 0 6px;
+        text-transform: capitalize;
+      }
+      .cells {
+        display: flex;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .sw {
+        flex: 1;
+        height: 60px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: 6px 8px;
+        font-size: 10px;
+      }
+      .sw b {
+        font-size: 11px;
+      }
+      .sw span {
+        opacity: 0.8;
+      }
+      .brand .cells {
+        display: flex;
+        gap: 0;
+      }
+      .sw.big {
+        height: 88px;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Marsa — colour palette</h1>
+    <p class="sub">
+      Generated from brand anchors. Primary = the deep-blue logo colour. Draft — iterate in
+      <code>gen-palette.mjs</code>.
+    </p>
+    <div class="scale brand">
+      <div class="name">Brand (exact logo colours)</div>
+      <div class="cells">
+        <div class="sw big" style="background: #1c4ebf; color: #fff">
+          <b>deep</b><span>#1C4EBF</span>
+        </div>
+        <div class="sw big" style="background: #3568d4; color: #fff">
+          <b>mid</b><span>#3568D4</span>
+        </div>
+        <div class="sw big" style="background: #10a5c4; color: #fff">
+          <b>cyan</b><span>#10A5C4</span>
+        </div>
+        <div class="sw big" style="background: #7ed0e5; color: #111">
+          <b>light</b><span>#7ED0E5</span>
+        </div>
+      </div>
+    </div>
+    <div class="scale">
+      <div class="name">primary</div>
+      <div class="cells">
+        <div class="sw" style="background: #f3f6fb; color: #111"><b>50</b><span>#f3f6fb</span></div>
+        <div class="sw" style="background: #e4e9f7; color: #111">
+          <b>100</b><span>#e4e9f7</span>
+        </div>
+        <div class="sw" style="background: #bccef5; color: #111">
+          <b>200</b><span>#bccef5</span>
+        </div>
+        <div class="sw" style="background: #90adef; color: #111">
+          <b>300</b><span>#90adef</span>
+        </div>
+        <div class="sw" style="background: #5a86e7; color: #111">
+          <b>400</b><span>#5a86e7</span>
+        </div>
+        <div class="sw" style="background: #2e65e0; color: #fff">
+          <b>500</b><span>#2e65e0</span>
+        </div>
+        <div class="sw" style="background: #1d52c8; color: #fff">
+          <b>600</b><span>#1d52c8</span>
+        </div>
+        <div class="sw" style="background: #1843a5; color: #fff">
+          <b>700</b><span>#1843a5</span>
+        </div>
+        <div class="sw" style="background: #133581; color: #fff">
+          <b>800</b><span>#133581</span>
+        </div>
+        <div class="sw" style="background: #132a5e; color: #fff">
+          <b>900</b><span>#132a5e</span>
+        </div>
+        <div class="sw" style="background: #0c1a3c; color: #fff">
+          <b>950</b><span>#0c1a3c</span>
+        </div>
+      </div>
+    </div>
+    <div class="scale">
+      <div class="name">accent</div>
+      <div class="cells">
+        <div class="sw" style="background: #f3fafc; color: #111"><b>50</b><span>#f3fafc</span></div>
+        <div class="sw" style="background: #e2f4f8; color: #111">
+          <b>100</b><span>#e2f4f8</span>
+        </div>
+        <div class="sw" style="background: #b8eef9; color: #111">
+          <b>200</b><span>#b8eef9</span>
+        </div>
+        <div class="sw" style="background: #89e3f5; color: #111">
+          <b>300</b><span>#89e3f5</span>
+        </div>
+        <div class="sw" style="background: #51d5f1; color: #111">
+          <b>400</b><span>#51d5f1</span>
+        </div>
+        <div class="sw" style="background: #21caed; color: #fff">
+          <b>500</b><span>#21caed</span>
+        </div>
+        <div class="sw" style="background: #11b3d4; color: #fff">
+          <b>600</b><span>#11b3d4</span>
+        </div>
+        <div class="sw" style="background: #0e93ae; color: #fff">
+          <b>700</b><span>#0e93ae</span>
+        </div>
+        <div class="sw" style="background: #0b7389; color: #fff">
+          <b>800</b><span>#0b7389</span>
+        </div>
+        <div class="sw" style="background: #0d5463; color: #fff">
+          <b>900</b><span>#0d5463</span>
+        </div>
+        <div class="sw" style="background: #08363f; color: #fff">
+          <b>950</b><span>#08363f</span>
+        </div>
+      </div>
+    </div>
+    <div class="scale">
+      <div class="name">neutral</div>
+      <div class="cells">
+        <div class="sw" style="background: #f7f7f8; color: #111"><b>50</b><span>#f7f7f8</span></div>
+        <div class="sw" style="background: #ecedee; color: #111">
+          <b>100</b><span>#ecedee</span>
+        </div>
+        <div class="sw" style="background: #d5d7dc; color: #111">
+          <b>200</b><span>#d5d7dc</span>
+        </div>
+        <div class="sw" style="background: #babdc5; color: #111">
+          <b>300</b><span>#babdc5</span>
+        </div>
+        <div class="sw" style="background: #989da9; color: #111">
+          <b>400</b><span>#989da9</span>
+        </div>
+        <div class="sw" style="background: #7c8292; color: #fff">
+          <b>500</b><span>#7c8292</span>
+        </div>
+        <div class="sw" style="background: #686e7d; color: #fff">
+          <b>600</b><span>#686e7d</span>
+        </div>
+        <div class="sw" style="background: #565b67; color: #fff">
+          <b>700</b><span>#565b67</span>
+        </div>
+        <div class="sw" style="background: #434751; color: #fff">
+          <b>800</b><span>#434751</span>
+        </div>
+        <div class="sw" style="background: #34363d; color: #fff">
+          <b>900</b><span>#34363d</span>
+        </div>
+        <div class="sw" style="background: #212227; color: #fff">
+          <b>950</b><span>#212227</span>
+        </div>
+      </div>
+    </div>
+    <div class="scale">
+      <div class="name">success</div>
+      <div class="cells">
+        <div class="sw" style="background: #f3fcf6; color: #111"><b>50</b><span>#f3fcf6</span></div>
+        <div class="sw" style="background: #e3f7eb; color: #111">
+          <b>100</b><span>#e3f7eb</span>
+        </div>
+        <div class="sw" style="background: #bcf6d1; color: #111">
+          <b>200</b><span>#bcf6d1</span>
+        </div>
+        <div class="sw" style="background: #8ff0b3; color: #111">
+          <b>300</b><span>#8ff0b3</span>
+        </div>
+        <div class="sw" style="background: #59e98e; color: #111">
+          <b>400</b><span>#59e98e</span>
+        </div>
+        <div class="sw" style="background: #2ce26f; color: #fff">
+          <b>500</b><span>#2ce26f</span>
+        </div>
+        <div class="sw" style="background: #1bca5c; color: #fff">
+          <b>600</b><span>#1bca5c</span>
+        </div>
+        <div class="sw" style="background: #16a64b; color: #fff">
+          <b>700</b><span>#16a64b</span>
+        </div>
+        <div class="sw" style="background: #12823b; color: #fff">
+          <b>800</b><span>#12823b</span>
+        </div>
+        <div class="sw" style="background: #125f2e; color: #fff">
+          <b>900</b><span>#125f2e</span>
+        </div>
+        <div class="sw" style="background: #0b3c1d; color: #fff">
+          <b>950</b><span>#0b3c1d</span>
+        </div>
+      </div>
+    </div>
+    <div class="scale">
+      <div class="name">warning</div>
+      <div class="cells">
+        <div class="sw" style="background: #fdf8f2; color: #111"><b>50</b><span>#fdf8f2</span></div>
+        <div class="sw" style="background: #f9eee1; color: #111">
+          <b>100</b><span>#f9eee1</span>
+        </div>
+        <div class="sw" style="background: #fddbb5; color: #111">
+          <b>200</b><span>#fddbb5</span>
+        </div>
+        <div class="sw" style="background: #fcc483; color: #111">
+          <b>300</b><span>#fcc483</span>
+        </div>
+        <div class="sw" style="background: #faa747; color: #111">
+          <b>400</b><span>#faa747</span>
+        </div>
+        <div class="sw" style="background: #f98f16; color: #fff">
+          <b>500</b><span>#f98f16</span>
+        </div>
+        <div class="sw" style="background: #df7a06; color: #fff">
+          <b>600</b><span>#df7a06</span>
+        </div>
+        <div class="sw" style="background: #b86505; color: #fff">
+          <b>700</b><span>#b86505</span>
+        </div>
+        <div class="sw" style="background: #904f04; color: #fff">
+          <b>800</b><span>#904f04</span>
+        </div>
+        <div class="sw" style="background: #683b08; color: #fff">
+          <b>900</b><span>#683b08</span>
+        </div>
+        <div class="sw" style="background: #422605; color: #fff">
+          <b>950</b><span>#422605</span>
+        </div>
+      </div>
+    </div>
+    <div class="scale">
+      <div class="name">error</div>
+      <div class="cells">
+        <div class="sw" style="background: #fbf3f3; color: #111"><b>50</b><span>#fbf3f3</span></div>
+        <div class="sw" style="background: #f6e4e4; color: #111">
+          <b>100</b><span>#f6e4e4</span>
+        </div>
+        <div class="sw" style="background: #f4bdbd; color: #111">
+          <b>200</b><span>#f4bdbd</span>
+        </div>
+        <div class="sw" style="background: #ed9191; color: #111">
+          <b>300</b><span>#ed9191</span>
+        </div>
+        <div class="sw" style="background: #e55d5d; color: #111">
+          <b>400</b><span>#e55d5d</span>
+        </div>
+        <div class="sw" style="background: #de3131; color: #fff">
+          <b>500</b><span>#de3131</span>
+        </div>
+        <div class="sw" style="background: #c62020; color: #fff">
+          <b>600</b><span>#c62020</span>
+        </div>
+        <div class="sw" style="background: #a21a1a; color: #fff">
+          <b>700</b><span>#a21a1a</span>
+        </div>
+        <div class="sw" style="background: #7f1515; color: #fff">
+          <b>800</b><span>#7f1515</span>
+        </div>
+        <div class="sw" style="background: #5d1414; color: #fff">
+          <b>900</b><span>#5d1414</span>
+        </div>
+        <div class="sw" style="background: #3b0c0c; color: #fff">
+          <b>950</b><span>#3b0c0c</span>
+        </div>
+      </div>
+    </div>
+    <div class="scale">
+      <div class="name">info</div>
+      <div class="cells">
+        <div class="sw" style="background: #f2f9fc; color: #111"><b>50</b><span>#f2f9fc</span></div>
+        <div class="sw" style="background: #e2f1f9; color: #111">
+          <b>100</b><span>#e2f1f9</span>
+        </div>
+        <div class="sw" style="background: #b7e6fb; color: #111">
+          <b>200</b><span>#b7e6fb</span>
+        </div>
+        <div class="sw" style="background: #87d5f8; color: #111">
+          <b>300</b><span>#87d5f8</span>
+        </div>
+        <div class="sw" style="background: #4dc0f4; color: #111">
+          <b>400</b><span>#4dc0f4</span>
+        </div>
+        <div class="sw" style="background: #1daff1; color: #fff">
+          <b>500</b><span>#1daff1</span>
+        </div>
+        <div class="sw" style="background: #0d99d8; color: #fff">
+          <b>600</b><span>#0d99d8</span>
+        </div>
+        <div class="sw" style="background: #0b7eb2; color: #fff">
+          <b>700</b><span>#0b7eb2</span>
+        </div>
+        <div class="sw" style="background: #08638c; color: #fff">
+          <b>800</b><span>#08638c</span>
+        </div>
+        <div class="sw" style="background: #0b4965; color: #fff">
+          <b>900</b><span>#0b4965</span>
+        </div>
+        <div class="sw" style="background: #072e40; color: #fff">
+          <b>950</b><span>#072e40</span>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

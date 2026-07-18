@@ -5,12 +5,12 @@ from a handful of anchors, so tuning is a one-line change + re-run.
 
 ## Files
 
-| File | What it is |
-|------|------------|
-| `gen-palette.mjs` | Source of truth. Brand anchors + lightness ramp at the top; emits the three files below. |
-| `palette.json` | Machine-readable palette — `brand` + `primary/accent/neutral/success/warning/error/info` scales (50–950). |
-| `palette.css` | CSS custom properties: `--marsa-deep`, `--color-primary-500`, … |
-| `preview.html` / `preview.png` | Swatch board. |
+| File                           | What it is                                                                                                |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `gen-palette.mjs`              | Source of truth. Brand anchors + lightness ramp at the top; emits the three files below.                  |
+| `palette.json`                 | Machine-readable palette — `brand` + `primary/accent/neutral/success/warning/error/info` scales (50–950). |
+| `palette.css`                  | CSS custom properties: `--marsa-deep`, `--color-primary-500`, …                                           |
+| `preview.html` / `preview.png` | Swatch board.                                                                                             |
 
 ## Regenerate
 
@@ -26,9 +26,9 @@ aliases:
 
 ```css
 /* app/assets/css/main.css */
-@import "tailwindcss";
+@import 'tailwindcss';
 @theme {
-  --color-primary-50:  #f3f6fb;
+  --color-primary-50: #f3f6fb;
   /* … paste from palette.css … */
   --color-primary-950: #0c1a3c;
 }

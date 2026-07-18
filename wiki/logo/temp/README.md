@@ -5,16 +5,16 @@ geometry is being tuned before a settled version is promoted out of `temp/`.
 
 ## Files
 
-| File | What it is |
-|------|------------|
-| `gen-logo.mjs` | Source of truth for the **full mark**. All geometry (sizes, cube, connectors, colours, spacing) lives in the `P` / `C` objects at the top. |
-| `gen-single.mjs` | Generates the **single cutout hexagon** — the reduced / favicon mark. `node gen-single.mjs single-berth.svg [#hex]`. |
-| `gen-cluster.mjs` | Generates the **three-hex cluster** — a compact honeycomb trefoil (no connectors) showing one hexagon of each state: filled control plane, cube-cutout berth, empty berth. Serves as the secondary / system lockup; the single berth is the primary logo. |
-| `marsa-logo.svg` | Current full mark. |
-| `single-berth.svg` | Current reduced mark. |
-| `cluster.svg` | Current cluster. |
-| `versions/` | **Frozen iterations** — `v1-full-mark.svg`, `v2-…`, so we can compare and roll back visually (git history is the real record; these are for eyeballing). |
-| `preview.html` / `preview.png` | Renders all marks on light + dark + a small-size ramp. |
+| File                           | What it is                                                                                                                                                                                                                                                |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `gen-logo.mjs`                 | Source of truth for the **full mark**. All geometry (sizes, cube, connectors, colours, spacing) lives in the `P` / `C` objects at the top.                                                                                                                |
+| `gen-single.mjs`               | Generates the **single cutout hexagon** — the reduced / favicon mark. `node gen-single.mjs single-berth.svg [#hex]`.                                                                                                                                      |
+| `gen-cluster.mjs`              | Generates the **three-hex cluster** — a compact honeycomb trefoil (no connectors) showing one hexagon of each state: filled control plane, cube-cutout berth, empty berth. Serves as the secondary / system lockup; the single berth is the primary logo. |
+| `marsa-logo.svg`               | Current full mark.                                                                                                                                                                                                                                        |
+| `single-berth.svg`             | Current reduced mark.                                                                                                                                                                                                                                     |
+| `cluster.svg`                  | Current cluster.                                                                                                                                                                                                                                          |
+| `versions/`                    | **Frozen iterations** — `v1-full-mark.svg`, `v2-…`, so we can compare and roll back visually (git history is the real record; these are for eyeballing).                                                                                                  |
+| `preview.html` / `preview.png` | Renders all marks on light + dark + a small-size ramp.                                                                                                                                                                                                    |
 
 ## Versioning convention
 
@@ -52,7 +52,7 @@ arrangement, encoding a semantic system:
 - **Hexagon with a cube cutout** = a berth with an app docked. The cube is an
   inner hexagon (RI=33) with one face filled; the two berths carry the filled
   face on **opposite** sides.
-- **Outline hexagon** = an empty berth. It shares the *same* inner hexagon (RI)
+- **Outline hexagon** = an empty berth. It shares the _same_ inner hexagon (RI)
   as the occupied berths, so its wall thickness matches theirs exactly — an
   empty berth is literally an occupied one with the docked face removed.
 - **Gradient connectors** interpolate between the two hexagons they join and sit
