@@ -1,4 +1,4 @@
-import { type FilterQuery } from '#src/utils/pagination/search/filter.query.js'
+import { type BaseFilterQuery } from '#src/utils/pagination/search/base-filter.query.js'
 import { type SortQuery } from '#src/utils/pagination/search/sort.query.js'
 
 // Composable search surface. Members are optional so a use-case opts into only
@@ -6,6 +6,6 @@ import { type SortQuery } from '#src/utils/pagination/search/sort.query.js'
 // @ValidateNested()/@Type().
 export abstract class SearchQuery {
   sort?: SortQuery
-  filter?: FilterQuery
+  filter?: BaseFilterQuery
   search?: string
 }

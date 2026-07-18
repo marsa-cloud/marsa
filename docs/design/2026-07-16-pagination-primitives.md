@@ -21,7 +21,7 @@ src/utils/pagination/
   search/
     sort-direction.ts                # enum SortDirection { ASC='asc', DESC='desc' } + SortDirectionApiProperty factory
     sort.query.ts                    # abstract SortQuery { key; order: SortDirection }
-    filter.query.ts                  # abstract class FilterQuery {} — marker base for per-use-case filter shapes
+    base-filter.query.ts             # abstract class BaseFilterQuery {} — marker base for per-use-case filter shapes
     search.query.ts                  # abstract SearchQuery { sort?; filter?; search? }
   offset/
     paginated-offset.query.ts        # PaginatedOffsetQuery { limit; offset }
@@ -90,17 +90,17 @@ export abstract class SortQuery {
   abstract order: SortDirection
 }
 
-export abstract class FilterQuery {} // class (not interface) so class-transformer can nest it + stay lint-clean
+export abstract class BaseFilterQuery {} // class (not interface) so class-transformer can nest it + stay lint-clean
 
 export abstract class SearchQuery {
   // members OPTIONAL so an endpoint opts into only what it needs
   abstract sort?: SortQuery
-  abstract filter?: FilterQuery
+  abstract filter?: BaseFilterQuery
   abstract search?: string
 }
 ```
 
-**Refinement vs the original sketch (flagged):** `SearchQuery`'s members are **optional**, not mandatory-abstract. An endpoint that needs pagination + search but no filter/sort shouldn't be forced to define empty `filter`/`sort` classes. `FilterQuery` is an **abstract class**, not an empty `interface` — an empty interface trips `@typescript-eslint/no-empty-object-type`, and class-transformer's `@Type()` nesting needs a class anyway.
+**Refinement vs the original sketch (flagged):** `SearchQuery`'s members are **optional**, not mandatory-abstract. An endpoint that needs pagination + search but no filter/sort shouldn't be forced to define empty `filter`/`sort` classes. `BaseFilterQuery` is an **abstract class**, not an empty `interface` — an empty interface trips `@typescript-eslint/no-empty-object-type`, and class-transformer's `@Type()` nesting needs a class anyway.
 
 ## Offset specifics
 
@@ -116,8 +116,8 @@ export abstract class SearchQuery {
 - **Cursor** = `base64url(JSON)` of the last row's compound key, e.g. `{ createdAt, uuid }`. Opaque — clients treat it as a token. `decodeCursor` throws `BadRequestException` on malformed input.
 - `keyset-comparison.ts` (pure, ORM-agnostic) turns `(sort, decodedCursor)` into a normalized descriptor `{ field, order, value, tiebreaker: { field, value } }` capturing the semantics
   `field <order> value OR (field = value AND tiebreaker.field <order> tiebreaker.value)`.
-  The adopting repo translates that descriptor into the ORM's `WHERE` (MikroORM `$or`, or Drizzle later) — the one ORM-coupled line.
-- Meta: `{ nextCursor, hasMore, limit }`. Over-fetch `limit + 1` rows at adoption to compute `hasMore`; `nextCursor = hasMore ? encodeCursor(lastKeptRow) : null`.
+  The descriptor spells its operator ORM-neutrally (`'lt' | 'gt'`, not `$lt`/`$gt`) and carries the `orderBy` it presupposes, since keyset is only correct when ORDER BY matches the predicate. The adopting repo translates it into the ORM's `WHERE` + `ORDER BY` (MikroORM `$or`, or Drizzle later) — the one ORM-coupled step.
+- Meta: `{ nextCursor, hasMore, limit }`. `build-keyset-page.ts` owns page assembly: the caller over-fetches `limit + 1` rows and `buildKeysetPage` drops the extra, derives `hasMore`, and encodes `nextCursor` from the last **kept** row (`null` on the last page). Centralising it keeps the classic last-fetched-vs-last-kept off-by-one out of every adopting repository.
 
 ## Testing (this PR)
 
@@ -132,7 +132,7 @@ Node built-in runner, `.unit.test.ts`, against compiled `dist/`. The **pure logi
 
 ### Coverage gate
 
-The api gate is **80% lines / 80% branches / 90% functions** (`--experimental-test-coverage`). New concrete classes contribute constructors (functions) and lines; the unit tests above instantiate every concrete DTO/meta/response + exercise both cursor/comparison helpers so the new files don't drag coverage under the floor. Abstract classes (`SortQuery`, `FilterQuery`, `SearchQuery`, the abstract `*SearchQuery`) are never instantiated → no coverage owed.
+The api gate is **80% lines / 75% branches / 75% functions** (`--experimental-test-coverage`; the authoritative values live in `apps/api/package.json` `test:run` — note `.claude/CLAUDE.md` still quotes a stale 80/80/90). New concrete classes contribute constructors (functions) and lines; the unit tests above instantiate every concrete DTO/meta/response + exercise both cursor/comparison helpers so the new files don't drag coverage under the floor. Abstract classes (`SortQuery`, `BaseFilterQuery`, `SearchQuery`, the abstract `*SearchQuery`) are never instantiated → no coverage owed.
 
 ## Conventions honored
 
