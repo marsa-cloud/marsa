@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test'
 import { expect } from 'expect'
-import { AppBuilder } from '#src/app/deployments/entities/app.builder.js'
+import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { ReleaseBuilder } from '#src/app/deployments/entities/release.builder.js'
 import { renderManifests } from '#src/app/deployments/render/render-manifests.js'
 import type { RegistryCredentials } from '#src/modules/kubernetes/deploy-backend.types.js'

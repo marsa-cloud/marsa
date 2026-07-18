@@ -49,7 +49,7 @@ The api is the source of truth for the web↔api contract. `src/entrypoints/gene
 
 Two top-level source areas with distinct roles:
 
-- `src/app/` — **features** (vertical slices). One folder per business capability. Currently empty; new feature work goes here.
+- `src/app/` — **features** (vertical slices). One folder per **domain aggregate root** (see "Feature module boundaries" below for the split criterion), e.g. `app-management/`, `deployments/`, `auth/`, `user/`, `github-app/`.
 - `src/modules/` — **support modules**: cross-cutting infrastructure that features depend on, plus the production composition module (`api/api.module.ts`). Not feature code.
 
 Other directories: `src/entrypoints/` (process bootstraps), `src/test/` (test harness + global setup), `src/utils/`, `src/sql/`.
@@ -63,6 +63,19 @@ Layered so tests can swap pieces:
 - `TestModule.forRoot(modules)` (`src/test/test.module.ts`) — parallel composition root for tests; mirrors `AppModule` (imports `DatabaseModule` directly + spread modules). Never nests inside `AppModule`.
 
 `AppModule` and `TestModule` are parallel roots — infrastructure like `DatabaseModule` belongs in both directly, not passed in by callers. When you add a feature, register its module in `ApiModule` only.
+
+## Feature module boundaries (when to split)
+
+`src/app/` is organised **one feature module per domain aggregate root** — not per business capability, per REST resource, or per team. This is the criterion inherited from the upstream NestJS project template marsa is built on, where `users`, `user-preferences`, `api-key`, and `roles` are each their own module — `user-preferences` is split out from `users` because it is a _distinct aggregate_, even though both are "user stuff". A capability rule would have kept them together; the aggregate rule splits them. That's the tell.
+
+The rule:
+
+- **A feature module owns exactly one aggregate root** — its entity (or tightly-bound entity cluster), that entity's `entities/` / `errors/` / `enums/` / `events/`, and every use-case whose primary read/write target is that aggregate. The module is named after the aggregate: `deployments/` owns `Release`, and (per marsa#131) `App` management is extracted into its own feature that owns `App`.
+- **A use-case lives with the aggregate it primarily reads or writes** — not the URL noun it is addressed by. `get-app-run-logs` and `get-app-health` are addressed under an app but read _deployment/runtime_ state from Kubernetes, not the `App` record, so they stay in `deployments/`. Ask "which aggregate's lifecycle is this use-case about?", never "which word is in the route?" — following the route noun is the trap this rule exists to avoid.
+- **Split a new module out when a cluster of use-cases centres on a different aggregate** than the one the current module owns. One module holding two aggregates — as `DeploymentsModule` did with `App` + `Release` (marsa#131) — is the smell this rule catches; extract the smaller aggregate into its own feature that owns it.
+- **Shared building blocks are the only cross-feature seam.** A use-case never imports from a sibling use-case or another feature's internals; if two features genuinely need the same code, promote it to `src/modules/` or a workspace package (see "Feature shape" below). Reaching into another feature's `entities/` is a boundary violation, not a shortcut.
+
+Driver + options considered (aggregate ownership vs. business capability vs. REST resource): `docs/agdr/AgDR-0040-feature-module-boundary-aggregate-ownership.md` (marsa#131).
 
 ## Feature shape (vertical slice)
 

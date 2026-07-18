@@ -99,18 +99,6 @@ export const zDeployAppResponse = z.object({
   deployStatus: zDeployStatus,
 })
 
-export const zAppSummary = z.object({
-  slug: z.string(),
-  image: z.string(),
-  url: z.string(),
-  createdAt: z.iso.datetime(),
-  updatedAt: z.iso.datetime(),
-})
-
-export const zListAppsResponse = z.object({
-  apps: z.array(zAppSummary),
-})
-
 export const zReleaseTrigger = z.enum(['manual', 'webhook'])
 
 export const zReleaseSummary = z.object({
@@ -139,6 +127,18 @@ export const zGetAppHealthResponse = z.object({
 export const zGetAppRunLogsResponse = z.object({
   podName: z.string().nullable(),
   logs: z.string(),
+})
+
+export const zAppSummary = z.object({
+  slug: z.string(),
+  image: z.string(),
+  url: z.string(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+})
+
+export const zListAppsResponse = z.object({
+  apps: z.array(zAppSummary),
 })
 
 export const zImagePullCredentialsWritable = z.object({
@@ -181,8 +181,6 @@ export const zDeployAppV1Body = zDeployAppCommandWritable
 
 export const zDeployAppV1Response = zDeployAppResponse
 
-export const zListAppsV1Response = zListAppsResponse
-
 export const zListAppReleasesV1Path = z.object({
   slug: z.string(),
 })
@@ -204,3 +202,5 @@ export const zGetAppRunLogsV1Query = z.object({
 })
 
 export const zGetAppRunLogsV1Response = zGetAppRunLogsResponse
+
+export const zListAppsV1Response = zListAppsResponse

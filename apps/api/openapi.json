@@ -237,31 +237,6 @@
         ]
       }
     },
-    "/api/v1/deployments/apps": {
-      "get": {
-        "operationId": "listAppsV1",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ListAppsResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No active session."
-          }
-        },
-        "summary": "",
-        "tags": [
-          "deployments"
-        ]
-      }
-    },
     "/api/v1/deployments/apps/{slug}/releases": {
       "get": {
         "operationId": "listAppReleasesV1",
@@ -376,6 +351,31 @@
         "summary": "",
         "tags": [
           "deployments"
+        ]
+      }
+    },
+    "/api/v1/apps": {
+      "get": {
+        "operationId": "listAppsV1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListAppsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          }
+        },
+        "summary": "",
+        "tags": [
+          "apps"
         ]
       }
     }
@@ -796,52 +796,6 @@
           "deployStatus"
         ]
       },
-      "AppSummary": {
-        "type": "object",
-        "properties": {
-          "slug": {
-            "type": "string",
-            "example": "my-app"
-          },
-          "image": {
-            "type": "string",
-            "example": "nginx:1.27"
-          },
-          "url": {
-            "type": "string",
-            "example": "https://my-app.demo.marsa.cc"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "slug",
-          "image",
-          "url",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "ListAppsResponse": {
-        "type": "object",
-        "properties": {
-          "apps": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AppSummary"
-            }
-          }
-        },
-        "required": [
-          "apps"
-        ]
-      },
       "ReleaseTrigger": {
         "type": "string",
         "enum": [
@@ -971,6 +925,52 @@
         "required": [
           "podName",
           "logs"
+        ]
+      },
+      "AppSummary": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "example": "my-app"
+          },
+          "image": {
+            "type": "string",
+            "example": "nginx:1.27"
+          },
+          "url": {
+            "type": "string",
+            "example": "https://my-app.demo.marsa.cc"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "slug",
+          "image",
+          "url",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ListAppsResponse": {
+        "type": "object",
+        "properties": {
+          "apps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AppSummary"
+            }
+          }
+        },
+        "required": [
+          "apps"
         ]
       }
     }

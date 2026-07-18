@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { ListAppsRepository } from '#src/app/deployments/use-cases/list-apps/list-apps.repository.js'
-import { ListAppsResponse } from '#src/app/deployments/use-cases/list-apps/list-apps.response.js'
+import { ListAppsRepository } from '#src/app/app-management/use-cases/list-apps/list-apps.repository.js'
+import { ListAppsResponse } from '#src/app/app-management/use-cases/list-apps/list-apps.response.js'
 
 @Injectable()
 export class ListAppsUseCase {

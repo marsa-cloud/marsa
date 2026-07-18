@@ -1,6 +1,6 @@
 import { ref } from '@mikro-orm/core'
-import { AppBuilder } from '#src/app/deployments/entities/app.builder.js'
-import type { App } from '#src/app/deployments/entities/app.entity.js'
+import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
+import type { App } from '#src/app/app-management/entities/app.entity.js'
 import { Release } from '#src/app/deployments/entities/release.entity.js'
 import { DeployStatus } from '#src/app/deployments/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/deployments/enums/release-trigger.enum.js'

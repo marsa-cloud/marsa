@@ -1,7 +1,7 @@
 import { EntityManager } from '@mikro-orm/postgresql'
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { AppBuilder } from '#src/app/deployments/entities/app.builder.js'
+import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { ReleaseBuilder } from '#src/app/deployments/entities/release.builder.js'
 import { DeployStatus } from '#src/app/deployments/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/deployments/enums/release-trigger.enum.js'

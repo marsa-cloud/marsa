@@ -1,5 +1,5 @@
-import { App } from '#src/app/deployments/entities/app.entity.js'
-import type { AppDomain } from '#src/app/deployments/entities/app-domain.types.js'
+import { App } from '#src/app/app-management/entities/app.entity.js'
+import type { AppDomain } from '#src/app/app-management/entities/app-domain.types.js'
 
 /** Fluent builder for {@link App}; constructor seeds valid defaults so `new AppBuilder().build()` is always usable. */
 export class AppBuilder {

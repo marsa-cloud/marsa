@@ -3,15 +3,8 @@ import { DeployAppModule } from '#src/app/deployments/use-cases/deploy-app/deplo
 import { GetAppHealthModule } from '#src/app/deployments/use-cases/get-app-health/get-app-health.module.js'
 import { GetAppRunLogsModule } from '#src/app/deployments/use-cases/get-app-run-logs/get-app-run-logs.module.js'
 import { ListAppReleasesModule } from '#src/app/deployments/use-cases/list-app-releases/list-app-releases.module.js'
-import { ListAppsModule } from '#src/app/deployments/use-cases/list-apps/list-apps.module.js'
 
 @Module({
-  imports: [
-    DeployAppModule,
-    ListAppsModule,
-    ListAppReleasesModule,
-    GetAppHealthModule,
-    GetAppRunLogsModule,
-  ],
+  imports: [DeployAppModule, ListAppReleasesModule, GetAppHealthModule, GetAppRunLogsModule],
 })
 export class DeploymentsModule {}

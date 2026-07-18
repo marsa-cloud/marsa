@@ -1,7 +1,7 @@
 import { type EntityRepository } from '@mikro-orm/core'
 import { InjectRepository } from '@mikro-orm/nestjs'
 import { Injectable } from '@nestjs/common'
-import { App } from '#src/app/deployments/entities/app.entity.js'
+import { App } from '#src/app/app-management/entities/app.entity.js'
 import { Release } from '#src/app/deployments/entities/release.entity.js'
 import type { ReleaseUuid } from '#src/app/deployments/entities/release.uuid.js'
 import type { DeployStatus } from '#src/app/deployments/enums/deploy-status.enum.js'

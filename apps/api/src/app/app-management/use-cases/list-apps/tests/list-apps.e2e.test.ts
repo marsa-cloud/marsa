@@ -1,14 +1,14 @@
 import { after, before, describe, it } from 'node:test'
 import { expect } from 'expect'
 import request from 'supertest'
-import { AppBuilder } from '#src/app/deployments/entities/app.builder.js'
+import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
 const SLUG_A = 'list-apps-e2e-a'
 const SLUG_B = 'list-apps-e2e-b'
 
-describe('GET /api/v1/deployments/apps (e2e)', () => {
+describe('GET /api/v1/apps (e2e)', () => {
   let setup: TestSetup
   let sessionCookie: string
 
@@ -31,7 +31,7 @@ describe('GET /api/v1/deployments/apps (e2e)', () => {
 
   it('lists deployed apps with slug, image and public URL', async () => {
     const response = await request(setup.httpServer)
-      .get('/api/v1/deployments/apps')
+      .get('/api/v1/apps')
       .set('Cookie', sessionCookie)
       .expect(200)
 
@@ -48,6 +48,6 @@ describe('GET /api/v1/deployments/apps (e2e)', () => {
   })
 
   it('rejects an unauthenticated request with 401', async () => {
-    await request(setup.httpServer).get('/api/v1/deployments/apps').expect(401)
+    await request(setup.httpServer).get('/api/v1/apps').expect(401)
   })
 })
