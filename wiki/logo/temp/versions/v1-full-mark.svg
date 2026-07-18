@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="75.0 84.0 258.0 356.3" width="258" height="356">
+  <defs>
+    <linearGradient id="g1" gradientUnits="userSpaceOnUse" x1="165.36" y1="180.00" x2="149.66" y2="207.19"><stop offset="0" stop-color="#1C4EBF"/><stop offset="1" stop-color="#3568D4"/></linearGradient>
+    <linearGradient id="g2" gradientUnits="userSpaceOnUse" x1="234.64" y1="180.00" x2="258.34" y2="221.05"><stop offset="0" stop-color="#1C4EBF"/><stop offset="1" stop-color="#10A5C4"/></linearGradient>
+    <linearGradient id="g3" gradientUnits="userSpaceOnUse" x1="232.36" y1="296.05" x2="213.16" y2="329.30"><stop offset="0" stop-color="#10A5C4"/><stop offset="1" stop-color="#7ED0E5"/></linearGradient>
+  </defs>
+  <!-- connectors (behind) -->
+  <polygon points="156.70,175.00 141.00,202.19 158.32,212.19 174.02,185.00" fill="url(#g1)"/>
+  <polygon points="225.98,185.00 249.68,226.05 267.00,216.05 243.30,175.00" fill="url(#g2)"/>
+  <polygon points="223.70,291.05 204.50,324.30 221.82,334.30 241.02,301.05" fill="url(#g3)"/>
+  <!-- control plane: solid -->
+  <polygon points="200.00,100.00 243.30,125.00 243.30,175.00 200.00,200.00 156.70,175.00 156.70,125.00" fill="#1C4EBF"/>
+  <!-- occupied berths: filled face on opposite sides -->
+  <path d="M 141.00 202.19 L 184.30 227.19 L 184.30 277.19 L 141.00 302.19 L 97.70 277.19 L 97.70 227.19 Z M 141.00 252.19 L 112.42 235.69 L 141.00 219.19 L 169.58 235.69 L 169.58 268.69 L 141.00 285.19 Z" fill="#3568D4" fill-rule="evenodd"/>
+  <path d="M 267.00 216.05 L 310.30 241.05 L 310.30 291.05 L 267.00 316.05 L 223.70 291.05 L 223.70 241.05 Z M 267.00 266.05 L 267.00 299.05 L 238.42 282.55 L 238.42 249.55 L 267.00 233.05 L 295.58 249.55 Z" fill="#10A5C4" fill-rule="evenodd"/>
+  <!-- empty berth: same outer hex (R=50) minus same inner hex (RI) => wall matches
+       the occupied berths' wall exactly; inside-aligned so outer edge = 50 like the rest -->
+  <path d="M 204.50 324.30 L 247.80 349.30 L 247.80 399.30 L 204.50 424.30 L 161.20 399.30 L 161.20 349.30 Z M 204.50 341.30 L 233.08 357.80 L 233.08 390.80 L 204.50 407.30 L 175.92 390.80 L 175.92 357.80 Z" fill="#7ED0E5" fill-rule="evenodd"/>
+</svg>
