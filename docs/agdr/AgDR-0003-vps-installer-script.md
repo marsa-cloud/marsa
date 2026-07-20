@@ -44,7 +44,14 @@ The first end-to-end run on a real VPS (now that the chart is published as `0.0.
 
 ## Amendment — 2026-07-20 (#122): `--rollback-on-failure` is Helm 4-only; require Helm 4, never upgrade
 
-The 2026-06-04 amendment above is **factually wrong** and this supersedes it. It claimed "Helm 3.18 renamed `--atomic` to `--rollback-on-failure`" and set `MIN_HELM_MINOR=18` on that basis. `--rollback-on-failure` is a **Helm 4** flag; no Helm 3.x release has it.
+The 2026-06-04 amendment above is **factually wrong on both of its Helm claims** and this supersedes it. Verified against Helm's source rather than restated:
+
+| Claim (2026-06-04)                                        | Reality                                                                                                                                                                |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Helm 3.18 renamed `--atomic` to `--rollback-on-failure`" | False. Helm 3.18.0 and 3.21.3 define only `--atomic` (`cmd/helm/upgrade.go:274`). `--rollback-on-failure` first appears in Helm 4 (`v4.1.3` `pkg/cmd/upgrade.go:289`). |
+| "Helm 4 removed `--atomic` outright"                      | False. `--atomic` is still present in Helm 4.1.3, deprecated and aliased to the same field (`pkg/cmd/upgrade.go:290-291`).                                             |
+
+`MIN_HELM_MINOR=18` was set on the first of these, which is what broke the installer.
 
 The error was invisible for six weeks because every machine that ran the installer happened to have Helm 4 already. The first real E2E run (the #122 harness, GitHub Actions run `29727378084`) hit a runner with Helm **3.21.3** preinstalled — which passed the `>= 3.18` gate, so the installer skipped its own Helm install and then handed Helm 3 a Helm 4 flag:
 
@@ -58,11 +65,11 @@ So the installer was broken for **any operator with Helm 3.x already on the box*
 Decided:
 
 - **Floor becomes major-version based: `MIN_HELM_MAJOR=4`.** `helm_meets_min` compares the major version only; the minor-version logic is gone.
-- **Bootstrap moves to `get-helm-4`, pinned to `v4.1.3`.** `get-helm-3` installs Helm 3 by design, so raising the floor without moving the script would make the installer fail its own check on every fresh box. `get-helm-4` first appears at tag `v4.1.3`, so the pin cannot go below it.
+- **Bootstrap moves to `get-helm-4`, pinned to `v4.1.3`.** `get-helm-3` installs Helm 3 by design, so raising the floor without moving the script would make the installer fail its own check on every fresh box. `get-helm-4` exists from tag `v4.1.0` onward (absent at `v4.0.1` and earlier), so the pin cannot go below `v4.1.0`; `v4.1.3` is chosen as the newest at time of writing, not as a floor.
 - **Never upgrade an existing Helm — error instead.** If Helm is present but older than 4, the installer now dies with an actionable message rather than replacing it. A PaaS installer silently swapping a system-wide tool out from under an operator's other workloads is too blunt an action to take unprompted. Installation happens only when Helm is **absent**.
-- **`--atomic` was considered and rejected.** It works on both Helm 3.8+ and Helm 4, so it would have fixed this without any version floor or behaviour change — the cheaper fix. Rejected deliberately in favour of standardising on Helm 4, accepting that operators on Helm 3 must now upgrade manually before installing Marsa.
+- **`--atomic` was considered and rejected — and it was the cheaper fix.** Since Helm 4 only deprecated `--atomic` rather than removing it, a one-word change would have worked on Helm 3.8+ _and_ Helm 4, with no version floor, no bootstrap change, and no operator-facing behaviour change. It was rejected as an operator call: Marsa standardises on Helm 4 rather than carrying a deprecated flag, accepting that operators on Helm 3 must upgrade manually before installing. Anyone revisiting this should know the cheap option was available and declined, not overlooked.
 
-Consequence: `scripts/cd-deploy.sh` also passes `--rollback-on-failure` (twice). It is safe **because** of this decision — the installer now guarantees Helm ≥ 4 on any host Marsa was installed on. The two scripts are coupled through that guarantee; if the floor is ever lowered, `cd-deploy.sh` must change with it.
+Consequence for `scripts/cd-deploy.sh`, which passes `--rollback-on-failure` twice and is unchanged here: it is safe on any host provisioned by `install.sh` **from 2026-06-04 onward**, since that is when the installer began requiring the flag's presence. It is _not_ universally safe — `cd-deploy.sh` (2026-06-28) is wired up by a manual one-time setup that never re-runs `install.sh`, so a host provisioned before 2026-06-04 can still be running Helm 3 with a working Marsa release, and enabling CD on it would fail in the pipeline against production. Blast radius is near-zero at pre-1.0 alpha, but the two scripts are coupled through the Helm-4 floor: if it is ever lowered, `cd-deploy.sh` must change with it.
 
 The E2E workflow installs Helm 4 explicitly (runners ship Helm 3), which means the `get-helm-4` bootstrap path itself is **not** exercised in CI — only the "Helm 4 already present" path is. That gap is accepted for now.
 

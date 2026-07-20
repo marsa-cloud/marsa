@@ -38,7 +38,7 @@ K3S_KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
 SKIP_K3S="false"          # --skip-k3s: install into an existing cluster (honor $KUBECONFIG)
 # Helm's official get-helm-4 installer, pinned to a release tag rather than the
 # moving `main` branch (supply-chain hygiene — see AgDR-0003). Overridable for
-# testing. get-helm-4 first appeared in v4.1.3, so the pin cannot go below that.
+# testing. get-helm-4 exists from v4.1.0 onward; the pin cannot go below that.
 # The pinned script still installs the latest stable Helm by default;
 # set MARSA_HELM_VERSION to pin the Helm version itself.
 HELM_INSTALL_SCRIPT_TAG="${MARSA_HELM_INSTALL_SCRIPT_TAG:-v4.1.3}"
