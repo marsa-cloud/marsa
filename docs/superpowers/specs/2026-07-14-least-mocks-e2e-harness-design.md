@@ -1,6 +1,6 @@
 # Least-Mocks E2E Harness + Installer Verification — Design
 
-> In the context of Marsa's testing gap (the real deploy path is never exercised end-to-end), facing three overlapping tickets (#55 installer CI, #122 k3d E2E, #134 fast local stack), we decided to build **one shared spine** — `install.sh` + `seed-dev` + a `make e2e` wrapper — with three thin consumers, to get least-mocks E2E coverage **and** a real local dev environment **and** installer verification without three drifting harnesses.
+> In the context of Marsa's testing gap (the real deploy path is never exercised end-to-end), facing three overlapping tickets (#55 installer CI, #122 k3d E2E, #134 fast local stack), we decided to build **one shared spine** — `install.sh` + `seed-dev` + the `e2e-up` / `e2e-test` wrappers — with three thin consumers, to get least-mocks E2E coverage **and** a real local dev environment **and** installer verification without three drifting harnesses.
 
 **Tickets:** collapses **#55** into **#122**; closes **#134** (folding its doc/script tail here). **Marsa-only — no chart change** (see § TLS).
 
@@ -32,7 +32,7 @@ The three tickets don't need three harnesses — they need **one spine with thre
 
 1. **`install.sh`** — cluster (optional) + Helm + `helm upgrade --install` of the Marsa chart. The single chart-install path; never duplicated.
 2. **`seed-dev.ts`** — seed a dev operator + mint a valid `@fastify/secure-session` cookie (the auth bypass), reused across consumers.
-3. **`scripts/e2e-up.sh` / `make e2e`** — thin wrapper holding all test-_only_ concerns (k3d creation + port map, nip.io domain, PR image tag, `curl -k` assertions, teardown).
+3. **`scripts/e2e-up.sh` (provision) + `scripts/e2e-test.sh` (assert)** — thin wrappers holding all test-_only_ concerns. `e2e-up.sh` does k3d creation + port map, nip.io domain, and the PR image tag; `e2e-test.sh` does the seed + deploy + `curl -k` assertions and runs against _any_ installed Marsa — which is how CI reuses it verbatim after its own real-K3s install.
 
 **Consumers:**
 
@@ -76,7 +76,7 @@ No TLS flag is needed — see § TLS. Test-only concerns stay in the wrapper. `-
 
 The E2E triggers on **`workflow_run` when `cd.yml` completes** (mirrors `deploy.yml`) and derives the image tag from the triggering run's head SHA, but the job is gated to `workflow_run.event == 'push' && head_branch == 'main' && conclusion == 'success'`.
 
-**Why main-only (security).** A `workflow_run` job runs in the target-repo context _with repo secrets_. The E2E checks out repo code and runs shell scripts (`install.sh`, `e2e-up.sh`); if it ran on a PR-preview build and checked out the **PR's** head, an untrusted PR could rewrite those scripts and exfiltrate the token (the "pwn-request" vector — flagged by Semgrep `workflow-run-target-code-checkout`). So the E2E runs **only post-merge on `main`**, checks out **trusted `main`** (not the PR head), and uses `head_sha` solely as the image tag. Pre-merge validation is via a local `make e2e`, not CI.
+**Why main-only (security).** A `workflow_run` job runs in the target-repo context _with repo secrets_. The E2E checks out repo code and runs shell scripts (`install.sh`, `e2e-test.sh`); if it ran on a PR-preview build and checked out the **PR's** head, an untrusted PR could rewrite those scripts and exfiltrate the token (the "pwn-request" vector — flagged by Semgrep `workflow-run-target-code-checkout`). So the E2E runs **only post-merge on `main`**, checks out **trusted `main`** (not the PR head), and uses `head_sha` solely as the image tag. Pre-merge validation is via a local `pnpm e2e:up && pnpm e2e:test`, not CI.
 
 **No raw `push` / `pull_request` trigger, no `workflow_dispatch`, no PR-preview run** — the image must exist first (CD guarantees it) and the checked-out code must be trusted (main guarantees it). The E2E **never builds images itself**; it consumes the CD-built sha via `helm --set image.tag=<sha>`.
 
@@ -113,23 +113,23 @@ So the E2E installs with **`--no-tls`** (existing flag → `tls.enabled=false`, 
 2. Deploy a sample app through Marsa's API → its Deployment + ClusterIP Service + Traefik IngressRoute are applied to the cluster.
 3. The deployed app is **reachable over its domain via HTTPS** (`curl -k https://<slug>.127.0.0.1.nip.io`). _(← #122's assertion.)_
 
-**Negative probe (one-time, dev-time — not a standing job):** during implementation, deliberately break a template/validation, run `make e2e`, confirm it goes **red**, revert. Proves the assertions actually assert (TDD: see it fail before trusting green). Satisfies #122's "red on a broken probe" AC without a recurring CI matrix.
+**Negative probe (one-time, dev-time — not a standing job):** during implementation, deliberately break a template/validation, run `pnpm e2e:test`, confirm it goes **red**, revert. Proves the assertions actually assert (TDD: see it fail before trusting green). Satisfies #122's "red on a broken probe" AC without a recurring CI matrix.
 
-**Local:** same wrapper, k3d substrate, leaves the cluster up for manual poking; explicit `make e2e-down` teardown.
+**Local:** same assertion script, k3d substrate, leaves the cluster up for manual poking (re-run `pnpm e2e:test` freely); explicit `pnpm e2e:down` teardown.
 
 ---
 
 ## Components / artifacts
 
-| Artifact                                                        | Change                                                                              |
-| --------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `scripts/install.sh`                                            | `--skip-k3s` (D3)                                                                   |
-| `apps/api/src/modules/kubernetes/kubernetes.module.ts`          | `DEPLOY_BACKEND` selector (D4)                                                      |
-| `apps/api/src/entrypoints/seed-dev.ts`                          | `--user-only` flag (D5)                                                             |
-| `scripts/e2e-up.sh` + `Makefile` (`make e2e` / `make e2e-down`) | new wrapper (spine #3); k3d create + port map, install, `curl -k` asserts, teardown |
-| `.github/workflows/e2e.yml`                                     | new; `workflow_run` after CD (D6)                                                   |
-| `docs/local-dev.md`                                             | new; documents both the no-cluster loop (#134 tail) and the with-cluster E2E        |
-| `README` pointer                                                | link to `docs/local-dev.md`                                                         |
+| Artifact                                                                  | Change                                                                              |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `scripts/install.sh`                                                      | `--skip-k3s` (D3)                                                                   |
+| `apps/api/src/modules/kubernetes/kubernetes.module.ts`                    | `DEPLOY_BACKEND` selector (D4)                                                      |
+| `apps/api/src/entrypoints/seed-dev.ts`                                    | `--user-only` flag (D5)                                                             |
+| `scripts/e2e-{up,test,down}.sh` (`pnpm e2e:up` / `e2e:test` / `e2e:down`) | new wrappers (spine #3); provision split from assertions so CI reuses `e2e-test.sh` |
+| `.github/workflows/e2e.yml`                                               | new; `workflow_run` after CD (D6)                                                   |
+| `docs/local-dev.md`                                                       | new; documents both the no-cluster loop (#134 tail) and the with-cluster E2E        |
+| `README` pointer                                                          | link to `docs/local-dev.md`                                                         |
 
 ---
 

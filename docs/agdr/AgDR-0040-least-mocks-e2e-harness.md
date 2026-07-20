@@ -16,7 +16,7 @@ ticket: marsa-cloud/marsa#122
 
 - Nothing exercises Marsa's real deploy path end-to-end: the api's e2e tests wire `MockDeployBackend` via `NODE_ENV=test` (no cluster, nothing applied); `install.sh` (the production VPS installer) has no automated test; the fast local stack (#134) deliberately skips Kubernetes for inner-loop speed.
 - Three tickets targeted overlapping ground: **#55** (installer CI), **#122** (k3d E2E), **#134** (fast local stack). Left alone, they drift into three harnesses that duplicate the chart-install path and diverge over time.
-- Key insight: the least-mocks E2E environment and the real local dev environment are the same artifact — both need a real cluster, a real Marsa install, real deploys through the API, and real (dummy) domains over HTTPS. Building it once means CI and a developer at a laptop become two callers of the same spine (`install.sh` + `seed-dev.ts` + `scripts/e2e-up.sh` / `make e2e`).
+- Key insight: the least-mocks E2E environment and the real local dev environment are the same artifact — both need a real cluster, a real Marsa install, real deploys through the API, and real (dummy) domains over HTTPS. Building it once means CI and a developer at a laptop become two callers of the same spine (`install.sh` + `seed-dev.ts` + `scripts/e2e-up.sh` + `scripts/e2e-test.sh`).
 - Full design: `docs/superpowers/specs/2026-07-14-least-mocks-e2e-harness-design.md`.
 
 ## Options Considered
@@ -56,7 +56,7 @@ ticket: marsa-cloud/marsa#122
 
 ## Decision
 
-Chosen, as a set: **(1)** collapse #55 into #122 and close #134 — one shared spine (`install.sh` + `seed-dev.ts` + `scripts/e2e-up.sh` / `make e2e`) with three thin consumers instead of three drifting harnesses; **(2)** CI runs the full real-K3s `install.sh` while local dev uses k3d + `install.sh --skip-k3s` — the only way for CI to prove the installer's own bootstrap works without losing local disposability; **(3)** read a `DEPLOY_BACKEND` env var directly in `kubernetes.module.ts` (default `direct`, `.env.test` sets `mock`) instead of branching on `NODE_ENV` — because deploy-backend selection and test-mode configuration are orthogonal concerns that were only coupled by accident.
+Chosen, as a set: **(1)** collapse #55 into #122 and close #134 — one shared spine (`install.sh` + `seed-dev.ts` + `scripts/e2e-up.sh` + `scripts/e2e-test.sh`) with three thin consumers instead of three drifting harnesses; **(2)** CI runs the full real-K3s `install.sh` while local dev uses k3d + `install.sh --skip-k3s` — the only way for CI to prove the installer's own bootstrap works without losing local disposability; **(3)** read a `DEPLOY_BACKEND` env var directly in `kubernetes.module.ts` (default `direct`, `.env.test` sets `mock`) instead of branching on `NODE_ENV` — because deploy-backend selection and test-mode configuration are orthogonal concerns that were only coupled by accident.
 
 Also decided (TLS, D3, folded into this record because it's the direct enabler of assertion #3 in the design): no `--tls` flag, no mkcert, no marsa-charts ticket — Traefik's existing default self-signed cert under `tls.enabled: false` already gives the E2E real HTTPS to assert against with `curl -k`.
 

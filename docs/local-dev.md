@@ -27,9 +27,15 @@ Spin a disposable k3d cluster, install Marsa via the real installer path, deploy
 a sample app through the API, and assert it is reachable over HTTPS.
 
 ```bash
-make e2e            # create k3d, install Marsa (install.sh --skip-k3s), deploy + assert
-make e2e-down       # tear the cluster down
+pnpm e2e:up         # create k3d + install Marsa (install.sh --skip-k3s)
+pnpm e2e:test       # seed, deploy a sample app through the API, assert HTTPS
+pnpm e2e:down       # tear the cluster down
 ```
+
+Provisioning and assertions are separate scripts on purpose: `e2e:test` runs
+against _any_ installed Marsa, which is exactly how CI reuses it after its own
+real-K3s install. Re-run `pnpm e2e:test` as often as you like against one
+cluster.
 
 The app is served at `<slug>.127.0.0.1.nip.io` with Traefik's default
 self-signed cert (the assertion uses `curl -k`). Override the cluster name or

@@ -50,7 +50,7 @@ Verify the node joined by running `sudo k3s kubectl get nodes` on the server.
 
 ## Local development
 
-See [`docs/local-dev.md`](docs/local-dev.md) — a fast no-cluster inner loop for UI work, and a `make e2e` k3d harness for real deploys over HTTPS.
+See [`docs/local-dev.md`](docs/local-dev.md) — a fast no-cluster inner loop for UI work, and a `pnpm e2e:up` / `pnpm e2e:test` k3d harness for real deploys over HTTPS.
 
 ## Current Status
 
