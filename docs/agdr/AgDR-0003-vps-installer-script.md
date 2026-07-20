@@ -42,6 +42,30 @@ The first end-to-end run on a real VPS (now that the chart is published as `0.0.
 - **`--atomic` → `--rollback-on-failure`; Helm floor 3.8 → 3.18.** Helm 3.18 renamed `--atomic` to `--rollback-on-failure` and Helm 4 removed `--atomic` outright. Rather than feature-detect, we always use `--rollback-on-failure` and raise `MIN_HELM_MINOR` to 18 so the flag is guaranteed present (3.18 still satisfies the OCI ≥3.8 requirement). `get-helm-3` installs ≥3.18 as current stable, so fresh installs are unaffected.
 - **Distribution URL → GitHub raw, not the OVH vanity redirect.** The README's `https://get.marsa.gomaa.ovh` resolves to an OVH web-redirect that only listens on port 80 (no TLS cert), so `https://` reset the connection before the script was even fetched. The README now points at `https://raw.githubusercontent.com/marsa-cloud/marsa/main/scripts/install.sh` (real TLS, zero infra). A pretty vanity URL over HTTPS is deferred to the real-domain purchase (#49) — via a TLS-terminating proxy (e.g. Cloudflare), not OVH's free redirect.
 
+## Amendment — 2026-07-20 (#122): `--rollback-on-failure` is Helm 4-only; require Helm 4, never upgrade
+
+The 2026-06-04 amendment above is **factually wrong** and this supersedes it. It claimed "Helm 3.18 renamed `--atomic` to `--rollback-on-failure`" and set `MIN_HELM_MINOR=18` on that basis. `--rollback-on-failure` is a **Helm 4** flag; no Helm 3.x release has it.
+
+The error was invisible for six weeks because every machine that ran the installer happened to have Helm 4 already. The first real E2E run (the #122 harness, GitHub Actions run `29727378084`) hit a runner with Helm **3.21.3** preinstalled — which passed the `>= 3.18` gate, so the installer skipped its own Helm install and then handed Helm 3 a Helm 4 flag:
+
+```
+✓ Helm v3.21.3 already installed — skipping
+Error: unknown flag: --rollback-on-failure
+```
+
+So the installer was broken for **any operator with Helm 3.x already on the box**. This is exactly the class of regression that installer-verification-in-CI (#55, folded into #122) exists to catch, and it was caught on the harness's first run.
+
+Decided:
+
+- **Floor becomes major-version based: `MIN_HELM_MAJOR=4`.** `helm_meets_min` compares the major version only; the minor-version logic is gone.
+- **Bootstrap moves to `get-helm-4`, pinned to `v4.1.3`.** `get-helm-3` installs Helm 3 by design, so raising the floor without moving the script would make the installer fail its own check on every fresh box. `get-helm-4` first appears at tag `v4.1.3`, so the pin cannot go below it.
+- **Never upgrade an existing Helm — error instead.** If Helm is present but older than 4, the installer now dies with an actionable message rather than replacing it. A PaaS installer silently swapping a system-wide tool out from under an operator's other workloads is too blunt an action to take unprompted. Installation happens only when Helm is **absent**.
+- **`--atomic` was considered and rejected.** It works on both Helm 3.8+ and Helm 4, so it would have fixed this without any version floor or behaviour change — the cheaper fix. Rejected deliberately in favour of standardising on Helm 4, accepting that operators on Helm 3 must now upgrade manually before installing Marsa.
+
+Consequence: `scripts/cd-deploy.sh` also passes `--rollback-on-failure` (twice). It is safe **because** of this decision — the installer now guarantees Helm ≥ 4 on any host Marsa was installed on. The two scripts are coupled through that guarantee; if the floor is ever lowered, `cd-deploy.sh` must change with it.
+
+The E2E workflow installs Helm 4 explicitly (runners ship Helm 3), which means the `get-helm-4` bootstrap path itself is **not** exercised in CI — only the "Helm 4 already present" path is. That gap is accepted for now.
+
 ## Amendment — 2026-06-07 (#29): `--agent` mode to join worker nodes
 
 The installer was server-only — it could stand up a single K3s server but offered no

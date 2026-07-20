@@ -18,6 +18,14 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
+      # Runners preinstall Helm 3.x, which install.sh now rejects rather than
+      # silently upgrading. Overwrite /usr/local/bin/helm so the sudo'd
+      # install.sh resolves Helm 4 through sudo's secure_path.
+      - name: Install Helm 4
+        run: |
+          curl -sfL https://raw.githubusercontent.com/helm/helm/v4.1.3/scripts/get-helm-4 | sudo bash
+          sudo helm version --short
+
       - name: Install Marsa (full real K3s) with the CD-built image
         env:
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
