@@ -50,6 +50,8 @@ async function mintSessionCookie(
 }
 
 async function rawDogFe(): Promise<void> {
+  const userOnly = process.argv.includes('--user-only')
+
   const context = await NestFactory.createApplicationContext(AppModule.forRoot([]), {
     logger: ['error', 'warn'],
   })
@@ -70,23 +72,25 @@ async function rawDogFe(): Promise<void> {
       em.persist(user)
     }
 
-    for (const slug of SAMPLE_APP_SLUGS) {
-      if (await em.findOne(App, { slug })) {
-        continue
+    if (!userOnly) {
+      for (const slug of SAMPLE_APP_SLUGS) {
+        if (await em.findOne(App, { slug })) {
+          continue
+        }
+        const app = new AppBuilder()
+          .withSlug(slug)
+          .withImage('nginx:1.27')
+          .withContainerPort(80)
+          .build()
+        em.persist(app)
+        em.persist(
+          new ReleaseBuilder()
+            .withApp(app)
+            .withImageRef('nginx:1.27')
+            .withDeployStatus(DeployStatus.Succeeded)
+            .build(),
+        )
       }
-      const app = new AppBuilder()
-        .withSlug(slug)
-        .withImage('nginx:1.27')
-        .withContainerPort(80)
-        .build()
-      em.persist(app)
-      em.persist(
-        new ReleaseBuilder()
-          .withApp(app)
-          .withImageRef('nginx:1.27')
-          .withDeployStatus(DeployStatus.Succeeded)
-          .build(),
-      )
     }
 
     await em.flush()
@@ -98,7 +102,9 @@ async function rawDogFe(): Promise<void> {
       user.uuid,
     )
 
-    console.log(`\nSeeded @${user.githubLogin} + ${SAMPLE_APP_SLUGS.length} sample apps.`)
+    console.log(
+      `\nSeeded @${user.githubLogin}${userOnly ? '' : ` + ${SAMPLE_APP_SLUGS.length} sample apps`}.`,
+    )
     console.log(
       'Set this cookie for the web origin (DevTools → Application → Cookies), then reload:\n',
     )

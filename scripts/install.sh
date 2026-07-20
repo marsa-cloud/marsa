@@ -31,8 +31,10 @@ EMAIL=""
 SERVER_URL=""             # agent mode: K3s server URL, e.g. https://10.0.0.5:6443
 TOKEN="${MARSA_K3S_TOKEN:-}"  # agent mode: cluster node-token (env avoids it landing in shell history / ps)
 CHART_VERSION=""        # empty → Helm pulls the latest published version (incl. pre-releases)
+IMAGE_TAG="${MARSA_IMAGE_TAG:-}"  # empty → chart default image tag; overridable to pin a build
 MIN_HELM_MINOR=18       # 3.18+: --rollback-on-failure (also covers OCI's 3.8 floor)
 K3S_KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
+SKIP_K3S="false"          # --skip-k3s: install into an existing cluster (honor $KUBECONFIG)
 # Helm's official get-helm-3 installer, pinned to a release tag rather than the
 # moving `main` branch (supply-chain hygiene — see AgDR-0003). Overridable for
 # testing. The pinned script still installs the latest stable Helm by default;
@@ -91,6 +93,7 @@ ${C_BOLD}Agent mode${C_RESET} — join this machine to an existing cluster as a 
 
 ${C_BOLD}Environment overrides${C_RESET}
   MARSA_CHART_REF       Marsa chart reference. Default: ${CHART_REF}
+  MARSA_IMAGE_TAG       Pin the marsa-api/web image tag (chart image.tag). Default: chart's own.
   MARSA_RELEASE_NAME    Install/release name (same as --release).
   MARSA_K3S_TOKEN       Agent-mode node-token (alternative to --token; keeps it out of ps).
 
@@ -130,6 +133,7 @@ while [ $# -gt 0 ]; do
     --namespace)     require_arg_value "$1" "${2:-}"; NAMESPACE="$2"; shift 2 ;;
     --release)       require_arg_value "$1" "${2:-}"; RELEASE_NAME="$2"; shift 2 ;;
     --no-tls)        TLS_ENABLED="false"; shift ;;
+    --skip-k3s)      SKIP_K3S="true"; shift ;;
     -h|--help)       usage; exit 0 ;;
     *)               die "Unknown argument: $1 (run --help for usage)" ;;
   esac
@@ -144,6 +148,7 @@ if [ "$MODE" = "agent" ]; then
   [ -z "$EMAIL" ]         || die "--email is not valid in --agent mode"
   [ -z "$CHART_VERSION" ] || die "--chart-version is not valid in --agent mode"
   [ "$TLS_ENABLED" = "true" ] || die "--no-tls is not valid in --agent mode"
+  [ "$SKIP_K3S" = "false" ] || die "--skip-k3s is not valid in --agent mode"
 
   [ -n "$SERVER_URL" ] || { usage; echo; die "--agent requires --server-url"; }
   [ -n "$TOKEN" ]      || die "--agent requires --token (or set MARSA_K3S_TOKEN)"
@@ -275,8 +280,12 @@ install_helm() {
 # --- Marsa --------------------------------------------------------------------
 
 deploy_marsa() {
-  export KUBECONFIG="$K3S_KUBECONFIG"
-  [ -r "$KUBECONFIG" ] || die "kubeconfig not readable at $KUBECONFIG"
+  if [ "$SKIP_K3S" = "true" ]; then
+    export KUBECONFIG="${KUBECONFIG:-$K3S_KUBECONFIG}"
+  else
+    export KUBECONFIG="$K3S_KUBECONFIG"
+    [ -r "$KUBECONFIG" ] || die "kubeconfig not readable at $KUBECONFIG"
+  fi
 
   info "Deploying Marsa release '${RELEASE_NAME}' into namespace '${NAMESPACE}'"
 
@@ -288,6 +297,7 @@ deploy_marsa() {
     --wait --timeout 10m --rollback-on-failure
   )
   [ -n "$EMAIL" ] && args+=(--set "email=${EMAIL}")
+  [ -n "$IMAGE_TAG" ] && args+=(--set "image.tag=${IMAGE_TAG}")
 
   if [ -n "$CHART_VERSION" ]; then
     args+=(--version "$CHART_VERSION")
@@ -374,7 +384,13 @@ main() {
   fi
 
   preflight "$@"
-  install_k3s
+  if [ "$SKIP_K3S" = "true" ]; then
+    info "Skipping K3s install (--skip-k3s); using existing cluster via \$KUBECONFIG"
+    export KUBECONFIG="${KUBECONFIG:-$K3S_KUBECONFIG}"
+    kubectl get nodes >/dev/null 2>&1 || die "No reachable cluster at KUBECONFIG=$KUBECONFIG"
+  else
+    install_k3s
+  fi
   install_helm
   deploy_marsa
   summary
