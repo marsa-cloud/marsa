@@ -5,8 +5,9 @@
 # What it does, in order:
 #   1. Pre-flight checks (root, Debian/Ubuntu, required tools)
 #   2. Installs K3s if absent (brings its own Traefik ingress + local-path storage)
-#   3. Installs Helm 3.18+ if absent (OCI registry pulls need 3.8+; the
-#      `--rollback-on-failure` flag we deploy with needs 3.18+)
+#   3. Installs Helm 4.x if absent; errors out (never upgrades) if an older
+#      Helm is present. The `--rollback-on-failure` flag we deploy with is
+#      Helm 4-only.
 #   4. helm upgrade --install of the Marsa chart from the OCI registry
 #
 # Re-running the script with the same arguments updates an existing install
@@ -32,14 +33,15 @@ SERVER_URL=""             # agent mode: K3s server URL, e.g. https://10.0.0.5:64
 TOKEN="${MARSA_K3S_TOKEN:-}"  # agent mode: cluster node-token (env avoids it landing in shell history / ps)
 CHART_VERSION=""        # empty → Helm pulls the latest published version (incl. pre-releases)
 IMAGE_TAG="${MARSA_IMAGE_TAG:-}"  # empty → chart default image tag; overridable to pin a build
-MIN_HELM_MINOR=18       # 3.18+: --rollback-on-failure (also covers OCI's 3.8 floor)
+MIN_HELM_MAJOR=4        # 4+: --rollback-on-failure (a Helm 4 flag; Helm 3's equivalent is --atomic)
 K3S_KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
 SKIP_K3S="false"          # --skip-k3s: install into an existing cluster (honor $KUBECONFIG)
-# Helm's official get-helm-3 installer, pinned to a release tag rather than the
+# Helm's official get-helm-4 installer, pinned to a release tag rather than the
 # moving `main` branch (supply-chain hygiene — see AgDR-0003). Overridable for
-# testing. The pinned script still installs the latest stable Helm by default;
+# testing. get-helm-4 exists from v4.1.0 onward; the pin cannot go below that.
+# The pinned script still installs the latest stable Helm by default;
 # set MARSA_HELM_VERSION to pin the Helm version itself.
-HELM_INSTALL_SCRIPT_TAG="${MARSA_HELM_INSTALL_SCRIPT_TAG:-v3.16.4}"
+HELM_INSTALL_SCRIPT_TAG="${MARSA_HELM_INSTALL_SCRIPT_TAG:-v4.1.3}"
 HELM_VERSION="${MARSA_HELM_VERSION:-}"
 
 # --- Output helpers -----------------------------------------------------------
@@ -249,31 +251,30 @@ install_k3s_agent() {
 # --- Helm ---------------------------------------------------------------------
 
 helm_meets_min() {
-  # Returns 0 when installed Helm is >= 3.MIN_HELM_MINOR (OCI pulls + --rollback-on-failure).
-  local ver major minor
+  # Returns 0 when installed Helm is >= MIN_HELM_MAJOR (OCI pulls + --rollback-on-failure).
+  local ver major
   ver="$(helm version --template '{{.Version}}' 2>/dev/null | sed 's/^v//')" || return 1
   major="${ver%%.*}"
-  minor="${ver#*.}"; minor="${minor%%.*}"
-  [ "${major:-0}" -gt 3 ] && return 0
-  [ "${major:-0}" -eq 3 ] && [ "${minor:-0}" -ge "$MIN_HELM_MINOR" ]
+  [ "${major:-0}" -ge "$MIN_HELM_MAJOR" ]
 }
 
 install_helm() {
-  if require_cmd helm && helm_meets_min; then
+  # Never replace an operator's existing Helm — a PaaS installer upgrading a
+  # system-wide tool out from under other workloads is too blunt. Install only
+  # when Helm is absent; otherwise require the operator to upgrade deliberately.
+  if require_cmd helm; then
+    helm_meets_min || die "Helm $(helm version --template '{{.Version}}' 2>/dev/null) is installed, but Marsa requires Helm ${MIN_HELM_MAJOR}.x or newer. Upgrade Helm and re-run — this installer will not replace an existing Helm for you."
     ok "Helm $(helm version --template '{{.Version}}' 2>/dev/null) already installed — skipping"
     return
   fi
-  if require_cmd helm; then
-    warn "Installed Helm is older than 3.${MIN_HELM_MINOR}; upgrading"
-  fi
   info "Installing Helm (installer pinned to ${HELM_INSTALL_SCRIPT_TAG})"
-  local get_helm="https://raw.githubusercontent.com/helm/helm/${HELM_INSTALL_SCRIPT_TAG}/scripts/get-helm-3"
+  local get_helm="https://raw.githubusercontent.com/helm/helm/${HELM_INSTALL_SCRIPT_TAG}/scripts/get-helm-4"
   if [ -n "$HELM_VERSION" ]; then
     curl -sfL "$get_helm" | DESIRED_VERSION="$HELM_VERSION" bash
   else
     curl -sfL "$get_helm" | bash
   fi
-  helm_meets_min || die "Helm install did not yield a 3.${MIN_HELM_MINOR}+ version"
+  helm_meets_min || die "Helm install did not yield a ${MIN_HELM_MAJOR}.x+ version"
   ok "Helm $(helm version --template '{{.Version}}' 2>/dev/null) ready"
 }
 
