@@ -18,21 +18,21 @@ Each controller set its own `operationId` (e.g. `@ApiOperation({ operationId: 'g
 
 Nine of twelve operationIds derive **byte-identically** from the class name. Three github-app endpoints did not — their hand-written IDs injected a `GithubApp` infix absent from the class name:
 
-| Controller class | Derived (factory) | Former hand-written |
-|---|---|---|
-| `GetManifestController` | `getManifestV1` | `getGithubAppManifestV1` |
-| `ConvertManifestController` | `convertManifestV1` | `convertGithubAppManifestV1` |
+| Controller class                | Derived (factory)       | Former hand-written              |
+| ------------------------------- | ----------------------- | -------------------------------- |
+| `GetManifestController`         | `getManifestV1`         | `getGithubAppManifestV1`         |
+| `ConvertManifestController`     | `convertManifestV1`     | `convertGithubAppManifestV1`     |
 | `CaptureInstallationController` | `captureInstallationV1` | `captureGithubAppInstallationV1` |
 
 The web codegen (`@hey-api/openapi-ts`) names its operation-wrapper types after the operationId, so any rename regenerates those types. Crucially, the web app consumes only the **DTO schema types** (`GetManifestResponse`, `zGetManifestResponse` — named after the response DTO class, unchanged here), never the operation-wrapper types (`*V1Response`); a repo-wide grep confirmed zero hand-written references to the renamed types. The blast radius of the three renames is therefore contained to generated files inside this monorepo, with no external consumers at this stage (v0.1).
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
-| Factory + `@OperationId()` override decorator for the 3 exceptions | No class renames; preserves the 3 external IDs (satisfies the ticket non-goal) | 3 endpoints still name their operationId; extra decorator machinery |
-| Factory + rename the 3 github-app controller classes | Truly zero hand-written IDs; class name always == operationId | Renames 3 classes; ripples to module registration + tests |
-| **Factory only — accept the 3 ID renames (chosen)** | Simplest code; fully self-consistent (operationId always derives from class name); no override path, no class renames | Deliberately breaks the ticket's "no breaking-change to existing operationIds" non-goal for 3 internal-only IDs; regenerates 3 web contract types |
+| Option                                                             | Pros                                                                                                                  | Cons                                                                                                                                              |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Factory + `@OperationId()` override decorator for the 3 exceptions | No class renames; preserves the 3 external IDs (satisfies the ticket non-goal)                                        | 3 endpoints still name their operationId; extra decorator machinery                                                                               |
+| Factory + rename the 3 github-app controller classes               | Truly zero hand-written IDs; class name always == operationId                                                         | Renames 3 classes; ripples to module registration + tests                                                                                         |
+| **Factory only — accept the 3 ID renames (chosen)**                | Simplest code; fully self-consistent (operationId always derives from class name); no override path, no class renames | Deliberately breaks the ticket's "no breaking-change to existing operationIds" non-goal for 3 internal-only IDs; regenerates 3 web contract types |
 
 ## Decision
 
@@ -46,8 +46,11 @@ Implementation: `operationIdFactory` lives in `apps/api/src/modules/swagger/oper
 - `GET /api/v1/status` still resolves to `getApiInfoV1`; the other 8 stable IDs are byte-identical in `openapi.json`.
 - 3 github-app operationIds renamed; `apps/api/openapi.json` and `apps/web/app/api/{types,zod,index}.gen.ts` regenerated and committed together (drift-check stays green).
 - Removing `@ApiOperation` also dropped the empty `"summary": ""` field from all 12 operations — benign cleanup.
-- Unit tests cover the derivation; the OpenAPI e2e test asserts both a stable ID (`getApiInfoV1`) and a renamed one (`getManifestV1`) to guard the intended behavior.
-- The version-suffix rationale in `apps/api/.claude/CLAUDE.md` (operationId section) is unchanged and still holds — the factory reproduces it mechanically.
+- Unit tests cover the derivation; the OpenAPI e2e test asserts both a stable ID (`getApiInfoV1`) and a renamed one (`getManifestV1`), plus a document-wide invariant — every operation has a present, unique, version-suffixed id — so a future collision or a lost version suffix fails CI rather than silently churning the web contract.
+- **The controller class name is now the contract.** Renaming a controller renames its operationId and regenerates the web operation-wrapper types, so class renames are a public-surface change rather than a local refactor.
+- **`apps/api/.claude/CLAUDE.md` updated.** Its OpenAPI section previously instructed annotating controllers with `@ApiOperation({ operationId })` — guidance that would have led future agents to reintroduce exactly the hand-written ids this change removes. It now says never to hand-write one, points at the factory, and records the class-name-is-contract and one-route-per-controller constraints. The version-suffix rationale itself is unchanged and still holds — the factory reproduces it mechanically.
+- **The factory assumes one route method per controller.** It ignores the method key, so a second route on an existing controller emits a duplicate operationId. True for all 12 controllers today (the CQRS slice shape enforces it by convention); the e2e uniqueness assertion is the mechanical guard.
+- `deriveOperationId` throws on a class named exactly `Controller` rather than returning an unversioned `Controller` id — a degenerate input that would otherwise reach the web generator as a valid-looking symbol.
 
 ## Artifacts
 

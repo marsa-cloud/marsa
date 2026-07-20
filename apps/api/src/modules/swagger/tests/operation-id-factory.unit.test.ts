@@ -20,8 +20,8 @@ describe('deriveOperationId', () => {
     expect(deriveOperationId('GetApiInfoController', undefined)).toBe('getApiInfo')
   })
 
-  it('handles a class name that is exactly "Controller"', () => {
-    expect(deriveOperationId('Controller', 'v1')).toBe('Controller')
+  it('throws on a class name that is exactly "Controller"', () => {
+    expect(() => deriveOperationId('Controller', 'v1')).toThrow(/no name beyond the Controller/)
   })
 })
 

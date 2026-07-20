@@ -14,11 +14,17 @@ import type { OperationIdFactory } from '@nestjs/swagger'
  *
  * Every controller is a single-endpoint (CQRS-style) unit whose method is always `handle`,
  * so the method key is intentionally ignored — the class name alone identifies the operation.
+ * Adding a second route method to a controller would therefore emit a duplicate id; the
+ * OpenAPI e2e test asserts uniqueness across the document to catch that.
  */
 export function deriveOperationId(controllerKey: string, version?: string): string {
   const base = controllerKey.replace(/Controller$/, '')
   if (base.length === 0) {
-    return controllerKey
+    // A class named exactly `Controller` yields no name to derive from. Fail at
+    // generate time rather than emitting an unversioned id the web generator consumes.
+    throw new Error(
+      `Cannot derive an operationId from controller class "${controllerKey}" — it has no name beyond the Controller suffix.`,
+    )
   }
 
   const camel = base.charAt(0).toLowerCase() + base.slice(1)
