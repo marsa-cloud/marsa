@@ -161,15 +161,15 @@ export const zDeployAppCommandWritable = z.object({
 
 export const zGetApiInfoV1Response = zGetApiInfoResponse
 
-export const zGetGithubAppManifestV1Response = zGetManifestResponse
+export const zGetManifestV1Response = zGetManifestResponse
 
-export const zConvertGithubAppManifestV1Body = zConvertManifestCommand
+export const zConvertManifestV1Body = zConvertManifestCommand
 
-export const zConvertGithubAppManifestV1Response = zConvertManifestResponse
+export const zConvertManifestV1Response = zConvertManifestResponse
 
-export const zCaptureGithubAppInstallationV1Body = zCaptureInstallationCommand
+export const zCaptureInstallationV1Body = zCaptureInstallationCommand
 
-export const zCaptureGithubAppInstallationV1Response = zCaptureInstallationResponse
+export const zCaptureInstallationV1Response = zCaptureInstallationResponse
 
 export const zCompleteGithubLoginV1Body = zCompleteGithubLoginCommand
 

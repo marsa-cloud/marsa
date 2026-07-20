@@ -270,28 +270,27 @@ export type GetApiInfoV1Responses = {
 
 export type GetApiInfoV1Response = GetApiInfoV1Responses[keyof GetApiInfoV1Responses]
 
-export type GetGithubAppManifestV1Data = {
+export type GetManifestV1Data = {
   body?: never
   path?: never
   query?: never
   url: '/api/v1/github-app/manifest'
 }
 
-export type GetGithubAppManifestV1Responses = {
+export type GetManifestV1Responses = {
   200: GetManifestResponse
 }
 
-export type GetGithubAppManifestV1Response =
-  GetGithubAppManifestV1Responses[keyof GetGithubAppManifestV1Responses]
+export type GetManifestV1Response = GetManifestV1Responses[keyof GetManifestV1Responses]
 
-export type ConvertGithubAppManifestV1Data = {
+export type ConvertManifestV1Data = {
   body: ConvertManifestCommand
   path?: never
   query?: never
   url: '/api/v1/github-app/convert-manifest'
 }
 
-export type ConvertGithubAppManifestV1Errors = {
+export type ConvertManifestV1Errors = {
   /**
    * Malformed body, or an invalid/expired state token.
    */
@@ -302,21 +301,20 @@ export type ConvertGithubAppManifestV1Errors = {
   502: unknown
 }
 
-export type ConvertGithubAppManifestV1Responses = {
+export type ConvertManifestV1Responses = {
   200: ConvertManifestResponse
 }
 
-export type ConvertGithubAppManifestV1Response =
-  ConvertGithubAppManifestV1Responses[keyof ConvertGithubAppManifestV1Responses]
+export type ConvertManifestV1Response = ConvertManifestV1Responses[keyof ConvertManifestV1Responses]
 
-export type CaptureGithubAppInstallationV1Data = {
+export type CaptureInstallationV1Data = {
   body: CaptureInstallationCommand
   path?: never
   query?: never
   url: '/api/v1/github-app/capture-installation'
 }
 
-export type CaptureGithubAppInstallationV1Errors = {
+export type CaptureInstallationV1Errors = {
   /**
    * Malformed body, an unsupported setup_action, or no provisioned App.
    */
@@ -327,12 +325,12 @@ export type CaptureGithubAppInstallationV1Errors = {
   502: unknown
 }
 
-export type CaptureGithubAppInstallationV1Responses = {
+export type CaptureInstallationV1Responses = {
   200: CaptureInstallationResponse
 }
 
-export type CaptureGithubAppInstallationV1Response =
-  CaptureGithubAppInstallationV1Responses[keyof CaptureGithubAppInstallationV1Responses]
+export type CaptureInstallationV1Response =
+  CaptureInstallationV1Responses[keyof CaptureInstallationV1Responses]
 
 export type BeginGithubLoginV1Data = {
   body?: never
