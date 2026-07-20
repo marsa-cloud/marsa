@@ -289,6 +289,10 @@ wait_for_traefik() {
   # fails with "no matches for kind IngressRoute". Both waits are needed and
   # they check different things: the CRD is what Helm needs to render, the
   # rollout is what serves traffic once the release is up.
+  # Without this, a missing kubectl is indistinguishable from an absent CRD:
+  # the loop below would poll for three minutes and then blame Traefik.
+  require_cmd kubectl || die "kubectl not found — required to verify Traefik before installing the chart"
+
   local tries=0
   info "Waiting for Traefik CRDs (the chart's IngressRoute needs them)"
   until kubectl get crd ingressroutes.traefik.io >/dev/null 2>&1; do
@@ -296,6 +300,11 @@ wait_for_traefik() {
     [ "$tries" -ge "$TRAEFIK_WAIT_TRIES" ] && die "Traefik CRDs (ingressroutes.traefik.io) did not appear within ~$((TRAEFIK_WAIT_TRIES * 2)) seconds. Marsa's chart requires Traefik — expected on K3s/k3d, which bundle it. On a cluster with a different ingress controller, install Traefik first."
     sleep 2
   done
+  # A CRD object exists before it is Established; the endpoint isn't served
+  # until the condition is set, so existence alone doesn't mean Helm can
+  # render against it.
+  kubectl wait --for condition=established --timeout=60s crd/ingressroutes.traefik.io >/dev/null 2>&1 \
+    || die "Traefik CRD ingressroutes.traefik.io exists but never became Established"
   ok "Traefik CRDs registered"
 
   info "Waiting for the Traefik deployment to roll out"

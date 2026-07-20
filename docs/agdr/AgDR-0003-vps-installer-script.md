@@ -101,6 +101,11 @@ Decided: **`deploy_marsa` blocks on `wait_for_traefik` before running Helm** —
 
 The wait runs on **both** install paths, not just the one that provisions K3s. `scripts/e2e-up.sh` uses `--skip-k3s` against k3d, and k3d deploys Traefik asynchronously exactly like K3s — so scoping the wait to the K3s path would leave the local path carrying the identical race.
 
+Two known limits of this wait, recorded so the next reader doesn't assume more than it gives:
+
+- **The CRD is waited on for `Established`, not merely existence.** A `CustomResourceDefinition` object exists the moment it is created, but the API server does not serve the kind until the `Established` condition is set — so `kubectl get crd` returning success is not the guarantee it looks like. The rollout wait that follows happens to cover the gap, but relying on that would be depending on timing rather than on a check, so the condition is waited on explicitly.
+- **With `--tls`, Traefik restarts _after_ this wait passes.** The chart ships `templates/cert-resolver.yaml`, a `HelmChartConfig` for Traefik in `kube-system`; helm-controller re-runs Traefik's install job to apply it, so Traefik restarts after `install.sh` has already reported success, and the `le` cert resolver does not exist in its config until that lands. `helm --wait` does not watch Traefik, so the install does not fail — it is a window, not a breakage. Invisible to CI because both E2E entry points pass `--no-tls`. Pre-existing behaviour, not introduced here; noted because this wait might otherwise be read as proving Traefik is settled for good.
+
 Consequence — **Traefik is now an explicit hard dependency of `install.sh`.** Installing onto a cluster with a different ingress controller previously failed at Helm render with a confusing CRD error; it now blocks for ~3 minutes and then fails with a message that names Traefik and says what to do. Tunable via `MARSA_TRAEFIK_NAMESPACE` and `MARSA_TRAEFIK_WAIT_TRIES`. Making that dependency implicit-but-real into explicit-and-stated is the point; if Marsa ever supports another ingress controller, this is the check that has to change.
 
 ## Amendment — 2026-06-07 (#29): `--agent` mode to join worker nodes
