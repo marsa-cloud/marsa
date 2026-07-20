@@ -66,7 +66,9 @@ describe('keyset pagination DTOs', () => {
   })
 
   it('surfaces nested pagination violations from the child error', () => {
-    expect(errorsFor(transform(TestKeysetSearch, { pagination: { limit: '500' } }))).toContain('max')
+    expect(errorsFor(transform(TestKeysetSearch, { pagination: { limit: '500' } }))).toContain(
+      'max',
+    )
   })
 
   it('treats the nested pagination object as optional', () => {
@@ -85,7 +87,10 @@ describe('keyset pagination DTOs', () => {
   })
 
   it('carries a structured next key on a non-final page', () => {
-    const page = new PaginatedKeysetResponse<number>([1], new PaginatedKeysetResponseMeta({ id: '1' }))
+    const page = new PaginatedKeysetResponse<number>(
+      [1],
+      new PaginatedKeysetResponseMeta({ id: '1' }),
+    )
 
     expect(page.meta.next).toEqual({ id: '1' })
   })

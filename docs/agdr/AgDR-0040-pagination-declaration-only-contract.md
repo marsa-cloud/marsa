@@ -18,7 +18,7 @@ The first cut of GH-132 shipped three modules of working logic beyond the DTOs:
 
 - `cursor.ts` — base64url encode/decode of a `{ sortValue, id }` payload, with `BadRequestException` on malformed input
 - `keyset-comparison.ts` — an ORM-neutral descriptor of the `seek past the cursor` predicate, carrying the `orderBy` the predicate presupposes
-- `build-keyset-page.ts` — page assembly from an over-fetched `limit + 1` row set, building `nextCursor` from the last row *returned* rather than the last row *fetched*
+- `build-keyset-page.ts` — page assembly from an over-fetched `limit + 1` row set, building `nextCursor` from the last row _returned_ rather than the last row _fetched_
 
 An external reference package (`@wisemen/pagination`) solves the same problem with declarations only: it declares an opaque keyset `key` and leaves encoding, seeking and assembly to each consumer. The team asked to converge on that shape.
 
@@ -31,11 +31,11 @@ So "match the reference" was adopted as a **shape** decision, not a correctness 
 
 ## Options Considered
 
-| Option | Pros | Cons |
-|--------|------|------|
-| **Declaration-only contract** (chosen) | Small, predictable surface; no ORM opinion baked into shared code; each repository is free to seek the way its query needs | Every keyset adopter re-implements cursor encoding and the seek predicate; the off-by-one that assembly prevented is now each adopter's to avoid |
-| Keep the centralised mechanics | Cursor correctness solved once; the page-boundary off-by-one is structurally impossible | Larger surface; the ORM-neutral descriptor still needed per-repository translation, so it removed less duplication than it appeared to |
-| Declaration-only, plus a shared keyset helper later | Smallest surface now, with a path to re-centralise once two or more real adopters show a common shape | Defers a decision rather than making one; risks two adopters diverging first |
+| Option                                              | Pros                                                                                                                       | Cons                                                                                                                                             |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Declaration-only contract** (chosen)              | Small, predictable surface; no ORM opinion baked into shared code; each repository is free to seek the way its query needs | Every keyset adopter re-implements cursor encoding and the seek predicate; the off-by-one that assembly prevented is now each adopter's to avoid |
+| Keep the centralised mechanics                      | Cursor correctness solved once; the page-boundary off-by-one is structurally impossible                                    | Larger surface; the ORM-neutral descriptor still needed per-repository translation, so it removed less duplication than it appeared to           |
+| Declaration-only, plus a shared keyset helper later | Smallest surface now, with a path to re-centralise once two or more real adopters show a common shape                      | Defers a decision rather than making one; risks two adopters diverging first                                                                     |
 
 ## Decision
 
