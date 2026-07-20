@@ -22,14 +22,11 @@ const collect = (errors: ValidationError[]): string[] =>
 const errorsFor = (instance: object): string[] =>
   collect(validateSync(instance, { whitelist: true, forbidNonWhitelisted: true }))
 
-// SearchQuery's members are abstract, so a subclass must redeclare them. They use
-// `declare` so no undecorated own-property is emitted — the global pipe runs with
-// forbidNonWhitelisted, which rejects any property carrying no validation decorator.
-class TestOffsetSearch extends PaginatedOffsetSearchQuery {
-  declare sort?: undefined
-  declare filter?: undefined
-  declare search?: string
-}
+// Redeclares nothing. SearchQuery's members are concrete precisely so this
+// shape works: when they were abstract, a subclass had to redeclare them and an
+// undecorated redeclaration tripped forbidNonWhitelisted, 400-ing every request
+// once the app was bootstrapped. The clean run below is the regression guard.
+class TestOffsetSearch extends PaginatedOffsetSearchQuery {}
 
 describe('pagination query DTOs through the validation pipeline', () => {
   before(() => TestBench.setupUnitTest())

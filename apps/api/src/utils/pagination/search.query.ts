@@ -24,8 +24,13 @@ export abstract class SortQuery {
 // own FilterQuery<T> in repositories that import both.
 export abstract class BaseFilterQuery {}
 
+// Members are deliberately NOT abstract. An abstract member forces every
+// subclass to redeclare it, and an undecorated redeclaration is rejected by the
+// global pipe's forbidNonWhitelisted — a 400 on every request, with a green
+// build. Leaving them concrete means a use-case redeclares only what it uses,
+// with the validators that make it whitelisted.
 export abstract class SearchQuery {
-  abstract sort?: SortQuery[]
-  abstract filter?: BaseFilterQuery
-  abstract search?: string
+  sort?: SortQuery[]
+  filter?: BaseFilterQuery
+  search?: string
 }

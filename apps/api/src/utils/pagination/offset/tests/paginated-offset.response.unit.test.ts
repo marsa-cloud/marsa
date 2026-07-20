@@ -17,7 +17,7 @@ describe('offset pagination response DTOs', () => {
     expect(meta.limit).toBe(10)
   })
 
-  it('constructs from an existing meta instance', () => {
+  it('response wraps items + meta', () => {
     const meta = new PaginatedOffsetResponseMeta(1, 0, 10)
     const res = new PaginatedOffsetResponse<string>(['a'], meta)
 
@@ -25,14 +25,9 @@ describe('offset pagination response DTOs', () => {
     expect(res.meta).toBe(meta)
   })
 
-  // The (total, limit, offset) overload takes limit BEFORE offset, while the
-  // meta constructor takes offset before limit — this pins that mapping.
-  it('constructs from loose total/limit/offset arguments', () => {
-    const res = new PaginatedOffsetResponse<string>(['a'], 42, 10, 20)
+  it('keeps meta a real instance so serialization sees the decorated class', () => {
+    const res = new PaginatedOffsetResponse<number>([1], new PaginatedOffsetResponseMeta(1, 0, 10))
 
     expect(res.meta).toBeInstanceOf(PaginatedOffsetResponseMeta)
-    expect(res.meta.total).toBe(42)
-    expect(res.meta.limit).toBe(10)
-    expect(res.meta.offset).toBe(20)
   })
 })

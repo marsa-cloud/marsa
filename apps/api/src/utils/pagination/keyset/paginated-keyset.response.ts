@@ -1,9 +1,8 @@
 export interface PaginatedKeysetResponseMeta {
   next: string | object | null
-  prev?: string | object | null
 }
 
-export interface PaginatedKeysetResponse {
-  items: unknown[]
+export interface PaginatedKeysetResponse<T> {
+  items: T[]
   meta: PaginatedKeysetResponseMeta
 }

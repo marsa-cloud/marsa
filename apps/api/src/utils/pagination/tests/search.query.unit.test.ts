@@ -14,10 +14,9 @@ class TestSort extends SortQuery {
   order = SortDirection.DESC
 }
 
+// Narrows only `sort`; the other members are inherited untouched.
 class TestSearch extends SearchQuery {
-  sort?: TestSort[]
-  filter?: undefined
-  search?: string
+  declare sort?: TestSort[]
 }
 
 describe('pagination search layer', () => {

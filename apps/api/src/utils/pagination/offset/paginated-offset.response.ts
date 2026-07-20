@@ -24,23 +24,11 @@ export class PaginatedOffsetResponse<T> {
   @ApiProperty({ type: PaginatedOffsetResponseMeta })
   meta: PaginatedOffsetResponseMeta
 
-  constructor(items: T[], meta: PaginatedOffsetResponseMeta)
-  constructor(items: T[], total: number, limit: number, offset: number)
-  constructor(
-    items: T[],
-    totalOrMeta: number | PaginatedOffsetResponseMeta,
-    limit?: number,
-    offset?: number,
-  ) {
+  // Takes a meta instance rather than loose numbers: three positional numbers
+  // in a different order from the meta constructor made a silent transposition
+  // type-check, and no test downstream would have caught the swap.
+  constructor(items: T[], meta: PaginatedOffsetResponseMeta) {
     this.items = items
-
-    if (
-      totalOrMeta instanceof PaginatedOffsetResponseMeta ||
-      (totalOrMeta !== null && typeof totalOrMeta === 'object')
-    ) {
-      this.meta = totalOrMeta
-    } else {
-      this.meta = new PaginatedOffsetResponseMeta(totalOrMeta, offset as number, limit as number)
-    }
+    this.meta = meta
   }
 }
