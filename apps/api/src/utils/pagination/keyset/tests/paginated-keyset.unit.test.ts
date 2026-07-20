@@ -7,7 +7,7 @@ import {
   PaginatedKeysetQuery,
   PaginatedKeysetSearchQuery,
 } from '#src/utils/pagination/keyset/paginated-keyset.query.js'
-import type {
+import {
   PaginatedKeysetResponse,
   PaginatedKeysetResponseMeta,
 } from '#src/utils/pagination/keyset/paginated-keyset.response.js'
@@ -76,11 +76,17 @@ describe('keyset pagination DTOs', () => {
     expect(errorsFor(q)).toEqual([])
   })
 
-  it('types a page as items + a next key', () => {
-    const last: PaginatedKeysetResponseMeta = { next: null }
-    const page: PaginatedKeysetResponse<number> = { items: [1, 2], meta: last }
+  it('wraps a page as items + a next key', () => {
+    const page = new PaginatedKeysetResponse<number>([1, 2], new PaginatedKeysetResponseMeta(null))
 
     expect(page.items).toEqual([1, 2])
     expect(page.meta.next).toBeNull()
+    expect(page.meta).toBeInstanceOf(PaginatedKeysetResponseMeta)
+  })
+
+  it('carries a structured next key on a non-final page', () => {
+    const page = new PaginatedKeysetResponse<number>([1], new PaginatedKeysetResponseMeta({ id: '1' }))
+
+    expect(page.meta.next).toEqual({ id: '1' })
   })
 })
