@@ -1,27 +1,21 @@
-import { ApiPropertyOptional } from '@nestjs/swagger'
+import { ApiProperty } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator'
-import { DEFAULT_LIMIT, MAX_LIMIT, MIN_LIMIT } from '#src/utils/pagination/pagination.constants.js'
+import { IsInt, IsOptional, IsPositive, Max } from 'class-validator'
+import { DEFAULT_PAGINATION_MAX_LIMIT } from '#src/utils/pagination/pagination-mapper.js'
+import { SearchQuery } from '#src/utils/pagination/search.query.js'
 
-export class PaginatedKeysetQuery {
-  @ApiPropertyOptional({
-    type: 'integer',
-    minimum: MIN_LIMIT,
-    maximum: MAX_LIMIT,
-    default: DEFAULT_LIMIT,
-  })
-  @IsOptional()
+export abstract class PaginatedKeysetQuery {
+  @ApiProperty({ required: false, maximum: DEFAULT_PAGINATION_MAX_LIMIT, minimum: 0 })
   @Type(() => Number)
-  @IsInt()
-  @Min(MIN_LIMIT)
-  @Max(MAX_LIMIT)
-  limit: number = DEFAULT_LIMIT
-
-  @ApiPropertyOptional({
-    type: 'string',
-    description: 'Opaque cursor from a previous page’s meta.nextCursor.',
-  })
   @IsOptional()
-  @IsString()
-  cursor?: string
+  @Max(DEFAULT_PAGINATION_MAX_LIMIT)
+  @IsPositive()
+  @IsInt()
+  limit?: number
+
+  abstract key?: string | object | null
+}
+
+export abstract class PaginatedKeysetSearchQuery extends SearchQuery {
+  abstract pagination?: PaginatedKeysetQuery
 }

@@ -1,17 +1,46 @@
 import { ApiProperty } from '@nestjs/swagger'
-import { PaginatedOffsetResponseMeta } from '#src/utils/pagination/offset/paginated-offset-response-meta.js'
 
-// Generic offset page. `T` is erased at runtime, so an adopting use-case
-// subclasses this and redeclares `items` with `@ApiProperty({ type: [ItemDto] })`
-// to give OpenAPI a named item schema.
+export class PaginatedOffsetResponseMeta {
+  @ApiProperty({ description: 'the total amount of items that exist' })
+  total: number
+
+  @ApiProperty({ description: 'the amount of items skipped' })
+  offset: number
+
+  @ApiProperty({ description: 'the amount of items per response' })
+  limit: number
+
+  constructor(total: number, offset: number, limit: number) {
+    this.total = total
+    this.offset = offset
+    this.limit = limit
+  }
+}
+
 export class PaginatedOffsetResponse<T> {
-  readonly items: T[]
+  @ApiProperty({ description: 'The items for the current page', isArray: true })
+  items: T[]
 
   @ApiProperty({ type: PaginatedOffsetResponseMeta })
-  readonly meta: PaginatedOffsetResponseMeta
+  meta: PaginatedOffsetResponseMeta
 
-  constructor(items: T[], meta: PaginatedOffsetResponseMeta) {
+  constructor(items: T[], meta: PaginatedOffsetResponseMeta)
+  constructor(items: T[], total: number, limit: number, offset: number)
+  constructor(
+    items: T[],
+    totalOrMeta: number | PaginatedOffsetResponseMeta,
+    limit?: number,
+    offset?: number,
+  ) {
     this.items = items
-    this.meta = meta
+
+    if (
+      totalOrMeta instanceof PaginatedOffsetResponseMeta ||
+      (totalOrMeta !== null && typeof totalOrMeta === 'object')
+    ) {
+      this.meta = totalOrMeta
+    } else {
+      this.meta = new PaginatedOffsetResponseMeta(totalOrMeta, offset as number, limit as number)
+    }
   }
 }

@@ -1,16 +1,23 @@
 import { before, describe, it } from 'node:test'
 import { expect } from 'expect'
 import { TestBench } from '#src/test/setup/test-bench.js'
-import { DEFAULT_LIMIT, MAX_LIMIT, MIN_LIMIT } from '#src/utils/pagination/pagination.constants.js'
-import { SortQuery } from '#src/utils/pagination/search/sort.query.js'
+import { DEFAULT_PAGINATION_MAX_LIMIT } from '#src/utils/pagination/pagination-mapper.js'
 import {
+  SearchQuery,
   SortDirection,
   SortDirectionApiProperty,
-} from '#src/utils/pagination/search/sort-direction.js'
+  SortQuery,
+} from '#src/utils/pagination/search.query.js'
 
 class TestSort extends SortQuery {
   key = 'createdAt'
   order = SortDirection.DESC
+}
+
+class TestSearch extends SearchQuery {
+  sort?: TestSort[]
+  filter?: undefined
+  search?: string
 }
 
 describe('pagination search layer', () => {
@@ -27,12 +34,21 @@ describe('pagination search layer', () => {
 
   it('a concrete SortQuery carries key + order', () => {
     const sort = new TestSort()
+
     expect(sort.key).toBe('createdAt')
     expect(sort.order).toBe(SortDirection.DESC)
   })
 
-  it('has sane limit bounds', () => {
-    expect(MIN_LIMIT).toBeLessThan(DEFAULT_LIMIT)
-    expect(DEFAULT_LIMIT).toBeLessThanOrEqual(MAX_LIMIT)
+  it('a concrete SearchQuery accepts multiple sorts and leaves members opt-in', () => {
+    const query = new TestSearch()
+    query.sort = [new TestSort(), new TestSort()]
+
+    expect(query.sort).toHaveLength(2)
+    expect(query.filter).toBeUndefined()
+    expect(query.search).toBeUndefined()
+  })
+
+  it('caps the page size', () => {
+    expect(DEFAULT_PAGINATION_MAX_LIMIT).toBe(100)
   })
 })

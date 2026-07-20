@@ -1,31 +1,28 @@
-import { ApiPropertyOptional } from '@nestjs/swagger'
+import { ApiProperty } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
-import { IsInt, IsOptional, Max, Min } from 'class-validator'
-import {
-  DEFAULT_LIMIT,
-  DEFAULT_OFFSET,
-  MAX_LIMIT,
-  MIN_LIMIT,
-} from '#src/utils/pagination/pagination.constants.js'
+import { IsInt, IsOptional, IsPositive, Max, Min, ValidateNested } from 'class-validator'
+import { DEFAULT_PAGINATION_MAX_LIMIT } from '#src/utils/pagination/pagination-mapper.js'
+import { SearchQuery } from '#src/utils/pagination/search.query.js'
 
 export class PaginatedOffsetQuery {
-  @ApiPropertyOptional({
-    type: 'integer',
-    minimum: MIN_LIMIT,
-    maximum: MAX_LIMIT,
-    default: DEFAULT_LIMIT,
-  })
-  @IsOptional()
+  @ApiProperty({ minimum: 1, maximum: DEFAULT_PAGINATION_MAX_LIMIT })
   @Type(() => Number)
+  @Max(DEFAULT_PAGINATION_MAX_LIMIT)
+  @IsPositive()
   @IsInt()
-  @Min(MIN_LIMIT)
-  @Max(MAX_LIMIT)
-  limit: number = DEFAULT_LIMIT
+  limit!: number
 
-  @ApiPropertyOptional({ type: 'integer', minimum: 0, default: DEFAULT_OFFSET })
-  @IsOptional()
+  @ApiProperty({ minimum: 0 })
   @Type(() => Number)
-  @IsInt()
   @Min(0)
-  offset: number = DEFAULT_OFFSET
+  @IsInt()
+  offset!: number
+}
+
+export abstract class PaginatedOffsetSearchQuery extends SearchQuery {
+  @ApiProperty({ type: PaginatedOffsetQuery, required: false })
+  @IsOptional()
+  @Type(() => PaginatedOffsetQuery)
+  @ValidateNested()
+  pagination?: PaginatedOffsetQuery
 }
