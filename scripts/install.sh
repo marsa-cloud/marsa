@@ -302,7 +302,10 @@ wait_for_traefik() {
   done
   # A CRD object exists before it is Established; the endpoint isn't served
   # until the condition is set, so existence alone doesn't mean Helm can
-  # render against it.
+  # render against it. This cannot replace the loop above: `kubectl wait`
+  # fails immediately with "no matching resources found" when the object
+  # doesn't exist yet, so folding the two together breaks on every fresh
+  # cluster. The loop waits for existence, this waits for served.
   kubectl wait --for condition=established --timeout=60s crd/ingressroutes.traefik.io >/dev/null 2>&1 \
     || die "Traefik CRD ingressroutes.traefik.io exists but never became Established"
   ok "Traefik CRDs registered"
