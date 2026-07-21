@@ -48,6 +48,10 @@ Verify the node joined by running `sudo k3s kubectl get nodes` on the server.
 > Connect nodes over a **private network**. Inter-node traffic is not encrypted by
 > default; encrypted networking is tracked in [#24](https://github.com/marsa-cloud/marsa/issues/24).
 
+## Local development
+
+See [`docs/local-dev.md`](docs/local-dev.md) — a fast no-cluster inner loop for UI work, and a `pnpm e2e:up` / `pnpm e2e:test` k3d harness for real deploys over HTTPS.
+
 ## Current Status
 
 Early prototype / MVP phase.

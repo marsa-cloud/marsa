@@ -5,8 +5,9 @@
 # What it does, in order:
 #   1. Pre-flight checks (root, Debian/Ubuntu, required tools)
 #   2. Installs K3s if absent (brings its own Traefik ingress + local-path storage)
-#   3. Installs Helm 3.18+ if absent (OCI registry pulls need 3.8+; the
-#      `--rollback-on-failure` flag we deploy with needs 3.18+)
+#   3. Installs Helm 4.x if absent; errors out (never upgrades) if an older
+#      Helm is present. The `--rollback-on-failure` flag we deploy with is
+#      Helm 4-only.
 #   4. helm upgrade --install of the Marsa chart from the OCI registry
 #
 # Re-running the script with the same arguments updates an existing install
@@ -31,13 +32,18 @@ EMAIL=""
 SERVER_URL=""             # agent mode: K3s server URL, e.g. https://10.0.0.5:6443
 TOKEN="${MARSA_K3S_TOKEN:-}"  # agent mode: cluster node-token (env avoids it landing in shell history / ps)
 CHART_VERSION=""        # empty → Helm pulls the latest published version (incl. pre-releases)
-MIN_HELM_MINOR=18       # 3.18+: --rollback-on-failure (also covers OCI's 3.8 floor)
+IMAGE_TAG="${MARSA_IMAGE_TAG:-}"  # empty → chart default image tag; overridable to pin a build
+MIN_HELM_MAJOR=4        # 4+: --rollback-on-failure (a Helm 4 flag; Helm 3's equivalent is --atomic)
 K3S_KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
-# Helm's official get-helm-3 installer, pinned to a release tag rather than the
+TRAEFIK_NAMESPACE="${MARSA_TRAEFIK_NAMESPACE:-kube-system}"
+TRAEFIK_WAIT_TRIES="${MARSA_TRAEFIK_WAIT_TRIES:-90}"   # x2s ≈ 3 minutes
+SKIP_K3S="false"          # --skip-k3s: install into an existing cluster (honor $KUBECONFIG)
+# Helm's official get-helm-4 installer, pinned to a release tag rather than the
 # moving `main` branch (supply-chain hygiene — see AgDR-0003). Overridable for
-# testing. The pinned script still installs the latest stable Helm by default;
+# testing. get-helm-4 exists from v4.1.0 onward; the pin cannot go below that.
+# The pinned script still installs the latest stable Helm by default;
 # set MARSA_HELM_VERSION to pin the Helm version itself.
-HELM_INSTALL_SCRIPT_TAG="${MARSA_HELM_INSTALL_SCRIPT_TAG:-v3.16.4}"
+HELM_INSTALL_SCRIPT_TAG="${MARSA_HELM_INSTALL_SCRIPT_TAG:-v4.1.3}"
 HELM_VERSION="${MARSA_HELM_VERSION:-}"
 
 # --- Output helpers -----------------------------------------------------------
@@ -91,6 +97,7 @@ ${C_BOLD}Agent mode${C_RESET} — join this machine to an existing cluster as a 
 
 ${C_BOLD}Environment overrides${C_RESET}
   MARSA_CHART_REF       Marsa chart reference. Default: ${CHART_REF}
+  MARSA_IMAGE_TAG       Pin the marsa-api/web image tag (chart image.tag). Default: chart's own.
   MARSA_RELEASE_NAME    Install/release name (same as --release).
   MARSA_K3S_TOKEN       Agent-mode node-token (alternative to --token; keeps it out of ps).
 
@@ -130,6 +137,7 @@ while [ $# -gt 0 ]; do
     --namespace)     require_arg_value "$1" "${2:-}"; NAMESPACE="$2"; shift 2 ;;
     --release)       require_arg_value "$1" "${2:-}"; RELEASE_NAME="$2"; shift 2 ;;
     --no-tls)        TLS_ENABLED="false"; shift ;;
+    --skip-k3s)      SKIP_K3S="true"; shift ;;
     -h|--help)       usage; exit 0 ;;
     *)               die "Unknown argument: $1 (run --help for usage)" ;;
   esac
@@ -144,6 +152,7 @@ if [ "$MODE" = "agent" ]; then
   [ -z "$EMAIL" ]         || die "--email is not valid in --agent mode"
   [ -z "$CHART_VERSION" ] || die "--chart-version is not valid in --agent mode"
   [ "$TLS_ENABLED" = "true" ] || die "--no-tls is not valid in --agent mode"
+  [ "$SKIP_K3S" = "false" ] || die "--skip-k3s is not valid in --agent mode"
 
   [ -n "$SERVER_URL" ] || { usage; echo; die "--agent requires --server-url"; }
   [ -n "$TOKEN" ]      || die "--agent requires --token (or set MARSA_K3S_TOKEN)"
@@ -244,39 +253,84 @@ install_k3s_agent() {
 # --- Helm ---------------------------------------------------------------------
 
 helm_meets_min() {
-  # Returns 0 when installed Helm is >= 3.MIN_HELM_MINOR (OCI pulls + --rollback-on-failure).
-  local ver major minor
+  # Returns 0 when installed Helm is >= MIN_HELM_MAJOR (OCI pulls + --rollback-on-failure).
+  local ver major
   ver="$(helm version --template '{{.Version}}' 2>/dev/null | sed 's/^v//')" || return 1
   major="${ver%%.*}"
-  minor="${ver#*.}"; minor="${minor%%.*}"
-  [ "${major:-0}" -gt 3 ] && return 0
-  [ "${major:-0}" -eq 3 ] && [ "${minor:-0}" -ge "$MIN_HELM_MINOR" ]
+  [ "${major:-0}" -ge "$MIN_HELM_MAJOR" ]
 }
 
 install_helm() {
-  if require_cmd helm && helm_meets_min; then
+  # Never replace an operator's existing Helm — a PaaS installer upgrading a
+  # system-wide tool out from under other workloads is too blunt. Install only
+  # when Helm is absent; otherwise require the operator to upgrade deliberately.
+  if require_cmd helm; then
+    helm_meets_min || die "Helm $(helm version --template '{{.Version}}' 2>/dev/null) is installed, but Marsa requires Helm ${MIN_HELM_MAJOR}.x or newer. Upgrade Helm and re-run — this installer will not replace an existing Helm for you."
     ok "Helm $(helm version --template '{{.Version}}' 2>/dev/null) already installed — skipping"
     return
   fi
-  if require_cmd helm; then
-    warn "Installed Helm is older than 3.${MIN_HELM_MINOR}; upgrading"
-  fi
   info "Installing Helm (installer pinned to ${HELM_INSTALL_SCRIPT_TAG})"
-  local get_helm="https://raw.githubusercontent.com/helm/helm/${HELM_INSTALL_SCRIPT_TAG}/scripts/get-helm-3"
+  local get_helm="https://raw.githubusercontent.com/helm/helm/${HELM_INSTALL_SCRIPT_TAG}/scripts/get-helm-4"
   if [ -n "$HELM_VERSION" ]; then
     curl -sfL "$get_helm" | DESIRED_VERSION="$HELM_VERSION" bash
   else
     curl -sfL "$get_helm" | bash
   fi
-  helm_meets_min || die "Helm install did not yield a 3.${MIN_HELM_MINOR}+ version"
+  helm_meets_min || die "Helm install did not yield a ${MIN_HELM_MAJOR}.x+ version"
   ok "Helm $(helm version --template '{{.Version}}' 2>/dev/null) ready"
 }
 
 # --- Marsa --------------------------------------------------------------------
 
+wait_for_traefik() {
+  # A Ready node does NOT mean the cluster is finished: K3s (and k3d) deploy
+  # Traefik asynchronously afterwards. The chart ships an IngressRoute
+  # (traefik.io/v1alpha1), so installing before Traefik's CRDs are registered
+  # fails with "no matches for kind IngressRoute". Both waits are needed and
+  # they check different things: the CRD is what Helm needs to render, the
+  # rollout is what serves traffic once the release is up.
+  # Without this, a missing kubectl is indistinguishable from an absent CRD:
+  # the loop below would poll for three minutes and then blame Traefik.
+  require_cmd kubectl || die "kubectl not found — required to verify Traefik before installing the chart"
+
+  local tries=0
+  info "Waiting for Traefik CRDs (the chart's IngressRoute needs them)"
+  until kubectl get crd ingressroutes.traefik.io >/dev/null 2>&1; do
+    tries=$((tries + 1))
+    [ "$tries" -ge "$TRAEFIK_WAIT_TRIES" ] && die "Traefik CRDs (ingressroutes.traefik.io) did not appear within ~$((TRAEFIK_WAIT_TRIES * 2)) seconds. Marsa's chart requires Traefik — expected on K3s/k3d, which bundle it. On a cluster with a different ingress controller, install Traefik first."
+    sleep 2
+  done
+  # A CRD object exists before it is Established; the endpoint isn't served
+  # until the condition is set, so existence alone doesn't mean Helm can
+  # render against it. This cannot replace the loop above: `kubectl wait`
+  # fails immediately with "no matching resources found" when the object
+  # doesn't exist yet, so folding the two together breaks on every fresh
+  # cluster. The loop waits for existence, this waits for served.
+  kubectl wait --for condition=established --timeout=60s crd/ingressroutes.traefik.io >/dev/null 2>&1 \
+    || die "Traefik CRD ingressroutes.traefik.io exists but never became Established"
+  ok "Traefik CRDs registered"
+
+  info "Waiting for the Traefik deployment to roll out"
+  tries=0
+  until kubectl -n "$TRAEFIK_NAMESPACE" get deploy traefik >/dev/null 2>&1; do
+    tries=$((tries + 1))
+    [ "$tries" -ge "$TRAEFIK_WAIT_TRIES" ] && die "Traefik CRDs exist but no traefik deployment appeared in namespace '$TRAEFIK_NAMESPACE' within ~$((TRAEFIK_WAIT_TRIES * 2)) seconds"
+    sleep 2
+  done
+  kubectl -n "$TRAEFIK_NAMESPACE" rollout status deploy/traefik --timeout=180s \
+    || die "Traefik deployment did not become ready; Marsa would install but nothing would route"
+  ok "Traefik is ready"
+}
+
 deploy_marsa() {
-  export KUBECONFIG="$K3S_KUBECONFIG"
-  [ -r "$KUBECONFIG" ] || die "kubeconfig not readable at $KUBECONFIG"
+  if [ "$SKIP_K3S" = "true" ]; then
+    export KUBECONFIG="${KUBECONFIG:-$K3S_KUBECONFIG}"
+  else
+    export KUBECONFIG="$K3S_KUBECONFIG"
+    [ -r "$KUBECONFIG" ] || die "kubeconfig not readable at $KUBECONFIG"
+  fi
+
+  wait_for_traefik
 
   info "Deploying Marsa release '${RELEASE_NAME}' into namespace '${NAMESPACE}'"
 
@@ -288,6 +342,7 @@ deploy_marsa() {
     --wait --timeout 10m --rollback-on-failure
   )
   [ -n "$EMAIL" ] && args+=(--set "email=${EMAIL}")
+  [ -n "$IMAGE_TAG" ] && args+=(--set "image.tag=${IMAGE_TAG}")
 
   if [ -n "$CHART_VERSION" ]; then
     args+=(--version "$CHART_VERSION")
@@ -374,7 +429,13 @@ main() {
   fi
 
   preflight "$@"
-  install_k3s
+  if [ "$SKIP_K3S" = "true" ]; then
+    info "Skipping K3s install (--skip-k3s); using existing cluster via \$KUBECONFIG"
+    export KUBECONFIG="${KUBECONFIG:-$K3S_KUBECONFIG}"
+    kubectl get nodes >/dev/null 2>&1 || die "No reachable cluster at KUBECONFIG=$KUBECONFIG"
+  else
+    install_k3s
+  fi
   install_helm
   deploy_marsa
   summary

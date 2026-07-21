@@ -42,6 +42,72 @@ The first end-to-end run on a real VPS (now that the chart is published as `0.0.
 - **`--atomic` → `--rollback-on-failure`; Helm floor 3.8 → 3.18.** Helm 3.18 renamed `--atomic` to `--rollback-on-failure` and Helm 4 removed `--atomic` outright. Rather than feature-detect, we always use `--rollback-on-failure` and raise `MIN_HELM_MINOR` to 18 so the flag is guaranteed present (3.18 still satisfies the OCI ≥3.8 requirement). `get-helm-3` installs ≥3.18 as current stable, so fresh installs are unaffected.
 - **Distribution URL → GitHub raw, not the OVH vanity redirect.** The README's `https://get.marsa.gomaa.ovh` resolves to an OVH web-redirect that only listens on port 80 (no TLS cert), so `https://` reset the connection before the script was even fetched. The README now points at `https://raw.githubusercontent.com/marsa-cloud/marsa/main/scripts/install.sh` (real TLS, zero infra). A pretty vanity URL over HTTPS is deferred to the real-domain purchase (#49) — via a TLS-terminating proxy (e.g. Cloudflare), not OVH's free redirect.
 
+## Amendment — 2026-07-20 (#122): `--rollback-on-failure` is Helm 4-only; require Helm 4, never upgrade
+
+The 2026-06-04 amendment above is **factually wrong on both of its Helm claims** and this supersedes it. Verified against Helm's source rather than restated:
+
+| Claim (2026-06-04)                                        | Reality                                                                                                                                                                |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| "Helm 3.18 renamed `--atomic` to `--rollback-on-failure`" | False. Helm 3.18.0 and 3.21.3 define only `--atomic` (`cmd/helm/upgrade.go:274`). `--rollback-on-failure` first appears in Helm 4 (`v4.1.3` `pkg/cmd/upgrade.go:289`). |
+| "Helm 4 removed `--atomic` outright"                      | False. `--atomic` is still present in Helm 4.1.3, deprecated and aliased to the same field (`pkg/cmd/upgrade.go:290-291`).                                             |
+
+`MIN_HELM_MINOR=18` was set on the first of these, which is what broke the installer.
+
+The error was invisible for six weeks because every machine that ran the installer happened to have Helm 4 already. The first real E2E run (the #122 harness, GitHub Actions run `29727378084`) hit a runner with Helm **3.21.3** preinstalled — which passed the `>= 3.18` gate, so the installer skipped its own Helm install and then handed Helm 3 a Helm 4 flag:
+
+```
+✓ Helm v3.21.3 already installed — skipping
+Error: unknown flag: --rollback-on-failure
+```
+
+So the installer was broken for **any operator with Helm 3.x already on the box**. This is exactly the class of regression that installer-verification-in-CI (#55, folded into #122) exists to catch, and it was caught on the harness's first run.
+
+Decided:
+
+- **Floor becomes major-version based: `MIN_HELM_MAJOR=4`.** `helm_meets_min` compares the major version only; the minor-version logic is gone.
+- **Bootstrap moves to `get-helm-4`, pinned to `v4.1.3`.** `get-helm-3` installs Helm 3 by design, so raising the floor without moving the script would make the installer fail its own check on every fresh box. `get-helm-4` exists from tag `v4.1.0` onward (absent throughout the whole `v4.0.x` line), so the pin cannot go below `v4.1.0`; `v4.1.3` is chosen as the newest at time of writing, not as a floor.
+- **Never upgrade an existing Helm — error instead.** If Helm is present but older than 4, the installer now dies with an actionable message rather than replacing it. A PaaS installer silently swapping a system-wide tool out from under an operator's other workloads is too blunt an action to take unprompted. Installation happens only when Helm is **absent**.
+- **`--atomic` was considered and rejected — and it was the cheaper fix.** Since Helm 4 only deprecated `--atomic` rather than removing it, a one-word change would have worked on Helm 3.8+ _and_ Helm 4, with no version floor, no bootstrap change, and no operator-facing behaviour change. It was rejected as an operator call: Marsa standardises on Helm 4 rather than carrying a deprecated flag, accepting that operators on Helm 3 must upgrade manually before installing. Anyone revisiting this should know the cheap option was available and declined, not overlooked.
+
+Consequence for `scripts/cd-deploy.sh`, which passes `--rollback-on-failure` twice and is unchanged here: it is safe on any host provisioned by `install.sh` **from 2026-06-04 onward**, since that is when the installer began requiring the flag's presence. It is _not_ universally safe — `cd-deploy.sh` (2026-06-28) is wired up by a manual one-time setup that never re-runs `install.sh`, so a host provisioned before 2026-06-04 can still be running Helm 3 with a working Marsa release, and enabling CD on it would fail in the pipeline against production. Blast radius is near-zero at pre-1.0 alpha, but the two scripts are coupled through the Helm-4 floor: if it is ever lowered, `cd-deploy.sh` must change with it.
+
+The E2E workflow installs Helm 4 explicitly (runners ship Helm 3), which means the `get-helm-4` bootstrap path itself is **not** exercised in CI — only the "Helm 4 already present" path is. That gap is accepted for now.
+
+## Amendment — 2026-07-20 (#122): wait for Traefik before installing the chart
+
+The second E2E run (GitHub Actions `29739836232`) got past Helm and died rendering the chart:
+
+```
+Error: unable to build kubernetes objects from release manifest:
+resource mapping not found for name: "marsa-ingress-route"
+no matches for kind "IngressRoute" in version "traefik.io/v1alpha1"
+```
+
+`install_k3s` waits for the **node** to report Ready, and the installer treats that as "the cluster is ready". It isn't: K3s deploys Traefik asynchronously afterwards via a `HelmChart` CR that helm-controller reconciles, and registering Traefik's CRDs is part of that work. The chart ships `templates/ingress-route.yml` as `traefik.io/v1alpha1 / IngressRoute`, so `helm upgrade` ran ~0.07s after node-Ready against a cluster where that kind did not yet exist. Total elapsed install time was 17 seconds.
+
+This never surfaced on a real VPS because slower hardware, slower networks, and a human typing the command all give Traefik time to settle. It needs a fast automated environment to reproduce — which is what the #122 harness now provides.
+
+Options considered:
+
+| Option                                                  | Why not                                                                                                                                                                                                                |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Poll for the `ingressroutes.traefik.io` CRD only        | Necessary but not sufficient — a registered CRD does not mean Traefik is serving, and the E2E's HTTPS assertion needs it serving. Would likely relocate the failure by seconds.                                        |
+| Retry the `helm upgrade` on failure                     | Masks the root cause and retries a 10-minute-timeout operation, turning a precise error into a slow ambiguous one.                                                                                                     |
+| Guard the template with `.Capabilities.APIVersions.Has` | **Rejected outright.** Converts a loud failure into a silent install with no ingress — the operator gets "success" and a system that routes nothing.                                                                   |
+| Switch to `networking.k8s.io/Ingress`                   | Removes the CRD race permanently and is portable across controllers, but it is a chart-repo architectural change that loses the Traefik `certResolver` wiring. Deferred as its own decision, not folded into a bugfix. |
+| Pre-apply Traefik's CRDs ourselves                      | Duplicates what K3s already does and invites version drift against the bundled Traefik.                                                                                                                                |
+
+Decided: **`deploy_marsa` blocks on `wait_for_traefik` before running Helm** — first polling for the `ingressroutes.traefik.io` CRD (what Helm needs to render), then for the `traefik` deployment to roll out (what serves traffic). Two distinct waits with distinct failure messages, because they fail for different reasons and conflating them makes the next incident harder to read.
+
+The wait runs on **both** install paths, not just the one that provisions K3s. `scripts/e2e-up.sh` uses `--skip-k3s` against k3d, and k3d deploys Traefik asynchronously exactly like K3s — so scoping the wait to the K3s path would leave the local path carrying the identical race.
+
+Two known limits of this wait, recorded so the next reader doesn't assume more than it gives:
+
+- **The CRD is waited on for `Established`, not merely existence.** A `CustomResourceDefinition` object exists the moment it is created, but the API server does not serve the kind until the `Established` condition is set — so `kubectl get crd` returning success is not the guarantee it looks like. The rollout wait that follows happens to cover the gap, but relying on that would be depending on timing rather than on a check, so the condition is waited on explicitly.
+- **With `--tls`, Traefik restarts _outside anything `install.sh` waits for_.** The chart ships `templates/cert-resolver.yaml`, a `HelmChartConfig` for Traefik in `kube-system`; helm-controller begins reconciling it as soon as it lands — which is _during_ the `helm --wait` phase, not after it — and re-runs Traefik's install job, so Traefik restarts with the `le` cert resolver absent from its config until that job completes. Note the shape precisely: this is **concurrent and unobserved**, not "after we finish". `install.sh` never waits for or observes it, and `helm --wait` does not watch Traefik, so the install does not fail — it is a window, not a breakage. That distinction is what explains a flaky _first_ TLS request; a clean-ordering reading would not. Invisible to CI because both E2E entry points pass `--no-tls`. Pre-existing behaviour, not introduced here; noted because this wait might otherwise be read as proving Traefik is settled for good.
+
+Consequence — **Traefik is now an explicit hard dependency of `install.sh`.** Installing onto a cluster with a different ingress controller previously failed at Helm render with a confusing CRD error; it now blocks for ~3 minutes and then fails with a message that names Traefik and says what to do. Tunable via `MARSA_TRAEFIK_NAMESPACE` and `MARSA_TRAEFIK_WAIT_TRIES`. Making that dependency implicit-but-real into explicit-and-stated is the point; if Marsa ever supports another ingress controller, this is the check that has to change.
+
 ## Amendment — 2026-06-07 (#29): `--agent` mode to join worker nodes
 
 The installer was server-only — it could stand up a single K3s server but offered no

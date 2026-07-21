@@ -2,7 +2,6 @@ import { Body, Controller, HttpCode, Post, UseGuards } from '@nestjs/common'
 import {
   ApiBadRequestResponse,
   ApiOkResponse,
-  ApiOperation,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger'
@@ -19,7 +18,6 @@ export class DeployAppController {
   @Post()
   @HttpCode(200)
   @UseGuards(SessionAuthGuard)
-  @ApiOperation({ operationId: 'deployAppV1' })
   @ApiOkResponse({ type: DeployAppResponse })
   @ApiBadRequestResponse({ description: 'Malformed body, or an invalid slug / image / port.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })

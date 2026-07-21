@@ -2,7 +2,6 @@ import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common'
 import {
   ApiBadRequestResponse,
   ApiOkResponse,
-  ApiOperation,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger'
@@ -18,7 +17,6 @@ export class ViewAppLogsController {
 
   @Get()
   @UseGuards(SessionAuthGuard)
-  @ApiOperation({ operationId: 'viewAppLogsV1' })
   @ApiOkResponse({ type: ViewAppLogsResponse })
   @ApiBadRequestResponse({ description: 'tailLines out of range (1–1000) or not an integer.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
