@@ -35,6 +35,8 @@ CHART_VERSION=""        # empty → Helm pulls the latest published version (inc
 IMAGE_TAG="${MARSA_IMAGE_TAG:-}"  # empty → chart default image tag; overridable to pin a build
 MIN_HELM_MAJOR=4        # 4+: --rollback-on-failure (a Helm 4 flag; Helm 3's equivalent is --atomic)
 K3S_KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
+TRAEFIK_NAMESPACE="${MARSA_TRAEFIK_NAMESPACE:-kube-system}"
+TRAEFIK_WAIT_TRIES="${MARSA_TRAEFIK_WAIT_TRIES:-90}"   # x2s ≈ 3 minutes
 SKIP_K3S="false"          # --skip-k3s: install into an existing cluster (honor $KUBECONFIG)
 # Helm's official get-helm-4 installer, pinned to a release tag rather than the
 # moving `main` branch (supply-chain hygiene — see AgDR-0003). Overridable for
@@ -280,6 +282,46 @@ install_helm() {
 
 # --- Marsa --------------------------------------------------------------------
 
+wait_for_traefik() {
+  # A Ready node does NOT mean the cluster is finished: K3s (and k3d) deploy
+  # Traefik asynchronously afterwards. The chart ships an IngressRoute
+  # (traefik.io/v1alpha1), so installing before Traefik's CRDs are registered
+  # fails with "no matches for kind IngressRoute". Both waits are needed and
+  # they check different things: the CRD is what Helm needs to render, the
+  # rollout is what serves traffic once the release is up.
+  # Without this, a missing kubectl is indistinguishable from an absent CRD:
+  # the loop below would poll for three minutes and then blame Traefik.
+  require_cmd kubectl || die "kubectl not found — required to verify Traefik before installing the chart"
+
+  local tries=0
+  info "Waiting for Traefik CRDs (the chart's IngressRoute needs them)"
+  until kubectl get crd ingressroutes.traefik.io >/dev/null 2>&1; do
+    tries=$((tries + 1))
+    [ "$tries" -ge "$TRAEFIK_WAIT_TRIES" ] && die "Traefik CRDs (ingressroutes.traefik.io) did not appear within ~$((TRAEFIK_WAIT_TRIES * 2)) seconds. Marsa's chart requires Traefik — expected on K3s/k3d, which bundle it. On a cluster with a different ingress controller, install Traefik first."
+    sleep 2
+  done
+  # A CRD object exists before it is Established; the endpoint isn't served
+  # until the condition is set, so existence alone doesn't mean Helm can
+  # render against it. This cannot replace the loop above: `kubectl wait`
+  # fails immediately with "no matching resources found" when the object
+  # doesn't exist yet, so folding the two together breaks on every fresh
+  # cluster. The loop waits for existence, this waits for served.
+  kubectl wait --for condition=established --timeout=60s crd/ingressroutes.traefik.io >/dev/null 2>&1 \
+    || die "Traefik CRD ingressroutes.traefik.io exists but never became Established"
+  ok "Traefik CRDs registered"
+
+  info "Waiting for the Traefik deployment to roll out"
+  tries=0
+  until kubectl -n "$TRAEFIK_NAMESPACE" get deploy traefik >/dev/null 2>&1; do
+    tries=$((tries + 1))
+    [ "$tries" -ge "$TRAEFIK_WAIT_TRIES" ] && die "Traefik CRDs exist but no traefik deployment appeared in namespace '$TRAEFIK_NAMESPACE' within ~$((TRAEFIK_WAIT_TRIES * 2)) seconds"
+    sleep 2
+  done
+  kubectl -n "$TRAEFIK_NAMESPACE" rollout status deploy/traefik --timeout=180s \
+    || die "Traefik deployment did not become ready; Marsa would install but nothing would route"
+  ok "Traefik is ready"
+}
+
 deploy_marsa() {
   if [ "$SKIP_K3S" = "true" ]; then
     export KUBECONFIG="${KUBECONFIG:-$K3S_KUBECONFIG}"
@@ -287,6 +329,8 @@ deploy_marsa() {
     export KUBECONFIG="$K3S_KUBECONFIG"
     [ -r "$KUBECONFIG" ] || die "kubeconfig not readable at $KUBECONFIG"
   fi
+
+  wait_for_traefik
 
   info "Deploying Marsa release '${RELEASE_NAME}' into namespace '${NAMESPACE}'"
 
