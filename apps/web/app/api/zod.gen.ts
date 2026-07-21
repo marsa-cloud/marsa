@@ -67,7 +67,7 @@ export const zCompleteGithubLoginResponse = z.object({
 
 export const zUserRole = z.enum(['operator', 'member'])
 
-export const zGetCurrentUserResponse = z.object({
+export const zViewMeResponse = z.object({
   id: z.string(),
   login: z.string(),
   role: zUserRole,
@@ -112,21 +112,8 @@ export const zReleaseSummary = z.object({
   failureMessage: z.string().nullish(),
 })
 
-export const zListAppReleasesResponse = z.object({
+export const zViewReleaseIndexResponse = z.object({
   releases: z.array(zReleaseSummary),
-})
-
-export const zAppHealthStatus = z.enum(['healthy', 'degraded', 'unavailable', 'not_found'])
-
-export const zGetAppHealthResponse = z.object({
-  status: zAppHealthStatus,
-  availableReplicas: z.number(),
-  desiredReplicas: z.number(),
-})
-
-export const zGetAppRunLogsResponse = z.object({
-  podName: z.string().nullable(),
-  logs: z.string(),
 })
 
 export const zAppSummary = z.object({
@@ -137,8 +124,21 @@ export const zAppSummary = z.object({
   updatedAt: z.iso.datetime(),
 })
 
-export const zListAppsResponse = z.object({
+export const zViewAppIndexResponse = z.object({
   apps: z.array(zAppSummary),
+})
+
+export const zAppHealthStatus = z.enum(['healthy', 'degraded', 'unavailable', 'not_found'])
+
+export const zViewAppHealthResponse = z.object({
+  status: zAppHealthStatus,
+  availableReplicas: z.number(),
+  desiredReplicas: z.number(),
+})
+
+export const zViewAppLogsResponse = z.object({
+  podName: z.string().nullable(),
+  logs: z.string(),
 })
 
 export const zImagePullCredentialsWritable = z.object({
@@ -175,32 +175,32 @@ export const zCompleteGithubLoginV1Body = zCompleteGithubLoginCommand
 
 export const zCompleteGithubLoginV1Response = zCompleteGithubLoginResponse
 
-export const zGetCurrentUserV1Response = zGetCurrentUserResponse
+export const zViewMeV1Response = zViewMeResponse
 
 export const zDeployAppV1Body = zDeployAppCommandWritable
 
 export const zDeployAppV1Response = zDeployAppResponse
 
-export const zListAppReleasesV1Path = z.object({
+export const zViewReleaseIndexV1Path = z.object({
   slug: z.string(),
 })
 
-export const zListAppReleasesV1Response = zListAppReleasesResponse
+export const zViewReleaseIndexV1Response = zViewReleaseIndexResponse
 
-export const zGetAppHealthV1Path = z.object({
+export const zViewAppIndexV1Response = zViewAppIndexResponse
+
+export const zViewAppHealthV1Path = z.object({
   slug: z.string(),
 })
 
-export const zGetAppHealthV1Response = zGetAppHealthResponse
+export const zViewAppHealthV1Response = zViewAppHealthResponse
 
-export const zGetAppRunLogsV1Path = z.object({
+export const zViewAppLogsV1Path = z.object({
   slug: z.string(),
 })
 
-export const zGetAppRunLogsV1Query = z.object({
+export const zViewAppLogsV1Query = z.object({
   tailLines: z.int().gte(1).lte(1000).optional(),
 })
 
-export const zGetAppRunLogsV1Response = zGetAppRunLogsResponse
-
-export const zListAppsV1Response = zListAppsResponse
+export const zViewAppLogsV1Response = zViewAppLogsResponse

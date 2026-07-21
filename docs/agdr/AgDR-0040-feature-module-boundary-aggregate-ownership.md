@@ -51,6 +51,51 @@ The user (CEO) was leaning toward aggregate ownership and confirmed after review
 - Future feature work has a one-line test for where a use-case belongs and when a module should split — no longer a per-PR discussion.
 - Accepted cost: "aggregate" is a modelling judgement, so genuinely ambiguous cases (an entity that is arguably part of a larger aggregate) still need a call — but the rule names the question to ask, which is the reusable part.
 
+## Amendment (marsa#131, same PR) — health/logs move to `app-management`, and the module is renamed
+
+The original decision (§ Decision) kept `get-app-health` and `get-app-run-logs` in
+`deployments/` on the reasoning that they read "Kubernetes runtime state produced by a
+deployment, not the `App` record." Re-reading the code before executing the split showed
+that reasoning was half-right and led to the wrong home:
+
+- Both use-cases are **keyed on the app slug** and call `readAppHealth(ns, slug)` /
+  `readRunLogs(ns, slug)`. **Neither references the `Release` entity at all** — there is
+  no release identifier in either path.
+- So "the aggregate this use-case is about" (the rule's own test) is the **running `App`**,
+  not a `Release`. The `App`-noun route (`/apps/:slug/health`) and the true aggregate agree
+  here; the original call over-applied the route-noun trap and treated "runtime" as a third
+  pseudo-aggregate it is not.
+
+Revised placement, adopted in the same PR:
+
+| Use-case            | Renamed to               | Module                        |
+| ------------------- | ------------------------ | ----------------------------- |
+| `list-apps`         | `view-app-index`         | `app-management` (owns `App`) |
+| `get-app-health`    | `view-app-health`        | `app-management`              |
+| `get-app-run-logs`  | `view-app-logs`          | `app-management`              |
+| `deploy-app`        | `deploy-app` (unchanged) | `release` (writes `Release`)  |
+| `list-app-releases` | `view-release-index`     | `release` (reads `Release`)   |
+
+`deployments/` is renamed to **`release/`** (`DeploymentsModule → ReleaseModule`), since after
+the split it owns only the `Release` aggregate — naming a module after its aggregate is the
+rule this AgDR established. Routes drop the `deployments/` prefix (breaking v1 change,
+pre-launch, web is the sole consumer).
+
+**On a future telemetry module:** grouping `view-app-health`/`view-app-logs` into a dedicated
+observability module (e.g. `AppTelemetry`) was considered and rejected _for now_ — it would own
+no aggregate root, which violates the one-aggregate-per-module rule and re-introduces the
+capability-grouping this AgDR chose against. That split becomes correct only once telemetry owns
+a **persisted aggregate** of its own (retained metrics, saved log queries, alert rules); until
+then the reads live with the `App` aggregate.
+
+The `create-app` / `create-release` / first-class `Deployment`-aggregate direction was also
+discussed and explicitly deferred: `deploy-app` stays in `release/` (it writes a `Release`) until
+a `Deployment` aggregate with its own lifecycle (redeploy / rollback / multi-env promotion) actually
+exists — at which point a Deployments module owning it is justified by this same rule.
+
+The naming vocabulary this amendment introduces (`view-<entity>-index`/`-detail`, singleton
+`view-<thing>`, domain-verb actions) is recorded in `apps/api/.claude/CLAUDE.md` § "Use-case naming".
+
 ## Artifacts
 
 - Issue: marsa-cloud/marsa#131

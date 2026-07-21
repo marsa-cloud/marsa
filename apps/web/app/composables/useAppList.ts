@@ -1,5 +1,5 @@
-import type { ListAppsResponse } from '~/api/types.gen'
-import { zListAppsResponse } from '~/api/zod.gen'
+import type { ViewAppIndexResponse } from '~/api/types.gen'
+import { zViewAppIndexResponse } from '~/api/zod.gen'
 
 /**
  * Read composable for the deployed-apps list (#128). Reactive read (method #1):
@@ -8,9 +8,9 @@ import { zListAppsResponse } from '~/api/zod.gen'
  */
 export function useAppList() {
   const { $api } = useNuxtApp()
-  return useAsyncData<ListAppsResponse>(
+  return useAsyncData<ViewAppIndexResponse>(
     'app-list',
     () => $api('/v1/apps'),
-    { transform: (raw): ListAppsResponse => zListAppsResponse.parse(raw) },
+    { transform: (raw): ViewAppIndexResponse => zViewAppIndexResponse.parse(raw) },
   )
 }

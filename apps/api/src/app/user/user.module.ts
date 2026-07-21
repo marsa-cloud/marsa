@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common'
-import { GetCurrentUserModule } from '#src/app/user/use-cases/get-current-user/get-current-user.module.js'
+import { ViewMeModule } from '#src/app/user/use-cases/view-me/view-me.module.js'
 
 @Module({
-  imports: [GetCurrentUserModule],
+  imports: [ViewMeModule],
 })
 export class UserModule {}

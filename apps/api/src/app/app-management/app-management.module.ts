@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common'
-import { ListAppsModule } from '#src/app/app-management/use-cases/list-apps/list-apps.module.js'
+import { ViewAppHealthModule } from '#src/app/app-management/use-cases/view-app-health/view-app-health.module.js'
+import { ViewAppIndexModule } from '#src/app/app-management/use-cases/view-app-index/view-app-index.module.js'
+import { ViewAppLogsModule } from '#src/app/app-management/use-cases/view-app-logs/view-app-logs.module.js'
 
 @Module({
-  imports: [ListAppsModule],
+  imports: [ViewAppIndexModule, ViewAppHealthModule, ViewAppLogsModule],
 })
 export class AppManagementModule {}

@@ -176,7 +176,7 @@
     },
     "/api/v1/auth/me": {
       "get": {
-        "operationId": "getCurrentUserV1",
+        "operationId": "viewMeV1",
         "parameters": [],
         "responses": {
           "200": {
@@ -184,7 +184,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GetCurrentUserResponse"
+                  "$ref": "#/components/schemas/ViewMeResponse"
                 }
               }
             }
@@ -199,7 +199,7 @@
         ]
       }
     },
-    "/api/v1/deployments/deploy": {
+    "/api/v1/deploy": {
       "post": {
         "operationId": "deployAppV1",
         "parameters": [],
@@ -233,13 +233,13 @@
         },
         "summary": "",
         "tags": [
-          "deployments"
+          "releases"
         ]
       }
     },
-    "/api/v1/deployments/apps/{slug}/releases": {
+    "/api/v1/apps/{slug}/releases": {
       "get": {
-        "operationId": "listAppReleasesV1",
+        "operationId": "viewReleaseIndexV1",
         "parameters": [
           {
             "name": "slug",
@@ -256,7 +256,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ListAppReleasesResponse"
+                  "$ref": "#/components/schemas/ViewReleaseIndexResponse"
                 }
               }
             }
@@ -267,13 +267,38 @@
         },
         "summary": "",
         "tags": [
-          "deployments"
+          "releases"
         ]
       }
     },
-    "/api/v1/deployments/apps/{slug}/health": {
+    "/api/v1/apps": {
       "get": {
-        "operationId": "getAppHealthV1",
+        "operationId": "viewAppIndexV1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewAppIndexResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          }
+        },
+        "summary": "",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
+    "/api/v1/apps/{slug}/health": {
+      "get": {
+        "operationId": "viewAppHealthV1",
         "parameters": [
           {
             "name": "slug",
@@ -290,7 +315,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GetAppHealthResponse"
+                  "$ref": "#/components/schemas/ViewAppHealthResponse"
                 }
               }
             }
@@ -301,13 +326,13 @@
         },
         "summary": "",
         "tags": [
-          "deployments"
+          "apps"
         ]
       }
     },
-    "/api/v1/deployments/apps/{slug}/logs": {
+    "/api/v1/apps/{slug}/logs": {
       "get": {
-        "operationId": "getAppRunLogsV1",
+        "operationId": "viewAppLogsV1",
         "parameters": [
           {
             "name": "slug",
@@ -336,38 +361,13 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GetAppRunLogsResponse"
+                  "$ref": "#/components/schemas/ViewAppLogsResponse"
                 }
               }
             }
           },
           "400": {
             "description": "tailLines out of range (1–1000) or not an integer."
-          },
-          "401": {
-            "description": "No active session."
-          }
-        },
-        "summary": "",
-        "tags": [
-          "deployments"
-        ]
-      }
-    },
-    "/api/v1/apps": {
-      "get": {
-        "operationId": "listAppsV1",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ListAppsResponse"
-                }
-              }
-            }
           },
           "401": {
             "description": "No active session."
@@ -646,7 +646,7 @@
           "member"
         ]
       },
-      "GetCurrentUserResponse": {
+      "ViewMeResponse": {
         "type": "object",
         "properties": {
           "id": {
@@ -859,7 +859,7 @@
           "updatedAt"
         ]
       },
-      "ListAppReleasesResponse": {
+      "ViewReleaseIndexResponse": {
         "type": "object",
         "properties": {
           "releases": {
@@ -871,60 +871,6 @@
         },
         "required": [
           "releases"
-        ]
-      },
-      "AppHealthStatus": {
-        "type": "string",
-        "enum": [
-          "healthy",
-          "degraded",
-          "unavailable",
-          "not_found"
-        ]
-      },
-      "GetAppHealthResponse": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "example": "healthy",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/AppHealthStatus"
-              }
-            ]
-          },
-          "availableReplicas": {
-            "type": "number",
-            "example": 1
-          },
-          "desiredReplicas": {
-            "type": "number",
-            "example": 1
-          }
-        },
-        "required": [
-          "status",
-          "availableReplicas",
-          "desiredReplicas"
-        ]
-      },
-      "GetAppRunLogsResponse": {
-        "type": "object",
-        "properties": {
-          "podName": {
-            "type": "string",
-            "nullable": true,
-            "example": "my-app-7d9c8b6f5-abcde",
-            "description": "Pod the log was read from; null when no pod was found."
-          },
-          "logs": {
-            "type": "string",
-            "example": "Listening on :8080\n"
-          }
-        },
-        "required": [
-          "podName",
-          "logs"
         ]
       },
       "AppSummary": {
@@ -959,7 +905,7 @@
           "updatedAt"
         ]
       },
-      "ListAppsResponse": {
+      "ViewAppIndexResponse": {
         "type": "object",
         "properties": {
           "apps": {
@@ -971,6 +917,60 @@
         },
         "required": [
           "apps"
+        ]
+      },
+      "AppHealthStatus": {
+        "type": "string",
+        "enum": [
+          "healthy",
+          "degraded",
+          "unavailable",
+          "not_found"
+        ]
+      },
+      "ViewAppHealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "example": "healthy",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AppHealthStatus"
+              }
+            ]
+          },
+          "availableReplicas": {
+            "type": "number",
+            "example": 1
+          },
+          "desiredReplicas": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "status",
+          "availableReplicas",
+          "desiredReplicas"
+        ]
+      },
+      "ViewAppLogsResponse": {
+        "type": "object",
+        "properties": {
+          "podName": {
+            "type": "string",
+            "nullable": true,
+            "example": "my-app-7d9c8b6f5-abcde",
+            "description": "Pod the log was read from; null when no pod was found."
+          },
+          "logs": {
+            "type": "string",
+            "example": "Listening on :8080\n"
+          }
+        },
+        "required": [
+          "podName",
+          "logs"
         ]
       }
     }
