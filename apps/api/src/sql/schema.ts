@@ -1,10 +1,3 @@
-import { sql } from 'drizzle-orm'
-import { timestamp } from 'drizzle-orm/pg-core'
-
-export const timestamps = {
-  createdAt: timestamp({ withTimezone: true, mode: 'date' }).defaultNow().notNull(),
-  updatedAt: timestamp({ withTimezone: true, mode: 'date' })
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => sql`now()`),
-}
+export * from '#src/app/deployments/entities/app.table.js'
+export * from '#src/app/deployments/entities/release.table.js'
+export * from '#src/app/user/entities/user.table.js'
