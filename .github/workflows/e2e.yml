@@ -4,10 +4,18 @@ on:
   workflow_run:
     workflows: ['CD']
     types: [completed]
+  # Run on PRs that touch the E2E harness itself, so the real-K3s path is
+  # exercised against the branch (installing the existing `latest` image, since
+  # CD builds no image for an unlabelled branch) before it reaches main. Path-
+  # scoped so unrelated PRs don't pay for a full cluster spin-up.
+  pull_request:
+    paths:
+      - 'scripts/e2e-*.sh'
+      - 'scripts/install.sh'
+      - '.github/workflows/e2e.yml'
   # On-demand run against any branch (dispatch requires this trigger to be on
-  # the default branch). Installs an existing image tag — CD does not build one
-  # for unlabelled branches — while checking out the dispatched branch's scripts,
-  # so the test harness can be iterated without merging to main.
+  # the default branch). Installs an existing image tag while checking out the
+  # dispatched branch's scripts, so the harness can be iterated on any branch.
   workflow_dispatch:
     inputs:
       image_tag:
@@ -22,6 +30,7 @@ jobs:
   e2e:
     if: >-
       github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'pull_request' ||
       (github.event.workflow_run.event == 'push' &&
        github.event.workflow_run.head_branch == 'main' &&
        github.event.workflow_run.conclusion == 'success')
@@ -43,10 +52,10 @@ jobs:
           WR_SHA: ${{ github.event.workflow_run.head_sha }}
           INPUT_TAG: ${{ github.event.inputs.image_tag }}
         run: |
-          if [ "$EVENT" = workflow_dispatch ]; then
-            tag="${INPUT_TAG:-latest}"
-          else
+          if [ "$EVENT" = workflow_run ]; then
             tag="sha-$(printf '%s' "$WR_SHA" | cut -c1-7)"
+          else
+            tag="${INPUT_TAG:-latest}"
           fi
           echo "Installing image tag: $tag"
           sudo MARSA_IMAGE_TAG="$tag" bash scripts/install.sh --domain 127.0.0.1.nip.io --no-tls
