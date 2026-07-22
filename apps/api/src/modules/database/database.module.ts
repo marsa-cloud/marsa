@@ -14,11 +14,14 @@ import config from '#src/sql/mikro-orm.config.js'
     {
       provide: DATABASE_POOL,
       inject: [ConfigService],
-      useFactory: (configService: ConfigService): Pool =>
-        new Pool({
-          connectionString: configService.getOrThrow('DATABASE_URL'),
-          database: configService.getOrThrow('DB_NAME'),
-        }),
+      useFactory: (configService: ConfigService): Pool => {
+        // DATABASE_URL carries no db path (mirrors MikroORM's clientUrl + dbName
+        // split); set the db on the URL path, not Pool's `database` field, which
+        // pg silently overwrites when parsing connectionString.
+        const url = new URL(configService.getOrThrow('DATABASE_URL'))
+        url.pathname = `/${configService.getOrThrow('DB_NAME')}`
+        return new Pool({ connectionString: url.toString() })
+      },
     },
     {
       provide: DATABASE,
