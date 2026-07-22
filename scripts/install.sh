@@ -312,8 +312,17 @@ wait_for_traefik() {
   # fails immediately with "no matching resources found" when the object
   # doesn't exist yet, so folding the two together breaks on every fresh
   # cluster. The loop waits for existence, this waits for served.
-  kubectl wait --for condition=established --timeout=60s crd/ingressroutes.traefik.io >/dev/null 2>&1 \
-    || die "Traefik CRD ingressroutes.traefik.io exists but never became Established"
+  # Retried, not a single 60s wait: on a cold/contended runner the CRD is
+  # created but takes longer than 60s to become Established, and the wait itself
+  # can hit a transient apiserver error. Three 60s attempts (~180s) absorbs both.
+  local established=""
+  for _ in 1 2 3; do
+    if kubectl wait --for condition=established --timeout=60s crd/ingressroutes.traefik.io >/dev/null 2>&1; then
+      established="yes"
+      break
+    fi
+  done
+  [ -n "$established" ] || die "Traefik CRD ingressroutes.traefik.io exists but never became Established (waited ~180s)"
   ok "Traefik CRDs registered"
 
   info "Waiting for the Traefik deployment to roll out"
