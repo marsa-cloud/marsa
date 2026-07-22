@@ -5,6 +5,10 @@ set -euo pipefail
 
 CLUSTER="${MARSA_E2E_CLUSTER:-marsa-e2e}"
 BASE_DOMAIN="${MARSA_E2E_DOMAIN:-127.0.0.1.nip.io}"
+# Host ports default to 80/443 (what CI's real-K3s path uses). Override locally
+# when something already holds :80/:443 on the host.
+HTTP_PORT="${MARSA_E2E_HTTP_PORT:-80}"
+HTTPS_PORT="${MARSA_E2E_HTTPS_PORT:-443}"
 IMAGE_TAG=""
 
 while [ $# -gt 0 ]; do
@@ -16,7 +20,7 @@ done
 
 here="$(cd "$(dirname "$0")" && pwd)"
 
-k3d cluster create "$CLUSTER" -p "80:80@loadbalancer" -p "443:443@loadbalancer" --wait
+k3d cluster create "$CLUSTER" -p "${HTTP_PORT}:80@loadbalancer" -p "${HTTPS_PORT}:443@loadbalancer" --wait
 KUBECONFIG="$(k3d kubeconfig write "$CLUSTER")"
 export KUBECONFIG
 

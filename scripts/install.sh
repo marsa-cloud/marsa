@@ -198,9 +198,15 @@ require_cmd() { command -v "$1" >/dev/null 2>&1; }
 
 preflight() {
   info "Running pre-flight checks"
-  require_root "$@"
+  # --skip-k3s only talks to an existing cluster via $KUBECONFIG (kubectl/helm),
+  # which needs no root; requiring it blocks the local k3d dev loop. The full
+  # install path (K3s + apt) still requires root.
+  [ "$SKIP_K3S" = "true" ] || require_root "$@"
   require_debian
-  require_cmd curl || { info "Installing curl"; apt-get update -qq && apt-get install -y -qq curl; }
+  if ! require_cmd curl; then
+    [ "$(id -u)" -eq 0 ] || die "curl is required but missing, and installing it needs root — install curl and re-run"
+    info "Installing curl"; apt-get update -qq && apt-get install -y -qq curl
+  fi
   ok "Pre-flight checks passed"
 }
 
