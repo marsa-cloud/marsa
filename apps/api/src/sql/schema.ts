@@ -1,3 +1,7 @@
+export * from '#src/app/auth/entities/oauth-state.table.js'
 export * from '#src/app/deployments/entities/app.table.js'
 export * from '#src/app/deployments/entities/release.table.js'
+export * from '#src/app/github-app/entities/github-app.table.js'
+export * from '#src/app/github-app/entities/github-installation.table.js'
+export * from '#src/app/github-app/entities/manifest-state.table.js'
 export * from '#src/app/user/entities/user.table.js'

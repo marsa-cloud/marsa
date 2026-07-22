@@ -12,4 +12,14 @@ export const relations = defineRelations(schema, (r) => ({
       optional: false,
     }),
   },
+  githubAppTable: {
+    installations: r.many.githubInstallationTable(),
+  },
+  githubInstallationTable: {
+    app: r.one.githubAppTable({
+      from: r.githubInstallationTable.appUuid,
+      to: r.githubAppTable.uuid,
+      optional: false,
+    }),
+  },
 }))
