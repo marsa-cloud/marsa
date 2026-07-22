@@ -50,12 +50,12 @@ cookie="$(kubectl -n "$NS" exec "$api_pod" -- node dist/src/entrypoints/seed-dev
 echo "== stage: deploy app via API =="
 deploy_status=""
 for attempt in $(seq 1 20); do
-  http -X POST "https://api.${BASE_DOMAIN}${PORT_SUFFIX}/api/v1/deployments/deploy" \
+  http -X POST "https://api.${BASE_DOMAIN}${PORT_SUFFIX}/api/v1/deploy" \
     -H 'Content-Type: application/json' \
     -H "Cookie: ${cookie}" \
     -d "{\"slug\":\"${APP_SLUG}\",\"image\":\"${APP_IMAGE}\",\"containerPort\":80}" || true
   deploy_status="$HTTP_STATUS"
-  echo "  attempt ${attempt}: POST /deployments/deploy -> ${deploy_status}"
+  echo "  attempt ${attempt}: POST /deploy -> ${deploy_status}"
   case "$deploy_status" in
     2??) break ;;
   esac
@@ -63,7 +63,7 @@ for attempt in $(seq 1 20); do
 done
 case "$deploy_status" in
   2??) : ;;
-  *) fail deploy "POST /deployments/deploy -> ${deploy_status}; body: ${HTTP_BODY}" ;;
+  *) fail deploy "POST /deploy -> ${deploy_status}; body: ${HTTP_BODY}" ;;
 esac
 
 echo "== stage: k8s resources created =="
