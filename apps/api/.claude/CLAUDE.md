@@ -51,7 +51,7 @@ The api is the source of truth for the web↔api contract. `src/entrypoints/gene
 
 Two top-level source areas with distinct roles:
 
-- `src/app/` — **features** (vertical slices). One folder per business capability. Currently empty; new feature work goes here.
+- `src/app/` — **features** (vertical slices). One folder per **domain aggregate root** (see "Feature module boundaries" below for the split criterion), e.g. `app-management/`, `release/`, `auth/`, `user/`, `github-app/`.
 - `src/modules/` — **support modules**: cross-cutting infrastructure that features depend on, plus the production composition module (`api/api.module.ts`). Not feature code.
 
 Other directories: `src/entrypoints/` (process bootstraps), `src/test/` (test harness + global setup), `src/utils/`, `src/sql/`.
@@ -65,6 +65,38 @@ Layered so tests can swap pieces:
 - `TestModule.forRoot(modules)` (`src/test/test.module.ts`) — parallel composition root for tests; mirrors `AppModule` (imports `DatabaseModule` directly + spread modules). Never nests inside `AppModule`.
 
 `AppModule` and `TestModule` are parallel roots — infrastructure like `DatabaseModule` belongs in both directly, not passed in by callers. When you add a feature, register its module in `ApiModule` only.
+
+## Feature module boundaries (when to split)
+
+`src/app/` is organised **one feature module per domain aggregate root** — not per business capability, per REST resource, or per team. This is the criterion inherited from the upstream NestJS project template marsa is built on, where `users`, `user-preferences`, `api-key`, and `roles` are each their own module — `user-preferences` is split out from `users` because it is a _distinct aggregate_, even though both are "user stuff". A capability rule would have kept them together; the aggregate rule splits them. That's the tell.
+
+The rule:
+
+- **A feature module owns exactly one aggregate root** — its entity (or tightly-bound entity cluster), that entity's `entities/` / `errors/` / `enums/` / `events/`, and every use-case whose primary read/write target is that aggregate. The module is named after the aggregate: `release/` owns `Release`, and (per marsa#131) `App` management is extracted into its own feature (`app-management/`) that owns `App`.
+- **A use-case lives with the aggregate it primarily reads or writes** — not the URL noun it is addressed by. `view-release-index` is addressed under `/apps/:slug/releases` but its primary target is the `Release` entity (`findByAppSlug`), so it lives in `release/`. Conversely `view-app-health` and `view-app-logs` are **app-keyed live reads of Kubernetes runtime state that touch no `Release`** — their subject is the running `App`, so they live in `app-management/`. Ask "which aggregate's lifecycle is this use-case about?", never "which word is in the route?" — following the route noun is the trap this rule exists to avoid. (This placement of health/logs revises the original call in AgDR-0040 — see that record's amendment.)
+- **Split a new module out when a cluster of use-cases centres on a different aggregate** than the one the current module owns. One module holding two aggregates — as `DeploymentsModule` did with `App` + `Release` before the marsa#131 split — is the smell this rule catches; extract the smaller aggregate into its own feature that owns it.
+- **Shared building blocks are the only cross-feature seam.** A use-case never reaches into another feature's — or a sibling use-case's — _internals_: its repository, use-case, command, or response class. If two features genuinely need the same behaviour, promote it to `src/modules/` or a workspace package (see "Feature shape" below). Importing another feature's **shared building blocks** — its `entities/` (aggregate root + builder), `errors/`, `enums/`, or `events/` — is the sanctioned seam, not a violation: that's how `release/` depends on the `App` aggregate after the marsa#131 split. The one hard constraint is that the dependency stays **one-directional** (`release/` → `app-management/`, never back); preserving that acyclicity is the property the split exists to protect.
+
+Driver + options considered (aggregate ownership vs. business capability vs. REST resource): `docs/agdr/AgDR-0040-feature-module-boundary-aggregate-ownership.md` (marsa#131).
+
+## Use-case naming (CRUD verbs + action exceptions)
+
+Use-case folders (and their `<Action>` class prefix, `operationId`, and route) follow a fixed vocabulary so a reader can predict the name from the operation:
+
+| Operation              | Use-case folder        | Route shape                           |
+| ---------------------- | ---------------------- | ------------------------------------- |
+| List / collection read | `view-<entity>-index`  | `GET /<entities>` (filters via query) |
+| Single read by id      | `view-<entity>-detail` | `GET /<entities>/:id`                 |
+| Create                 | `create-<entity>`      | `POST /<entities>`                    |
+| Update                 | `update-<entity>`      | `PATCH`/`PUT /<entities>/:id`         |
+| Delete                 | `delete-<entity>`      | `DELETE /<entities>/:id`              |
+
+Two deliberate exceptions:
+
+- **Singleton / self reads drop the `-index`/`-detail` suffix** — a read that is neither a collection nor an id-lookup is just `view-<thing>`: `view-me` (the current user), and settings-style singletons.
+- **Domain-verb actions keep their ubiquitous-language verb** — an imperative operation that isn't plain CRUD stays named after the domain action rather than being forced into `create-`/`update-`: `deploy-app` writes a `Release`, but the domain says "deploy", not "create release". A write scoped to one facet of an aggregate takes a qualifier: `update-<entity>-<facet>`.
+
+The `operationId` is **derived automatically** by the global factory from the controller class name (`<Action>Controller` → `<action>V1`; see the "OpenAPI contract" section above) — so a use-case named `view-app-index` yields `viewAppIndexV1` with nothing hand-written. The response / command / repository classes take the `<Action>` prefix (`ViewAppIndexResponse`, `DeployAppCommand`). marsa#131 migrated the first batch: `list-apps → view-app-index`, `get-app-health → view-app-health`, `get-app-run-logs → view-app-logs`, `list-app-releases → view-release-index`, `get-current-user → view-me`.
 
 ## Feature shape (vertical slice)
 

@@ -21,9 +21,9 @@ const releases = {
 const health = { status: 'healthy', availableReplicas: 2, desiredReplicas: 2 }
 const runLogs = { podName: 'my-app-abc', logs: 'listening on :8080\n' }
 
-registerEndpoint(`/api/v1/deployments/apps/${SLUG}/releases`, () => releases)
-registerEndpoint(`/api/v1/deployments/apps/${SLUG}/health`, () => health)
-registerEndpoint(`/api/v1/deployments/apps/${SLUG}/logs`, () => runLogs)
+registerEndpoint(`/api/v1/apps/${SLUG}/releases`, () => releases)
+registerEndpoint(`/api/v1/apps/${SLUG}/health`, () => health)
+registerEndpoint(`/api/v1/apps/${SLUG}/logs`, () => runLogs)
 
 function mountComposable<T>(run: () => T) {
   let result!: T

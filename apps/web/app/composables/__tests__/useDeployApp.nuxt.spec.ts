@@ -11,7 +11,7 @@ const response = {
 }
 
 const handler = vi.fn(() => response)
-registerEndpoint('/api/v1/deployments/deploy', { method: 'POST', handler: () => handler() })
+registerEndpoint('/api/v1/deploy', { method: 'POST', handler: () => handler() })
 
 describe('useDeployApp.deploy', () => {
   it('POSTs the deploy command and returns the contract-validated response', async () => {

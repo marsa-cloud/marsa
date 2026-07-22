@@ -170,7 +170,7 @@
     },
     "/api/v1/auth/me": {
       "get": {
-        "operationId": "getCurrentUserV1",
+        "operationId": "viewMeV1",
         "parameters": [],
         "responses": {
           "200": {
@@ -178,7 +178,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GetCurrentUserResponse"
+                  "$ref": "#/components/schemas/ViewMeResponse"
                 }
               }
             }
@@ -192,7 +192,7 @@
         ]
       }
     },
-    "/api/v1/deployments/deploy": {
+    "/api/v1/deploy": {
       "post": {
         "operationId": "deployAppV1",
         "parameters": [],
@@ -225,13 +225,46 @@
           }
         },
         "tags": [
-          "deployments"
+          "releases"
         ]
       }
     },
-    "/api/v1/deployments/apps": {
+    "/api/v1/apps/{slug}/releases": {
       "get": {
-        "operationId": "listAppsV1",
+        "operationId": "viewReleaseIndexV1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewReleaseIndexResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          }
+        },
+        "tags": [
+          "releases"
+        ]
+      }
+    },
+    "/api/v1/apps": {
+      "get": {
+        "operationId": "viewAppIndexV1",
         "parameters": [],
         "responses": {
           "200": {
@@ -239,7 +272,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ListAppsResponse"
+                  "$ref": "#/components/schemas/ViewAppIndexResponse"
                 }
               }
             }
@@ -249,13 +282,13 @@
           }
         },
         "tags": [
-          "deployments"
+          "apps"
         ]
       }
     },
-    "/api/v1/deployments/apps/{slug}/releases": {
+    "/api/v1/apps/{slug}/health": {
       "get": {
-        "operationId": "listAppReleasesV1",
+        "operationId": "viewAppHealthV1",
         "parameters": [
           {
             "name": "slug",
@@ -272,7 +305,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ListAppReleasesResponse"
+                  "$ref": "#/components/schemas/ViewAppHealthResponse"
                 }
               }
             }
@@ -282,46 +315,13 @@
           }
         },
         "tags": [
-          "deployments"
+          "apps"
         ]
       }
     },
-    "/api/v1/deployments/apps/{slug}/health": {
+    "/api/v1/apps/{slug}/logs": {
       "get": {
-        "operationId": "getAppHealthV1",
-        "parameters": [
-          {
-            "name": "slug",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetAppHealthResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "No active session."
-          }
-        },
-        "tags": [
-          "deployments"
-        ]
-      }
-    },
-    "/api/v1/deployments/apps/{slug}/logs": {
-      "get": {
-        "operationId": "getAppRunLogsV1",
+        "operationId": "viewAppLogsV1",
         "parameters": [
           {
             "name": "slug",
@@ -350,7 +350,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GetAppRunLogsResponse"
+                  "$ref": "#/components/schemas/ViewAppLogsResponse"
                 }
               }
             }
@@ -363,7 +363,7 @@
           }
         },
         "tags": [
-          "deployments"
+          "apps"
         ]
       }
     }
@@ -634,7 +634,7 @@
           "member"
         ]
       },
-      "GetCurrentUserResponse": {
+      "ViewMeResponse": {
         "type": "object",
         "properties": {
           "id": {
@@ -784,52 +784,6 @@
           "deployStatus"
         ]
       },
-      "AppSummary": {
-        "type": "object",
-        "properties": {
-          "slug": {
-            "type": "string",
-            "example": "my-app"
-          },
-          "image": {
-            "type": "string",
-            "example": "nginx:1.27"
-          },
-          "url": {
-            "type": "string",
-            "example": "https://my-app.demo.marsa.cc"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "slug",
-          "image",
-          "url",
-          "createdAt",
-          "updatedAt"
-        ]
-      },
-      "ListAppsResponse": {
-        "type": "object",
-        "properties": {
-          "apps": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/AppSummary"
-            }
-          }
-        },
-        "required": [
-          "apps"
-        ]
-      },
       "ReleaseTrigger": {
         "type": "string",
         "enum": [
@@ -893,7 +847,7 @@
           "updatedAt"
         ]
       },
-      "ListAppReleasesResponse": {
+      "ViewReleaseIndexResponse": {
         "type": "object",
         "properties": {
           "releases": {
@@ -907,6 +861,52 @@
           "releases"
         ]
       },
+      "AppSummary": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "example": "my-app"
+          },
+          "image": {
+            "type": "string",
+            "example": "nginx:1.27"
+          },
+          "url": {
+            "type": "string",
+            "example": "https://my-app.demo.marsa.cc"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "slug",
+          "image",
+          "url",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ViewAppIndexResponse": {
+        "type": "object",
+        "properties": {
+          "apps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AppSummary"
+            }
+          }
+        },
+        "required": [
+          "apps"
+        ]
+      },
       "AppHealthStatus": {
         "type": "string",
         "enum": [
@@ -916,7 +916,7 @@
           "not_found"
         ]
       },
-      "GetAppHealthResponse": {
+      "ViewAppHealthResponse": {
         "type": "object",
         "properties": {
           "status": {
@@ -942,7 +942,7 @@
           "desiredReplicas"
         ]
       },
-      "GetAppRunLogsResponse": {
+      "ViewAppLogsResponse": {
         "type": "object",
         "properties": {
           "podName": {

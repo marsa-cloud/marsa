@@ -16,7 +16,7 @@ const apps = {
   ],
 }
 
-registerEndpoint('/api/v1/deployments/apps', () => apps)
+registerEndpoint('/api/v1/apps', () => apps)
 
 function mountComposable() {
   let result!: ReturnType<typeof useAppList>
@@ -32,7 +32,7 @@ function mountComposable() {
 }
 
 describe('useAppList', () => {
-  it('reads GET /v1/deployments/apps and returns the contract-validated list', async () => {
+  it('reads GET /v1/apps and returns the contract-validated list', async () => {
     const { data } = await mountComposable()
     expect(data.value).toEqual(apps)
   })

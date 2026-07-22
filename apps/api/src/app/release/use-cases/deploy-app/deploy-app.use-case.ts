@@ -1,0 +1,64 @@
+import { EntityManager } from '@mikro-orm/postgresql'
+import { Injectable } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
+import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
+import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
+import { ReleaseTrigger } from '#src/app/release/enums/release-trigger.enum.js'
+import { renderManifests } from '#src/app/release/render/render-manifests.js'
+import { DeployAppCommand } from '#src/app/release/use-cases/deploy-app/deploy-app.command.js'
+import { DeployAppRepository } from '#src/app/release/use-cases/deploy-app/deploy-app.repository.js'
+import { DeployAppResponse } from '#src/app/release/use-cases/deploy-app/deploy-app.response.js'
+import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
+import { OPERATOR_APPS_NAMESPACE } from '#src/modules/kubernetes/deploy-backend.constants.js'
+import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
+
+@Injectable()
+export class DeployAppUseCase {
+  constructor(
+    private readonly repository: DeployAppRepository,
+    private readonly deployBackend: DeployBackend,
+    private readonly config: ConfigService,
+    private readonly cipher: SecretCipherService,
+    private readonly em: EntityManager,
+  ) {}
+
+  async execute(command: DeployAppCommand): Promise<DeployAppResponse> {
+    const baseDomain = this.config.getOrThrow<string>('MARSA_BASE_DOMAIN')
+
+    const credentials = command.imagePullCredentials
+    const app = new AppBuilder()
+      .withSlug(command.slug)
+      .withDomain({ type: 'subdomain' })
+      .withImage(command.image)
+      .withContainerPort(command.containerPort)
+      .withReplicas(command.replicas ?? 1)
+      .withEnv(command.env ?? {})
+      .withImagePullCredentialsEnc(
+        credentials ? this.cipher.encrypt(JSON.stringify(credentials)) : null,
+      )
+      .build()
+
+    const release = new ReleaseBuilder()
+      .withApp(app)
+      .withImageRef(command.image)
+      .withTriggeredBy(ReleaseTrigger.Manual)
+      .withDeployStatus(DeployStatus.Pending)
+      .build()
+
+    await this.em.transactional(async () => {
+      await this.repository.upsertApp(app)
+      await this.repository.createRelease(release)
+    })
+
+    try {
+      const manifests = renderManifests(app, release, baseDomain, credentials)
+      await this.deployBackend.apply(OPERATOR_APPS_NAMESPACE, manifests)
+    } catch (error) {
+      await this.repository.setReleaseDeployStatus(release.uuid, DeployStatus.Failed)
+      throw error
+    }
+
+    return new DeployAppResponse(app, release, baseDomain)
+  }
+}

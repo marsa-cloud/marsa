@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { zListAppsResponse } from '~/api/zod.gen'
+import { zViewAppIndexResponse } from '~/api/zod.gen'
 
 describe('app-list response contract', () => {
   it('accepts a valid list payload', () => {
@@ -15,14 +15,14 @@ describe('app-list response contract', () => {
         },
       ],
     }
-    expect(zListAppsResponse.parse(valid)).toEqual(valid)
+    expect(zViewAppIndexResponse.parse(valid)).toEqual(valid)
   })
 
   it('accepts an empty list', () => {
-    expect(zListAppsResponse.parse({ apps: [] })).toEqual({ apps: [] })
+    expect(zViewAppIndexResponse.parse({ apps: [] })).toEqual({ apps: [] })
   })
 
   it('rejects an app missing required fields', () => {
-    expect(() => zListAppsResponse.parse({ apps: [{ slug: 'x' }] })).toThrow()
+    expect(() => zViewAppIndexResponse.parse({ apps: [{ slug: 'x' }] })).toThrow()
   })
 })
