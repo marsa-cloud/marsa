@@ -1,5 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common'
-import { User } from '#src/app/user/entities/user.entity.js'
+import type { User } from '#src/app/user/entities/user.table.js'
 import type { UserUuid } from '#src/app/user/entities/user.uuid.js'
 import { GetCurrentUserRepository } from '#src/app/user/use-cases/get-current-user/get-current-user.repository.js'
 
