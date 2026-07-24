@@ -1,14 +1,15 @@
-import { type EntityRepository } from '@mikro-orm/core'
-import { InjectRepository } from '@mikro-orm/nestjs'
 import { Injectable } from '@nestjs/common'
-import { App } from '#src/app/deployments/entities/app.entity.js'
+import { desc } from 'drizzle-orm'
+import { type App, appTable } from '#src/app/deployments/entities/app.table.js'
+import type { Database } from '#src/modules/database/drizzle.factory.js'
+import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 
 @Injectable()
 export class ListAppsRepository {
-  constructor(@InjectRepository(App) private readonly apps: EntityRepository<App>) {}
+  constructor(@InjectDatabase() private readonly db: Database) {}
 
   /** All apps, newest first. */
   async listApps(): Promise<App[]> {
-    return this.apps.findAll({ orderBy: { createdAt: 'DESC' } })
+    return this.db.select().from(appTable).orderBy(desc(appTable.createdAt))
   }
 }

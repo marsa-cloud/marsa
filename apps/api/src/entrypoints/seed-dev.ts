@@ -3,16 +3,20 @@ import { MikroORM } from '@mikro-orm/core'
 import { Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { NestFactory } from '@nestjs/core'
+import { eq } from 'drizzle-orm'
 import Fastify from 'fastify'
 import { AppModule } from '#src/app.module.js'
 import { AppBuilder } from '#src/app/deployments/entities/app.builder.js'
-import { App } from '#src/app/deployments/entities/app.entity.js'
+import { appTable } from '#src/app/deployments/entities/app.table.js'
 import { ReleaseBuilder } from '#src/app/deployments/entities/release.builder.js'
+import { releaseTable } from '#src/app/deployments/entities/release.table.js'
 import { DeployStatus } from '#src/app/deployments/enums/deploy-status.enum.js'
 import { UserBuilder } from '#src/app/user/entities/user.builder.js'
 import { User } from '#src/app/user/entities/user.entity.js'
 import { UserRole } from '#src/app/user/enums/user-role.enum.js'
 import { DEFAULT_AUTH_COOKIE_NAME } from '#src/config/env.config.js'
+import { DATABASE } from '#src/modules/database/database.tokens.js'
+import type { Database } from '#src/modules/database/drizzle.factory.js'
 
 /**
  * Seed a dev operator + sample apps and print a ready-to-paste
@@ -59,6 +63,7 @@ async function rawDogFe(): Promise<void> {
     await orm.migrator.up()
 
     const em = orm.em.fork()
+    const db = context.get<Database>(DATABASE)
 
     let user = await em.findOne(User, { githubUserId: DEV_GITHUB_USER_ID })
     if (!user) {
@@ -67,11 +72,12 @@ async function rawDogFe(): Promise<void> {
         .withGithubLogin(DEV_GITHUB_LOGIN)
         .withRole(UserRole.Operator)
         .build()
-      em.persist(user)
+      await em.persistAndFlush(user)
     }
 
     for (const slug of SAMPLE_APP_SLUGS) {
-      if (await em.findOne(App, { slug })) {
+      const [existing] = await db.select().from(appTable).where(eq(appTable.slug, slug)).limit(1)
+      if (existing) {
         continue
       }
       const app = new AppBuilder()
@@ -79,17 +85,14 @@ async function rawDogFe(): Promise<void> {
         .withImage('nginx:1.27')
         .withContainerPort(80)
         .build()
-      em.persist(app)
-      em.persist(
-        new ReleaseBuilder()
-          .withApp(app)
-          .withImageRef('nginx:1.27')
-          .withDeployStatus(DeployStatus.Succeeded)
-          .build(),
-      )
+      const release = new ReleaseBuilder()
+        .withApp(app)
+        .withImageRef('nginx:1.27')
+        .withDeployStatus(DeployStatus.Succeeded)
+        .build()
+      await db.insert(appTable).values(app)
+      await db.insert(releaseTable).values(release)
     }
-
-    await em.flush()
 
     const config = context.get(ConfigService)
     const cookie = await mintSessionCookie(

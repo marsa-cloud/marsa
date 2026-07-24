@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger'
-import type { App } from '#src/app/deployments/entities/app.entity.js'
-import type { Release } from '#src/app/deployments/entities/release.entity.js'
+import type { App } from '#src/app/deployments/entities/app.table.js'
+import type { Release } from '#src/app/deployments/entities/release.table.js'
 import {
   DeployStatus,
   DeployStatusApiProperty,

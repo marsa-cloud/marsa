@@ -8,6 +8,8 @@ import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { CompleteGithubLoginCommandBuilder } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.builder.js'
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
+import { DATABASE } from '#src/modules/database/database.tokens.js'
+import type { Database } from '#src/modules/database/drizzle.factory.js'
 import type { TestApp } from '#src/test/setup/test-bench.js'
 
 export class TestSetup {
@@ -41,6 +43,10 @@ export class TestSetup {
 
   public get httpServer(): Server {
     return this.app.getHttpServer()
+  }
+
+  public get db(): Database {
+    return this.testModule.get<Database>(DATABASE)
   }
 
   /**

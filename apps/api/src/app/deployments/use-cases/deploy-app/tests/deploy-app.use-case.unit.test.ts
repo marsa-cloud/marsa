@@ -1,8 +1,7 @@
 import { before, describe, it } from 'node:test'
-import { EntityManager } from '@mikro-orm/postgresql'
 import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
-import { createStubInstance, type SinonStub } from 'sinon'
+import { createStubInstance } from 'sinon'
 import { DeployStatus } from '#src/app/deployments/enums/deploy-status.enum.js'
 import { DeployAppCommandBuilder } from '#src/app/deployments/use-cases/deploy-app/deploy-app.command.builder.js'
 import { DeployAppRepository } from '#src/app/deployments/use-cases/deploy-app/deploy-app.repository.js'
@@ -14,8 +13,7 @@ import { TestBench } from '#src/test/setup/test-bench.js'
 
 function build() {
   const repository = createStubInstance(DeployAppRepository)
-  repository.upsertApp.resolves()
-  repository.createRelease.resolves()
+  repository.deploy.resolves()
   repository.setReleaseDeployStatus.resolves()
 
   const deployBackend = createStubInstance(MockDeployBackend)
@@ -26,11 +24,7 @@ function build() {
 
   const cipher = createStubInstance(SecretCipherService)
 
-  const em = createStubInstance(EntityManager)
-  // Run the transactional callback inline so the wrapped repository writes execute.
-  ;(em.transactional as unknown as SinonStub).callsFake((work: () => Promise<unknown>) => work())
-
-  const usecase = new DeployAppUseCase(repository, deployBackend, config, cipher, em)
+  const usecase = new DeployAppUseCase(repository, deployBackend, config, cipher)
   return { usecase, repository, deployBackend, cipher }
 }
 
@@ -56,8 +50,8 @@ describe('DeployAppUseCase', () => {
     // until the refresh-on-read reconciliation on the list endpoint (marsa#100).
     expect(result.deployStatus).toBe(DeployStatus.Pending)
 
-    expect(repository.upsertApp.calledOnce).toBe(true)
-    expect(repository.createRelease.calledOnce).toBe(true)
+    // App + Release are written atomically in one repository call (the tx seam).
+    expect(repository.deploy.calledOnce).toBe(true)
 
     const [namespace, manifests] = deployBackend.apply.firstCall.args
     expect(namespace).toBe(OPERATOR_APPS_NAMESPACE)
@@ -65,7 +59,7 @@ describe('DeployAppUseCase', () => {
     expect(manifests.ingressRoute.spec.routes[0].match).toBe('Host(`my-app.demo.marsa.cc`)')
 
     // Public image: no credentials touched, no pull Secret rendered.
-    const [app] = repository.upsertApp.firstCall.args
+    const [app] = repository.deploy.firstCall.args
     expect(app.imagePullCredentialsEnc).toBeNull()
     expect(cipher.encrypt.called).toBe(false)
     expect(manifests.imagePullSecret).toBeUndefined()
@@ -89,7 +83,7 @@ describe('DeployAppUseCase', () => {
 
     // Encrypt the exact credentials JSON; persist only the opaque ciphertext.
     expect(cipher.encrypt.calledOnceWithExactly(credentialsJson)).toBe(true)
-    const [app] = repository.upsertApp.firstCall.args
+    const [app] = repository.deploy.firstCall.args
     expect(app.imagePullCredentialsEnc).toBe('opaque-cipher-token')
     expect(app.imagePullCredentialsEnc).not.toContain('pw-test')
 

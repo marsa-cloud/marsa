@@ -1,4 +1,3 @@
-import { EntityManager } from '@mikro-orm/postgresql'
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { AppBuilder } from '#src/app/deployments/entities/app.builder.js'
@@ -20,7 +19,6 @@ export class DeployAppUseCase {
     private readonly deployBackend: DeployBackend,
     private readonly config: ConfigService,
     private readonly cipher: SecretCipherService,
-    private readonly em: EntityManager,
   ) {}
 
   async execute(command: DeployAppCommand): Promise<DeployAppResponse> {
@@ -46,10 +44,7 @@ export class DeployAppUseCase {
       .withDeployStatus(DeployStatus.Pending)
       .build()
 
-    await this.em.transactional(async () => {
-      await this.repository.upsertApp(app)
-      await this.repository.createRelease(release)
-    })
+    await this.repository.deploy(app, release)
 
     try {
       const manifests = renderManifests(app, release, baseDomain, credentials)
