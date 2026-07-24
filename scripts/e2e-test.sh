@@ -42,10 +42,19 @@ kubectl -n "$NS" rollout status deploy/marsa-api --timeout=180s || fail rollout 
 kubectl -n "$NS" rollout status deploy/marsa-web --timeout=180s || fail rollout "marsa-web did not roll out"
 
 echo "== stage: seed session cookie =="
-api_pod="$(kubectl -n "$NS" get pod -l app=marsa-api -o jsonpath='{.items[0].metadata.name}')"
-[ -n "$api_pod" ] || fail seed "no marsa-api pod found"
-cookie="$(kubectl -n "$NS" exec "$api_pod" -- node dist/src/entrypoints/seed-dev.js --user-only | grep -oE 'marsa_session=[^[:space:]]+' || true)"
-[ -n "$cookie" ] || fail seed "seed-dev.js did not print a session cookie"
+# Retried: right after rollout, `kubectl exec` into the api pod can hit a
+# transient containerd "failed to load task: context deadline exceeded".
+cookie=""
+for attempt in $(seq 1 10); do
+  api_pod="$(kubectl -n "$NS" get pod -l app=marsa-api -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+  if [ -n "$api_pod" ]; then
+    cookie="$(kubectl -n "$NS" exec "$api_pod" -- node dist/src/entrypoints/seed-dev.js --user-only 2>/dev/null | grep -oE 'marsa_session=[^[:space:]]+' || true)"
+    [ -n "$cookie" ] && break
+  fi
+  echo "  attempt ${attempt}: session cookie not ready"
+  sleep 3
+done
+[ -n "$cookie" ] || fail seed "seed-dev.js did not print a session cookie after retries"
 
 echo "== stage: deploy app via API =="
 deploy_status=""
