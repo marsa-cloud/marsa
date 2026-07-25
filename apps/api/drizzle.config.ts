@@ -1,11 +1,11 @@
 import { defineConfig } from 'drizzle-kit'
 
 export default defineConfig({
-  out: './src/sql/migrations',
+  out: './src/sql/drizzle',
   dialect: 'postgresql',
-  schema: './src/sql/schema',
+  schema: './src/sql/schema.ts',
   dbCredentials: {
-    url: process.env.DATABASE_URL!,
-    database: process.env.DB_NAME!,
+    // Only used by studio/push — generate and the runtime migrator don't connect.
+    url: `${process.env.DATABASE_URL}/${process.env.DB_NAME}`,
   },
 })

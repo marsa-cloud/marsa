@@ -22,9 +22,7 @@
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "lint:fix": "eslint \"{src,test}/**/*.ts\" --fix",
     "typecheck": "tsc --noEmit",
-    "migration:create": "node --env-file=.env node_modules/@mikro-orm/cli/cli.js migration:create --config ./dist/src/sql/mikro-orm.config.js",
-    "migration:up": "node --env-file=.env node_modules/@mikro-orm/cli/cli.js migration:up --config ./dist/src/sql/mikro-orm.config.js",
-    "migration:down": "node --env-file=.env node_modules/@mikro-orm/cli/cli.js migration:down --config ./dist/src/sql/mikro-orm.config.js",
+    "db:generate": "drizzle-kit generate",
     "test:setup": "node --env-file=.env.test dist/src/test/setup/global-setup.js",
     "test:run": "node --experimental-default-config-file --env-file=.env.test --test \"**/*.test.ts\"",
     "test": "pnpm clean && pnpm build && pnpm test:setup && pnpm test:run"

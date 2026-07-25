@@ -1,15 +1,23 @@
-import { MikroORM } from '@mikro-orm/core'
-import { compileTestModule } from '#src/test/setup/compile-test-module.js'
+import { drizzle } from 'drizzle-orm/node-postgres'
+import { migrate } from 'drizzle-orm/node-postgres/migrator'
+import { Pool } from 'pg'
+import { MIGRATIONS_FOLDER } from '#src/modules/database/drizzle.factory.js'
 
 async function globalTestSetup(): Promise<void> {
-  const testingModule = await compileTestModule([], true)
-  await testingModule.init()
+  // DATABASE_URL carries no db path — set it on the URL path (see DatabaseModule).
+  const url = new URL(process.env.DATABASE_URL as string)
+  url.pathname = `/${process.env.DB_NAME}`
+  const pool = new Pool({ connectionString: url.toString() })
 
-  const orm = testingModule.get(MikroORM)
-  await orm.migrator.up()
-
-  console.log('Global setup completed')
-  await testingModule.close()
+  try {
+    // Big-bang: drop the pre-existing (MikroORM-created) schema, then rebuild it
+    // entirely from the Drizzle baseline.
+    await pool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;')
+    await migrate(drizzle({ client: pool }), { migrationsFolder: MIGRATIONS_FOLDER })
+    console.log('Global setup completed')
+  } finally {
+    await pool.end()
+  }
 }
 
 void globalTestSetup()

@@ -1,10 +1,14 @@
-import { MikroORM } from '@mikro-orm/core'
 import { MikroOrmModule } from '@mikro-orm/nestjs'
 import { Global, Inject, Module, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
+import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { Pool } from 'pg'
 import { DATABASE, DATABASE_POOL } from '#src/modules/database/database.tokens.js'
-import { createDatabase, type Database } from '#src/modules/database/drizzle.factory.js'
+import {
+  createDatabase,
+  type Database,
+  MIGRATIONS_FOLDER,
+} from '#src/modules/database/drizzle.factory.js'
 import config from '#src/sql/mikro-orm.config.js'
 
 @Global()
@@ -33,13 +37,13 @@ import config from '#src/sql/mikro-orm.config.js'
 })
 export class DatabaseModule implements OnModuleInit, OnModuleDestroy {
   constructor(
-    private readonly orm: MikroORM,
+    @Inject(DATABASE) private readonly db: Database,
     @Inject(DATABASE_POOL) private readonly pool: Pool,
   ) {}
 
   async onModuleInit(): Promise<void> {
     if (process.env.NODE_ENV === 'production') {
-      await this.orm.migrator.up()
+      await migrate(this.db, { migrationsFolder: MIGRATIONS_FOLDER })
     }
   }
 
