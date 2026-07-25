@@ -306,14 +306,17 @@ wait_for_traefik() {
     [ "$tries" -ge "$TRAEFIK_WAIT_TRIES" ] && die "Traefik CRDs (ingressroutes.traefik.io) did not appear within ~$((TRAEFIK_WAIT_TRIES * 2)) seconds. Marsa's chart requires Traefik — expected on K3s/k3d, which bundle it. On a cluster with a different ingress controller, install Traefik first."
     sleep 2
   done
-  # A CRD object exists before it is Established; the endpoint isn't served
-  # until the condition is set, so existence alone doesn't mean Helm can
-  # render against it. This cannot replace the loop above: `kubectl wait`
-  # fails immediately with "no matching resources found" when the object
-  # doesn't exist yet, so folding the two together breaks on every fresh
-  # cluster. The loop waits for existence, this waits for served.
-  kubectl wait --for condition=established --timeout=60s crd/ingressroutes.traefik.io >/dev/null 2>&1 \
-    || die "Traefik CRD ingressroutes.traefik.io exists but never became Established"
+  # A CRD object exists before it is Established; existence alone doesn't mean
+  # Helm can render against it. --timeout=0 checks the condition once, so this
+  # mirrors the existence poll above (instant check, 2s backoff, same
+  # TRAEFIK_WAIT_TRIES budget); a blocking --timeout would ignore that budget and
+  # stall the whole window on a single transient apiserver error.
+  tries=0
+  until kubectl wait --for condition=established --timeout=0 crd/ingressroutes.traefik.io >/dev/null 2>&1; do
+    tries=$((tries + 1))
+    [ "$tries" -ge "$TRAEFIK_WAIT_TRIES" ] && die "Traefik CRD ingressroutes.traefik.io exists but never became Established within ~$((TRAEFIK_WAIT_TRIES * 2)) seconds"
+    sleep 2
+  done
   ok "Traefik CRDs registered"
 
   info "Waiting for the Traefik deployment to roll out"
