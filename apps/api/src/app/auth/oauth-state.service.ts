@@ -1,10 +1,12 @@
-import { EntityManager } from '@mikro-orm/core'
 import { Injectable } from '@nestjs/common'
 import { isUUID } from 'class-validator'
 import dayjs from 'dayjs'
+import { and, eq, gt } from 'drizzle-orm'
 import { OAuthStateBuilder } from '#src/app/auth/entities/oauth-state.builder.js'
-import { OAuthState } from '#src/app/auth/entities/oauth-state.entity.js'
+import { oauthStateTable } from '#src/app/auth/entities/oauth-state.table.js'
 import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
+import type { Database } from '#src/modules/database/drizzle.factory.js'
+import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 
 const DEFAULT_TTL_MINUTES = 10
 
@@ -18,13 +20,13 @@ const DEFAULT_TTL_MINUTES = 10
  */
 @Injectable()
 export class OAuthStateService {
-  constructor(private readonly em: EntityManager) {}
+  constructor(@InjectDatabase() private readonly db: Database) {}
 
   async issue(ttlMinutes: number = DEFAULT_TTL_MINUTES): Promise<OAuthStateUuid> {
     const state = new OAuthStateBuilder()
       .withExpiresAt(dayjs().add(ttlMinutes, 'minute').toDate())
       .build()
-    await this.em.fork().persistAndFlush(state)
+    await this.db.insert(oauthStateTable).values(state)
     return state.uuid
   }
 
@@ -33,10 +35,10 @@ export class OAuthStateService {
       return false
     }
     // Atomic conditional delete → verifies at most once, no replay.
-    const deleted = await this.em.fork().nativeDelete(OAuthState, {
-      uuid: state,
-      expiresAt: { $gt: dayjs().toDate() },
-    })
-    return deleted === 1
+    const deleted = await this.db
+      .delete(oauthStateTable)
+      .where(and(eq(oauthStateTable.uuid, state), gt(oauthStateTable.expiresAt, dayjs().toDate())))
+      .returning()
+    return deleted.length === 1
   }
 }

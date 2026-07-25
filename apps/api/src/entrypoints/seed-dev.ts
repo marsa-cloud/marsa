@@ -12,7 +12,7 @@ import { ReleaseBuilder } from '#src/app/deployments/entities/release.builder.js
 import { releaseTable } from '#src/app/deployments/entities/release.table.js'
 import { DeployStatus } from '#src/app/deployments/enums/deploy-status.enum.js'
 import { UserBuilder } from '#src/app/user/entities/user.builder.js'
-import { User } from '#src/app/user/entities/user.entity.js'
+import { userTable } from '#src/app/user/entities/user.table.js'
 import { UserRole } from '#src/app/user/enums/user-role.enum.js'
 import { DEFAULT_AUTH_COOKIE_NAME } from '#src/config/env.config.js'
 import { DATABASE } from '#src/modules/database/database.tokens.js'
@@ -62,17 +62,20 @@ async function rawDogFe(): Promise<void> {
     const orm = context.get(MikroORM)
     await orm.migrator.up()
 
-    const em = orm.em.fork()
     const db = context.get<Database>(DATABASE)
 
-    let user = await em.findOne(User, { githubUserId: DEV_GITHUB_USER_ID })
+    let [user] = await db
+      .select()
+      .from(userTable)
+      .where(eq(userTable.githubUserId, DEV_GITHUB_USER_ID))
+      .limit(1)
     if (!user) {
       user = new UserBuilder()
         .withGithubUserId(DEV_GITHUB_USER_ID)
         .withGithubLogin(DEV_GITHUB_LOGIN)
         .withRole(UserRole.Operator)
         .build()
-      await em.persistAndFlush(user)
+      await db.insert(userTable).values(user)
     }
 
     for (const slug of SAMPLE_APP_SLUGS) {

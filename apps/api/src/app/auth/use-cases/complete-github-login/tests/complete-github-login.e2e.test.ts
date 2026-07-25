@@ -1,13 +1,13 @@
 import { after, before, describe, it } from 'node:test'
-import { EntityManager } from '@mikro-orm/core'
 import { ConfigService } from '@nestjs/config'
+import { eq } from 'drizzle-orm'
 import { expect } from 'expect'
 import request from 'supertest'
 import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { CompleteGithubLoginCommandBuilder } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.builder.js'
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
-import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
-import { User } from '#src/app/user/entities/user.entity.js'
+import { githubAppTable } from '#src/app/github-app/entities/github-app.table.js'
+import { userTable } from '#src/app/user/entities/user.table.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
@@ -15,11 +15,9 @@ import { generateUuid } from '#src/utils/uuid.js'
 
 describe('POST /api/v1/auth/github/session (e2e)', () => {
   let setup: TestSetup
-  let em: EntityManager
 
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
-    em = setup.testModule.get(EntityManager)
   })
 
   after(async () => {
@@ -29,7 +27,7 @@ describe('POST /api/v1/auth/github/session (e2e)', () => {
   it('completes the login, upserts the user, and sets the session cookie', async () => {
     const cipher = new SecretCipherService(new ConfigService())
     const app = new GitHubAppBuilder().withClientSecretEnc(cipher.encrypt('shh')).build()
-    await em.fork().persistAndFlush(app)
+    await setup.db.insert(githubAppTable).values(app)
 
     // Drive the real begin-login flow to get a state bound to a session cookie,
     // rather than issuing one directly — this exercises the login-CSRF binding.
@@ -57,7 +55,7 @@ describe('POST /api/v1/auth/github/session (e2e)', () => {
       .withSlug('marsa-app-repeat-login-test')
       .withClientSecretEnc(new SecretCipherService(new ConfigService()).encrypt('shh'))
       .build()
-    await em.fork().persistAndFlush(app)
+    await setup.db.insert(githubAppTable).values(app)
 
     const login = async () => {
       const beginResponse = await request(setup.httpServer).get('/api/v1/auth/github').expect(302)
@@ -74,14 +72,23 @@ describe('POST /api/v1/auth/github/session (e2e)', () => {
 
     try {
       await login()
-      const firstUser = await em.fork().findOneOrFail(User, { githubUserId: '1' })
+      const [firstUser] = await setup.db
+        .select()
+        .from(userTable)
+        .where(eq(userTable.githubUserId, '1'))
 
       await login()
-      const secondUser = await em.fork().findOneOrFail(User, { githubUserId: '1' })
+      const [secondUser] = await setup.db
+        .select()
+        .from(userTable)
+        .where(eq(userTable.githubUserId, '1'))
 
-      expect(secondUser.uuid).toBe(firstUser.uuid)
+      expect(firstUser?.uuid).toBeDefined()
+      expect(secondUser?.uuid).toBe(firstUser?.uuid)
     } finally {
-      await em.fork().nativeDelete(GitHubApp, { githubAppId: 'repeat-login-test' })
+      await setup.db
+        .delete(githubAppTable)
+        .where(eq(githubAppTable.githubAppId, 'repeat-login-test'))
     }
   })
 
@@ -99,7 +106,7 @@ describe('POST /api/v1/auth/github/session (e2e)', () => {
       .withGithubAppId('mismatch-state-test')
       .withSlug('marsa-app-mismatch-state-test')
       .build()
-    await em.fork().persistAndFlush(app)
+    await setup.db.insert(githubAppTable).values(app)
 
     try {
       const beginResponse = await request(setup.httpServer).get('/api/v1/auth/github').expect(302)
@@ -113,7 +120,9 @@ describe('POST /api/v1/auth/github/session (e2e)', () => {
         )
         .expect(400)
     } finally {
-      await em.fork().nativeDelete(GitHubApp, { githubAppId: 'mismatch-state-test' })
+      await setup.db
+        .delete(githubAppTable)
+        .where(eq(githubAppTable.githubAppId, 'mismatch-state-test'))
     }
   })
 })

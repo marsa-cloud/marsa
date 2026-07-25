@@ -7,6 +7,7 @@ import request from 'supertest'
 import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { CompleteGithubLoginCommandBuilder } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.builder.js'
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
+import { githubAppTable } from '#src/app/github-app/entities/github-app.table.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
 import { DATABASE } from '#src/modules/database/database.tokens.js'
 import type { Database } from '#src/modules/database/drizzle.factory.js'
@@ -58,7 +59,7 @@ export class TestSetup {
   public async authenticate(): Promise<string> {
     const cipher = new SecretCipherService(new ConfigService())
     const githubApp = new GitHubAppBuilder().withClientSecretEnc(cipher.encrypt('shh')).build()
-    await this.orm.em.fork().persistAndFlush(githubApp)
+    await this.db.insert(githubAppTable).values(githubApp)
 
     const beginResponse = await request(this.httpServer).get('/api/v1/auth/github').expect(302)
     const beginCookie = beginResponse.headers['set-cookie']?.[0]

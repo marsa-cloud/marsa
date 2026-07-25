@@ -1,14 +1,21 @@
-import { User } from '#src/app/user/entities/user.entity.js'
+import type { User } from '#src/app/user/entities/user.table.js'
+import type { UserUuid } from '#src/app/user/entities/user.uuid.js'
 import { UserRole } from '#src/app/user/enums/user-role.enum.js'
+import { generateUuid } from '#src/utils/uuid.js'
 
 export class UserBuilder {
   private readonly user: User
 
   constructor() {
-    this.user = new User()
-    this.user.githubUserId = '1'
-    this.user.githubLogin = 'marsa-user'
-    this.user.role = UserRole.Member
+    const now = new Date()
+    this.user = {
+      uuid: generateUuid<UserUuid>(),
+      githubUserId: '1',
+      githubLogin: 'marsa-user',
+      role: UserRole.Member,
+      createdAt: now,
+      updatedAt: now,
+    }
   }
 
   withGithubUserId(githubUserId: string): this {

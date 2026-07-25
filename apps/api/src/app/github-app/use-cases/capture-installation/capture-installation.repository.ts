@@ -1,28 +1,45 @@
-import { EntityManager } from '@mikro-orm/core'
 import { Injectable } from '@nestjs/common'
-import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
+import { desc } from 'drizzle-orm'
+import { type GitHubApp, githubAppTable } from '#src/app/github-app/entities/github-app.table.js'
 import type { GitHubAppUuid } from '#src/app/github-app/entities/github-app.uuid.js'
 import { GitHubInstallationBuilder } from '#src/app/github-app/entities/github-installation.builder.js'
-import { GitHubInstallation } from '#src/app/github-app/entities/github-installation.entity.js'
+import {
+  type GitHubInstallation,
+  githubInstallationTable,
+} from '#src/app/github-app/entities/github-installation.table.js'
+import type { Database } from '#src/modules/database/drizzle.factory.js'
+import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 
 @Injectable()
 export class CaptureInstallationRepository {
-  constructor(private readonly em: EntityManager) {}
+  constructor(@InjectDatabase() private readonly db: Database) {}
 
   async loadProvisionedApp(): Promise<GitHubApp | null> {
-    return this.em.fork().findOne(GitHubApp, {}, { orderBy: { createdAt: 'DESC' } })
+    const [app] = await this.db
+      .select()
+      .from(githubAppTable)
+      .orderBy(desc(githubAppTable.createdAt))
+      .limit(1)
+    return app ?? null
   }
 
   async upsertByInstallationId(
     installationId: string,
     appUuid: GitHubAppUuid,
   ): Promise<GitHubInstallation> {
-    const em = this.em.fork()
     const installation = new GitHubInstallationBuilder()
       .withInstallationId(installationId)
-      .withApp(em.getReference(GitHubApp, appUuid, { wrapped: true }))
+      .withAppUuid(appUuid)
       .build()
 
-    return em.upsert(installation, undefined, { onConflictFields: ['installationId'] })
+    const [row] = await this.db
+      .insert(githubInstallationTable)
+      .values(installation)
+      .onConflictDoUpdate({
+        target: githubInstallationTable.installationId,
+        set: { appUuid: installation.appUuid, accountLogin: installation.accountLogin },
+      })
+      .returning()
+    return row
   }
 }

@@ -1,22 +1,20 @@
 import { after, before, describe, it } from 'node:test'
-import { EntityManager } from '@mikro-orm/core'
 import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import request from 'supertest'
 import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { CompleteGithubLoginCommandBuilder } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.builder.js'
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
+import { githubAppTable } from '#src/app/github-app/entities/github-app.table.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
 describe('GET /api/v1/auth/me (e2e)', () => {
   let setup: TestSetup
-  let em: EntityManager
 
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
-    em = setup.testModule.get(EntityManager)
   })
 
   after(() => setup.teardown())
@@ -24,7 +22,7 @@ describe('GET /api/v1/auth/me (e2e)', () => {
   it('returns the current user (with role) for a valid session cookie', async () => {
     const cipher = new SecretCipherService(new ConfigService())
     const app = new GitHubAppBuilder().withClientSecretEnc(cipher.encrypt('shh')).build()
-    await em.fork().persistAndFlush(app)
+    await setup.db.insert(githubAppTable).values(app)
 
     const beginResponse = await request(setup.httpServer).get('/api/v1/auth/github').expect(302)
     const beginCookie = beginResponse.headers['set-cookie']?.[0]
