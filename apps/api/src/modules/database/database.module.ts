@@ -1,4 +1,3 @@
-import { MikroOrmModule } from '@mikro-orm/nestjs'
 import { Global, Inject, Module, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
@@ -9,11 +8,10 @@ import {
   type Database,
   MIGRATIONS_FOLDER,
 } from '#src/modules/database/drizzle.factory.js'
-import config from '#src/sql/mikro-orm.config.js'
 
 @Global()
 @Module({
-  imports: [MikroOrmModule.forRoot(config), ConfigModule],
+  imports: [ConfigModule],
   providers: [
     {
       provide: DATABASE_POOL,

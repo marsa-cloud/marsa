@@ -1,6 +1,5 @@
 import { after } from 'node:test'
 import fastifySecureSession from '@fastify/secure-session'
-import { MikroORM } from '@mikro-orm/core'
 import { type DynamicModule, type Type, ValidationPipe, VersioningType } from '@nestjs/common'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import { Test, TestingModule } from '@nestjs/testing'
@@ -14,7 +13,6 @@ after(async () => await TestBench.teardown())
 export interface TestApp {
   app: NestFastifyApplication
   testModule: TestingModule
-  orm: MikroORM
 }
 
 export class TestBench {
@@ -67,8 +65,7 @@ export class TestBench {
     const testModuleBuilder = Test.createTestingModule({ imports: [module] })
     const testModule = await testModuleBuilder.compile()
     const app = await this.createApp(testModule)
-    const orm = testModule.get(MikroORM)
-    const testApp: TestApp = { app, testModule, orm }
+    const testApp: TestApp = { app, testModule }
     this._apps.set(moduleKey, testApp)
     return testApp
   }

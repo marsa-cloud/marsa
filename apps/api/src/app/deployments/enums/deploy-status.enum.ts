@@ -1,7 +1,5 @@
-import { Enum, type EnumOptions } from '@mikro-orm/core'
 import { ApiProperty, type ApiPropertyOptions } from '@nestjs/swagger'
 import { pgEnum } from 'drizzle-orm/pg-core'
-import type { Release } from '#src/app/deployments/entities/release.entity.js'
 
 /**
  * Lifecycle of a single deploy (rollout). The value is reconciled from a live
@@ -17,14 +15,6 @@ export enum DeployStatus {
 }
 
 export const deployStatusEnum = pgEnum('deploy_status_enum', DeployStatus)
-
-export function DeployStatusEnum(options?: EnumOptions<Partial<Release>>) {
-  return Enum({
-    ...options,
-    items: () => DeployStatus,
-    nativeEnumName: 'deploy_status_enum',
-  })
-}
 
 export const DeployStatusApiProperty = (options?: ApiPropertyOptions): PropertyDecorator =>
   ApiProperty({

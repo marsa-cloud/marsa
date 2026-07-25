@@ -10,9 +10,13 @@ async function globalTestSetup(): Promise<void> {
   const pool = new Pool({ connectionString: url.toString() })
 
   try {
-    // Big-bang: drop the pre-existing (MikroORM-created) schema, then rebuild it
-    // entirely from the Drizzle baseline.
-    await pool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;')
+    // Big-bang: drop the public schema AND drizzle's migration-tracking schema
+    // (migrate() records applied migrations in a separate `drizzle` schema that a
+    // public-only drop leaves behind — which would make migrate a no-op on reruns),
+    // then rebuild everything from the Drizzle baseline.
+    await pool.query(
+      'DROP SCHEMA IF EXISTS drizzle CASCADE; DROP SCHEMA public CASCADE; CREATE SCHEMA public;',
+    )
     await migrate(drizzle({ client: pool }), { migrationsFolder: MIGRATIONS_FOLDER })
     console.log('Global setup completed')
   } finally {

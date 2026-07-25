@@ -30,10 +30,6 @@
   "dependencies": {
     "@fastify/secure-session": "^8.2.0",
     "@kubernetes/client-node": "catalog:",
-    "@mikro-orm/core": "catalog:",
-    "@mikro-orm/migrations": "catalog:",
-    "@mikro-orm/nestjs": "catalog:",
-    "@mikro-orm/postgresql": "catalog:",
     "@nestjs/common": "catalog:",
     "@nestjs/config": "catalog:",
     "@nestjs/core": "catalog:",
@@ -57,7 +53,6 @@
     "rxjs": "catalog:"
   },
   "devDependencies": {
-    "@mikro-orm/cli": "catalog:",
     "@nestjs/cli": "catalog:",
     "@nestjs/schematics": "catalog:",
     "@nestjs/testing": "catalog:",

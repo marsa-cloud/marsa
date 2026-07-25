@@ -1,9 +1,9 @@
 import fastifySecureSession from '@fastify/secure-session'
-import { MikroORM } from '@mikro-orm/core'
 import { Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { NestFactory } from '@nestjs/core'
 import { eq } from 'drizzle-orm'
+import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import Fastify from 'fastify'
 import { AppModule } from '#src/app.module.js'
 import { AppBuilder } from '#src/app/deployments/entities/app.builder.js'
@@ -16,7 +16,7 @@ import { userTable } from '#src/app/user/entities/user.table.js'
 import { UserRole } from '#src/app/user/enums/user-role.enum.js'
 import { DEFAULT_AUTH_COOKIE_NAME } from '#src/config/env.config.js'
 import { DATABASE } from '#src/modules/database/database.tokens.js'
-import type { Database } from '#src/modules/database/drizzle.factory.js'
+import { type Database, MIGRATIONS_FOLDER } from '#src/modules/database/drizzle.factory.js'
 
 /**
  * Seed a dev operator + sample apps and print a ready-to-paste
@@ -59,10 +59,8 @@ async function rawDogFe(): Promise<void> {
   })
 
   try {
-    const orm = context.get(MikroORM)
-    await orm.migrator.up()
-
     const db = context.get<Database>(DATABASE)
+    await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER })
 
     let [user] = await db
       .select()
