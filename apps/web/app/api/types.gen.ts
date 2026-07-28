@@ -107,7 +107,7 @@ export type CompleteGithubLoginResponse = {
 
 export type UserRole = 'operator' | 'member'
 
-export type GetCurrentUserResponse = {
+export type ViewMeResponse = {
   id: string
   login: string
   role: UserRole
@@ -165,18 +165,6 @@ export type DeployAppResponse = {
   deployStatus: DeployStatus
 }
 
-export type AppSummary = {
-  slug: string
-  image: string
-  url: string
-  createdAt: string
-  updatedAt: string
-}
-
-export type ListAppsResponse = {
-  apps: Array<AppSummary>
-}
-
 export type ReleaseTrigger = 'manual' | 'webhook'
 
 export type ReleaseSummary = {
@@ -193,19 +181,31 @@ export type ReleaseSummary = {
   failureMessage?: string | null
 }
 
-export type ListAppReleasesResponse = {
+export type ViewReleaseIndexResponse = {
   releases: Array<ReleaseSummary>
+}
+
+export type AppSummary = {
+  slug: string
+  image: string
+  url: string
+  createdAt: string
+  updatedAt: string
+}
+
+export type ViewAppIndexResponse = {
+  apps: Array<AppSummary>
 }
 
 export type AppHealthStatus = 'healthy' | 'degraded' | 'unavailable' | 'not_found'
 
-export type GetAppHealthResponse = {
+export type ViewAppHealthResponse = {
   status: AppHealthStatus
   availableReplicas: number
   desiredReplicas: number
 }
 
-export type GetAppRunLogsResponse = {
+export type ViewAppLogsResponse = {
   /**
    * Pod the log was read from; null when no pod was found.
    */
@@ -270,28 +270,27 @@ export type GetApiInfoV1Responses = {
 
 export type GetApiInfoV1Response = GetApiInfoV1Responses[keyof GetApiInfoV1Responses]
 
-export type GetGithubAppManifestV1Data = {
+export type GetManifestV1Data = {
   body?: never
   path?: never
   query?: never
   url: '/api/v1/github-app/manifest'
 }
 
-export type GetGithubAppManifestV1Responses = {
+export type GetManifestV1Responses = {
   200: GetManifestResponse
 }
 
-export type GetGithubAppManifestV1Response =
-  GetGithubAppManifestV1Responses[keyof GetGithubAppManifestV1Responses]
+export type GetManifestV1Response = GetManifestV1Responses[keyof GetManifestV1Responses]
 
-export type ConvertGithubAppManifestV1Data = {
+export type ConvertManifestV1Data = {
   body: ConvertManifestCommand
   path?: never
   query?: never
   url: '/api/v1/github-app/convert-manifest'
 }
 
-export type ConvertGithubAppManifestV1Errors = {
+export type ConvertManifestV1Errors = {
   /**
    * Malformed body, or an invalid/expired state token.
    */
@@ -302,21 +301,20 @@ export type ConvertGithubAppManifestV1Errors = {
   502: unknown
 }
 
-export type ConvertGithubAppManifestV1Responses = {
+export type ConvertManifestV1Responses = {
   200: ConvertManifestResponse
 }
 
-export type ConvertGithubAppManifestV1Response =
-  ConvertGithubAppManifestV1Responses[keyof ConvertGithubAppManifestV1Responses]
+export type ConvertManifestV1Response = ConvertManifestV1Responses[keyof ConvertManifestV1Responses]
 
-export type CaptureGithubAppInstallationV1Data = {
+export type CaptureInstallationV1Data = {
   body: CaptureInstallationCommand
   path?: never
   query?: never
   url: '/api/v1/github-app/capture-installation'
 }
 
-export type CaptureGithubAppInstallationV1Errors = {
+export type CaptureInstallationV1Errors = {
   /**
    * Malformed body, an unsupported setup_action, or no provisioned App.
    */
@@ -327,12 +325,12 @@ export type CaptureGithubAppInstallationV1Errors = {
   502: unknown
 }
 
-export type CaptureGithubAppInstallationV1Responses = {
+export type CaptureInstallationV1Responses = {
   200: CaptureInstallationResponse
 }
 
-export type CaptureGithubAppInstallationV1Response =
-  CaptureGithubAppInstallationV1Responses[keyof CaptureGithubAppInstallationV1Responses]
+export type CaptureInstallationV1Response =
+  CaptureInstallationV1Responses[keyof CaptureInstallationV1Responses]
 
 export type BeginGithubLoginV1Data = {
   body?: never
@@ -366,31 +364,31 @@ export type CompleteGithubLoginV1Responses = {
 export type CompleteGithubLoginV1Response =
   CompleteGithubLoginV1Responses[keyof CompleteGithubLoginV1Responses]
 
-export type GetCurrentUserV1Data = {
+export type ViewMeV1Data = {
   body?: never
   path?: never
   query?: never
   url: '/api/v1/auth/me'
 }
 
-export type GetCurrentUserV1Errors = {
+export type ViewMeV1Errors = {
   /**
    * No active session.
    */
   401: unknown
 }
 
-export type GetCurrentUserV1Responses = {
-  200: GetCurrentUserResponse
+export type ViewMeV1Responses = {
+  200: ViewMeResponse
 }
 
-export type GetCurrentUserV1Response = GetCurrentUserV1Responses[keyof GetCurrentUserV1Responses]
+export type ViewMeV1Response = ViewMeV1Responses[keyof ViewMeV1Responses]
 
 export type DeployAppV1Data = {
   body: DeployAppCommandWritable
   path?: never
   query?: never
-  url: '/api/v1/deployments/deploy'
+  url: '/api/v1/deploy'
 }
 
 export type DeployAppV1Errors = {
@@ -410,71 +408,72 @@ export type DeployAppV1Responses = {
 
 export type DeployAppV1Response = DeployAppV1Responses[keyof DeployAppV1Responses]
 
-export type ListAppsV1Data = {
+export type ViewReleaseIndexV1Data = {
+  body?: never
+  path: {
+    slug: string
+  }
+  query?: never
+  url: '/api/v1/apps/{slug}/releases'
+}
+
+export type ViewReleaseIndexV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+}
+
+export type ViewReleaseIndexV1Responses = {
+  200: ViewReleaseIndexResponse
+}
+
+export type ViewReleaseIndexV1Response =
+  ViewReleaseIndexV1Responses[keyof ViewReleaseIndexV1Responses]
+
+export type ViewAppIndexV1Data = {
   body?: never
   path?: never
   query?: never
-  url: '/api/v1/deployments/apps'
+  url: '/api/v1/apps'
 }
 
-export type ListAppsV1Errors = {
+export type ViewAppIndexV1Errors = {
   /**
    * No active session.
    */
   401: unknown
 }
 
-export type ListAppsV1Responses = {
-  200: ListAppsResponse
+export type ViewAppIndexV1Responses = {
+  200: ViewAppIndexResponse
 }
 
-export type ListAppsV1Response = ListAppsV1Responses[keyof ListAppsV1Responses]
+export type ViewAppIndexV1Response = ViewAppIndexV1Responses[keyof ViewAppIndexV1Responses]
 
-export type ListAppReleasesV1Data = {
+export type ViewAppHealthV1Data = {
   body?: never
   path: {
     slug: string
   }
   query?: never
-  url: '/api/v1/deployments/apps/{slug}/releases'
+  url: '/api/v1/apps/{slug}/health'
 }
 
-export type ListAppReleasesV1Errors = {
+export type ViewAppHealthV1Errors = {
   /**
    * No active session.
    */
   401: unknown
 }
 
-export type ListAppReleasesV1Responses = {
-  200: ListAppReleasesResponse
+export type ViewAppHealthV1Responses = {
+  200: ViewAppHealthResponse
 }
 
-export type ListAppReleasesV1Response = ListAppReleasesV1Responses[keyof ListAppReleasesV1Responses]
+export type ViewAppHealthV1Response = ViewAppHealthV1Responses[keyof ViewAppHealthV1Responses]
 
-export type GetAppHealthV1Data = {
-  body?: never
-  path: {
-    slug: string
-  }
-  query?: never
-  url: '/api/v1/deployments/apps/{slug}/health'
-}
-
-export type GetAppHealthV1Errors = {
-  /**
-   * No active session.
-   */
-  401: unknown
-}
-
-export type GetAppHealthV1Responses = {
-  200: GetAppHealthResponse
-}
-
-export type GetAppHealthV1Response = GetAppHealthV1Responses[keyof GetAppHealthV1Responses]
-
-export type GetAppRunLogsV1Data = {
+export type ViewAppLogsV1Data = {
   body?: never
   path: {
     slug: string
@@ -485,10 +484,10 @@ export type GetAppRunLogsV1Data = {
      */
     tailLines?: number
   }
-  url: '/api/v1/deployments/apps/{slug}/logs'
+  url: '/api/v1/apps/{slug}/logs'
 }
 
-export type GetAppRunLogsV1Errors = {
+export type ViewAppLogsV1Errors = {
   /**
    * tailLines out of range (1–1000) or not an integer.
    */
@@ -499,8 +498,8 @@ export type GetAppRunLogsV1Errors = {
   401: unknown
 }
 
-export type GetAppRunLogsV1Responses = {
-  200: GetAppRunLogsResponse
+export type ViewAppLogsV1Responses = {
+  200: ViewAppLogsResponse
 }
 
-export type GetAppRunLogsV1Response = GetAppRunLogsV1Responses[keyof GetAppRunLogsV1Responses]
+export type ViewAppLogsV1Response = ViewAppLogsV1Responses[keyof ViewAppLogsV1Responses]

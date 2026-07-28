@@ -96,5 +96,24 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm --filter web exec playwright install --with-deps chromium
 
+      - name: Start seeded API for web e2e
+        run: |
+          pnpm --filter api build
+          cd apps/api
+          COOKIE=$(node --env-file=.env dist/src/entrypoints/seed-dev.js | grep -o 'marsa_session=[^ ]*')
+          if [ -z "$COOKIE" ]; then echo "::error::seed-dev emitted no session cookie"; exit 1; fi
+          echo "E2E_SESSION_COOKIE=$COOKIE" >> "$GITHUB_ENV"
+          node --env-file=.env dist/src/entrypoints/api.js &
+          echo "API_PID=$!" >> "$GITHUB_ENV"
+          for _ in $(seq 1 30); do
+            curl -sf http://localhost:3000/api/v1/status >/dev/null && { echo "API ready"; exit 0; }
+            sleep 1
+          done
+          echo "::error::API did not become ready on :3000"; exit 1
+
       - name: Test Web (e2e)
         run: pnpm --filter web test:e2e
+
+      - name: Stop seeded API
+        if: always()
+        run: '[ -n "${API_PID:-}" ] && kill "$API_PID" 2>/dev/null || true'

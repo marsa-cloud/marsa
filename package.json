@@ -21,12 +21,17 @@
     "lint:root": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "dev": "pnpm --parallel --filter api --filter web dev",
     "dev:api": "pnpm --filter api dev",
     "dev:web": "pnpm --filter web dev",
+    "seed": "node --env-file=apps/api/.env apps/api/dist/src/entrypoints/seed-dev.js",
     "build": "pnpm -r run build",
     "build:api": "pnpm --filter api build",
     "build:web": "pnpm --filter web build",
-    "test": "pnpm -r --parallel run test"
+    "test": "pnpm -r --parallel run test",
+    "e2e:up": "bash scripts/e2e-up.sh",
+    "e2e:test": "bash scripts/e2e-test.sh",
+    "e2e:down": "bash scripts/e2e-down.sh"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",

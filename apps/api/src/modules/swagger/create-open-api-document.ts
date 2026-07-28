@@ -2,7 +2,10 @@ import type { INestApplication } from '@nestjs/common'
 import type { OpenAPIObject } from '@nestjs/swagger'
 import { SwaggerModule } from '@nestjs/swagger'
 import { buildApiDocumentation } from '#src/modules/swagger/build-api-documentation.js'
+import { operationIdFactory } from '#src/modules/swagger/operation-id-factory.js'
 
 export function createOpenApiDocument(app: INestApplication): OpenAPIObject {
-  return SwaggerModule.createDocument(app, buildApiDocumentation(process.env.VERSION ?? '0.0.0'))
+  return SwaggerModule.createDocument(app, buildApiDocumentation(process.env.VERSION ?? '0.0.0'), {
+    operationIdFactory,
+  })
 }

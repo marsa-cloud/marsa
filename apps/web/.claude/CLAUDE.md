@@ -36,6 +36,20 @@ pnpm --filter web test:e2e:install     # one-time Playwright browser install
 
 `pnpm test` at the root runs only the fast layer (it fans out to each workspace's `test` script). E2E stays per-package.
 
+**E2E runs against the real API, not mocks.** The specs boot the browser + the Nuxt preview server (whose `routeRules` proxy `/api/**` → `:3000`) and drive real endpoints. So they need the API running in test mode and an authenticated session cookie in `E2E_SESSION_COOKIE` (unauthenticated specs like the `/login` redirect don't need it). Locally:
+
+```bash
+docker compose up -d                                   # Postgres (marsa_test)
+cp apps/api/.env.test apps/api/.env
+pnpm --filter api build
+cd apps/api
+export E2E_SESSION_COOKIE=$(node --env-file=.env dist/src/entrypoints/seed-dev.js | grep -o 'marsa_session=[^ ]*')
+node --env-file=.env dist/src/entrypoints/api.js &     # API on :3000 (mock deploy backend, no cluster)
+cd ../.. && pnpm --filter web test:e2e
+```
+
+CI does the same in the "Start seeded API" step before `test:e2e`. The real-cluster (k3d) path is a separate concern — issue #122.
+
 ### Configs
 
 - `vitest.config.ts` — uses `defineVitestConfig` from `@nuxt/test-utils/config`; happy-dom is the DOM env for the Nuxt environment; e2e is excluded.

@@ -3,7 +3,6 @@ import {
   ApiBadGatewayResponse,
   ApiBadRequestResponse,
   ApiOkResponse,
-  ApiOperation,
   ApiTags,
 } from '@nestjs/swagger'
 import { CaptureInstallationCommand } from '#src/app/github-app/use-cases/capture-installation/capture-installation.command.js'
@@ -17,7 +16,6 @@ export class CaptureInstallationController {
 
   @Post()
   @HttpCode(200)
-  @ApiOperation({ operationId: 'captureGithubAppInstallationV1' })
   @ApiOkResponse({ type: CaptureInstallationResponse })
   @ApiBadRequestResponse({
     description: 'Malformed body, an unsupported setup_action, or no provisioned App.',

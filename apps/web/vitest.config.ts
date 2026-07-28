@@ -22,20 +22,21 @@ export default defineVitestConfig({
       // committed-but-generated API client (app/api/*, lint/format-ignored
       // per apps/web/.claude/CLAUDE.md) are not meaningful coverage targets.
       include: ['app/**/*.{ts,vue}'],
-      exclude: ['app/api/**', 'app/**/__tests__/**'],
+      exclude: [
+        'app/api/**',
+        'app/**/__tests__/**',
+        // Logic-free shells: root app container and the auth layout are pure
+        // framework-component templates (no script, no branches) — a test would
+        // only assert that Nuxt renders <NuxtLayout>/<slot>, not our behaviour.
+        'app/app.vue',
+        'app/layouts/auth.vue',
+      ],
       reporter: ['text', 'text-summary'],
-      // TEMPORARY v4 ratchet — see #66.
-      // Vitest 4 + @nuxt/test-utils 4 instrument files the Nuxt test-bootstrap
-      // loads (app.vue, plugins, auto-imported composables) plus the untested
-      // starter scaffolding (index.vue, TemplateMenu.vue), which vitest 3 did
-      // not count — dropping measured coverage from ~90% to ~30%. Rather than
-      // mask scaffolding via excludes, the floors are lowered to current
-      // reality and #66 tracks adding tests + ratcheting them back up.
       thresholds: {
-        lines: 28,
-        functions: 12,
-        branches: 30,
-        statements: 28,
+        lines: 88,
+        functions: 60,
+        branches: 85,
+        statements: 88,
       },
     },
   },

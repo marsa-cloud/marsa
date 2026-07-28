@@ -6,11 +6,11 @@ import { eq } from 'drizzle-orm'
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import Fastify from 'fastify'
 import { AppModule } from '#src/app.module.js'
-import { AppBuilder } from '#src/app/deployments/entities/app.builder.js'
-import { appTable } from '#src/app/deployments/entities/app.table.js'
-import { ReleaseBuilder } from '#src/app/deployments/entities/release.builder.js'
-import { releaseTable } from '#src/app/deployments/entities/release.table.js'
-import { DeployStatus } from '#src/app/deployments/enums/deploy-status.enum.js'
+import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
+import { appTable } from '#src/app/app-management/entities/app.table.js'
+import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
+import { releaseTable } from '#src/app/release/entities/release.table.js'
+import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { UserBuilder } from '#src/app/user/entities/user.builder.js'
 import { userTable } from '#src/app/user/entities/user.table.js'
 import { UserRole } from '#src/app/user/enums/user-role.enum.js'
@@ -54,6 +54,8 @@ async function mintSessionCookie(
 }
 
 async function rawDogFe(): Promise<void> {
+  const userOnly = process.argv.includes('--user-only')
+
   const context = await NestFactory.createApplicationContext(AppModule.forRoot([]), {
     logger: ['error', 'warn'],
   })
@@ -76,23 +78,25 @@ async function rawDogFe(): Promise<void> {
       await db.insert(userTable).values(user)
     }
 
-    for (const slug of SAMPLE_APP_SLUGS) {
-      const [existing] = await db.select().from(appTable).where(eq(appTable.slug, slug)).limit(1)
-      if (existing) {
-        continue
+    if (!userOnly) {
+      for (const slug of SAMPLE_APP_SLUGS) {
+        const [existing] = await db.select().from(appTable).where(eq(appTable.slug, slug)).limit(1)
+        if (existing) {
+          continue
+        }
+        const app = new AppBuilder()
+          .withSlug(slug)
+          .withImage('nginx:1.27')
+          .withContainerPort(80)
+          .build()
+        const release = new ReleaseBuilder()
+          .withApp(app)
+          .withImageRef('nginx:1.27')
+          .withDeployStatus(DeployStatus.Succeeded)
+          .build()
+        await db.insert(appTable).values(app)
+        await db.insert(releaseTable).values(release)
       }
-      const app = new AppBuilder()
-        .withSlug(slug)
-        .withImage('nginx:1.27')
-        .withContainerPort(80)
-        .build()
-      const release = new ReleaseBuilder()
-        .withApp(app)
-        .withImageRef('nginx:1.27')
-        .withDeployStatus(DeployStatus.Succeeded)
-        .build()
-      await db.insert(appTable).values(app)
-      await db.insert(releaseTable).values(release)
     }
 
     const config = context.get(ConfigService)
@@ -102,7 +106,9 @@ async function rawDogFe(): Promise<void> {
       user.uuid,
     )
 
-    console.log(`\nSeeded @${user.githubLogin} + ${SAMPLE_APP_SLUGS.length} sample apps.`)
+    console.log(
+      `\nSeeded @${user.githubLogin}${userOnly ? '' : ` + ${SAMPLE_APP_SLUGS.length} sample apps`}.`,
+    )
     console.log(
       'Set this cookie for the web origin (DevTools → Application → Cookies), then reload:\n',
     )

@@ -9,7 +9,7 @@ import { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.j
     {
       provide: DeployBackend,
       useFactory: (config: ConfigService) =>
-        config.getOrThrow('NODE_ENV') === 'test'
+        config.get<string>('DEPLOY_BACKEND', 'direct') === 'mock'
           ? new MockDeployBackend()
           : new DirectApplyDeployBackend(),
       inject: [ConfigService],

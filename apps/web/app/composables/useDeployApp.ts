@@ -52,7 +52,7 @@ export function useDeployApp() {
   const { $api } = useNuxtApp()
 
   async function deploy(command: DeployAppCommand): Promise<DeployAppResponse> {
-    const raw = await $api('/v1/deployments/deploy', {
+    const raw = await $api('/v1/deploy', {
       method: 'POST',
       body: command,
     })
