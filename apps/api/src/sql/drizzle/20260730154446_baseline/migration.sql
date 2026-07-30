@@ -1,12 +1,6 @@
 CREATE TYPE "deploy_status_enum" AS ENUM('pending', 'in_progress', 'succeeded', 'failed');--> statement-breakpoint
 CREATE TYPE "release_trigger_enum" AS ENUM('manual', 'webhook');--> statement-breakpoint
 CREATE TYPE "user_role_enum" AS ENUM('operator', 'member');--> statement-breakpoint
-CREATE TABLE "auth_oauth_state" (
-	"uuid" uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
-	"expires_at" timestamp with time zone NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE "app" (
 	"uuid" uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
 	"slug" varchar(255) NOT NULL UNIQUE,
@@ -20,14 +14,10 @@ CREATE TABLE "app" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "release" (
+CREATE TABLE "auth_oauth_state" (
 	"uuid" uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
-	"app_uuid" uuid NOT NULL,
-	"image_ref" varchar(255) NOT NULL,
-	"triggered_by" "release_trigger_enum" DEFAULT 'manual'::"release_trigger_enum" NOT NULL,
-	"deploy_status" "deploy_status_enum" DEFAULT 'pending'::"deploy_status_enum" NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+	"expires_at" timestamp with time zone NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "github_app" (
@@ -60,6 +50,16 @@ CREATE TABLE "github_app_manifest_state" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "release" (
+	"uuid" uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
+	"app_uuid" uuid NOT NULL,
+	"image_ref" varchar(255) NOT NULL,
+	"triggered_by" "release_trigger_enum" DEFAULT 'manual'::"release_trigger_enum" NOT NULL,
+	"deploy_status" "deploy_status_enum" DEFAULT 'pending'::"deploy_status_enum" NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "user" (
 	"uuid" uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
 	"github_user_id" varchar(255) NOT NULL UNIQUE,
@@ -69,5 +69,5 @@ CREATE TABLE "user" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "release" ADD CONSTRAINT "release_app_uuid_app_uuid_fkey" FOREIGN KEY ("app_uuid") REFERENCES "app"("uuid");--> statement-breakpoint
-ALTER TABLE "github_installation" ADD CONSTRAINT "github_installation_app_uuid_github_app_uuid_fkey" FOREIGN KEY ("app_uuid") REFERENCES "github_app"("uuid");
+ALTER TABLE "github_installation" ADD CONSTRAINT "github_installation_app_uuid_github_app_uuid_fkey" FOREIGN KEY ("app_uuid") REFERENCES "github_app"("uuid") ON UPDATE CASCADE;--> statement-breakpoint
+ALTER TABLE "release" ADD CONSTRAINT "release_app_uuid_app_uuid_fkey" FOREIGN KEY ("app_uuid") REFERENCES "app"("uuid") ON UPDATE CASCADE;

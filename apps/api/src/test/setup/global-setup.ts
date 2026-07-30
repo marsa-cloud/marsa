@@ -24,4 +24,7 @@ async function globalTestSetup(): Promise<void> {
   }
 }
 
-void globalTestSetup()
+globalTestSetup().catch((error: unknown) => {
+  console.error(error)
+  process.exitCode = 1
+})

@@ -1,6 +1,5 @@
 import { after, before, describe, it } from 'node:test'
 import { ConfigService } from '@nestjs/config'
-import { eq } from 'drizzle-orm'
 import { expect } from 'expect'
 import { Server } from 'http'
 import request from 'supertest'
@@ -50,14 +49,14 @@ describe('first login bootstraps the Operator (e2e)', () => {
   it('assigns Operator to the first user', async () => {
     await login(setup.httpServer)
 
-    const [user] = await setup.db.select().from(userTable).where(eq(userTable.githubUserId, '1'))
+    const user = await setup.db.query.userTable.findFirst({ where: { githubUserId: '1' } })
     expect(user?.role).toBe(UserRole.Operator)
   })
 
   it('does not demote the user on re-login', async () => {
     await login(setup.httpServer)
 
-    const [user] = await setup.db.select().from(userTable).where(eq(userTable.githubUserId, '1'))
+    const user = await setup.db.query.userTable.findFirst({ where: { githubUserId: '1' } })
     expect(user?.role).toBe(UserRole.Operator)
   })
 })
@@ -76,7 +75,7 @@ describe('a later user becomes a Member (e2e)', () => {
   it('assigns Member when a user already exists', async () => {
     await login(setup.httpServer)
 
-    const [user] = await setup.db.select().from(userTable).where(eq(userTable.githubUserId, '1'))
+    const user = await setup.db.query.userTable.findFirst({ where: { githubUserId: '1' } })
     expect(user?.role).toBe(UserRole.Member)
   })
 })

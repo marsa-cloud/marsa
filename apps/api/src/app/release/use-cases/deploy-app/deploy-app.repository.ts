@@ -11,14 +11,11 @@ import { InjectDatabase } from '#src/modules/database/inject-database.decorator.
 export class DeployAppRepository {
   constructor(@InjectDatabase() private readonly db: Database) {}
 
-  // First-deploy only: no slug conflict, so the in-memory `app.uuid` is the
-  // persisted identity. Re-deploy (a slug conflict) keeps the DB's original
-  // `uuid` (excluded from the update set) — at which point the caller must bind
-  // the Release to the persisted App identity, not the freshly generated one,
-  // to avoid an app_uuid FK mismatch. Deferred until re-deploy is implemented.
   async deploy(app: App, release: Release): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await tx
+      // On a slug conflict the stored uuid wins, so the release must bind to it
+      // rather than to the freshly generated app.uuid.
+      const [persisted] = await tx
         .insert(appTable)
         .values(app)
         .onConflictDoUpdate({
@@ -33,7 +30,8 @@ export class DeployAppRepository {
             updatedAt: app.updatedAt,
           },
         })
-      await tx.insert(releaseTable).values(release)
+        .returning({ uuid: appTable.uuid })
+      await tx.insert(releaseTable).values({ ...release, appUuid: persisted.uuid })
     })
   }
 

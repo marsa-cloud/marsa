@@ -80,22 +80,28 @@ async function rawDogFe(): Promise<void> {
 
     if (!userOnly) {
       for (const slug of SAMPLE_APP_SLUGS) {
-        const [existing] = await db.select().from(appTable).where(eq(appTable.slug, slug)).limit(1)
-        if (existing) {
-          continue
-        }
-        const app = new AppBuilder()
-          .withSlug(slug)
-          .withImage('nginx:1.27')
-          .withContainerPort(80)
-          .build()
-        const release = new ReleaseBuilder()
-          .withApp(app)
-          .withImageRef('nginx:1.27')
-          .withDeployStatus(DeployStatus.Succeeded)
-          .build()
-        await db.insert(appTable).values(app)
-        await db.insert(releaseTable).values(release)
+        await db.transaction(async (tx) => {
+          const [existing] = await tx
+            .select()
+            .from(appTable)
+            .where(eq(appTable.slug, slug))
+            .limit(1)
+          if (existing) {
+            return
+          }
+          const app = new AppBuilder()
+            .withSlug(slug)
+            .withImage('nginx:1.27')
+            .withContainerPort(80)
+            .build()
+          const release = new ReleaseBuilder()
+            .withApp(app)
+            .withImageRef('nginx:1.27')
+            .withDeployStatus(DeployStatus.Succeeded)
+            .build()
+          await tx.insert(appTable).values(app)
+          await tx.insert(releaseTable).values(release)
+        })
       }
     }
 

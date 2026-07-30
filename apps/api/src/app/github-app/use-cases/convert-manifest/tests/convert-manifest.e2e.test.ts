@@ -22,7 +22,7 @@ describe('POST /api/v1/github-app/convert-manifest (e2e)', () => {
       .send({ code: 'whatever', state: 'invalid' })
       .expect(400)
 
-    expect(response.body.message).toMatch(/state/)
+    expect(response.body.message).toEqual(expect.arrayContaining([expect.stringMatching(/state/)]))
   })
 
   it('rejects an empty code with 400 (message mentions code) even when state is valid', async () => {

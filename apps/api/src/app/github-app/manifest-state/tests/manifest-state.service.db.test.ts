@@ -1,6 +1,5 @@
 import { after, before, describe, it } from 'node:test'
 import { expect } from 'expect'
-import type { ManifestStateUuid } from '#src/app/github-app/entities/manifest-state.uuid.js'
 import { ManifestStateModule } from '#src/app/github-app/manifest-state/manifest-state.module.js'
 import { ManifestStateService } from '#src/app/github-app/manifest-state/manifest-state.service.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
@@ -37,9 +36,5 @@ describe('ManifestStateService (db)', () => {
     const state = await service.issue(-1000)
 
     expect(await service.consume(state)).toBe(false)
-  })
-
-  it('rejects a malformed (non-uuid) token without touching the db', async () => {
-    expect(await service.consume('not-a-uuid' as ManifestStateUuid)).toBe(false)
   })
 })

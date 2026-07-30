@@ -7,7 +7,6 @@ import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { CompleteGithubLoginCommandBuilder } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.builder.js'
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
 import { githubAppTable } from '#src/app/github-app/entities/github-app.table.js'
-import { userTable } from '#src/app/user/entities/user.table.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
@@ -72,16 +71,10 @@ describe('POST /api/v1/auth/github/session (e2e)', () => {
 
     try {
       await login()
-      const [firstUser] = await setup.db
-        .select()
-        .from(userTable)
-        .where(eq(userTable.githubUserId, '1'))
+      const firstUser = await setup.db.query.userTable.findFirst({ where: { githubUserId: '1' } })
 
       await login()
-      const [secondUser] = await setup.db
-        .select()
-        .from(userTable)
-        .where(eq(userTable.githubUserId, '1'))
+      const secondUser = await setup.db.query.userTable.findFirst({ where: { githubUserId: '1' } })
 
       expect(firstUser?.uuid).toBeDefined()
       expect(secondUser?.uuid).toBe(firstUser?.uuid)

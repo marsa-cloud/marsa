@@ -15,7 +15,7 @@ export const releaseTable = pgTable('release', {
   appUuid: uuid('app_uuid')
     .$type<AppUuid>()
     .notNull()
-    .references(() => appTable.uuid),
+    .references(() => appTable.uuid, { onUpdate: 'cascade' }),
   imageRef: varchar('image_ref', { length: 255 }).notNull(),
   triggeredBy: releaseTriggerEnum('triggered_by').notNull().default(ReleaseTrigger.Manual),
   deployStatus: deployStatusEnum('deploy_status').notNull().default(DeployStatus.Pending),

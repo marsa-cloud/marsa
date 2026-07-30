@@ -7,7 +7,6 @@ import type { Database } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 
 const DEFAULT_TTL_MS = 10 * 60 * 1000
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /**
  * DB-backed, single-use CSRF state for the Manifest round-trip (AgDR-0010).
@@ -23,9 +22,6 @@ export class ManifestStateService {
   }
 
   async consume(state: ManifestStateUuid): Promise<boolean> {
-    if (!UUID_RE.test(state)) {
-      return false
-    }
     // Atomic conditional delete → verifies at most once, no replay.
     const deleted = await this.db
       .delete(manifestStateTable)

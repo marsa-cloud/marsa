@@ -15,7 +15,7 @@ export const githubInstallationTable = pgTable('github_installation', {
   appUuid: uuid('app_uuid')
     .$type<GitHubAppUuid>()
     .notNull()
-    .references(() => githubAppTable.uuid),
+    .references(() => githubAppTable.uuid, { onUpdate: 'cascade' }),
   ...timestamps,
 })
 

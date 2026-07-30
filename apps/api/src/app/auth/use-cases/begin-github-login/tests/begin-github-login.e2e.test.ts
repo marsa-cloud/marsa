@@ -37,8 +37,8 @@ describe('GET /api/v1/auth/github (e2e)', () => {
       // the callback came from the same browser that began the flow (#62).
       expect(response.headers['set-cookie']?.[0]).toMatch(/marsa_session=/)
     } finally {
-      // Forked EM commits outside the TestSetup transaction (request isolation),
-      // so this row would otherwise leak into the sibling "no App provisioned" test.
+      // The sibling test asserts the bootstrap path taken when no App exists,
+      // so every row has to go — deliberately unscoped.
       await setup.db.delete(githubAppTable)
     }
   })

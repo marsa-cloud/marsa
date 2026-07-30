@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "abdc9690-6f3a-43d5-a602-051bb60a93ee",
+  "id": "b8902029-3ffa-46c4-a781-ee1e6883e17a",
   "prevIds": ["f5cd41e2-623c-4022-9966-19765e1d8aa3"],
   "ddl": [
     {
@@ -24,19 +24,13 @@
     },
     {
       "isRlsEnabled": false,
-      "name": "auth_oauth_state",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
       "name": "app",
       "entityType": "tables",
       "schema": "public"
     },
     {
       "isRlsEnabled": false,
-      "name": "release",
+      "name": "auth_oauth_state",
       "entityType": "tables",
       "schema": "public"
     },
@@ -60,48 +54,15 @@
     },
     {
       "isRlsEnabled": false,
-      "name": "user",
+      "name": "release",
       "entityType": "tables",
       "schema": "public"
     },
     {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "uuid_generate_v7()",
-      "generated": null,
-      "identity": null,
-      "name": "uuid",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "auth_oauth_state"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "expires_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "auth_oauth_state"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "auth_oauth_state"
+      "isRlsEnabled": false,
+      "name": "user",
+      "entityType": "tables",
+      "schema": "public"
     },
     {
       "type": "uuid",
@@ -244,59 +205,20 @@
       "name": "uuid",
       "entityType": "columns",
       "schema": "public",
-      "table": "release"
+      "table": "auth_oauth_state"
     },
     {
-      "type": "uuid",
+      "type": "timestamp with time zone",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "app_uuid",
+      "name": "expires_at",
       "entityType": "columns",
       "schema": "public",
-      "table": "release"
-    },
-    {
-      "type": "varchar(255)",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "image_ref",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "release"
-    },
-    {
-      "type": "release_trigger_enum",
-      "typeSchema": "public",
-      "notNull": true,
-      "dimensions": 0,
-      "default": "'manual'",
-      "generated": null,
-      "identity": null,
-      "name": "triggered_by",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "release"
-    },
-    {
-      "type": "deploy_status_enum",
-      "typeSchema": "public",
-      "notNull": true,
-      "dimensions": 0,
-      "default": "'pending'",
-      "generated": null,
-      "identity": null,
-      "name": "deploy_status",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "release"
+      "table": "auth_oauth_state"
     },
     {
       "type": "timestamp with time zone",
@@ -309,20 +231,7 @@
       "name": "created_at",
       "entityType": "columns",
       "schema": "public",
-      "table": "release"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "release"
+      "table": "auth_oauth_state"
     },
     {
       "type": "uuid",
@@ -608,6 +517,97 @@
       "name": "uuid",
       "entityType": "columns",
       "schema": "public",
+      "table": "release"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "app_uuid",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "release"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "image_ref",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "release"
+    },
+    {
+      "type": "release_trigger_enum",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'manual'",
+      "generated": null,
+      "identity": null,
+      "name": "triggered_by",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "release"
+    },
+    {
+      "type": "deploy_status_enum",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'pending'",
+      "generated": null,
+      "identity": null,
+      "name": "deploy_status",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "release"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "release"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "release"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuid_generate_v7()",
+      "generated": null,
+      "identity": null,
+      "name": "uuid",
+      "entityType": "columns",
+      "schema": "public",
       "table": "user"
     },
     {
@@ -679,22 +679,9 @@
       "nameExplicit": false,
       "columns": ["app_uuid"],
       "schemaTo": "public",
-      "tableTo": "app",
-      "columnsTo": ["uuid"],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "release_app_uuid_app_uuid_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "release"
-    },
-    {
-      "nameExplicit": false,
-      "columns": ["app_uuid"],
-      "schemaTo": "public",
       "tableTo": "github_app",
       "columnsTo": ["uuid"],
-      "onUpdate": "NO ACTION",
+      "onUpdate": "CASCADE",
       "onDelete": "NO ACTION",
       "name": "github_installation_app_uuid_github_app_uuid_fkey",
       "entityType": "fks",
@@ -702,12 +689,17 @@
       "table": "github_installation"
     },
     {
-      "columns": ["uuid"],
       "nameExplicit": false,
-      "name": "auth_oauth_state_pkey",
+      "columns": ["app_uuid"],
+      "schemaTo": "public",
+      "tableTo": "app",
+      "columnsTo": ["uuid"],
+      "onUpdate": "CASCADE",
+      "onDelete": "NO ACTION",
+      "name": "release_app_uuid_app_uuid_fkey",
+      "entityType": "fks",
       "schema": "public",
-      "table": "auth_oauth_state",
-      "entityType": "pks"
+      "table": "release"
     },
     {
       "columns": ["uuid"],
@@ -720,9 +712,9 @@
     {
       "columns": ["uuid"],
       "nameExplicit": false,
-      "name": "release_pkey",
+      "name": "auth_oauth_state_pkey",
       "schema": "public",
-      "table": "release",
+      "table": "auth_oauth_state",
       "entityType": "pks"
     },
     {
@@ -747,6 +739,14 @@
       "name": "github_app_manifest_state_pkey",
       "schema": "public",
       "table": "github_app_manifest_state",
+      "entityType": "pks"
+    },
+    {
+      "columns": ["uuid"],
+      "nameExplicit": false,
+      "name": "release_pkey",
+      "schema": "public",
+      "table": "release",
       "entityType": "pks"
     },
     {
