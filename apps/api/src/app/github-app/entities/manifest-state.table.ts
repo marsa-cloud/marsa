@@ -7,7 +7,7 @@ export const manifestStateTable = pgTable('github_app_manifest_state', {
   uuid: uuid()
     .$type<ManifestStateUuid>()
     .primaryKey()
-    .default(sql`uuid_generate_v7()`),
+    .default(sql`uuidv7()`),
   expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),
   createdAt: timestamps.createdAt,
 })

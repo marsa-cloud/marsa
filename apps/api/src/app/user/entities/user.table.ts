@@ -8,7 +8,7 @@ export const userTable = pgTable('user', {
   uuid: uuid()
     .$type<UserUuid>()
     .primaryKey()
-    .default(sql`uuid_generate_v7()`),
+    .default(sql`uuidv7()`),
   githubUserId: varchar('github_user_id', { length: 255 }).unique().notNull(),
   githubLogin: varchar('github_login', { length: 255 }).notNull(),
   role: userRoleEnum().notNull().default(UserRole.Member),

@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common'
-import { desc } from 'drizzle-orm'
-import { type GitHubApp, githubAppTable } from '#src/app/github-app/entities/github-app.table.js'
+import { type GitHubApp } from '#src/app/github-app/entities/github-app.table.js'
 import type { GitHubAppUuid } from '#src/app/github-app/entities/github-app.uuid.js'
 import { GitHubInstallationBuilder } from '#src/app/github-app/entities/github-installation.builder.js'
 import {
@@ -15,11 +14,9 @@ export class CaptureInstallationRepository {
   constructor(@InjectDatabase() private readonly db: Database) {}
 
   async loadProvisionedApp(): Promise<GitHubApp | null> {
-    const [app] = await this.db
-      .select()
-      .from(githubAppTable)
-      .orderBy(desc(githubAppTable.createdAt))
-      .limit(1)
+    const app = await this.db.query.githubAppTable.findFirst({
+      orderBy: { createdAt: 'desc' },
+    })
     return app ?? null
   }
 

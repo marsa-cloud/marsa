@@ -7,7 +7,7 @@ export const oauthStateTable = pgTable('auth_oauth_state', {
   uuid: uuid()
     .$type<OAuthStateUuid>()
     .primaryKey()
-    .default(sql`uuid_generate_v7()`),
+    .default(sql`uuidv7()`),
   expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull(),
   createdAt: timestamps.createdAt,
 })

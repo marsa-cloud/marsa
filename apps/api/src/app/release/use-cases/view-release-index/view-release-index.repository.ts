@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common'
-import { desc, eq, getTableColumns } from 'drizzle-orm'
-import { appTable } from '#src/app/app-management/entities/app.table.js'
+import { eq } from 'drizzle-orm'
 import { type Release, releaseTable } from '#src/app/release/entities/release.table.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import type { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
@@ -12,12 +11,10 @@ export class ViewReleaseIndexRepository {
   constructor(@InjectDatabase() private readonly db: Database) {}
 
   async findByAppSlug(slug: string): Promise<Release[]> {
-    return this.db
-      .select(getTableColumns(releaseTable))
-      .from(releaseTable)
-      .innerJoin(appTable, eq(releaseTable.appUuid, appTable.uuid))
-      .where(eq(appTable.slug, slug))
-      .orderBy(desc(releaseTable.createdAt))
+    return this.db.query.releaseTable.findMany({
+      where: { app: { slug } },
+      orderBy: { createdAt: 'desc' },
+    })
   }
 
   async setReleaseDeployStatus(uuid: ReleaseUuid, deployStatus: DeployStatus): Promise<void> {

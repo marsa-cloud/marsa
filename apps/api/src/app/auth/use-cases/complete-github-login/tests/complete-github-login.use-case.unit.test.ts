@@ -8,9 +8,9 @@ import { CompleteGithubLoginRepository } from '#src/app/auth/use-cases/complete-
 import { CompleteGithubLoginUseCase } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.use-case.js'
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
 import type { GitHubApp } from '#src/app/github-app/entities/github-app.table.js'
-import { UserBuilder } from '#src/app/user/entities/user.builder.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
 import { OctokitGithubClient } from '#src/modules/github-client/octokit-github-client.js'
+import { stubDatabase } from '#src/test/setup/stub-database.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { generateUuid } from '#src/utils/uuid.js'
 
@@ -27,16 +27,15 @@ function build(options: { app?: GitHubApp | null; stateConsumed?: boolean } = {}
 
   const repository = createStubInstance(CompleteGithubLoginRepository)
   repository.loadProvisionedApp.resolves(app)
-  repository.consumeStateAndUpsertUser.resolves(
-    (options.stateConsumed ?? true)
-      ? new UserBuilder().withGithubUserId('1').withGithubLogin('marsa-mock-user').build()
-      : null,
-  )
+  repository.consumeState.resolves(options.stateConsumed ?? true)
+  repository.lockUserBootstrap.resolves()
+  repository.countUsers.resolves(1)
+  repository.upsertUser.callsFake((_tx, user) => Promise.resolve(user))
 
   const github = createStubInstance(OctokitGithubClient)
   github.loginUser.resolves({ id: 1, login: 'marsa-mock-user' })
 
-  const usecase = new CompleteGithubLoginUseCase(repository, github, cipher)
+  const usecase = new CompleteGithubLoginUseCase(stubDatabase(), repository, github, cipher)
   return { usecase, repository, github, app }
 }
 
@@ -51,7 +50,17 @@ describe('CompleteGithubLoginUseCase', () => {
     expect(user.githubUserId).toBe('1')
     expect(user.githubLogin).toBe('marsa-mock-user')
     expect(github.loginUser.calledOnce).toBe(true)
-    expect(repository.consumeStateAndUpsertUser.calledOnce).toBe(true)
+    expect(repository.upsertUser.calledOnce).toBe(true)
+  })
+
+  it('takes the bootstrap lock before counting users', async () => {
+    const { usecase, repository } = build()
+
+    await usecase.execute(command(), SESSION_STATE)
+
+    expect(
+      repository.lockUserBootstrap.firstCall.calledBefore(repository.countUsers.firstCall),
+    ).toBe(true)
   })
 
   it('rejects an invalid or expired state after exchanging the code, without persisting', async () => {
@@ -60,7 +69,7 @@ describe('CompleteGithubLoginUseCase', () => {
     await expect(usecase.execute(command(), SESSION_STATE)).rejects.toThrow(
       /Invalid or expired OAuth state/,
     )
-    // The state's single-use/replay guard runs inside the repo tx, so the code
+    // The state's single-use/replay guard runs inside the tx, so the code
     // exchange has already happened; the tx returns null and nothing persists.
     expect(github.loginUser.calledOnce).toBe(true)
   })
@@ -71,7 +80,7 @@ describe('CompleteGithubLoginUseCase', () => {
     await expect(usecase.execute(command(), 'some-other-state')).rejects.toThrow(
       /Invalid or expired OAuth state/,
     )
-    expect(repository.consumeStateAndUpsertUser.notCalled).toBe(true)
+    expect(repository.consumeState.notCalled).toBe(true)
     expect(github.loginUser.notCalled).toBe(true)
   })
 
@@ -100,7 +109,7 @@ describe('CompleteGithubLoginUseCase', () => {
     await expect(usecase.execute(command(), SESSION_STATE)).rejects.toThrow(
       /Could not complete login with GitHub/,
     )
-    expect(repository.consumeStateAndUpsertUser.notCalled).toBe(true)
+    expect(repository.consumeState.notCalled).toBe(true)
   })
 
   it('lets a decrypt failure surface as itself, before any GitHub call', async () => {

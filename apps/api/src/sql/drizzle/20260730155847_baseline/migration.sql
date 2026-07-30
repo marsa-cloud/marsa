@@ -2,7 +2,7 @@ CREATE TYPE "deploy_status_enum" AS ENUM('pending', 'in_progress', 'succeeded', 
 CREATE TYPE "release_trigger_enum" AS ENUM('manual', 'webhook');--> statement-breakpoint
 CREATE TYPE "user_role_enum" AS ENUM('operator', 'member');--> statement-breakpoint
 CREATE TABLE "app" (
-	"uuid" uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
+	"uuid" uuid PRIMARY KEY DEFAULT uuidv7(),
 	"slug" varchar(255) NOT NULL UNIQUE,
 	"domain" jsonb NOT NULL,
 	"image" varchar(255) NOT NULL,
@@ -15,13 +15,13 @@ CREATE TABLE "app" (
 );
 --> statement-breakpoint
 CREATE TABLE "auth_oauth_state" (
-	"uuid" uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
+	"uuid" uuid PRIMARY KEY DEFAULT uuidv7(),
 	"expires_at" timestamp with time zone NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "github_app" (
-	"uuid" uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
+	"uuid" uuid PRIMARY KEY DEFAULT uuidv7(),
 	"github_app_id" varchar(255) NOT NULL UNIQUE,
 	"slug" varchar(255) NOT NULL UNIQUE,
 	"name" varchar(255) NOT NULL,
@@ -36,7 +36,7 @@ CREATE TABLE "github_app" (
 );
 --> statement-breakpoint
 CREATE TABLE "github_installation" (
-	"uuid" uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
+	"uuid" uuid PRIMARY KEY DEFAULT uuidv7(),
 	"installation_id" varchar(255) NOT NULL UNIQUE,
 	"account_login" varchar(255),
 	"app_uuid" uuid NOT NULL,
@@ -45,13 +45,13 @@ CREATE TABLE "github_installation" (
 );
 --> statement-breakpoint
 CREATE TABLE "github_app_manifest_state" (
-	"uuid" uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
+	"uuid" uuid PRIMARY KEY DEFAULT uuidv7(),
 	"expires_at" timestamp with time zone NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "release" (
-	"uuid" uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
+	"uuid" uuid PRIMARY KEY DEFAULT uuidv7(),
 	"app_uuid" uuid NOT NULL,
 	"image_ref" varchar(255) NOT NULL,
 	"triggered_by" "release_trigger_enum" DEFAULT 'manual'::"release_trigger_enum" NOT NULL,
@@ -61,7 +61,7 @@ CREATE TABLE "release" (
 );
 --> statement-breakpoint
 CREATE TABLE "user" (
-	"uuid" uuid PRIMARY KEY DEFAULT uuid_generate_v7(),
+	"uuid" uuid PRIMARY KEY DEFAULT uuidv7(),
 	"github_user_id" varchar(255) NOT NULL UNIQUE,
 	"github_login" varchar(255) NOT NULL,
 	"role" "user_role_enum" DEFAULT 'member'::"user_role_enum" NOT NULL,

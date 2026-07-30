@@ -9,7 +9,7 @@ export const githubInstallationTable = pgTable('github_installation', {
   uuid: uuid()
     .$type<GitHubInstallationUuid>()
     .primaryKey()
-    .default(sql`uuid_generate_v7()`),
+    .default(sql`uuidv7()`),
   installationId: varchar('installation_id', { length: 255 }).unique().notNull(),
   accountLogin: varchar('account_login', { length: 255 }),
   appUuid: uuid('app_uuid')

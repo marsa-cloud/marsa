@@ -50,7 +50,8 @@
     "pg": "^8.21.0",
     "qs": "^6.15.2",
     "reflect-metadata": "catalog:",
-    "rxjs": "catalog:"
+    "rxjs": "catalog:",
+    "uuid": "catalog:"
   },
   "devDependencies": {
     "@nestjs/cli": "catalog:",

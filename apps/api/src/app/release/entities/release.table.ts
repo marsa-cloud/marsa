@@ -11,7 +11,7 @@ export const releaseTable = pgTable('release', {
   uuid: uuid()
     .$type<ReleaseUuid>()
     .primaryKey()
-    .default(sql`uuid_generate_v7()`),
+    .default(sql`uuidv7()`),
   appUuid: uuid('app_uuid')
     .$type<AppUuid>()
     .notNull()

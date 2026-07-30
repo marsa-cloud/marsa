@@ -7,7 +7,7 @@ export const githubAppTable = pgTable('github_app', {
   uuid: uuid()
     .$type<GitHubAppUuid>()
     .primaryKey()
-    .default(sql`uuid_generate_v7()`),
+    .default(sql`uuidv7()`),
   githubAppId: varchar('github_app_id', { length: 255 }).unique().notNull(),
   slug: varchar({ length: 255 }).unique().notNull(),
   name: varchar({ length: 255 }).notNull(),

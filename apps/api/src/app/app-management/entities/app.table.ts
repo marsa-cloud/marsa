@@ -8,7 +8,7 @@ export const appTable = pgTable('app', {
   uuid: uuid()
     .$type<AppUuid>()
     .primaryKey()
-    .default(sql`uuid_generate_v7()`),
+    .default(sql`uuidv7()`),
   slug: varchar({ length: 255 }).unique().notNull(),
   domain: jsonb().$type<AppDomain>().notNull(),
   image: varchar({ length: 255 }).notNull(),
