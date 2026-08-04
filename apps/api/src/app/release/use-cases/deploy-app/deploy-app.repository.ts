@@ -1,35 +1,43 @@
-import { type EntityRepository } from '@mikro-orm/core'
-import { InjectRepository } from '@mikro-orm/nestjs'
 import { Injectable } from '@nestjs/common'
-import { App } from '#src/app/app-management/entities/app.entity.js'
-import { Release } from '#src/app/release/entities/release.entity.js'
+import { eq } from 'drizzle-orm'
+import { type App, appTable } from '#src/app/app-management/entities/app.table.js'
+import type { AppUuid } from '#src/app/app-management/entities/app.uuid.js'
+import { type Release, releaseTable } from '#src/app/release/entities/release.table.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import type { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
+import type { Database, Executor } from '#src/modules/database/drizzle.factory.js'
+import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 
 @Injectable()
 export class DeployAppRepository {
-  constructor(
-    @InjectRepository(App) private readonly apps: EntityRepository<App>,
-    @InjectRepository(Release) private readonly releases: EntityRepository<Release>,
-  ) {}
+  constructor(@InjectDatabase() private readonly db: Database) {}
 
-  // First-deploy only: no slug conflict, so the in-memory `app.uuid` is the
-  // persisted identity. Re-deploy (a slug conflict) keeps the DB's original
-  // `uuid` via onConflictExcludeFields — at which point the caller must bind
-  // the Release to the persisted App identity, not the freshly generated one,
-  // to avoid an app_uuid FK mismatch. Deferred until re-deploy is implemented.
-  async upsertApp(app: App): Promise<void> {
-    await this.apps.upsert(app, {
-      onConflictFields: ['slug'],
-      onConflictExcludeFields: ['uuid', 'createdAt'],
-    })
+  /** Returns the stored uuid, which on a slug conflict is the existing app's, not `app.uuid`. */
+  async upsertApp(tx: Executor, app: App): Promise<AppUuid> {
+    const [persisted] = await tx
+      .insert(appTable)
+      .values(app)
+      .onConflictDoUpdate({
+        target: appTable.slug,
+        set: {
+          domain: app.domain,
+          image: app.image,
+          containerPort: app.containerPort,
+          replicas: app.replicas,
+          env: app.env,
+          imagePullCredentialsEnc: app.imagePullCredentialsEnc,
+          updatedAt: app.updatedAt,
+        },
+      })
+      .returning({ uuid: appTable.uuid })
+    return persisted.uuid
   }
 
-  async createRelease(release: Release): Promise<void> {
-    await this.releases.insert(release)
+  async createRelease(tx: Executor, release: Release): Promise<void> {
+    await tx.insert(releaseTable).values(release)
   }
 
   async setReleaseDeployStatus(uuid: ReleaseUuid, deployStatus: DeployStatus): Promise<void> {
-    await this.releases.nativeUpdate({ uuid }, { deployStatus })
+    await this.db.update(releaseTable).set({ deployStatus }).where(eq(releaseTable.uuid, uuid))
   }
 }

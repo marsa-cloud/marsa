@@ -62,7 +62,7 @@ describe('ConvertManifestUseCase', () => {
     expect(cipher.decrypt(app.privateKeyPemEnc)).toBe('PEMDATA')
   })
 
-  it('maps a null ownerLogin to undefined on the persisted app', async () => {
+  it('preserves a null ownerLogin on the persisted app', async () => {
     const manifestState = sinon.createStubInstance(ManifestStateService)
     const repository = sinon.createStubInstance(ConvertManifestRepository)
     const client = sinon.createStubInstance(MockGithubClient)
@@ -81,7 +81,7 @@ describe('ConvertManifestUseCase', () => {
     )
 
     const app = repository.upsertByGithubAppId.firstCall.args[0]
-    expect(app.ownerLogin).toBeUndefined()
+    expect(app.ownerLogin).toBeNull()
   })
 
   it('rejects an invalid state before calling GitHub', async () => {

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
-import type { Release } from '#src/app/release/entities/release.entity.js'
+import type { Release } from '#src/app/release/entities/release.table.js'
 import { DeployStatus, DeployStatusApiProperty } from '#src/app/release/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/release/enums/release-trigger.enum.js'
 import type { DeployFailure } from '#src/modules/kubernetes/deploy-backend.types.js'

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
-import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
+import type { GitHubApp } from '#src/app/github-app/entities/github-app.table.js'
 
 export class ConvertManifestResponse {
   @ApiProperty({ type: String, example: 'marsa-demo-marsa-cc' })

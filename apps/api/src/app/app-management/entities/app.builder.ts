@@ -1,18 +1,26 @@
-import { App } from '#src/app/app-management/entities/app.entity.js'
+import type { App } from '#src/app/app-management/entities/app.table.js'
+import type { AppUuid } from '#src/app/app-management/entities/app.uuid.js'
 import type { AppDomain } from '#src/app/app-management/entities/app-domain.types.js'
+import { generateUuid } from '#src/utils/uuid.js'
 
 /** Fluent builder for {@link App}; constructor seeds valid defaults so `new AppBuilder().build()` is always usable. */
 export class AppBuilder {
   private readonly app: App
 
   constructor() {
-    this.app = new App()
-    this.app.slug = 'my-app'
-    this.app.domain = { type: 'subdomain' }
-    this.app.image = 'nginx:1.27'
-    this.app.containerPort = 80
-    this.app.replicas = 1
-    this.app.env = {}
+    const now = new Date()
+    this.app = {
+      uuid: generateUuid<AppUuid>(),
+      slug: 'my-app',
+      domain: { type: 'subdomain' },
+      image: 'nginx:1.27',
+      containerPort: 80,
+      replicas: 1,
+      env: {},
+      imagePullCredentialsEnc: null,
+      createdAt: now,
+      updatedAt: now,
+    }
   }
 
   withSlug(slug: string): this {

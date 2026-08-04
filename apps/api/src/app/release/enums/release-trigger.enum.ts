@@ -1,5 +1,4 @@
-import { Enum, type EnumOptions } from '@mikro-orm/core'
-import type { Release } from '#src/app/release/entities/release.entity.js'
+import { pgEnum } from 'drizzle-orm/pg-core'
 
 /**
  * What produced a Release. Only `Manual` is produced in v0.1; `Webhook` is
@@ -11,10 +10,4 @@ export enum ReleaseTrigger {
   Webhook = 'webhook',
 }
 
-export function ReleaseTriggerEnum(options?: EnumOptions<Partial<Release>>) {
-  return Enum({
-    ...options,
-    items: () => ReleaseTrigger,
-    nativeEnumName: 'release_trigger_enum',
-  })
-}
+export const releaseTriggerEnum = pgEnum('release_trigger_enum', ReleaseTrigger)

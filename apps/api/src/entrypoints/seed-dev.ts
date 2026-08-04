@@ -1,18 +1,22 @@
 import fastifySecureSession from '@fastify/secure-session'
-import { MikroORM } from '@mikro-orm/core'
 import { Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { NestFactory } from '@nestjs/core'
+import { eq } from 'drizzle-orm'
+import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import Fastify from 'fastify'
 import { AppModule } from '#src/app.module.js'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
-import { App } from '#src/app/app-management/entities/app.entity.js'
+import { appTable } from '#src/app/app-management/entities/app.table.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
+import { releaseTable } from '#src/app/release/entities/release.table.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { UserBuilder } from '#src/app/user/entities/user.builder.js'
-import { User } from '#src/app/user/entities/user.entity.js'
+import { userTable } from '#src/app/user/entities/user.table.js'
 import { UserRole } from '#src/app/user/enums/user-role.enum.js'
 import { DEFAULT_AUTH_COOKIE_NAME } from '#src/config/env.config.js'
+import { DATABASE } from '#src/modules/database/database.tokens.js'
+import { type Database, MIGRATIONS_FOLDER } from '#src/modules/database/drizzle.factory.js'
 
 /**
  * Seed a dev operator + sample apps and print a ready-to-paste
@@ -57,43 +61,49 @@ async function rawDogFe(): Promise<void> {
   })
 
   try {
-    const orm = context.get(MikroORM)
-    await orm.migrator.up()
+    const db = context.get<Database>(DATABASE)
+    await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER })
 
-    const em = orm.em.fork()
-
-    let user = await em.findOne(User, { githubUserId: DEV_GITHUB_USER_ID })
+    let [user] = await db
+      .select()
+      .from(userTable)
+      .where(eq(userTable.githubUserId, DEV_GITHUB_USER_ID))
+      .limit(1)
     if (!user) {
       user = new UserBuilder()
         .withGithubUserId(DEV_GITHUB_USER_ID)
         .withGithubLogin(DEV_GITHUB_LOGIN)
         .withRole(UserRole.Operator)
         .build()
-      em.persist(user)
+      await db.insert(userTable).values(user)
     }
 
     if (!userOnly) {
       for (const slug of SAMPLE_APP_SLUGS) {
-        if (await em.findOne(App, { slug })) {
-          continue
-        }
-        const app = new AppBuilder()
-          .withSlug(slug)
-          .withImage('nginx:1.27')
-          .withContainerPort(80)
-          .build()
-        em.persist(app)
-        em.persist(
-          new ReleaseBuilder()
+        await db.transaction(async (tx) => {
+          const [existing] = await tx
+            .select()
+            .from(appTable)
+            .where(eq(appTable.slug, slug))
+            .limit(1)
+          if (existing) {
+            return
+          }
+          const app = new AppBuilder()
+            .withSlug(slug)
+            .withImage('nginx:1.27')
+            .withContainerPort(80)
+            .build()
+          const release = new ReleaseBuilder()
             .withApp(app)
             .withImageRef('nginx:1.27')
             .withDeployStatus(DeployStatus.Succeeded)
-            .build(),
-        )
+            .build()
+          await tx.insert(appTable).values(app)
+          await tx.insert(releaseTable).values(release)
+        })
       }
     }
-
-    await em.flush()
 
     const config = context.get(ConfigService)
     const cookie = await mintSessionCookie(

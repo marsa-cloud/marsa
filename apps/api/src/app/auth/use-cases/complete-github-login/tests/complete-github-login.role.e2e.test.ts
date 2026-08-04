@@ -1,5 +1,4 @@
 import { after, before, describe, it } from 'node:test'
-import { EntityManager } from '@mikro-orm/core'
 import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import { Server } from 'http'
@@ -7,18 +6,20 @@ import request from 'supertest'
 import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { CompleteGithubLoginCommandBuilder } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.builder.js'
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
+import { githubAppTable } from '#src/app/github-app/entities/github-app.table.js'
 import { UserBuilder } from '#src/app/user/entities/user.builder.js'
-import { User } from '#src/app/user/entities/user.entity.js'
+import { userTable } from '#src/app/user/entities/user.table.js'
 import { UserRole } from '#src/app/user/enums/user-role.enum.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
+import type { Database } from '#src/modules/database/drizzle.factory.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
-async function provisionApp(em: EntityManager): Promise<void> {
+async function provisionApp(db: Database): Promise<void> {
   const app = new GitHubAppBuilder()
     .withClientSecretEnc(new SecretCipherService(new ConfigService()).encrypt('shh'))
     .build()
-  await em.fork().persistAndFlush(app)
+  await db.insert(githubAppTable).values(app)
 }
 
 // The mock GitHub client always resolves the same identity (id 1), so every
@@ -37,12 +38,10 @@ async function login(httpServer: Server): Promise<void> {
 
 describe('first login bootstraps the Operator (e2e)', () => {
   let setup: TestSetup
-  let em: EntityManager
 
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
-    em = setup.testModule.get(EntityManager)
-    await provisionApp(em)
+    await provisionApp(setup.db)
   })
 
   after(() => setup.teardown())
@@ -50,27 +49,25 @@ describe('first login bootstraps the Operator (e2e)', () => {
   it('assigns Operator to the first user', async () => {
     await login(setup.httpServer)
 
-    const user = await em.fork().findOneOrFail(User, { githubUserId: '1' })
-    expect(user.role).toBe(UserRole.Operator)
+    const user = await setup.db.query.userTable.findFirst({ where: { githubUserId: '1' } })
+    expect(user?.role).toBe(UserRole.Operator)
   })
 
   it('does not demote the user on re-login', async () => {
     await login(setup.httpServer)
 
-    const user = await em.fork().findOneOrFail(User, { githubUserId: '1' })
-    expect(user.role).toBe(UserRole.Operator)
+    const user = await setup.db.query.userTable.findFirst({ where: { githubUserId: '1' } })
+    expect(user?.role).toBe(UserRole.Operator)
   })
 })
 
 describe('a later user becomes a Member (e2e)', () => {
   let setup: TestSetup
-  let em: EntityManager
 
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
-    em = setup.testModule.get(EntityManager)
-    await provisionApp(em)
-    await em.fork().persistAndFlush(new UserBuilder().withGithubUserId('999').build())
+    await provisionApp(setup.db)
+    await setup.db.insert(userTable).values(new UserBuilder().withGithubUserId('999').build())
   })
 
   after(() => setup.teardown())
@@ -78,7 +75,7 @@ describe('a later user becomes a Member (e2e)', () => {
   it('assigns Member when a user already exists', async () => {
     await login(setup.httpServer)
 
-    const user = await em.fork().findOneOrFail(User, { githubUserId: '1' })
-    expect(user.role).toBe(UserRole.Member)
+    const user = await setup.db.query.userTable.findFirst({ where: { githubUserId: '1' } })
+    expect(user?.role).toBe(UserRole.Member)
   })
 })

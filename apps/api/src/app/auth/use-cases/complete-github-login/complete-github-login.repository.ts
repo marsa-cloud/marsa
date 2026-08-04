@@ -1,47 +1,56 @@
-import type { EntityRepository } from '@mikro-orm/core'
-import { InjectRepository } from '@mikro-orm/nestjs'
 import { Injectable } from '@nestjs/common'
-import { OAuthState } from '#src/app/auth/entities/oauth-state.entity.js'
+import { and, eq, gt, sql } from 'drizzle-orm'
+import { oauthStateTable } from '#src/app/auth/entities/oauth-state.table.js'
 import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
-import { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
-import { UserBuilder } from '#src/app/user/entities/user.builder.js'
-import { User } from '#src/app/user/entities/user.entity.js'
-import { UserRole } from '#src/app/user/enums/user-role.enum.js'
+import { type GitHubApp } from '#src/app/github-app/entities/github-app.table.js'
+import { type User, userTable } from '#src/app/user/entities/user.table.js'
+import type { Database, Executor } from '#src/modules/database/drizzle.factory.js'
+import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
+
+const USER_BOOTSTRAP_LOCK_KEY = 49170001
 
 @Injectable()
 export class CompleteGithubLoginRepository {
-  constructor(
-    @InjectRepository(GitHubApp) private readonly apps: EntityRepository<GitHubApp>,
-    @InjectRepository(OAuthState) private readonly states: EntityRepository<OAuthState>,
-    @InjectRepository(User) private readonly users: EntityRepository<User>,
-  ) {}
+  constructor(@InjectDatabase() private readonly db: Database) {}
 
   async loadProvisionedApp(): Promise<GitHubApp | null> {
-    const [app] = await this.apps.find({}, { orderBy: { createdAt: 'DESC' }, limit: 1 })
+    const app = await this.db.query.githubAppTable.findFirst({
+      orderBy: { createdAt: 'desc' },
+    })
     return app ?? null
   }
 
-  async consumeState(state: OAuthStateUuid): Promise<boolean> {
-    const deleted = await this.states.nativeDelete({ uuid: state, expiresAt: { $gt: new Date() } })
-    return deleted === 1
+  /**
+   * Without this two concurrent first logins can both read a user count of zero
+   * and both claim Operator; the lock releases when the transaction ends.
+   */
+  async lockUserBootstrap(tx: Executor): Promise<void> {
+    await tx.execute(sql`select pg_advisory_xact_lock(${USER_BOOTSTRAP_LOCK_KEY})`)
   }
 
-  async countUsers(): Promise<number> {
-    return this.users.count()
+  async consumeState(tx: Executor, state: OAuthStateUuid): Promise<boolean> {
+    const consumed = await tx
+      .delete(oauthStateTable)
+      .where(and(eq(oauthStateTable.uuid, state), gt(oauthStateTable.expiresAt, new Date())))
+      .returning()
+    return consumed.length === 1
   }
 
-  async upsertUser(githubUserId: string, githubLogin: string, role: UserRole): Promise<User> {
-    const user = new UserBuilder()
-      .withGithubUserId(githubUserId)
-      .withGithubLogin(githubLogin)
-      .withRole(role)
-      .build()
+  async countUsers(tx: Executor): Promise<number> {
+    const [{ count }] = await tx.select({ count: sql<number>`count(*)::int` }).from(userTable)
+    return count
+  }
 
-    // role/createdAt are insert-only — excluding them on conflict stops a
-    // returning user from being demoted to the role computed for this login.
-    return this.users.upsert(user, {
-      onConflictFields: ['githubUserId'],
-      onConflictExcludeFields: ['uuid', 'role', 'createdAt'],
-    })
+  /** role/createdAt are insert-only, so a returning user keeps the role they were given. */
+  async upsertUser(tx: Executor, user: User): Promise<User> {
+    const [upserted] = await tx
+      .insert(userTable)
+      .values(user)
+      .onConflictDoUpdate({
+        target: userTable.githubUserId,
+        set: { githubLogin: user.githubLogin, updatedAt: user.updatedAt },
+      })
+      .returning()
+    return upserted
   }
 }

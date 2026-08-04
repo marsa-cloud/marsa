@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common'
-import type { Release } from '#src/app/release/entities/release.entity.js'
+import type { Release } from '#src/app/release/entities/release.table.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { ViewReleaseIndexRepository } from '#src/app/release/use-cases/view-release-index/view-release-index.repository.js'
 import { ViewReleaseIndexResponse } from '#src/app/release/use-cases/view-release-index/view-release-index.response.js'

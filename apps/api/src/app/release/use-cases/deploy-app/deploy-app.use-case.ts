@@ -1,4 +1,3 @@
-import { EntityManager } from '@mikro-orm/postgresql'
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
@@ -10,17 +9,19 @@ import { DeployAppCommand } from '#src/app/release/use-cases/deploy-app/deploy-a
 import { DeployAppRepository } from '#src/app/release/use-cases/deploy-app/deploy-app.repository.js'
 import { DeployAppResponse } from '#src/app/release/use-cases/deploy-app/deploy-app.response.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
+import type { Database } from '#src/modules/database/drizzle.factory.js'
+import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 import { OPERATOR_APPS_NAMESPACE } from '#src/modules/kubernetes/deploy-backend.constants.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
 
 @Injectable()
 export class DeployAppUseCase {
   constructor(
+    @InjectDatabase() private readonly db: Database,
     private readonly repository: DeployAppRepository,
     private readonly deployBackend: DeployBackend,
     private readonly config: ConfigService,
     private readonly cipher: SecretCipherService,
-    private readonly em: EntityManager,
   ) {}
 
   async execute(command: DeployAppCommand): Promise<DeployAppResponse> {
@@ -46,9 +47,9 @@ export class DeployAppUseCase {
       .withDeployStatus(DeployStatus.Pending)
       .build()
 
-    await this.em.transactional(async () => {
-      await this.repository.upsertApp(app)
-      await this.repository.createRelease(release)
+    await this.db.transaction(async (tx) => {
+      const appUuid = await this.repository.upsertApp(tx, app)
+      await this.repository.createRelease(tx, { ...release, appUuid })
     })
 
     try {

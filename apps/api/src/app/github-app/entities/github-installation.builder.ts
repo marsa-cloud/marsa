@@ -1,14 +1,21 @@
-import type { Ref } from '@mikro-orm/core'
-import type { GitHubApp } from '#src/app/github-app/entities/github-app.entity.js'
-import { GitHubInstallation } from '#src/app/github-app/entities/github-installation.entity.js'
+import type { GitHubAppUuid } from '#src/app/github-app/entities/github-app.uuid.js'
+import type { GitHubInstallation } from '#src/app/github-app/entities/github-installation.table.js'
+import type { GitHubInstallationUuid } from '#src/app/github-app/entities/github-installation.uuid.js'
+import { generateUuid } from '#src/utils/uuid.js'
 
 export class GitHubInstallationBuilder {
   private readonly installation: GitHubInstallation
 
   constructor() {
-    this.installation = new GitHubInstallation()
-    this.installation.installationId = '1'
-    this.installation.accountLogin = null
+    const now = new Date()
+    this.installation = {
+      uuid: generateUuid<GitHubInstallationUuid>(),
+      installationId: '1',
+      accountLogin: null,
+      appUuid: generateUuid<GitHubAppUuid>(),
+      createdAt: now,
+      updatedAt: now,
+    }
   }
 
   withInstallationId(installationId: string): this {
@@ -21,8 +28,8 @@ export class GitHubInstallationBuilder {
     return this
   }
 
-  withApp(app: Ref<GitHubApp>): this {
-    this.installation.app = app
+  withAppUuid(appUuid: GitHubAppUuid): this {
+    this.installation.appUuid = appUuid
     return this
   }
 

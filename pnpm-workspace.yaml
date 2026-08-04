@@ -28,13 +28,6 @@ catalog:
   typescript-eslint: ^8.20.0
   globals: ^17.0.0
 
-  # MikroORM (api)
-  '@mikro-orm/core': ^6.0.0
-  '@mikro-orm/postgresql': ^6.0.0
-  '@mikro-orm/nestjs': ^6.0.0
-  '@mikro-orm/migrations': ^6.0.0
-  '@mikro-orm/cli': ^6.0.0
-
   # NestJS (api)
   '@nestjs/common': ^11.0.1
   '@nestjs/core': ^11.0.1
@@ -50,6 +43,7 @@ catalog:
   reflect-metadata: ^0.2.2
   rxjs: ^7.8.1
   dayjs: ^1.11.13
+  uuid: ^14.0.1
 
   # GitHub integration (api)
   '@octokit/auth-app': ^8.2.0

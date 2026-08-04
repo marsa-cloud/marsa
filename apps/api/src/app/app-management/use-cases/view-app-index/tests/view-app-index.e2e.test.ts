@@ -2,6 +2,7 @@ import { after, before, describe, it } from 'node:test'
 import { expect } from 'expect'
 import request from 'supertest'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
+import { appTable } from '#src/app/app-management/entities/app.table.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -16,13 +17,12 @@ describe('GET /api/v1/apps (e2e)', () => {
     setup = await TestBench.setupEndToEndTest()
     sessionCookie = await setup.authenticate()
 
-    // Seed straight through the EM — the only HTTP call under test is the GET
+    // Seed straight through Drizzle — the only HTTP call under test is the GET
     // below, so the fixtures are built with the entity builder, not by driving
     // the deploy endpoint.
-    const em = setup.orm.em.fork()
     const appA = new AppBuilder().withSlug(SLUG_A).withImage('nginx:1.27').build()
     const appB = new AppBuilder().withSlug(SLUG_B).withImage('nginx:1.27').build()
-    await em.persistAndFlush([appA, appB])
+    await setup.db.insert(appTable).values([appA, appB])
   })
 
   after(async () => {

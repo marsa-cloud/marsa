@@ -1,24 +1,30 @@
-import { ref } from '@mikro-orm/core'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
-import type { App } from '#src/app/app-management/entities/app.entity.js'
-import { Release } from '#src/app/release/entities/release.entity.js'
+import type { App } from '#src/app/app-management/entities/app.table.js'
+import type { Release } from '#src/app/release/entities/release.table.js'
+import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/release/enums/release-trigger.enum.js'
+import { generateUuid } from '#src/utils/uuid.js'
 
 /** Fluent builder for {@link Release}; constructor seeds valid defaults so `new ReleaseBuilder().build()` is always usable. */
 export class ReleaseBuilder {
   private readonly release: Release
 
   constructor() {
-    this.release = new Release()
-    this.release.app = ref(new AppBuilder().build())
-    this.release.imageRef = 'nginx:1.27'
-    this.release.triggeredBy = ReleaseTrigger.Manual
-    this.release.deployStatus = DeployStatus.Pending
+    const now = new Date()
+    this.release = {
+      uuid: generateUuid<ReleaseUuid>(),
+      appUuid: new AppBuilder().build().uuid,
+      imageRef: 'nginx:1.27',
+      triggeredBy: ReleaseTrigger.Manual,
+      deployStatus: DeployStatus.Pending,
+      createdAt: now,
+      updatedAt: now,
+    }
   }
 
   withApp(app: App): this {
-    this.release.app = ref(app)
+    this.release.appUuid = app.uuid
     return this
   }
 
