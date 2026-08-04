@@ -10,6 +10,9 @@ const s = vi.hoisted(() => ({
   health: { data: null as unknown, status: 'success', error: null as unknown },
   releases: { data: { releases: [] } as unknown, status: 'success', error: null as unknown },
   logs: { data: { podName: null, logs: '' } as unknown, status: 'success', error: null as unknown },
+  refreshHealth: vi.fn(),
+  refreshReleases: vi.fn(),
+  redeploy: vi.fn(),
 }))
 
 mockNuxtImport('useRoute', () => () => ({ params: { slug: 'my-app' } }))
@@ -17,12 +20,15 @@ mockNuxtImport('useAppHealth', () => () => ({
   data: ref(s.health.data),
   status: ref(s.health.status),
   error: ref(s.health.error),
+  refresh: s.refreshHealth,
 }))
 mockNuxtImport('useAppReleases', () => () => ({
   data: ref(s.releases.data),
   status: ref(s.releases.status),
   error: ref(s.releases.error),
+  refresh: s.refreshReleases,
 }))
+mockNuxtImport('useRedeployApp', () => () => ({ redeploy: s.redeploy }))
 mockNuxtImport('useAppRunLogs', () => () => ({
   data: ref(s.logs.data),
   status: ref(s.logs.status),
@@ -33,7 +39,22 @@ beforeEach(() => {
   s.health = { data: null, status: 'success', error: null }
   s.releases = { data: { releases: [] }, status: 'success', error: null }
   s.logs = { data: { podName: null, logs: '' }, status: 'success', error: null }
+  s.refreshHealth = vi.fn()
+  s.refreshReleases = vi.fn()
+  s.redeploy = vi.fn().mockResolvedValue({
+    appSlug: 'my-app',
+    url: 'https://my-app.marsa.cc',
+    releaseUuid: 'r-new',
+    deployStatus: 'pending',
+  })
 })
+
+const clickRedeploy = async (wrapper: { findAll: (s: string) => { text: () => string, trigger: (e: string) => Promise<void> }[] }) => {
+  const button = wrapper.findAll('button').find(b => b.text().includes('Redeploy'))
+  if (!button) throw new Error('Redeploy button not found')
+  await button.trigger('click')
+  await new Promise(resolve => setTimeout(resolve, 0))
+}
 
 const aRelease = (over = {}) => ({
   uuid: 'r1',
@@ -108,5 +129,27 @@ describe('apps/[slug] detail page', () => {
     s.health.data = null
     const wrapper = await mountSuspended(Detail)
     expect(wrapper.text()).toContain('No health data yet.')
+  })
+
+  it('redeploys the app and refreshes releases + health', async () => {
+    const wrapper = await mountSuspended(Detail)
+
+    await clickRedeploy(wrapper)
+
+    expect(s.redeploy).toHaveBeenCalledWith('my-app')
+    expect(s.refreshReleases).toHaveBeenCalled()
+    expect(s.refreshHealth).toHaveBeenCalled()
+    expect(wrapper.text()).toContain('Redeploy started')
+  })
+
+  it('surfaces the API message and skips the refresh when redeploy fails', async () => {
+    s.redeploy = vi.fn().mockRejectedValue({ data: { message: 'No app with that slug.' } })
+    const wrapper = await mountSuspended(Detail)
+
+    await clickRedeploy(wrapper)
+
+    expect(wrapper.text()).toContain('Redeploy failed')
+    expect(wrapper.text()).toContain('No app with that slug.')
+    expect(s.refreshReleases).not.toHaveBeenCalled()
   })
 })

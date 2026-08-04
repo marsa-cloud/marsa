@@ -3,6 +3,7 @@ import { expect } from 'expect'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { renderManifests } from '#src/app/release/render/render-manifests.js'
+import { RELEASE_UUID_ANNOTATION } from '#src/modules/kubernetes/deploy-backend.constants.js'
 import type { RegistryCredentials } from '#src/modules/kubernetes/deploy-backend.types.js'
 
 describe('renderManifests', () => {
@@ -31,6 +32,25 @@ describe('renderManifests', () => {
     expect(container?.env).toEqual([{ name: 'LOG_LEVEL', value: 'info' }])
     expect(container?.readinessProbe?.tcpSocket?.port).toBe(8080)
     expect(container?.livenessProbe?.tcpSocket?.port).toBe(8080)
+  })
+
+  it('stamps the release uuid on the pod template so every deploy rolls new pods', () => {
+    const app = new AppBuilder().withSlug('my-app').withImage('nginx:1.27').build()
+    const release = new ReleaseBuilder().withApp(app).withImageRef('nginx:1.27').build()
+
+    const { deployment } = renderManifests(app, release, 'demo.marsa.cc')
+
+    expect(deployment.spec?.template.metadata?.annotations).toEqual({
+      [RELEASE_UUID_ANNOTATION]: release.uuid,
+    })
+
+    // Same app + image, different release => a different pod template, so k8s
+    // replaces the pods instead of treating the apply as a no-op.
+    const next = new ReleaseBuilder().withApp(app).withImageRef('nginx:1.27').build()
+    const { deployment: nextDeployment } = renderManifests(app, next, 'demo.marsa.cc')
+    expect(nextDeployment.spec?.template.metadata?.annotations).not.toEqual(
+      deployment.spec?.template.metadata?.annotations,
+    )
   })
 
   it('renders a ClusterIP Service selecting the app', () => {

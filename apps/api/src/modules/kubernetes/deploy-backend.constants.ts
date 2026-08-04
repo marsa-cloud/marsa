@@ -15,6 +15,17 @@ export const OPERATOR_APPS_NAMESPACE = 'marsa-apps'
  */
 export const REGISTRY_SECRET_SUFFIX = '-registry'
 
+/**
+ * Pod-template annotation carrying the Release a rollout belongs to.
+ *
+ * Load-bearing, not informational: Kubernetes only replaces pods when the pod
+ * template changes. A redeploy of an unchanged image ref would otherwise be a
+ * no-op, and the fresh Release would immediately reconcile against the *previous*
+ * rollout and report `succeeded`. Stamping the release uuid makes every deploy
+ * change the template hash, so mutable tags (`:latest`) actually re-pull.
+ */
+export const RELEASE_UUID_ANNOTATION = 'marsa.cloud/release-uuid'
+
 /** Traefik `IngressRoute` CRD coordinates, for applying it via `CustomObjectsApi`. */
 export const TRAEFIK_GROUP = 'traefik.io'
 export const TRAEFIK_VERSION = 'v1alpha1'

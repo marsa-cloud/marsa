@@ -229,6 +229,42 @@
         ]
       }
     },
+    "/api/v1/apps/{slug}/redeploy": {
+      "post": {
+        "operationId": "redeployAppV1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeployAppResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "404": {
+            "description": "No app with that slug."
+          }
+        },
+        "tags": [
+          "releases"
+        ]
+      }
+    },
     "/api/v1/apps/{slug}/releases": {
       "get": {
         "operationId": "viewReleaseIndexV1",
@@ -768,6 +804,37 @@
             "type": "string",
             "example": "00000000-0000-0000-0000-000000000000",
             "description": "The Release created for this deploy."
+          },
+          "deployStatus": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeployStatus"
+              }
+            ]
+          }
+        },
+        "required": [
+          "appSlug",
+          "url",
+          "releaseUuid",
+          "deployStatus"
+        ]
+      },
+      "RedeployAppResponse": {
+        "type": "object",
+        "properties": {
+          "appSlug": {
+            "type": "string",
+            "example": "my-app"
+          },
+          "url": {
+            "type": "string",
+            "example": "https://my-app.demo.marsa.cc"
+          },
+          "releaseUuid": {
+            "type": "string",
+            "example": "00000000-0000-0000-0000-000000000000",
+            "description": "The Release created for this redeploy."
           },
           "deployStatus": {
             "allOf": [

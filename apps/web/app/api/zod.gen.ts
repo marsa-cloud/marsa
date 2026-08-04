@@ -99,6 +99,13 @@ export const zDeployAppResponse = z.object({
   deployStatus: zDeployStatus,
 })
 
+export const zRedeployAppResponse = z.object({
+  appSlug: z.string(),
+  url: z.string(),
+  releaseUuid: z.string(),
+  deployStatus: zDeployStatus,
+})
+
 export const zReleaseTrigger = z.enum(['manual', 'webhook'])
 
 export const zReleaseSummary = z.object({
@@ -180,6 +187,12 @@ export const zViewMeV1Response = zViewMeResponse
 export const zDeployAppV1Body = zDeployAppCommandWritable
 
 export const zDeployAppV1Response = zDeployAppResponse
+
+export const zRedeployAppV1Path = z.object({
+  slug: z.string(),
+})
+
+export const zRedeployAppV1Response = zRedeployAppResponse
 
 export const zViewReleaseIndexV1Path = z.object({
   slug: z.string(),

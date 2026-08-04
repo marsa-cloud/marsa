@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
+import { ApplyReleaseService } from '#src/app/release/services/apply-release/apply-release.service.js'
 import { DeployAppCommandBuilder } from '#src/app/release/use-cases/deploy-app/deploy-app.command.builder.js'
 import { DeployAppRepository } from '#src/app/release/use-cases/deploy-app/deploy-app.repository.js'
 import { DeployAppUseCase } from '#src/app/release/use-cases/deploy-app/deploy-app.use-case.js'
@@ -26,7 +27,11 @@ function build() {
 
   const cipher = createStubInstance(SecretCipherService)
 
-  const usecase = new DeployAppUseCase(stubDatabase(), repository, deployBackend, config, cipher)
+  // Real ApplyReleaseService over the stubbed backend: rendering is the
+  // behaviour under test here, so only the cluster call is faked.
+  const applyRelease = new ApplyReleaseService(deployBackend, config)
+
+  const usecase = new DeployAppUseCase(stubDatabase(), repository, applyRelease, cipher)
   return { usecase, repository, deployBackend, cipher }
 }
 

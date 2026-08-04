@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { AppHealthStatus, DeployStatus } from '~/api/types.gen'
 
-// useAppReleases / useAppHealth / useAppRunLogs are Nuxt auto-imports
+// useAppReleases / useAppHealth / useAppRunLogs / useRedeployApp / extractApiError
+// are Nuxt auto-imports
 // (app/composables/*) — left un-imported so tests can mock them via
 // mockNuxtImport, matching the deploy-form page convention.
 
@@ -15,11 +16,32 @@ const slug = computed(() => String(route.params.slug))
 
 useSeoMeta({ title: () => `${slug.value} — Marsa` })
 
-const { data: health, status: healthStatus, error: healthError } = useAppHealth(slug.value)
-const { data: releasesData, status: releasesStatus, error: releasesError } = useAppReleases(slug.value)
+const { data: health, status: healthStatus, error: healthError, refresh: refreshHealth } = useAppHealth(slug.value)
+const { data: releasesData, status: releasesStatus, error: releasesError, refresh: refreshReleases } = useAppReleases(slug.value)
 const { data: logsData, status: logsStatus, error: logsError } = useAppRunLogs(slug.value)
 
 const releases = computed(() => releasesData.value?.releases ?? [])
+
+const { redeploy } = useRedeployApp()
+
+const redeploying = ref(false)
+const redeployError = ref<string | null>(null)
+const redeployed = ref(false)
+
+async function onRedeploy() {
+  redeployError.value = null
+  redeployed.value = false
+  redeploying.value = true
+  try {
+    await redeploy(slug.value)
+    redeployed.value = true
+    await Promise.all([refreshReleases(), refreshHealth()])
+  } catch (err) {
+    redeployError.value = extractApiError(err)
+  } finally {
+    redeploying.value = false
+  }
+}
 
 type BadgeColor = 'neutral' | 'info' | 'success' | 'warning' | 'error'
 
@@ -59,11 +81,43 @@ function formatTime(iso: string) {
             aria-label="Back to apps"
           />
         </template>
+
+        <template #right>
+          <UButton
+            icon="i-lucide-rotate-cw"
+            color="neutral"
+            variant="subtle"
+            :loading="redeploying"
+            :disabled="redeploying"
+            @click="onRedeploy"
+          >
+            Redeploy
+          </UButton>
+        </template>
       </UDashboardNavbar>
     </template>
 
     <template #body>
       <div class="flex flex-col gap-6 max-w-4xl">
+        <!-- aria-live so the outcome is announced even though the button that
+             triggered it sits in the navbar, outside this region. -->
+        <div aria-live="polite">
+          <UAlert
+            v-if="redeployError"
+            color="error"
+            icon="i-lucide-triangle-alert"
+            title="Redeploy failed"
+            :description="redeployError"
+          />
+          <UAlert
+            v-else-if="redeployed"
+            color="success"
+            icon="i-lucide-check"
+            title="Redeploy started"
+            description="A new release is rolling out. Watch its status in the release history below."
+          />
+        </div>
+
         <!-- Health -->
         <UCard>
           <template #header>

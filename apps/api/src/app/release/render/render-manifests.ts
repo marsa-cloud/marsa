@@ -1,7 +1,10 @@
 import type { V1Deployment, V1Secret, V1Service } from '@kubernetes/client-node'
 import type { App } from '#src/app/app-management/entities/app.table.js'
 import type { Release } from '#src/app/release/entities/release.table.js'
-import { REGISTRY_SECRET_SUFFIX } from '#src/modules/kubernetes/deploy-backend.constants.js'
+import {
+  REGISTRY_SECRET_SUFFIX,
+  RELEASE_UUID_ANNOTATION,
+} from '#src/modules/kubernetes/deploy-backend.constants.js'
 import type {
   IngressRoute,
   RegistryCredentials,
@@ -47,7 +50,7 @@ export function renderManifests(
       replicas: app.replicas,
       selector: { matchLabels: labels },
       template: {
-        metadata: { labels },
+        metadata: { labels, annotations: { [RELEASE_UUID_ANNOTATION]: release.uuid } },
         spec: {
           ...(imagePullSecret?.metadata?.name
             ? { imagePullSecrets: [{ name: imagePullSecret.metadata.name }] }
