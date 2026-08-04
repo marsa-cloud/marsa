@@ -163,7 +163,7 @@ git commit -m "refactor: extract 404-tolerant delete helper for kubernetes teard
 **Interfaces:**
 
 - Consumes: `ignoreNotFound` from Task 1
-- Produces: `DeployBackend.destroy(namespace: string, appName: string): Promise<void>` — used by Task 4's use-case. `REGISTRY_SECRET_SUFFIX` (existing, `'-registry'`) forms the pull-secret name `` `${appName}${REGISTRY_SECRET_SUFFIX}` ``.
+- Produces: `DeployBackend.destroy(namespace: string, appName: string): Promise<void>` — used by Task 3's use-case. `REGISTRY_SECRET_SUFFIX` (existing, `'-registry'`) forms the pull-secret name `` `${appName}${REGISTRY_SECRET_SUFFIX}` ``.
 
 - [ ] **Step 1: Add the abstract method to the port**
 
