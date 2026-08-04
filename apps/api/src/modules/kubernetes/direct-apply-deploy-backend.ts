@@ -12,6 +12,7 @@ import { Injectable } from '@nestjs/common'
 import {
   DEPLOY_FIELD_MANAGER,
   INGRESS_ROUTE_PLURAL,
+  REGISTRY_SECRET_SUFFIX,
   TRAEFIK_GROUP,
   TRAEFIK_VERSION,
 } from '#src/modules/kubernetes/deploy-backend.constants.js'
@@ -26,7 +27,7 @@ import type {
 import { extractDeployFailure } from '#src/modules/kubernetes/extract-deploy-failure.js'
 import { mapRolloutStatus } from '#src/modules/kubernetes/map-rollout-status.js'
 import { newestPod } from '#src/modules/kubernetes/newest-pod.js'
-import { isNotFound } from '#src/modules/kubernetes/not-found.js'
+import { ignoreNotFound, isNotFound } from '#src/modules/kubernetes/not-found.js'
 import { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
 
 function requireName(object: { metadata?: { name?: string } }, kind: string): string {
@@ -105,6 +106,32 @@ export class DirectApplyDeployBackend extends DeployBackend {
         force: true,
       },
       ssa,
+    )
+  }
+
+  async destroy(namespace: string, appName: string): Promise<void> {
+    // IngressRoute first so routing stops before the pods it points at go away.
+    await ignoreNotFound(() =>
+      this.custom.deleteNamespacedCustomObject({
+        group: TRAEFIK_GROUP,
+        version: TRAEFIK_VERSION,
+        namespace,
+        plural: INGRESS_ROUTE_PLURAL,
+        name: appName,
+      }),
+    )
+
+    await ignoreNotFound(() => this.apps.deleteNamespacedDeployment({ name: appName, namespace }))
+
+    await ignoreNotFound(() => this.core.deleteNamespacedService({ name: appName, namespace }))
+
+    // Attempted unconditionally — the app row does not record whether a pull
+    // secret was rendered, so a 404 here is the normal case.
+    await ignoreNotFound(() =>
+      this.core.deleteNamespacedSecret({
+        name: `${appName}${REGISTRY_SECRET_SUFFIX}`,
+        namespace,
+      }),
     )
   }
 
