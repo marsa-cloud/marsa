@@ -11,7 +11,8 @@
         "stripLeadingPaths": false
       }
     },
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "assets": [{ "include": "sql/drizzle/**/*.sql", "outDir": "dist/src" }]
   },
   "projects": {
     "api": {

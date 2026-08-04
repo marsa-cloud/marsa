@@ -45,16 +45,36 @@ echo "== stage: seed session cookie =="
 # Retried: right after rollout, `kubectl exec` into the api pod can hit a
 # transient containerd "failed to load task: context deadline exceeded".
 cookie=""
+seed_rc=0
+seed_out="$(mktemp)"
+trap 'rm -f "$seed_out"' EXIT
 for attempt in $(seq 1 10); do
   api_pod="$(kubectl -n "$NS" get pod -l app=marsa-api -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
   if [ -n "$api_pod" ]; then
-    cookie="$(kubectl -n "$NS" exec "$api_pod" -- node dist/src/entrypoints/seed-dev.js --user-only 2>/dev/null | grep -oE 'marsa_session=[^[:space:]]+' || true)"
+    seed_rc=0
+    kubectl -n "$NS" exec "$api_pod" -- node dist/src/entrypoints/seed-dev.js --user-only >"$seed_out" 2>&1 || seed_rc=$?
+    cookie="$(grep -oE 'marsa_session=[^[:space:]]+' "$seed_out" || true)"
     [ -n "$cookie" ] && break
   fi
   echo "  attempt ${attempt}: session cookie not ready"
   sleep 3
 done
-[ -n "$cookie" ] || fail seed "seed-dev.js did not print a session cookie after retries"
+if [ -z "$cookie" ]; then
+  echo "--- last seed-dev output ---" >&2
+  cat "$seed_out" >&2
+  echo "--- marsa-api pod state ---" >&2
+  kubectl -n "$NS" get pod -l app=marsa-api -o wide >&2 2>/dev/null || true
+  kubectl -n "$NS" logs -l app=marsa-api --tail=50 --all-containers >&2 2>/dev/null || true
+  fail seed "seed-dev.js did not print a session cookie after retries"
+fi
+# seed-dev prints the cookie as the last statement of its `try`, then closes the
+# Nest context in a `finally`. So a cookie plus a non-zero exit means the seed
+# itself succeeded and only teardown failed — the cookie is still valid. Warn
+# rather than fail, which would reintroduce the flakiness #173 set out to remove.
+if [ "$seed_rc" -ne 0 ]; then
+  echo "  warning: seed-dev exited ${seed_rc} after printing the cookie" >&2
+  cat "$seed_out" >&2
+fi
 
 echo "== stage: deploy app via API =="
 deploy_status=""
