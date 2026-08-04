@@ -24,6 +24,7 @@ export type ManifestDto = {
   url: string
   hook_attributes: HookAttributesDto
   redirect_url: string
+  setup_url: string
   callback_urls: Array<string>
   public: boolean
   request_oauth_on_install: boolean
