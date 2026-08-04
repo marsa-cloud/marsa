@@ -2,9 +2,10 @@ import { after, before, describe, it } from 'node:test'
 import { eq } from 'drizzle-orm'
 import { expect } from 'expect'
 import request from 'supertest'
+import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
+import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
-import { DeployAppCommandBuilder } from '#src/app/release/use-cases/deploy-app/deploy-app.command.builder.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -24,11 +25,9 @@ describe('DELETE /api/v1/apps/:slug (e2e)', () => {
   })
 
   it('removes the app and its releases', async () => {
-    await request(setup.httpServer)
-      .post('/api/v1/deploy')
-      .set('Cookie', sessionCookie)
-      .send(new DeployAppCommandBuilder().withSlug(SLUG).build())
-      .expect(200)
+    const app = new AppBuilder().withSlug(SLUG).build()
+    await setup.db.insert(appTable).values(app)
+    await setup.db.insert(releaseTable).values(new ReleaseBuilder().withApp(app).build())
 
     await request(setup.httpServer)
       .delete(`/api/v1/apps/${SLUG}`)
