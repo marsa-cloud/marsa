@@ -1,6 +1,7 @@
+import { flushPromises } from '@vue/test-utils'
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 
 import Detail from '../[slug].vue'
 
@@ -29,10 +30,19 @@ mockNuxtImport('useAppRunLogs', () => () => ({
   error: ref(s.logs.error),
 }))
 
+const del = vi.hoisted(() => ({ remove: vi.fn() }))
+const nav = vi.hoisted(() => vi.fn())
+
+mockNuxtImport('useDeleteApp', () => () => ({ remove: del.remove }))
+mockNuxtImport('navigateTo', () => nav)
+
 beforeEach(() => {
   s.health = { data: null, status: 'success', error: null }
   s.releases = { data: { releases: [] }, status: 'success', error: null }
   s.logs = { data: { podName: null, logs: '' }, status: 'success', error: null }
+  del.remove.mockReset()
+  del.remove.mockResolvedValue(undefined)
+  nav.mockReset()
 })
 
 const aRelease = (over = {}) => ({
@@ -108,5 +118,51 @@ describe('apps/[slug] detail page', () => {
     s.health.data = null
     const wrapper = await mountSuspended(Detail)
     expect(wrapper.text()).toContain('No health data yet.')
+  })
+
+  it('shows a danger zone with a delete button', async () => {
+    const wrapper = await mountSuspended(Detail)
+    expect(wrapper.text()).toContain('Danger zone')
+    expect(wrapper.text()).toContain('Delete app')
+  })
+
+  it('keeps confirmation disabled until the typed slug matches, then deletes and navigates away', async () => {
+    const wrapper = await mountSuspended(Detail, { attachTo: document.body })
+
+    await wrapper.find('[data-testid="delete-app"]').trigger('click')
+    await nextTick()
+
+    const confirm = () => document.querySelector('[data-testid="confirm-delete"]') as HTMLButtonElement
+    expect(confirm().disabled).toBe(true)
+
+    const input = document.querySelector('[data-testid="confirm-slug"]') as HTMLInputElement
+    input.value = 'my-app'
+    input.dispatchEvent(new Event('input'))
+    await nextTick()
+
+    expect(confirm().disabled).toBe(false)
+    confirm().click()
+    await flushPromises()
+
+    expect(del.remove).toHaveBeenCalledWith('my-app')
+    expect(nav).toHaveBeenCalledWith('/apps')
+  })
+
+  it('surfaces the API error and stays on the page when deletion fails', async () => {
+    del.remove.mockRejectedValueOnce({ data: { message: 'Could not remove it.' } })
+    const wrapper = await mountSuspended(Detail, { attachTo: document.body })
+
+    await wrapper.find('[data-testid="delete-app"]').trigger('click')
+    await nextTick()
+
+    const input = document.querySelector('[data-testid="confirm-slug"]') as HTMLInputElement
+    input.value = 'my-app'
+    input.dispatchEvent(new Event('input'))
+    await nextTick()
+    ;(document.querySelector('[data-testid="confirm-delete"]') as HTMLButtonElement).click()
+    await flushPromises()
+
+    expect(document.body.textContent).toContain('Could not remove it.')
+    expect(nav).not.toHaveBeenCalled()
   })
 })
