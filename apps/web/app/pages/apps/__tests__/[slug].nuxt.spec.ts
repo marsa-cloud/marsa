@@ -32,9 +32,11 @@ mockNuxtImport('useAppRunLogs', () => () => ({
 
 const del = vi.hoisted(() => ({ remove: vi.fn() }))
 const nav = vi.hoisted(() => vi.fn())
+const toastAdd = vi.hoisted(() => vi.fn())
 
 mockNuxtImport('useDeleteApp', () => () => ({ remove: del.remove }))
 mockNuxtImport('navigateTo', () => nav)
+mockNuxtImport('useToast', () => () => ({ add: toastAdd }))
 
 beforeEach(() => {
   s.health = { data: null, status: 'success', error: null }
@@ -43,6 +45,7 @@ beforeEach(() => {
   del.remove.mockReset()
   del.remove.mockResolvedValue(undefined)
   nav.mockReset()
+  toastAdd.mockReset()
 })
 
 const aRelease = (over = {}) => ({
@@ -148,6 +151,41 @@ describe('apps/[slug] detail page', () => {
     expect(nav).toHaveBeenCalledWith('/apps')
   })
 
+  it('confirms the deletion with a toast, since the page navigates away', async () => {
+    const wrapper = await mountSuspended(Detail, { attachTo: document.body })
+
+    await wrapper.find('[data-testid="delete-app"]').trigger('click')
+    await nextTick()
+
+    const input = document.querySelector('[data-testid="confirm-slug"]') as HTMLInputElement
+    input.value = 'my-app'
+    input.dispatchEvent(new Event('input'))
+    await nextTick()
+    ;(document.querySelector('[data-testid="confirm-delete"]') as HTMLButtonElement).click()
+    await flushPromises()
+
+    expect(toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'my-app deleted', color: 'success' }),
+    )
+  })
+
+  it('does not delete when the typed slug does not match', async () => {
+    const wrapper = await mountSuspended(Detail, { attachTo: document.body })
+
+    await wrapper.find('[data-testid="delete-app"]').trigger('click')
+    await nextTick()
+
+    const input = document.querySelector('[data-testid="confirm-slug"]') as HTMLInputElement
+    input.value = 'wrong-name'
+    input.dispatchEvent(new Event('input'))
+    await nextTick()
+    ;(document.querySelector('[data-testid="confirm-delete"]') as HTMLButtonElement).click()
+    await flushPromises()
+
+    expect(del.remove).not.toHaveBeenCalled()
+    expect(nav).not.toHaveBeenCalled()
+  })
+
   it('surfaces the API error and stays on the page when deletion fails', async () => {
     del.remove.mockRejectedValueOnce({ data: { message: 'Could not remove it.' } })
     const wrapper = await mountSuspended(Detail, { attachTo: document.body })
@@ -164,5 +202,8 @@ describe('apps/[slug] detail page', () => {
 
     expect(document.body.textContent).toContain('Could not remove it.')
     expect(nav).not.toHaveBeenCalled()
+    // The error belongs next to the retry button, not in a toast the user has
+    // to look away for.
+    expect(toastAdd).not.toHaveBeenCalled()
   })
 })

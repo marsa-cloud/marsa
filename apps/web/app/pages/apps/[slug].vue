@@ -46,6 +46,7 @@ function formatTime(iso: string) {
 }
 
 const { remove } = useDeleteApp()
+const toast = useToast()
 
 const confirmOpen = ref(false)
 const confirmSlug = ref('')
@@ -62,16 +63,28 @@ function openConfirm() {
 
 async function confirmDelete() {
   if (!canDelete.value) return
+
   deleting.value = true
   deleteError.value = ''
   try {
     await remove(slug.value)
-    await navigateTo('/apps')
   } catch (err) {
     deleteError.value = extractApiError(err, 'Could not delete this app. Please try again.')
+    return
   } finally {
     deleting.value = false
   }
+
+  // Confirmation has to outlive the page — we navigate away, so a toast is the
+  // only thing the user still sees.
+  confirmOpen.value = false
+  toast.add({
+    title: `${slug.value} deleted`,
+    description: 'The app and its cluster resources were removed.',
+    icon: 'i-lucide-check',
+    color: 'success',
+  })
+  await navigateTo('/apps')
 }
 </script>
 
