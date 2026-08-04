@@ -503,3 +503,36 @@ export type ViewAppLogsV1Responses = {
 }
 
 export type ViewAppLogsV1Response = ViewAppLogsV1Responses[keyof ViewAppLogsV1Responses]
+
+export type DeleteAppV1Data = {
+  body?: never
+  path: {
+    slug: string
+  }
+  query?: never
+  url: '/api/v1/apps/{slug}'
+}
+
+export type DeleteAppV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * No app with that slug.
+   */
+  404: unknown
+  /**
+   * Kubernetes teardown failed; the app was kept.
+   */
+  502: unknown
+}
+
+export type DeleteAppV1Responses = {
+  /**
+   * The app and its Kubernetes resources were removed.
+   */
+  204: void
+}
+
+export type DeleteAppV1Response = DeleteAppV1Responses[keyof DeleteAppV1Responses]
