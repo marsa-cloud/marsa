@@ -1,5 +1,4 @@
 import {
-  ApiException,
   AppsV1Api,
   CoreV1Api,
   CustomObjectsApi,
@@ -27,11 +26,8 @@ import type {
 import { extractDeployFailure } from '#src/modules/kubernetes/extract-deploy-failure.js'
 import { mapRolloutStatus } from '#src/modules/kubernetes/map-rollout-status.js'
 import { newestPod } from '#src/modules/kubernetes/newest-pod.js'
+import { isNotFound } from '#src/modules/kubernetes/not-found.js'
 import { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
-
-function isNotFound(error: unknown): boolean {
-  return error instanceof ApiException && error.code === 404
-}
 
 function requireName(object: { metadata?: { name?: string } }, kind: string): string {
   const name = object.metadata?.name
