@@ -1,7 +1,10 @@
 import { after, before, describe, it } from 'node:test'
 import { expect } from 'expect'
 import request from 'supertest'
-import { DeployAppCommandBuilder } from '#src/app/release/use-cases/deploy-app/deploy-app.command.builder.js'
+import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
+import { appTable } from '#src/app/app-management/entities/app.table.js'
+import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
+import { releaseTable } from '#src/app/release/entities/release.table.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -10,18 +13,17 @@ const SLUG = 'redeploy-e2e-app'
 describe('POST /api/v1/apps/:slug/redeploy (e2e)', () => {
   let setup: TestSetup
   let sessionCookie: string
-  let firstReleaseUuid: string
+  let seededReleaseUuid: string
 
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
     sessionCookie = await setup.authenticate()
 
-    const deploy = await request(setup.httpServer)
-      .post('/api/v1/deploy')
-      .set('Cookie', sessionCookie)
-      .send(new DeployAppCommandBuilder().withSlug(SLUG).withImage('nginx:1.27').build())
-      .expect(200)
-    firstReleaseUuid = deploy.body.releaseUuid
+    const app = new AppBuilder().withSlug(SLUG).withImage('nginx:1.27').build()
+    const release = new ReleaseBuilder().withApp(app).withImageRef('nginx:1.27').build()
+    await setup.db.insert(appTable).values(app)
+    await setup.db.insert(releaseTable).values(release)
+    seededReleaseUuid = release.uuid
   })
 
   after(async () => {
@@ -35,8 +37,9 @@ describe('POST /api/v1/apps/:slug/redeploy (e2e)', () => {
       .expect(200)
 
     expect(response.body.appSlug).toBe(SLUG)
+    expect(response.body.url).toBe(`https://${SLUG}.demo.marsa.cc`)
     expect(response.body.deployStatus).toBe('pending')
-    expect(response.body.releaseUuid).not.toBe(firstReleaseUuid)
+    expect(response.body.releaseUuid).not.toBe(seededReleaseUuid)
 
     const releases = await request(setup.httpServer)
       .get(`/api/v1/apps/${SLUG}/releases`)

@@ -1,7 +1,10 @@
 import { after, before, describe, it } from 'node:test'
 import { expect } from 'expect'
 import request from 'supertest'
-import { DeployAppCommandBuilder } from '#src/app/release/use-cases/deploy-app/deploy-app.command.builder.js'
+import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
+import { appTable } from '#src/app/app-management/entities/app.table.js'
+import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
+import { releaseTable } from '#src/app/release/entities/release.table.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -15,12 +18,13 @@ describe('GET /api/v1/apps/:slug/releases (e2e)', () => {
     setup = await TestBench.setupEndToEndTest()
     sessionCookie = await setup.authenticate()
 
-    // Seed a release via the deploy endpoint (stays `pending` on the deploy path).
-    await request(setup.httpServer)
-      .post('/api/v1/deploy')
-      .set('Cookie', sessionCookie)
-      .send(new DeployAppCommandBuilder().withSlug(SLUG).withImage('nginx:1.27').build())
-      .expect(200)
+    // Seed straight through Drizzle — the only endpoint under test is the GET
+    // below. The release starts `pending` so the assertion below exercises the
+    // refresh-on-read reconciliation (AgDR-0034).
+    const app = new AppBuilder().withSlug(SLUG).withImage('nginx:1.27').build()
+    const release = new ReleaseBuilder().withApp(app).withImageRef('nginx:1.27').build()
+    await setup.db.insert(appTable).values(app)
+    await setup.db.insert(releaseTable).values(release)
   })
 
   after(async () => {

@@ -9,7 +9,7 @@ import { ReleaseTrigger } from '#src/app/release/enums/release-trigger.enum.js'
 import { ApplyReleaseService } from '#src/app/release/services/apply-release/apply-release.service.js'
 import { RedeployAppRepository } from '#src/app/release/use-cases/redeploy-app/redeploy-app.repository.js'
 import { RedeployAppUseCase } from '#src/app/release/use-cases/redeploy-app/redeploy-app.use-case.js'
-import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
+import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import { OPERATOR_APPS_NAMESPACE } from '#src/modules/kubernetes/deploy-backend.constants.js'
 import { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
@@ -35,7 +35,7 @@ function build(app = storedApp()) {
   const config = createStubInstance(ConfigService)
   config.getOrThrow.returns('demo.marsa.cc')
 
-  const cipher = createStubInstance(SecretCipherService)
+  const cipher = createStubInstance(ImagePullCredentialsCipher)
 
   const applyRelease = new ApplyReleaseService(deployBackend, config)
   const usecase = new RedeployAppUseCase(repository, applyRelease, cipher)
@@ -73,11 +73,11 @@ describe('RedeployAppUseCase', () => {
   it('decrypts stored pull credentials and re-materializes the pull Secret', async () => {
     const credentials = { registry: 'ghcr.io', username: 'my-org', password: 'pw-test' }
     const { usecase, deployBackend, cipher } = build(storedApp('opaque-cipher-token'))
-    cipher.decrypt.returns(JSON.stringify(credentials))
+    cipher.open.returns(credentials)
 
     await usecase.execute('my-app')
 
-    expect(cipher.decrypt.calledOnceWithExactly('opaque-cipher-token')).toBe(true)
+    expect(cipher.open.calledOnceWithExactly('opaque-cipher-token')).toBe(true)
     const [, manifests] = deployBackend.apply.firstCall.args
     expect(manifests.imagePullSecret?.metadata?.name).toBe('my-app-registry')
     expect(manifests.deployment.spec?.template.spec?.imagePullSecrets).toEqual([
@@ -90,7 +90,7 @@ describe('RedeployAppUseCase', () => {
 
     await usecase.execute('my-app')
 
-    expect(cipher.decrypt.called).toBe(false)
+    expect(cipher.open.called).toBe(false)
     const [, manifests] = deployBackend.apply.firstCall.args
     expect(manifests.imagePullSecret).toBeUndefined()
   })

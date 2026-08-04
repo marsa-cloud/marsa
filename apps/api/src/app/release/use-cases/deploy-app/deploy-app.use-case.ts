@@ -7,7 +7,7 @@ import { ApplyReleaseService } from '#src/app/release/services/apply-release/app
 import { DeployAppCommand } from '#src/app/release/use-cases/deploy-app/deploy-app.command.js'
 import { DeployAppRepository } from '#src/app/release/use-cases/deploy-app/deploy-app.repository.js'
 import { DeployAppResponse } from '#src/app/release/use-cases/deploy-app/deploy-app.response.js'
-import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
+import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import type { Database } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 
@@ -17,7 +17,7 @@ export class DeployAppUseCase {
     @InjectDatabase() private readonly db: Database,
     private readonly repository: DeployAppRepository,
     private readonly applyRelease: ApplyReleaseService,
-    private readonly cipher: SecretCipherService,
+    private readonly credentialsCipher: ImagePullCredentialsCipher,
   ) {}
 
   async execute(command: DeployAppCommand): Promise<DeployAppResponse> {
@@ -29,9 +29,7 @@ export class DeployAppUseCase {
       .withContainerPort(command.containerPort)
       .withReplicas(command.replicas ?? 1)
       .withEnv(command.env ?? {})
-      .withImagePullCredentialsEnc(
-        credentials ? this.cipher.encrypt(JSON.stringify(credentials)) : null,
-      )
+      .withImagePullCredentialsEnc(credentials ? this.credentialsCipher.seal(credentials) : null)
       .build()
 
     const release = new ReleaseBuilder()

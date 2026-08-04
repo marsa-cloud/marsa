@@ -23,21 +23,28 @@ const { data: logsData, status: logsStatus, error: logsError } = useAppRunLogs(s
 const releases = computed(() => releasesData.value?.releases ?? [])
 
 const { redeploy } = useRedeployApp()
+const toast = useToast()
 
 const redeploying = ref(false)
-const redeployError = ref<string | null>(null)
-const redeployed = ref(false)
 
 async function onRedeploy() {
-  redeployError.value = null
-  redeployed.value = false
   redeploying.value = true
   try {
     await redeploy(slug.value)
-    redeployed.value = true
+    toast.add({
+      title: 'Redeploy started',
+      description: 'A new release is rolling out — watch its status in the release history.',
+      color: 'success',
+      icon: 'i-lucide-check',
+    })
     await Promise.all([refreshReleases(), refreshHealth()])
   } catch (err) {
-    redeployError.value = extractApiError(err)
+    toast.add({
+      title: 'Redeploy failed',
+      description: extractApiError(err),
+      color: 'error',
+      icon: 'i-lucide-triangle-alert',
+    })
   } finally {
     redeploying.value = false
   }
@@ -99,25 +106,6 @@ function formatTime(iso: string) {
 
     <template #body>
       <div class="flex flex-col gap-6 max-w-4xl">
-        <!-- aria-live so the outcome is announced even though the button that
-             triggered it sits in the navbar, outside this region. -->
-        <div aria-live="polite">
-          <UAlert
-            v-if="redeployError"
-            color="error"
-            icon="i-lucide-triangle-alert"
-            title="Redeploy failed"
-            :description="redeployError"
-          />
-          <UAlert
-            v-else-if="redeployed"
-            color="success"
-            icon="i-lucide-check"
-            title="Redeploy started"
-            description="A new release is rolling out. Watch its status in the release history below."
-          />
-        </div>
-
         <!-- Health -->
         <UCard>
           <template #header>

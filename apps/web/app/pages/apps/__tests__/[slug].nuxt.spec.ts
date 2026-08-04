@@ -13,6 +13,7 @@ const s = vi.hoisted(() => ({
   refreshHealth: vi.fn(),
   refreshReleases: vi.fn(),
   redeploy: vi.fn(),
+  toastAdd: vi.fn(),
 }))
 
 mockNuxtImport('useRoute', () => () => ({ params: { slug: 'my-app' } }))
@@ -29,6 +30,7 @@ mockNuxtImport('useAppReleases', () => () => ({
   refresh: s.refreshReleases,
 }))
 mockNuxtImport('useRedeployApp', () => () => ({ redeploy: s.redeploy }))
+mockNuxtImport('useToast', () => () => ({ add: s.toastAdd }))
 mockNuxtImport('useAppRunLogs', () => () => ({
   data: ref(s.logs.data),
   status: ref(s.logs.status),
@@ -41,6 +43,7 @@ beforeEach(() => {
   s.logs = { data: { podName: null, logs: '' }, status: 'success', error: null }
   s.refreshHealth = vi.fn()
   s.refreshReleases = vi.fn()
+  s.toastAdd = vi.fn()
   s.redeploy = vi.fn().mockResolvedValue({
     appSlug: 'my-app',
     url: 'https://my-app.marsa.cc',
@@ -139,7 +142,9 @@ describe('apps/[slug] detail page', () => {
     expect(s.redeploy).toHaveBeenCalledWith('my-app')
     expect(s.refreshReleases).toHaveBeenCalled()
     expect(s.refreshHealth).toHaveBeenCalled()
-    expect(wrapper.text()).toContain('Redeploy started')
+    expect(s.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Redeploy started', color: 'success' }),
+    )
   })
 
   it('surfaces the API message and skips the refresh when redeploy fails', async () => {
@@ -148,8 +153,13 @@ describe('apps/[slug] detail page', () => {
 
     await clickRedeploy(wrapper)
 
-    expect(wrapper.text()).toContain('Redeploy failed')
-    expect(wrapper.text()).toContain('No app with that slug.')
+    expect(s.toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Redeploy failed',
+        description: 'No app with that slug.',
+        color: 'error',
+      }),
+    )
     expect(s.refreshReleases).not.toHaveBeenCalled()
   })
 })

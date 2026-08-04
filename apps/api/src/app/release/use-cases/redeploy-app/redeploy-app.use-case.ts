@@ -1,13 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import type { App } from '#src/app/app-management/entities/app.table.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/release/enums/release-trigger.enum.js'
 import { ApplyReleaseService } from '#src/app/release/services/apply-release/apply-release.service.js'
 import { RedeployAppRepository } from '#src/app/release/use-cases/redeploy-app/redeploy-app.repository.js'
 import { RedeployAppResponse } from '#src/app/release/use-cases/redeploy-app/redeploy-app.response.js'
-import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
-import type { RegistryCredentials } from '#src/modules/kubernetes/deploy-backend.types.js'
+import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 
 /**
  * Re-runs the app's current stored config as a new Release. Config is read
@@ -23,7 +21,7 @@ export class RedeployAppUseCase {
   constructor(
     private readonly repository: RedeployAppRepository,
     private readonly applyRelease: ApplyReleaseService,
-    private readonly cipher: SecretCipherService,
+    private readonly credentialsCipher: ImagePullCredentialsCipher,
   ) {}
 
   async execute(slug: string): Promise<RedeployAppResponse> {
@@ -41,18 +39,17 @@ export class RedeployAppUseCase {
 
     await this.repository.createRelease(release)
 
+    const credentials = app.imagePullCredentialsEnc
+      ? this.credentialsCipher.open(app.imagePullCredentialsEnc)
+      : undefined
+
     try {
-      await this.applyRelease.apply(app, release, this.readCredentials(app))
+      await this.applyRelease.apply(app, release, credentials)
     } catch (error) {
       await this.repository.setReleaseDeployStatus(release.uuid, DeployStatus.Failed)
       throw error
     }
 
     return new RedeployAppResponse(app, release, this.applyRelease.baseDomain)
-  }
-
-  private readCredentials(app: App): RegistryCredentials | undefined {
-    if (!app.imagePullCredentialsEnc) return undefined
-    return JSON.parse(this.cipher.decrypt(app.imagePullCredentialsEnc)) as RegistryCredentials
   }
 }
