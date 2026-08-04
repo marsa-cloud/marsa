@@ -19,6 +19,7 @@ export const zManifestDto = z.object({
   url: z.string(),
   hook_attributes: zHookAttributesDto,
   redirect_url: z.string(),
+  setup_url: z.string(),
   callback_urls: z.array(z.string()),
   public: z.boolean(),
   request_oauth_on_install: z.boolean(),

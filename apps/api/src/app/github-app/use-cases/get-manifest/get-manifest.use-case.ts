@@ -7,7 +7,14 @@ import { appName } from '#src/app/github-app/utils/app-name.js'
 import { stripTrailingSlash } from '#src/utils/strip-trailing-slash.js'
 
 const WEBHOOK_PATH = '/api/v1/github-app/webhooks'
-const REDIRECT_PATH = '/setup/github/callback'
+
+/**
+ * Serves both manifest-conversion (`redirect_url`, code+state) and post-install
+ * (`setup_url`, installation_id+setup_action) returns — the page dispatches on
+ * which query params are present.
+ */
+const SETUP_CALLBACK_PATH = '/setup/github/callback'
+
 const OAUTH_CALLBACK_PATH = '/auth/github/callback'
 
 @Injectable()
@@ -29,7 +36,8 @@ export class GetManifestUseCase {
       name: appName(webUrl),
       url: webUrl,
       webhookUrl: `${apiPublicUrl}${WEBHOOK_PATH}`,
-      redirectUrl: `${webUrl}${REDIRECT_PATH}`,
+      redirectUrl: `${webUrl}${SETUP_CALLBACK_PATH}`,
+      setupUrl: `${webUrl}${SETUP_CALLBACK_PATH}`,
       oauthCallbackUrl: `${webUrl}${OAUTH_CALLBACK_PATH}`,
     })
 

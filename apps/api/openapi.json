@@ -437,6 +437,9 @@
           "redirect_url": {
             "type": "string"
           },
+          "setup_url": {
+            "type": "string"
+          },
           "callback_urls": {
             "type": "array",
             "items": {
@@ -467,6 +470,7 @@
           "url",
           "hook_attributes",
           "redirect_url",
+          "setup_url",
           "callback_urls",
           "public",
           "request_oauth_on_install",
