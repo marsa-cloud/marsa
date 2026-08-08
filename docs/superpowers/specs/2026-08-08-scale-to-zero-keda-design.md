@@ -1,7 +1,7 @@
 # Scale-to-zero via KEDA + HTTP add-on — design
 
 **Ticket:** marsa-cloud/marsa#119 (promoted from the #120 spike)
-**Companion decision record:** [AgDR-0041](../../agdr/AgDR-0041-keda-uniform-scaling-ownership.md)
+**Companion decision record:** [AgDR-0043](../../agdr/AgDR-0043-keda-uniform-scaling-ownership.md)
 **Repos touched:** `marsa-cloud/marsa`, `marsa-cloud/marsa-charts`
 
 ## Summary
@@ -91,9 +91,7 @@ Existing apps become `min = max = N` — their current fixed count expressed in 
 vocabulary, so no app changes its replica count on upgrade.
 
 The DB layer is **Drizzle** (`drizzle-kit generate` → a timestamped folder under
-`src/sql/drizzle/` holding `migration.sql` + `snapshot.json`), not MikroORM —
-`apps/api/.claude/CLAUDE.md` is stale on this point and should be corrected in passing.
-Two consequences for the plan:
+`src/sql/drizzle/` holding `migration.sql` + `snapshot.json`). Two consequences for the plan:
 
 - `drizzle-kit generate` will see `replicas` gone and two new columns and may offer to treat it
   as a **rename**, which would silently drop one column's data. Take the add/add/drop shape and

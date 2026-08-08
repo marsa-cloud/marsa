@@ -9,7 +9,7 @@
 **Tech Stack:** NestJS 11 (Fastify, ESM, Node 24), Drizzle ORM + drizzle-kit, `@kubernetes/client-node`, Nuxt 4 + Nuxt UI, Helm 3 + helm-unittest, k3s/k3d, KEDA + `keda-add-ons-http`.
 
 **Design spec:** [`docs/superpowers/specs/2026-08-08-scale-to-zero-keda-design.md`](../specs/2026-08-08-scale-to-zero-keda-design.md)
-**Decision record:** [`docs/agdr/AgDR-0041-keda-uniform-scaling-ownership.md`](../../agdr/AgDR-0041-keda-uniform-scaling-ownership.md)
+**Decision record:** [`docs/agdr/AgDR-0043-keda-uniform-scaling-ownership.md`](../../agdr/AgDR-0043-keda-uniform-scaling-ownership.md)
 
 ## Global Constraints
 
@@ -40,7 +40,7 @@ No code. These artifacts gate later tasks — the migration gate blocks editing 
 
 The AC "The always-on (`1+`) path is unchanged for existing apps" is false under uniform KEDA — every existing app moves onto the interceptor on its next deploy. Edit it to read:
 
-> - [ ] Existing apps keep their current replica count across the upgrade (`min = max = N`), and move onto the KEDA-managed path on their next deploy — see AgDR-0041.
+> - [ ] Existing apps keep their current replica count across the upgrade (`min = max = N`), and move onto the KEDA-managed path on their next deploy — see AgDR-0043.
 
 - [ ] **Step 2: File the marsa-charts issue**
 
@@ -123,7 +123,7 @@ Add `charts/marsa/charts/` to `.helmignore` and `.gitignore` if not already igno
 In `charts/marsa/values.yaml`:
 
 ```yaml
-# KEDA owns the replica count for every tenant app (AgDR-0041). Disable only if
+# KEDA owns the replica count for every tenant app (AgDR-0043). Disable only if
 # the cluster already runs KEDA + the HTTP add-on; Marsa apps will not route
 # without them.
 keda:
@@ -151,7 +151,7 @@ Confirm the replica key against the subchart's own `values.yaml` in Step 2's out
   "properties": {
     "enabled": {
       "type": "boolean",
-      "description": "Install KEDA core + the HTTP add-on. Marsa apps are scaled by KEDA and routed through its interceptor (AgDR-0041), so disabling this only makes sense when the cluster already provides both."
+      "description": "Install KEDA core + the HTTP add-on. Marsa apps are scaled by KEDA and routed through its interceptor (AgDR-0043), so disabling this only makes sense when the cluster already provides both."
     }
   }
 },
@@ -187,7 +187,7 @@ Expected: exits 0, no output.
 git add charts/marsa/Chart.yaml charts/marsa/Chart.lock charts/marsa/values.yaml charts/marsa/values.schema.json .github/workflows/chart-ci.yml .helmignore
 git commit -m "feat: bundle KEDA core and the HTTP add-on as subcharts
 
-Marsa apps are scaled by KEDA (AgDR-0041), so both are required for any
+Marsa apps are scaled by KEDA (AgDR-0043), so both are required for any
 app to route. Conditional on keda.enabled for clusters that already run
 them. Interceptor pinned to 2 replicas so a chart upgrade doesn't black
 out every tenant app at once.
@@ -278,7 +278,7 @@ setting can live — it is NOT additive across files.
 
 Rendered unconditionally: allowCrossNamespace is required for every tenant
 app's IngressRoute to reach the KEDA interceptor in the `keda` namespace
-(AgDR-0041). Gating it behind tls.enabled would silently drop every app's
+(AgDR-0043). Gating it behind tls.enabled would silently drop every app's
 backend and serve 404s with nothing visibly wrong in the resources.
 */}}
 apiVersion: helm.cattle.io/v1
@@ -396,7 +396,7 @@ gh pr create --repo marsa-cloud/marsa-charts \
   --body-file <(cat <<'EOF'
 ## Summary
 - **Bundles KEDA core + the HTTP add-on as conditional subcharts** — Marsa apps
-  are now scaled by KEDA (AgDR-0041), so neither is optional for a working
+  are now scaled by KEDA (AgDR-0043), so neither is optional for a working
   install; `keda.enabled: false` exists only for clusters that already run them.
 - **Pins the interceptor to 2 replicas** — it sits on the request path of every
   tenant app, so a single-replica rolling upgrade would black out the whole
@@ -641,7 +641,7 @@ In `deploy-app.constants.ts`, replace the `MIN_REPLICAS` block with:
 ```ts
 /**
  * Replica bounds for a deploy. A floor of 0 is scale-to-zero: KEDA sleeps the
- * app while idle and cold-starts it on the first HTTP request (AgDR-0041). The
+ * app while idle and cold-starts it on the first HTTP request (AgDR-0043). The
  * ceiling guards against an operator exhausting cluster capacity.
  */
 export const MIN_REPLICAS = 0
@@ -650,7 +650,7 @@ export const MAX_REPLICAS = 100
 /**
  * Idle time before KEDA scales an app back to its floor. Platform-wide rather
  * than per-app: per-app scaling config is the correct model but deferred for
- * scope (AgDR-0041).
+ * scope (AgDR-0043).
  */
 export const SCALEDOWN_PERIOD_SECONDS = 300
 ```
@@ -744,7 +744,7 @@ export const HTTP_SCALED_OBJECT_PLURAL = 'httpscaledobjects'
  * The add-on's shared interceptor proxy. Every app's IngressRoute points here
  * rather than at the app's own Service: the interceptor holds the request while
  * KEDA scales the app up, which is what makes a cold start survive instead of
- * 502 (AgDR-0041). Cross-namespace, so k3s Traefik needs allowCrossNamespace —
+ * 502 (AgDR-0043). Cross-namespace, so k3s Traefik needs allowCrossNamespace —
  * shipped by marsa-charts.
  */
 export const KEDA_NAMESPACE = 'keda'
@@ -835,7 +835,7 @@ it('omits replicas from the Deployment so KEDA owns the count', () => {
 
   // Not `0` — absent. KEDA's HPA owns spec.replicas via the scale
   // subresource; declaring it here makes every redeploy stomp KEDA's live
-  // count and the two field managers fight (AgDR-0041).
+  // count and the two field managers fight (AgDR-0043).
   expect(deployment.spec && 'replicas' in deployment.spec).toBe(false)
 })
 
@@ -1133,7 +1133,7 @@ function verdict(health: AppHealth, minReplicas: number): AppHealthStatus {
     return AppHealthStatus.NotFound
   }
   // Ahead of the arms below: a scale-to-zero app asleep at 0 pods is idle by
-  // design, not unavailable (AgDR-0041).
+  // design, not unavailable (AgDR-0043).
   if (minReplicas === 0 && health.desiredReplicas === 0 && health.availableReplicas === 0) {
     return AppHealthStatus.Idle
   }
@@ -1370,7 +1370,7 @@ gh pr create --repo marsa-cloud/marsa \
 - **KEDA now owns every app's replica count** — the Deployment no longer declares
   `spec.replicas` at all. KEDA's HPA owns that field via the scale subresource, so
   a field manager that kept declaring it would stomp KEDA's live count on every
-  redeploy and the two would fight. One deploy path, no serverless fork (AgDR-0041).
+  redeploy and the two would fight. One deploy path, no serverless fork (AgDR-0043).
 - **Apps take a min/max replica range instead of a single count** — a floor of 0
   opts into scale-to-zero. Existing apps migrate to `min = max = N`, so nobody's
   replica count changes on upgrade. Dropping the old column is destructive, hence
@@ -1391,7 +1391,7 @@ gh pr create --repo marsa-cloud/marsa \
 ## Known gap
 A redeploy of a *sleeping* app can't report failure: a 0-replica Deployment
 satisfies `Available=True` trivially, so a broken image reports `Succeeded` until
-a request wakes it. Accepted for this issue and recorded in AgDR-0041; the
+a request wakes it. Accepted for this issue and recorded in AgDR-0043; the
 failure surfaces within one request via health + run logs.
 
 Refs #119
@@ -1475,6 +1475,5 @@ Post the measured cold-start and warm timings as a PR comment. This is the evide
 
 1. Per-app `scaledownPeriod` and scaling target — acknowledged as the correct model, deferred for scope.
 2. Warm-up request on deploy so a redeploy of a sleeping app can fail at deploy time rather than reporting `Succeeded`.
-3. Correct `apps/api/.claude/CLAUDE.md` — it documents MikroORM throughout; the repo is on Drizzle.
-4. Revisit `allowCrossNamespace` if tenants ever gain the ability to supply their own manifests.
-5. NetworkPolicy allowance from the `keda` namespace, for when project×env namespacing lands.
+3. Revisit `allowCrossNamespace` if tenants ever gain the ability to supply their own manifests.
+4. NetworkPolicy allowance from the `keda` namespace, for when project×env namespacing lands.
