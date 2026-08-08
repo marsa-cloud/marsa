@@ -47,7 +47,7 @@ export function renderManifests(
     kind: 'Deployment',
     metadata: { name, labels },
     spec: {
-      replicas: app.replicas,
+      replicas: app.minReplicas,
       selector: { matchLabels: labels },
       template: {
         metadata: { labels, annotations: { [RELEASE_UUID_ANNOTATION]: release.uuid } },
