@@ -39,7 +39,39 @@ cluster.
 
 The app is served at `<slug>.127.0.0.1.nip.io` with Traefik's default
 self-signed cert (the assertion uses `curl -k`). Override the cluster name or
-base domain with `MARSA_E2E_CLUSTER` / `MARSA_E2E_DOMAIN`.
+base domain with `MARSA_E2E_CLUSTER` / `MARSA_E2E_DOMAIN`, and the host ports
+with `MARSA_E2E_HTTP_PORT` / `MARSA_E2E_HTTPS_PORT` when something already holds
+`:80` / `:443`.
+
+### Clicking through your own branch
+
+`e2e:up` installs whatever image tag the chart resolves — by default the
+**published** one, not your working tree. The chart is pulled from OCI and the
+installer only accepts a tag, so there is no build-and-load-local path. To click
+through a branch, have CD publish an image for it:
+
+```bash
+gh pr edit <pr> --add-label preview          # cd.yml is label-gated for PRs
+
+# The tag is the sha of the PR's MERGE commit, not your head commit — read it:
+gh run view <run-id> --log \
+  | grep -oE 'ghcr.io/marsa-cloud/marsa-(api|web):sha-[a-f0-9]+' | sort -u
+
+MARSA_E2E_HTTP_PORT=8080 bash scripts/e2e-up.sh --image-tag sha-<short>
+export KUBECONFIG="$(k3d kubeconfig write marsa-e2e)"
+```
+
+A throwaway cluster has no GitHub App configured, so mint a session cookie from
+inside the api pod instead of logging in:
+
+```bash
+pod=$(kubectl -n marsa get pod -l app=marsa-api -o jsonpath='{.items[0].metadata.name}')
+kubectl -n marsa exec "$pod" -- node dist/src/entrypoints/seed-dev.js --user-only
+```
+
+Open `https://127.0.0.1.nip.io/`, accept the self-signed cert, paste the cookie
+for that origin, reload. The web's `apiBase` is the relative `/api` and Traefik
+routes it on the web host, so one cookie on the web origin covers the API too.
 
 The same harness runs in CI on `workflow_run` after `CD` completes
 (`.github/workflows/e2e.yml`), there against a **full real-K3s** `install.sh`

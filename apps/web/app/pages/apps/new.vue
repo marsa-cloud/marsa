@@ -11,6 +11,7 @@ import type { DeployAppCommand, DeployAppResponse } from '~/api/types.gen'
 useSeoMeta({ title: 'Deploy an app — Marsa' })
 
 const { deploy } = useDeployApp()
+const toast = useToast()
 
 // Mirror the API contract (zDeployAppCommandWritable) so invalid input is caught
 // inline before we ever hit the network. Env rows aren't schema-validated — they
@@ -68,12 +69,12 @@ function removeEnvRow(index: number) {
 
 const submitting = ref(false)
 const error = ref<string | null>(null)
-const result = ref<DeployAppResponse | null>(null)
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   error.value = null
-  result.value = null
   submitting.value = true
+
+  let deployed: DeployAppResponse
   try {
     const env = buildEnvRecord(envRows.value)
     const command: DeployAppCommand = {
@@ -83,12 +84,23 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       ...(event.data.replicas !== undefined ? { replicas: event.data.replicas } : {}),
       ...(Object.keys(env).length ? { env } : {}),
     }
-    result.value = await deploy(command)
+    deployed = await deploy(command)
   } catch (err) {
     error.value = extractApiError(err)
+    return
   } finally {
     submitting.value = false
   }
+
+  // The rollout is what the operator wants to watch next, and it only exists on
+  // the detail page — so confirmation has to be a toast that outlives this page.
+  toast.add({
+    title: 'Deploy started',
+    description: `${deployed.appSlug} is rolling out at ${deployed.url}`,
+    color: 'success',
+    icon: 'i-lucide-check',
+  })
+  await navigateTo(`/apps/${deployed.appSlug}`)
 }
 </script>
 
@@ -110,36 +122,10 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
     <template #body>
       <div class="max-w-2xl">
-        <!-- aria-live so screen readers announce the deploy result/error even
-             when the submit button is scrolled away from the alert. -->
+        <!-- aria-live so screen readers announce a failed deploy even when the
+             submit button is scrolled away from the alert. A successful deploy
+             navigates away and is announced by the toast instead. -->
         <div aria-live="polite">
-          <UAlert
-            v-if="result"
-            color="success"
-            icon="i-lucide-check"
-            title="Deploy started"
-            class="mb-6"
-          >
-            <template #description>
-              <div class="space-y-1">
-                <p>
-                  <span class="font-medium">{{ result.appSlug }}</span> — status
-                  <span class="font-medium">{{ result.deployStatus }}</span>
-                </p>
-                <p>
-                  <ULink
-                    :to="result.url"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="text-primary underline"
-                  >
-                    {{ result.url }}
-                  </ULink>
-                </p>
-              </div>
-            </template>
-          </UAlert>
-
           <UAlert
             v-if="error"
             color="error"
