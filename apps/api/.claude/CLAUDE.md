@@ -85,7 +85,7 @@ Two deliberate exceptions:
 
 Each feature under `src/app/<feature>/` is self-contained: HTTP endpoints, domain logic, persistence, and feature-local types together, exposing a single module.
 
-```
+```text
 src/app/<feature>/
   <feature>.module.ts            # feature root; imported by ApiModule
   use-cases/<use-case>/

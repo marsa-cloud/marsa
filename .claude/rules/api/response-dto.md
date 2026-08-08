@@ -18,9 +18,15 @@ return { apps: apps.map(toSummary) } as ViewAppIndexResponse
 return new ViewAppIndexResponse(apps, baseDomain)
 ```
 
-Why: the cast produces no `@ApiProperty` metadata, so `openapi.json` emits no schema and
-the web generator has nothing to type against. Field-by-field mutation after construction
-has the same problem.
+Why: **the schema stays correct either way** — `SwaggerModule.createDocument` reads the
+class's `@ApiProperty` metadata at boot and never runs the handler. That is exactly the
+danger: the cast lets the _runtime payload_ drift from a contract that still claims to
+describe it. The constructor is where entity-to-wire mapping lives (`url` composed from
+slug + base domain, dates through `toISOString()`), so a hand-built literal has to
+re-derive every computed field, and omitting one ships a response the published schema
+says is impossible — the web's Zod parse then throws at the boundary.
+
+Field-by-field mutation is not an option either: response fields are `readonly`.
 
 ## Take the entity, not exploded fields
 

@@ -8,7 +8,7 @@ paths:
 
 ## The filename selects the environment
 
-```
+```text
 WRONG — uses mountSuspended but lands in the node project
   app/composables/__tests__/useAppList.spec.ts
 

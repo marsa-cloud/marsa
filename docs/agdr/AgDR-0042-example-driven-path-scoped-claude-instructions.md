@@ -49,22 +49,27 @@ So feature-module/aggregate boundaries, the use-case naming vocabulary, and the 
 
 ### Structure
 
-```
+```text
 .claude/rules/
   comments.md            # existing, unscoped
   git-workflow.md        # existing, unscoped
   api/
     table.md · response-dto.md · command-dto.md · controller.md
     use-case.md · repository.md · builder.md · module-wiring.md · tests.md
+    imports.md · build-config.md
   web/
     composable.md · component.md · tests.md
 ```
 
-Rules live at the repository root so `paths:` globs are repo-relative. Each file is capped at roughly 60 lines and covers one artifact type.
+Fourteen rules in total. `imports.md` and `build-config.md` were added while implementing:
+applying the split criterion showed that import style and the SWC build gotcha are
+file-scoped, not placement guidance, so they left the always-loaded file too.
+
+Rules live at the repository root so `paths:` globs are repo-relative. Each file covers one artifact type and is capped at **120 lines**; the implementation landed at 43–114 lines per file, with `api/table.md` the largest because the DB layer's nine rules are read together.
 
 ### Rule file shape
 
-````markdown
+`````markdown
 ---
 paths: ['apps/api/src/app/**/*.response.ts']
 ---
@@ -73,17 +78,20 @@ paths: ['apps/api/src/app/**/*.response.ts']
 
 ## Return a constructed instance
 
-```ts
+````ts
 // WRONG
 return { slug: app.slug, url } as ViewAppIndexResponse
 
 // RIGHT
 return new ViewAppIndexResponse(apps, baseDomain)
-```
+```text
 
 Why: the cast produces no `@ApiProperty` metadata, so `openapi.json` emits
 no schema and the web generator has nothing to type against.
 ````
+`````
+
+```
 
 Every snippet is lifted from real code in this repository. A rule that goes stale therefore becomes **visibly** wrong — someone reading the rule beside the code sees the mismatch — rather than quietly wrong, which is how the MikroORM section survived a whole ORM migration.
 
@@ -115,7 +123,7 @@ After the rules land, one session runs with the `InstructionsLoaded` hook enable
 
 ## Consequences
 
-- `apps/api/.claude/CLAUDE.md` drops from 227 to roughly 70 lines; `apps/web/.claude/CLAUDE.md` from 150 to roughly 60. Root `CLAUDE.md` is unchanged — repo layout, commands, and the local-dev runbooks are genuinely always-on.
+- `apps/api/.claude/CLAUDE.md` drops from 227 to 129 lines; `apps/web/.claude/CLAUDE.md` from 150 to 101 (measured with `wc -l`). Both are well under the 200-line threshold the docs tie to degraded adherence, which is the constraint that matters — what remains is irreducibly placement and orientation. Root `CLAUDE.md` is unchanged: repo layout, commands, and the local-dev runbooks are genuinely always-on.
 - Context spent on api conventions during frontend work drops to zero, and vice versa.
 - **A brand-new file may not trigger its rule.** Rules load when Claude _reads_ a matching file. In practice Claude reads sibling files before writing a new one, but this is not guaranteed. If it proves to be a real miss, the mitigation is a `paths:`-scoped skill for slice authoring — deliberately deferred rather than built speculatively.
 - **Path-scoped rules are not re-injected after `/compact`**; they reload the next time a matching file is read. Anything that must never lapse mid-session belongs in the package `CLAUDE.md`, not a rule.
@@ -129,3 +137,4 @@ After the rules land, one session runs with the `InstructionsLoaded` hook enable
 - marsa#185 — Keyset pagination; carries a matching "revise the AI harness" requirement and must be sequenced against this change rather than run in parallel
 - PR #174 / marsa#107 — the MikroORM → Drizzle migration that stranded the api instructions
 - `docs/agdr/AgDR-0040-pagination-declaration-only-contract.md` — one of the four colliding 0040 records
+```

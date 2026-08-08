@@ -49,7 +49,16 @@ and belongs in both directly; feature modules are passed in by the caller.
 
 // RIGHT — src/modules/kubernetes/kubernetes.module.ts owns and exports it
 @Module({
-  providers: [{ provide: DeployBackend, useFactory: /* real or mock */ }],
+  providers: [
+    {
+      provide: DeployBackend,
+      useFactory: (config: ConfigService) =>
+        config.get<string>('DEPLOY_BACKEND', 'direct') === 'mock'
+          ? new MockDeployBackend()
+          : new DirectApplyDeployBackend(),
+      inject: [ConfigService],
+    },
+  ],
   exports: [DeployBackend],
 })
 export class KubernetesModule {}

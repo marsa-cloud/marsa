@@ -43,7 +43,7 @@ pnpm --filter web test:e2e:install     # one-time Playwright browser install
 
 `pnpm test` at the root runs only the fast layer. E2E stays per-package.
 
-**E2E runs against the real API, not mocks**, so it needs the api running in test mode and a session cookie in `E2E_SESSION_COOKIE`. Locally:
+**E2E runs against the real API, not mocks**, so it needs the api running in test mode. Specs that exercise authenticated routes also need a session cookie in `E2E_SESSION_COOKIE`; unauthenticated ones (the `/login` redirect) run without it. Locally:
 
 ```bash
 docker compose up -d                                   # Postgres (marsa_test)
@@ -68,7 +68,7 @@ To verify a UI change or reproduce a UI bug, drive the running dev server (`pnpm
 
 ## File layout
 
-```
+```text
 apps/web/
   nuxt.config.ts                # ssr: false, modules, eslint stylistic
   vitest.config.ts · vitest.e2e.config.ts · playwright.config.ts
