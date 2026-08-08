@@ -258,6 +258,9 @@
           },
           "404": {
             "description": "No app with that slug."
+          },
+          "500": {
+            "description": "Stored image pull credentials could not be decrypted."
           }
         },
         "tags": [

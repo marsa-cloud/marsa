@@ -95,6 +95,19 @@ describe('RedeployAppUseCase', () => {
     expect(manifests.imagePullSecret).toBeUndefined()
   })
 
+  it('fails without creating a Release when the stored credentials cannot be decrypted', async () => {
+    const { usecase, repository, deployBackend, cipher } = build(storedApp('corrupt-token'))
+    cipher.open.throws(new Error('Unsupported state or unable to authenticate data'))
+
+    await expect(usecase.execute('my-app')).rejects.toThrow(
+      /Stored image pull credentials for 'my-app' could not be decrypted/,
+    )
+
+    expect(repository.createRelease.called).toBe(false)
+    expect(repository.setReleaseDeployStatus.called).toBe(false)
+    expect(deployBackend.apply.called).toBe(false)
+  })
+
   it('marks the Release Failed and rethrows when the cluster apply fails', async () => {
     const { usecase, repository, deployBackend } = build()
     const applyError = new Error('cluster unreachable')

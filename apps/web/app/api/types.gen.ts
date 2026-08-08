@@ -436,6 +436,10 @@ export type RedeployAppV1Errors = {
    * No app with that slug.
    */
   404: unknown
+  /**
+   * Stored image pull credentials could not be decrypted.
+   */
+  500: unknown
 }
 
 export type RedeployAppV1Responses = {

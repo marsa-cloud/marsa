@@ -1,5 +1,6 @@
 import { Controller, HttpCode, Param, Post, UseGuards } from '@nestjs/common'
 import {
+  ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
@@ -20,6 +21,9 @@ export class RedeployAppController {
   @ApiOkResponse({ type: RedeployAppResponse })
   @ApiNotFoundResponse({ description: 'No app with that slug.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
+  @ApiInternalServerErrorResponse({
+    description: 'Stored image pull credentials could not be decrypted.',
+  })
   handle(@Param('slug') slug: string): Promise<RedeployAppResponse> {
     return this.usecase.execute(slug)
   }

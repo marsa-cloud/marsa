@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common'
+import type { App } from '#src/app/app-management/entities/app.table.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/release/enums/release-trigger.enum.js'
@@ -6,6 +7,7 @@ import { ApplyReleaseService } from '#src/app/release/services/apply-release/app
 import { RedeployAppRepository } from '#src/app/release/use-cases/redeploy-app/redeploy-app.repository.js'
 import { RedeployAppResponse } from '#src/app/release/use-cases/redeploy-app/redeploy-app.response.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
+import type { RegistryCredentials } from '#src/modules/kubernetes/deploy-backend.types.js'
 
 /**
  * Re-runs the app's current stored config as a new Release. Config is read
@@ -30,6 +32,10 @@ export class RedeployAppUseCase {
       throw new NotFoundException(`No app with slug '${slug}'.`)
     }
 
+    // Before createRelease: a decrypt failure here is terminal, and a Release
+    // persisted first would strand at Pending with nothing to reconcile it.
+    const credentials = this.openCredentials(app)
+
     const release = new ReleaseBuilder()
       .withApp(app)
       .withImageRef(app.image)
@@ -39,10 +45,6 @@ export class RedeployAppUseCase {
 
     await this.repository.createRelease(release)
 
-    const credentials = app.imagePullCredentialsEnc
-      ? this.credentialsCipher.open(app.imagePullCredentialsEnc)
-      : undefined
-
     try {
       await this.applyRelease.apply(app, release, credentials)
     } catch (error) {
@@ -51,5 +53,21 @@ export class RedeployAppUseCase {
     }
 
     return new RedeployAppResponse(app, release, this.applyRelease.baseDomain)
+  }
+
+  private openCredentials(app: App): RegistryCredentials | undefined {
+    if (!app.imagePullCredentialsEnc) {
+      return undefined
+    }
+
+    try {
+      return this.credentialsCipher.open(app.imagePullCredentialsEnc)
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Stored image pull credentials for '${app.slug}' could not be decrypted. ` +
+          'The app must be redeployed with its registry credentials re-entered.',
+        { cause: error },
+      )
+    }
   }
 }
