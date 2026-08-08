@@ -1,9 +1,11 @@
 import type {
+  ViewAppDetailResponse,
   ViewAppHealthResponse,
   ViewAppLogsResponse,
   ViewReleaseIndexResponse,
 } from '~/api/types.gen'
 import {
+  zViewAppDetailResponse,
   zViewAppHealthResponse,
   zViewAppLogsResponse,
   zViewReleaseIndexResponse,
@@ -36,12 +38,32 @@ export function useAppHealth(slug: string) {
   )
 }
 
-/** A recent run-log snapshot from the app's newest pod. */
-export function useAppRunLogs(slug: string) {
+/** Stored config for one app — the source of truth for the env editor. */
+export function useAppDetail(slug: string) {
+  const { $api } = useNuxtApp()
+  return useAsyncData<ViewAppDetailResponse>(
+    `app-detail-${slug}`,
+    () => $api(`/v1/apps/${encodeURIComponent(slug)}`),
+    { transform: (raw): ViewAppDetailResponse => zViewAppDetailResponse.parse(raw) },
+  )
+}
+
+/**
+ * A recent run-log snapshot from the app's newest pod. `tailLines` is a ref so
+ * changing the line count re-fetches: it's in the cache key and watched, which
+ * is what lets the page's selector drive the API's `tailLines` query param.
+ */
+export function useAppRunLogs(slug: string, tailLines: Ref<number>) {
   const { $api } = useNuxtApp()
   return useAsyncData<ViewAppLogsResponse>(
     `app-logs-${slug}`,
-    () => $api(`/v1/apps/${encodeURIComponent(slug)}/logs`),
-    { transform: (raw): ViewAppLogsResponse => zViewAppLogsResponse.parse(raw) },
+    () =>
+      $api(`/v1/apps/${encodeURIComponent(slug)}/logs`, {
+        query: { tailLines: tailLines.value },
+      }),
+    {
+      watch: [tailLines],
+      transform: (raw): ViewAppLogsResponse => zViewAppLogsResponse.parse(raw),
+    },
   )
 }

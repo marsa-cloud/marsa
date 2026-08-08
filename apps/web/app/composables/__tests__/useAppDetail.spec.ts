@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  zUpdateAppEnvResponse,
+  zViewAppDetailResponse,
   zViewAppHealthResponse,
   zViewAppLogsResponse,
   zViewReleaseIndexResponse,
@@ -54,5 +56,25 @@ describe('app-detail response contracts', () => {
 
   it('rejects a run-logs payload missing logs', () => {
     expect(() => zViewAppLogsResponse.parse({ podName: 'pod-1' })).toThrow()
+  })
+
+  it('accepts a valid app-detail payload carrying env', () => {
+    const valid = {
+      slug: 'my-app',
+      image: 'nginx:1.27',
+      url: 'https://my-app.marsa.cc',
+      containerPort: 80,
+      replicas: 1,
+      env: { LOG_LEVEL: 'info' },
+      createdAt: '2026-07-10T10:00:00.000Z',
+      updatedAt: '2026-07-10T10:01:00.000Z',
+    }
+    expect(zViewAppDetailResponse.parse(valid)).toEqual(valid)
+  })
+
+  it('rejects an env-update payload with a non-string value', () => {
+    expect(() =>
+      zUpdateAppEnvResponse.parse({ slug: 'my-app', env: { PORT: 8080 }, redeployRequired: true }),
+    ).toThrow()
   })
 })

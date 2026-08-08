@@ -136,6 +136,17 @@ export const zViewAppIndexResponse = z.object({
   apps: z.array(zAppSummary),
 })
 
+export const zViewAppDetailResponse = z.object({
+  slug: z.string(),
+  image: z.string(),
+  url: z.string(),
+  containerPort: z.int(),
+  replicas: z.int(),
+  env: z.record(z.string(), z.string()),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+})
+
 export const zAppHealthStatus = z.enum(['healthy', 'degraded', 'unavailable', 'not_found'])
 
 export const zViewAppHealthResponse = z.object({
@@ -147,6 +158,16 @@ export const zViewAppHealthResponse = z.object({
 export const zViewAppLogsResponse = z.object({
   podName: z.string().nullable(),
   logs: z.string(),
+})
+
+export const zUpdateAppEnvCommand = z.object({
+  env: z.record(z.string(), z.string()),
+})
+
+export const zUpdateAppEnvResponse = z.object({
+  slug: z.string(),
+  env: z.record(z.string(), z.string()),
+  redeployRequired: z.boolean(),
 })
 
 export const zImagePullCredentialsWritable = z.object({
@@ -203,6 +224,21 @@ export const zViewReleaseIndexV1Response = zViewReleaseIndexResponse
 
 export const zViewAppIndexV1Response = zViewAppIndexResponse
 
+export const zDeleteAppV1Path = z.object({
+  slug: z.string(),
+})
+
+/**
+ * The app and its Kubernetes resources were removed.
+ */
+export const zDeleteAppV1Response = z.void()
+
+export const zViewAppDetailV1Path = z.object({
+  slug: z.string(),
+})
+
+export const zViewAppDetailV1Response = zViewAppDetailResponse
+
 export const zViewAppHealthV1Path = z.object({
   slug: z.string(),
 })
@@ -219,11 +255,10 @@ export const zViewAppLogsV1Query = z.object({
 
 export const zViewAppLogsV1Response = zViewAppLogsResponse
 
-export const zDeleteAppV1Path = z.object({
+export const zUpdateAppEnvV1Body = zUpdateAppEnvCommand
+
+export const zUpdateAppEnvV1Path = z.object({
   slug: z.string(),
 })
 
-/**
- * The app and its Kubernetes resources were removed.
- */
-export const zDeleteAppV1Response = z.void()
+export const zUpdateAppEnvV1Response = zUpdateAppEnvResponse

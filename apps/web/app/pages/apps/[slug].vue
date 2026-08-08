@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { AppHealthStatus, DeployStatus } from '~/api/types.gen'
 
-// useAppReleases / useAppHealth / useAppRunLogs / useRedeployApp / extractApiError
-// are Nuxt auto-imports
+// useAppReleases / useAppHealth / useAppRunLogs / useAppDetail / useRedeployApp /
+// useUpdateAppEnv / buildEnvRecord / extractApiError are Nuxt auto-imports
 // (app/composables/*) — left un-imported so tests can mock them via
 // mockNuxtImport, matching the deploy-form page convention.
 
@@ -18,19 +18,83 @@ useSeoMeta({ title: () => `${slug.value} — Marsa` })
 
 const { data: health, status: healthStatus, error: healthError, refresh: refreshHealth } = useAppHealth(slug.value)
 const { data: releasesData, status: releasesStatus, error: releasesError, refresh: refreshReleases } = useAppReleases(slug.value)
-const { data: logsData, status: logsStatus, error: logsError } = useAppRunLogs(slug.value)
+// Bounds come from the API's tailLines validator (1–1000); 100 is its default.
+const TAIL_LINE_OPTIONS = [50, 100, 200, 500, 1000]
+const tailLines = ref(100)
+
+const {
+  data: logsData,
+  status: logsStatus,
+  error: logsError,
+  refresh: refreshLogs,
+} = useAppRunLogs(slug.value, tailLines)
+
+const { data: config, status: configStatus, error: configError, refresh: refreshConfig }
+  = useAppDetail(slug.value)
 
 const releases = computed(() => releasesData.value?.releases ?? [])
 
 const { redeploy } = useRedeployApp()
+const { updateEnv } = useUpdateAppEnv()
 const toast = useToast()
 
 const redeploying = ref(false)
+
+// Stable per-row id so :key survives removals — index keys would shift and let
+// v-model bind to the wrong row after a middle row is deleted.
+let nextEnvId = 0
+function makeEnvRow(key = '', value = '') {
+  return { id: nextEnvId++, key, value }
+}
+
+const envRows = ref<{ id: number, key: string, value: string }[]>([])
+const savingEnv = ref(false)
+const envError = ref('')
+
+// Set on a successful save and cleared by a successful redeploy: the stored env
+// and the running container genuinely diverge in between, and a toast would
+// vanish while the divergence persists. It does not survive a page reload —
+// tracking that needs the release-snapshot model (#179).
+const envRedeployPending = ref(false)
+
+watch(
+  config,
+  (detail) => {
+    if (!detail) return
+    const rows = Object.entries(detail.env).map(([key, value]) => makeEnvRow(key, value))
+    envRows.value = rows.length ? rows : [makeEnvRow()]
+  },
+  { immediate: true },
+)
+
+function addEnvRow() {
+  envRows.value.push(makeEnvRow())
+}
+
+function removeEnvRow(index: number) {
+  envRows.value.splice(index, 1)
+  if (envRows.value.length === 0) addEnvRow()
+}
+
+async function onSaveEnv() {
+  savingEnv.value = true
+  envError.value = ''
+  try {
+    const { redeployRequired } = await updateEnv(slug.value, buildEnvRecord(envRows.value))
+    envRedeployPending.value = redeployRequired
+    await refreshConfig()
+  } catch (err) {
+    envError.value = extractApiError(err, 'Could not save environment variables.')
+  } finally {
+    savingEnv.value = false
+  }
+}
 
 async function onRedeploy() {
   redeploying.value = true
   try {
     await redeploy(slug.value)
+    envRedeployPending.value = false
     toast.add({
       title: 'Redeploy started',
       description: 'A new release is rolling out — watch its status in the release history.',
@@ -245,7 +309,7 @@ async function confirmDelete() {
         <!-- Logs -->
         <UCard>
           <template #header>
-            <div class="flex items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
               <h2 class="font-medium">
                 Run logs
               </h2>
@@ -253,6 +317,27 @@ async function confirmDelete() {
                 v-if="logsData?.podName"
                 class="font-mono text-xs text-muted"
               >{{ logsData.podName }}</span>
+
+              <div class="ms-auto flex items-center gap-2">
+                <USelect
+                  v-model="tailLines"
+                  data-testid="tail-lines"
+                  :items="TAIL_LINE_OPTIONS"
+                  size="sm"
+                  class="w-28"
+                  aria-label="Log lines to show"
+                />
+                <UButton
+                  data-testid="refresh-logs"
+                  icon="i-lucide-refresh-cw"
+                  color="neutral"
+                  variant="subtle"
+                  size="sm"
+                  :loading="logsStatus === 'pending'"
+                  aria-label="Refresh logs"
+                  @click="refreshLogs()"
+                />
+              </div>
             </div>
           </template>
 
@@ -274,8 +359,108 @@ async function confirmDelete() {
           </p>
           <pre
             v-else
-            class="overflow-x-auto rounded-md bg-elevated p-3 text-xs leading-relaxed"
+            class="max-h-96 overflow-auto rounded-md bg-elevated p-3 text-xs leading-relaxed"
           >{{ logsData.logs }}</pre>
+        </UCard>
+
+        <!-- Environment variables -->
+        <UCard>
+          <template #header>
+            <h2 class="font-medium">
+              Environment variables
+            </h2>
+          </template>
+
+          <div
+            v-if="isPending(configStatus)"
+            class="space-y-2"
+          >
+            <USkeleton class="h-8 w-full" />
+            <USkeleton class="h-8 w-full" />
+          </div>
+          <UAlert
+            v-else-if="configError"
+            color="error"
+            icon="i-lucide-triangle-alert"
+            title="Couldn't load environment variables"
+          />
+          <div
+            v-else
+            class="space-y-3"
+          >
+            <UAlert
+              v-if="envRedeployPending"
+              data-testid="env-redeploy-prompt"
+              color="warning"
+              icon="i-lucide-triangle-alert"
+              title="Saved — redeploy to apply"
+              description="The running container keeps its current environment until a new release rolls out."
+            >
+              <template #actions>
+                <UButton
+                  data-testid="env-redeploy"
+                  color="warning"
+                  variant="solid"
+                  size="sm"
+                  :loading="redeploying"
+                  :disabled="redeploying"
+                  @click="onRedeploy"
+                >
+                  Redeploy now
+                </UButton>
+              </template>
+            </UAlert>
+
+            <UAlert
+              v-if="envError"
+              color="error"
+              icon="i-lucide-triangle-alert"
+              :title="envError"
+            />
+
+            <div
+              v-for="(row, index) in envRows"
+              :key="row.id"
+              class="flex items-center gap-2"
+            >
+              <UInput
+                v-model="row.key"
+                placeholder="KEY"
+                class="flex-1"
+                :aria-label="`env key ${index + 1}`"
+              />
+              <UInput
+                v-model="row.value"
+                placeholder="value"
+                class="flex-1"
+                :aria-label="`env value ${index + 1}`"
+              />
+              <UButton
+                icon="i-lucide-x"
+                variant="ghost"
+                color="neutral"
+                :aria-label="`Remove environment variable ${index + 1}`"
+                @click="removeEnvRow(index)"
+              />
+            </div>
+
+            <div class="flex items-center justify-between gap-2">
+              <UButton
+                icon="i-lucide-plus"
+                variant="ghost"
+                size="sm"
+                label="Add variable"
+                @click="addEnvRow"
+              />
+              <UButton
+                data-testid="save-env"
+                :loading="savingEnv"
+                :disabled="savingEnv"
+                label="Save"
+                @click="onSaveEnv"
+              />
+            </div>
+          </div>
         </UCard>
 
         <!-- Danger zone -->

@@ -4,11 +4,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import New from '../new.vue'
 
 const deploy = vi.hoisted(() => vi.fn())
+const nav = vi.hoisted(() => vi.fn())
+const toastAdd = vi.hoisted(() => vi.fn())
 
 mockNuxtImport('useDeployApp', () => () => ({ deploy }))
+mockNuxtImport('navigateTo', () => nav)
+mockNuxtImport('useToast', () => () => ({ add: toastAdd }))
 
 beforeEach(() => {
   deploy.mockReset()
+  nav.mockReset()
+  toastAdd.mockReset()
 })
 
 const flush = () => new Promise(resolve => setTimeout(resolve))
@@ -32,7 +38,7 @@ describe('apps/new deploy form', () => {
     expect(wrapper.find('input#slug').exists()).toBe(true)
   })
 
-  it('deploys and shows the public URL + status on success', async () => {
+  it('deploys, then redirects to the app detail page with a confirming toast', async () => {
     deploy.mockResolvedValueOnce({
       appSlug: 'my-app',
       url: 'https://my-app.marsa.cc',
@@ -50,9 +56,14 @@ describe('apps/new deploy form', () => {
       image: 'nginx:1.27',
       containerPort: 80,
     })
-    expect(wrapper.text()).toContain('Deploy started')
-    expect(wrapper.text()).toContain('https://my-app.marsa.cc')
-    expect(wrapper.text()).toContain('pending')
+    expect(nav).toHaveBeenCalledWith('/apps/my-app')
+    expect(toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Deploy started',
+        description: 'my-app is rolling out at https://my-app.marsa.cc',
+        color: 'success',
+      }),
+    )
   })
 
   it('includes non-empty env rows in the deploy command', async () => {
@@ -113,6 +124,7 @@ describe('apps/new deploy form', () => {
     await flush()
 
     expect(wrapper.text()).toContain('slug must be a valid DNS-1123 label')
+    expect(nav).not.toHaveBeenCalled()
   })
 
   it('blocks submit and does not call the API on invalid input', async () => {

@@ -1,6 +1,7 @@
 import { flushPromises } from '@vue/test-utils'
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Ref } from 'vue'
 import { nextTick, ref } from 'vue'
 
 import Detail from '../[slug].vue'
@@ -11,9 +12,21 @@ const s = vi.hoisted(() => ({
   health: { data: null as unknown, status: 'success', error: null as unknown },
   releases: { data: { releases: [] } as unknown, status: 'success', error: null as unknown },
   logs: { data: { podName: null, logs: '' } as unknown, status: 'success', error: null as unknown },
+  config: {
+    data: { slug: 'my-app', env: {} } as unknown,
+    status: 'success',
+    error: null as unknown,
+  },
   refreshHealth: vi.fn(),
   refreshReleases: vi.fn(),
+  refreshLogs: vi.fn(),
+  refreshConfig: vi.fn(),
   redeploy: vi.fn(),
+  updateEnv: vi.fn(),
+  // Captured from useAppRunLogs so a test can assert the selector drives the
+  // tailLines the composable fetches with. Seeded as a plain holder because
+  // vi.hoisted runs before imports — the real ref is assigned by the mock.
+  tailLines: { value: 0 } as { value: number },
 }))
 
 mockNuxtImport('useRoute', () => () => ({ params: { slug: 'my-app' } }))
@@ -30,11 +43,22 @@ mockNuxtImport('useAppReleases', () => () => ({
   refresh: s.refreshReleases,
 }))
 mockNuxtImport('useRedeployApp', () => () => ({ redeploy: s.redeploy }))
-mockNuxtImport('useAppRunLogs', () => () => ({
-  data: ref(s.logs.data),
-  status: ref(s.logs.status),
-  error: ref(s.logs.error),
+mockNuxtImport('useAppRunLogs', () => (_slug: string, tailLines: Ref<number>) => {
+  s.tailLines = tailLines
+  return {
+    data: ref(s.logs.data),
+    status: ref(s.logs.status),
+    error: ref(s.logs.error),
+    refresh: s.refreshLogs,
+  }
+})
+mockNuxtImport('useAppDetail', () => () => ({
+  data: ref(s.config.data),
+  status: ref(s.config.status),
+  error: ref(s.config.error),
+  refresh: s.refreshConfig,
 }))
+mockNuxtImport('useUpdateAppEnv', () => () => ({ updateEnv: s.updateEnv }))
 
 const del = vi.hoisted(() => ({ remove: vi.fn() }))
 const nav = vi.hoisted(() => vi.fn())
@@ -48,8 +72,16 @@ beforeEach(() => {
   s.health = { data: null, status: 'success', error: null }
   s.releases = { data: { releases: [] }, status: 'success', error: null }
   s.logs = { data: { podName: null, logs: '' }, status: 'success', error: null }
+  s.config = { data: { slug: 'my-app', env: {} }, status: 'success', error: null }
   s.refreshHealth = vi.fn()
   s.refreshReleases = vi.fn()
+  s.refreshLogs = vi.fn()
+  s.refreshConfig = vi.fn()
+  s.updateEnv = vi.fn().mockResolvedValue({
+    slug: 'my-app',
+    env: { LOG_LEVEL: 'debug' },
+    redeployRequired: true,
+  })
   s.redeploy = vi.fn().mockResolvedValue({
     appSlug: 'my-app',
     url: 'https://my-app.marsa.cc',
@@ -171,6 +203,89 @@ describe('apps/[slug] detail page', () => {
       }),
     )
     expect(s.refreshReleases).not.toHaveBeenCalled()
+  })
+
+  it('refreshes the logs on demand', async () => {
+    const wrapper = await mountSuspended(Detail)
+
+    await wrapper.find('[data-testid="refresh-logs"]').trigger('click')
+
+    expect(s.refreshLogs).toHaveBeenCalled()
+  })
+
+  it('re-fetches the logs with the selected line count', async () => {
+    const wrapper = await mountSuspended(Detail)
+    expect(s.tailLines.value).toBe(100)
+
+    // The dropdown is portalled and doesn't open under happy-dom, so drive the
+    // selection through the component's v-model rather than the popover UI.
+    const select = wrapper.findComponent({ name: 'USelect' })
+    expect(select.props('items')).toEqual([50, 100, 200, 500, 1000])
+    select.vm.$emit('update:modelValue', 500)
+    await nextTick()
+
+    expect(s.tailLines.value).toBe(500)
+  })
+
+  it('seeds the env editor from the stored config', async () => {
+    s.config.data = { slug: 'my-app', env: { LOG_LEVEL: 'info', REGION: 'eu' } }
+    const wrapper = await mountSuspended(Detail)
+
+    expect(
+      (wrapper.find('input[aria-label="env key 1"]').element as HTMLInputElement).value,
+    ).toBe('LOG_LEVEL')
+    expect(
+      (wrapper.find('input[aria-label="env value 1"]').element as HTMLInputElement).value,
+    ).toBe('info')
+    expect(
+      (wrapper.find('input[aria-label="env key 2"]').element as HTMLInputElement).value,
+    ).toBe('REGION')
+  })
+
+  it('saves the edited env as a whole record and prompts for a redeploy', async () => {
+    s.config.data = { slug: 'my-app', env: { LOG_LEVEL: 'info' } }
+    const wrapper = await mountSuspended(Detail)
+
+    await wrapper.find('input[aria-label="env value 1"]').setValue('debug')
+    await wrapper.find('[data-testid="save-env"]').trigger('click')
+    await flushPromises()
+
+    expect(s.updateEnv).toHaveBeenCalledWith('my-app', { LOG_LEVEL: 'debug' })
+    expect(wrapper.find('[data-testid="env-redeploy-prompt"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Saved — redeploy to apply')
+  })
+
+  it('clears the redeploy prompt once the redeploy succeeds', async () => {
+    const wrapper = await mountSuspended(Detail)
+
+    await wrapper.find('[data-testid="save-env"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="env-redeploy-prompt"]').exists()).toBe(true)
+
+    await wrapper.find('[data-testid="env-redeploy"]').trigger('click')
+    await flushPromises()
+
+    expect(s.redeploy).toHaveBeenCalledWith('my-app')
+    expect(wrapper.find('[data-testid="env-redeploy-prompt"]').exists()).toBe(false)
+  })
+
+  it('surfaces the API message inline and shows no prompt when the env save fails', async () => {
+    s.updateEnv = vi.fn().mockRejectedValue({ data: { message: 'env must be an object' } })
+    const wrapper = await mountSuspended(Detail)
+
+    await wrapper.find('[data-testid="save-env"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('env must be an object')
+    expect(wrapper.find('[data-testid="env-redeploy-prompt"]').exists()).toBe(false)
+  })
+
+  it('shows an error state when the stored config fails to load', async () => {
+    s.config.error = new Error('boom')
+    const wrapper = await mountSuspended(Detail)
+
+    expect(wrapper.text()).toContain('Couldn\'t load environment variables')
+    expect(wrapper.find('[data-testid="save-env"]').exists()).toBe(false)
   })
 
   it('shows a danger zone with a delete button', async () => {

@@ -11,6 +11,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator'
+import { IsAppEnvRecord } from '#src/app/app-management/entities/app-env.js'
 import {
   MAX_CONTAINER_PORT,
   MAX_REPLICAS,
@@ -20,7 +21,6 @@ import {
   SLUG_PATTERN,
 } from '#src/app/release/use-cases/deploy-app/deploy-app.constants.js'
 import { ImagePullCredentials } from '#src/app/release/use-cases/deploy-app/image-pull-credentials.js'
-import { IsStringRecord } from '#src/app/release/use-cases/deploy-app/is-string-record.validator.js'
 
 export class DeployAppCommand {
   @ApiProperty({
@@ -77,7 +77,7 @@ export class DeployAppCommand {
     description: 'Plain (non-secret) environment variables for the container.',
   })
   @IsOptional()
-  @IsStringRecord()
+  @IsAppEnvRecord()
   env?: Record<string, string>
 
   @ApiPropertyOptional({

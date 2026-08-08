@@ -1,8 +1,9 @@
 import { mountSuspended, registerEndpoint } from '@nuxt/test-utils/runtime'
-import { describe, expect, it } from 'vitest'
-import { defineComponent, h } from 'vue'
+import { getQuery } from 'h3'
+import { describe, expect, it, vi } from 'vitest'
+import { defineComponent, h, ref } from 'vue'
 
-import { useAppHealth, useAppReleases, useAppRunLogs } from '../useAppDetail'
+import { useAppDetail, useAppHealth, useAppReleases, useAppRunLogs } from '../useAppDetail'
 
 const SLUG = 'my-app'
 
@@ -20,10 +21,26 @@ const releases = {
 }
 const health = { status: 'healthy', availableReplicas: 2, desiredReplicas: 2 }
 const runLogs = { podName: 'my-app-abc', logs: 'listening on :8080\n' }
+const detail = {
+  slug: SLUG,
+  image: 'nginx:1.27',
+  url: 'https://my-app.marsa.cc',
+  containerPort: 80,
+  replicas: 1,
+  env: { LOG_LEVEL: 'info' },
+  createdAt: '2026-07-10T10:00:00.000Z',
+  updatedAt: '2026-07-10T10:01:00.000Z',
+}
+
+const logsQuery = vi.fn()
 
 registerEndpoint(`/api/v1/apps/${SLUG}/releases`, () => releases)
 registerEndpoint(`/api/v1/apps/${SLUG}/health`, () => health)
-registerEndpoint(`/api/v1/apps/${SLUG}/logs`, () => runLogs)
+registerEndpoint(`/api/v1/apps/${SLUG}/logs`, (event) => {
+  logsQuery(getQuery(event))
+  return runLogs
+})
+registerEndpoint(`/api/v1/apps/${SLUG}`, () => detail)
 
 function mountComposable<T>(run: () => T) {
   let result!: T
@@ -49,8 +66,14 @@ describe('useAppDetail read composables', () => {
     expect(data.value).toEqual(health)
   })
 
-  it('useAppRunLogs reads the per-app logs endpoint', async () => {
-    const { data } = await mountComposable(() => useAppRunLogs(SLUG))
+  it('useAppRunLogs reads the per-app logs endpoint with the requested tailLines', async () => {
+    const { data } = await mountComposable(() => useAppRunLogs(SLUG, ref(250)))
     expect(data.value).toEqual(runLogs)
+    expect(logsQuery).toHaveBeenCalledWith(expect.objectContaining({ tailLines: '250' }))
+  })
+
+  it('useAppDetail reads the per-app detail endpoint', async () => {
+    const { data } = await mountComposable(() => useAppDetail(SLUG))
+    expect(data.value).toEqual(detail)
   })
 })
