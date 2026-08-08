@@ -69,7 +69,40 @@ pnpm dev:api                               # api on :3000 (mock backends)
 pnpm dev:web                               # web on :3001 (auto-picks a free port; proxies /api → :3000)
 ```
 
-Then paste the printed `marsa_session=…` cookie into the browser (DevTools → Application → Cookies) for the web origin and reload — the web's `get-current-user` now resolves the seeded operator and the app renders authenticated. The cookie is a real `@fastify/secure-session` cookie minted with the fixed dev `AUTH_SESSION_SECRET_KEY`, so it stays valid across restarts; re-run `seed-dev.js` to reprint it. Real GitHub login + real deploys are exercised on the k3d path (issue #122), not here.
+Then paste the printed `marsa_session=…` cookie into the browser (DevTools → Application → Cookies) for the web origin and reload — the web's `get-current-user` now resolves the seeded operator and the app renders authenticated. The cookie is a real `@fastify/secure-session` cookie minted with the fixed dev `AUTH_SESSION_SECRET_KEY`, so it stays valid across restarts; re-run `seed-dev.js` to reprint it. Real GitHub login + real deploys are exercised on the k3d path below, not here.
+
+## Clicking through a branch on a real cluster (k3d)
+
+The fast loop above fakes deploys. To exercise a branch against **real** Kubernetes — real manifests, real rollouts, real pod logs — install it on a disposable k3d cluster.
+
+**`pnpm e2e:up` installs the _published_ image, not your working tree.** There is no local-image path: the chart is pulled from OCI and the installer only takes an image _tag_. So to click through your own branch, get CD to publish one:
+
+1. **Label the PR `preview`** — `cd.yml` is label-gated (`pull_request: [labeled, synchronize]` + a job-level `if`), so labelling publishes `ghcr.io/marsa-cloud/marsa-{api,web}:sha-<short>`.
+2. **Read the tag from the CD run, don't derive it.** On a `pull_request` event `github.sha` is the **merge** commit, so the tag is _not_ your head commit's sha:
+
+   ```bash
+   gh run view <run-id> --log | grep -oE 'ghcr.io/marsa-cloud/marsa-(api|web):sha-[a-f0-9]+' | sort -u
+   ```
+
+3. **Bring the cluster up on that tag**, overriding the host ports if something already holds `:80` / `:443`:
+
+   ```bash
+   MARSA_E2E_HTTP_PORT=8080 bash scripts/e2e-up.sh --image-tag sha-<short>
+   export KUBECONFIG="$(k3d kubeconfig write marsa-e2e)"
+   ```
+
+4. **Mint a session cookie from inside the api pod** (no GitHub App is configured on a throwaway cluster, so real login isn't available):
+
+   ```bash
+   pod=$(kubectl -n marsa get pod -l app=marsa-api -o jsonpath='{.items[0].metadata.name}')
+   kubectl -n marsa exec "$pod" -- node dist/src/entrypoints/seed-dev.js --user-only
+   ```
+
+5. **Open `https://127.0.0.1.nip.io/`** (Traefik's self-signed cert — accept the warning), paste the cookie for that origin, reload. The web's `apiBase` is the relative `/api` and Traefik routes it on the web host, so **one cookie on the web origin covers the API too** — you don't need a second cookie on `api.<domain>`.
+
+6. `pnpm e2e:down` when finished. `pnpm e2e:test` runs the scripted assertions against any installed Marsa and is re-runnable against the same cluster.
+
+Deployed apps land at `https://<slug>.127.0.0.1.nip.io`. Full tier comparison, CI reuse, and design rationale: [`docs/local-dev.md`](../docs/local-dev.md).
 
 ## Code style
 

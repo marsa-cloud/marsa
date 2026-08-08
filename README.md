@@ -44,9 +44,28 @@ curl -fsSL https://get.marsa.cc \
 
 Verify the node joined by running `sudo k3s kubectl get nodes` on the server.
 
-> [!WARNING]
-> Connect nodes over a **private network**. Inter-node traffic is not encrypted by
-> default; encrypted networking is tracked in [#24](https://github.com/marsa-cloud/marsa/issues/24).
+### Node-to-node encryption
+
+Traffic between nodes is encrypted. Marsa installs K3s with flannel's
+`wireguard-native` backend, so the pod/service overlay is carried over WireGuard
+instead of plaintext VXLAN. This is on by default and has no configuration flag.
+
+Two consequences for operators:
+
+- **Open UDP 51820 between nodes.** WireGuard replaces VXLAN's UDP 8472. A firewall
+  that only allows 8472 will leave a joining node stuck short of `Ready`.
+- **Every node needs in-kernel WireGuard.** Kernel 5.6+ has it built in; on older or
+  minimal cloud images, `sudo apt-get install -y wireguard` (and sometimes
+  `linux-modules-extra-$(uname -r)`) provides it. The installer checks for this in
+  pre-flight and refuses to run without it, on both the server and agent paths.
+
+Single-node installs are unaffected in practice — there is no second node to talk to —
+but the same kernel requirement applies, since adding a node later must just work.
+
+This covers **L3 node interconnection** only. Pod-to-pod / service-mesh mTLS is tracked
+in [#24](https://github.com/marsa-cloud/marsa/issues/24), and edge TLS from clients to
+the ingress is handled by the chart (see
+[marsa-charts#19](https://github.com/marsa-cloud/marsa-charts/issues/19)).
 
 ## Local development
 

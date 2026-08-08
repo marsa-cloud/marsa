@@ -208,6 +208,22 @@ export type ViewAppIndexResponse = {
   apps: Array<AppSummary>
 }
 
+export type ViewAppDetailResponse = {
+  slug: string
+  image: string
+  url: string
+  containerPort: number
+  replicas: number
+  /**
+   * Stored environment variables; may differ from the running container until the app is redeployed.
+   */
+  env: {
+    [key: string]: string
+  }
+  createdAt: string
+  updatedAt: string
+}
+
 export type AppHealthStatus = 'healthy' | 'degraded' | 'unavailable' | 'not_found'
 
 export type ViewAppHealthResponse = {
@@ -222,6 +238,26 @@ export type ViewAppLogsResponse = {
    */
   podName: string | null
   logs: string
+}
+
+export type UpdateAppEnvCommand = {
+  /**
+   * The complete set of environment variables to store. Replaces the existing set — omit a key to remove it, send {} to clear them all.
+   */
+  env: {
+    [key: string]: string
+  }
+}
+
+export type UpdateAppEnvResponse = {
+  slug: string
+  env: {
+    [key: string]: string
+  }
+  /**
+   * The stored env now differs from the running container until the app redeploys.
+   */
+  redeployRequired: boolean
 }
 
 export type ImagePullCredentialsWritable = {
@@ -492,6 +528,65 @@ export type ViewAppIndexV1Responses = {
 
 export type ViewAppIndexV1Response = ViewAppIndexV1Responses[keyof ViewAppIndexV1Responses]
 
+export type DeleteAppV1Data = {
+  body?: never
+  path: {
+    slug: string
+  }
+  query?: never
+  url: '/api/v1/apps/{slug}'
+}
+
+export type DeleteAppV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * No app with that slug.
+   */
+  404: unknown
+  /**
+   * Kubernetes teardown failed; the app was kept.
+   */
+  502: unknown
+}
+
+export type DeleteAppV1Responses = {
+  /**
+   * The app and its Kubernetes resources were removed.
+   */
+  204: void
+}
+
+export type DeleteAppV1Response = DeleteAppV1Responses[keyof DeleteAppV1Responses]
+
+export type ViewAppDetailV1Data = {
+  body?: never
+  path: {
+    slug: string
+  }
+  query?: never
+  url: '/api/v1/apps/{slug}'
+}
+
+export type ViewAppDetailV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * No app with that slug.
+   */
+  404: unknown
+}
+
+export type ViewAppDetailV1Responses = {
+  200: ViewAppDetailResponse
+}
+
+export type ViewAppDetailV1Response = ViewAppDetailV1Responses[keyof ViewAppDetailV1Responses]
+
 export type ViewAppHealthV1Data = {
   body?: never
   path: {
@@ -545,16 +640,20 @@ export type ViewAppLogsV1Responses = {
 
 export type ViewAppLogsV1Response = ViewAppLogsV1Responses[keyof ViewAppLogsV1Responses]
 
-export type DeleteAppV1Data = {
-  body?: never
+export type UpdateAppEnvV1Data = {
+  body: UpdateAppEnvCommand
   path: {
     slug: string
   }
   query?: never
-  url: '/api/v1/apps/{slug}'
+  url: '/api/v1/apps/{slug}/env'
 }
 
-export type DeleteAppV1Errors = {
+export type UpdateAppEnvV1Errors = {
+  /**
+   * env is not an object of string values with valid keys.
+   */
+  400: unknown
   /**
    * No active session.
    */
@@ -563,17 +662,10 @@ export type DeleteAppV1Errors = {
    * No app with that slug.
    */
   404: unknown
-  /**
-   * Kubernetes teardown failed; the app was kept.
-   */
-  502: unknown
 }
 
-export type DeleteAppV1Responses = {
-  /**
-   * The app and its Kubernetes resources were removed.
-   */
-  204: void
+export type UpdateAppEnvV1Responses = {
+  200: UpdateAppEnvResponse
 }
 
-export type DeleteAppV1Response = DeleteAppV1Responses[keyof DeleteAppV1Responses]
+export type UpdateAppEnvV1Response = UpdateAppEnvV1Responses[keyof UpdateAppEnvV1Responses]

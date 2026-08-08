@@ -1,5 +1,11 @@
 import { buildMessage, registerDecorator, type ValidationOptions } from 'class-validator'
-import { ENV_KEY_PATTERN } from '#src/app/release/use-cases/deploy-app/deploy-app.constants.js'
+
+/**
+ * Valid Kubernetes env-var name (`EnvVar.name`): must start with a letter or
+ * one of `-._`, followed by letters, digits, or `-._`. Keys that don't match
+ * fail late at cluster apply, so we reject them at the DTO boundary instead.
+ */
+export const ENV_KEY_PATTERN = /^[-._a-zA-Z][-._a-zA-Z0-9]*$/
 
 /**
  * Validates that a value is a plain object whose values are ALL strings AND
@@ -7,13 +13,16 @@ import { ENV_KEY_PATTERN } from '#src/app/release/use-cases/deploy-app/deploy-ap
  * `@IsObject()` alone accepts `{ LOG_LEVEL: 1 }` (non-string value) or
  * `{ '1BAD': 'x' }` (invalid key) — both flow into the deploy path and fail
  * late at cluster apply (Rex #103, r3493223271 + the env-key follow-up). Since
- * class-validator has no built-in record check, this co-located decorator
- * provides one for both dimensions.
+ * class-validator has no built-in record check, this decorator provides one for
+ * both dimensions.
+ *
+ * Lives with the App aggregate, which owns the `env` column, so both the
+ * deploy command and the env-update command validate it the same way.
  */
-export function IsStringRecord(validationOptions?: ValidationOptions) {
+export function IsAppEnvRecord(validationOptions?: ValidationOptions) {
   return function (object: object, propertyName: string) {
     registerDecorator({
-      name: 'isStringRecord',
+      name: 'isAppEnvRecord',
       target: object.constructor,
       propertyName,
       options: validationOptions,
