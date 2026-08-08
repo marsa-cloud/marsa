@@ -37,7 +37,7 @@ catalog:
   '@nestjs/cli': ^11.0.0
   '@nestjs/schematics': ^11.0.0
   '@nestjs/testing': ^11.0.1
-  joi: ^17.13.0
+  joi: ^17.13.4
   class-validator: ^0.14.1
   class-transformer: ^0.5.1
   reflect-metadata: ^0.2.2
@@ -67,9 +67,9 @@ catalog:
   supertest: ^7.0.0
 
   # Nuxt (web)
-  nuxt: ^4.4.6
+  nuxt: ^4.5.1
   '@nuxt/eslint': ^1.15.2
-  '@nuxt/ui': ^4.7.1
+  '@nuxt/ui': ^4.8.1
   '@iconify-json/lucide': ^1.2.106
   '@iconify-json/simple-icons': ^1.2.81
   tailwindcss: ^4.3.0
