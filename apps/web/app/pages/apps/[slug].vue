@@ -57,15 +57,36 @@ const envError = ref('')
 // tracking that needs the release-snapshot model (#179).
 const envRedeployPending = ref(false)
 
+function rowsFrom(env: Record<string, string>) {
+  const rows = Object.entries(env).map(([key, value]) => makeEnvRow(key, value))
+  return rows.length ? rows : [makeEnvRow()]
+}
+
 watch(
   config,
   (detail) => {
-    if (!detail) return
-    const rows = Object.entries(detail.env).map(([key, value]) => makeEnvRow(key, value))
-    envRows.value = rows.length ? rows : [makeEnvRow()]
+    if (detail) envRows.value = rowsFrom(detail.env)
   },
   { immediate: true },
 )
+
+/**
+ * Save is a whole-record replace, so a row the form would silently drop is a
+ * deletion the user never asked for: clearing a key to retype it, or keying two
+ * rows the same, would remove a live variable. Block the save instead.
+ */
+function envRowsProblem(): string {
+  const filled = envRows.value.filter(row => row.key.trim() || row.value.trim())
+
+  if (filled.some(row => !row.key.trim())) {
+    return 'Every variable needs a name. Name the blank row or remove it.'
+  }
+
+  const keys = filled.map(row => row.key.trim())
+  const duplicate = keys.find((key, index) => keys.indexOf(key) !== index)
+
+  return duplicate ? `Duplicate variable name "${duplicate}". Names must be unique.` : ''
+}
 
 function addEnvRow() {
   envRows.value.push(makeEnvRow())
@@ -77,17 +98,36 @@ function removeEnvRow(index: number) {
 }
 
 async function onSaveEnv() {
+  const problem = envRowsProblem()
+  if (problem) {
+    envError.value = problem
+    return
+  }
+
   savingEnv.value = true
   envError.value = ''
   try {
-    const { redeployRequired } = await updateEnv(slug.value, buildEnvRecord(envRows.value))
-    envRedeployPending.value = redeployRequired
-    await refreshConfig()
+    const saved = await updateEnv(slug.value, buildEnvRecord(envRows.value))
+    envRows.value = rowsFrom(saved.env)
+    envRedeployPending.value = saved.redeployRequired
   } catch (err) {
-    envError.value = extractApiError(err, 'Could not save environment variables.')
+    // A write that landed but came back unreadable must still prompt: the stored
+    // env has already changed, and redeploying is the only way to apply it.
+    if (err instanceof EnvSavedUnreadableError) {
+      envRedeployPending.value = true
+      envError.value = err.message
+    } else {
+      envError.value = extractApiError(err, 'Could not save environment variables.')
+    }
+    return
   } finally {
     savingEnv.value = false
   }
+
+  // Best-effort resync. refresh() reports failure through `error` rather than
+  // rejecting, and the card deliberately keeps rendering on a stale-but-present
+  // config, so a failed refetch can't hide the save or its redeploy button.
+  await refreshConfig()
 }
 
 async function onRedeploy() {
@@ -372,14 +412,14 @@ async function confirmDelete() {
           </template>
 
           <div
-            v-if="isPending(configStatus)"
+            v-if="!config && isPending(configStatus)"
             class="space-y-2"
           >
             <USkeleton class="h-8 w-full" />
             <USkeleton class="h-8 w-full" />
           </div>
           <UAlert
-            v-else-if="configError"
+            v-else-if="!config && configError"
             color="error"
             icon="i-lucide-triangle-alert"
             title="Couldn't load environment variables"

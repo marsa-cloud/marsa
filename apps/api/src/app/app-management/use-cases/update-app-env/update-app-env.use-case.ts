@@ -18,6 +18,11 @@ export class UpdateAppEnvUseCase {
       throw new NotFoundException(`App '${slug}' was not found.`)
     }
 
-    return new UpdateAppEnvResponse(await this.repository.updateEnv(app.uuid, command.env))
+    const updated = await this.repository.updateEnv(app.uuid, command.env)
+    if (!updated) {
+      throw new NotFoundException(`App '${slug}' was not found.`)
+    }
+
+    return new UpdateAppEnvResponse(updated)
   }
 }

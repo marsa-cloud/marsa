@@ -5,6 +5,7 @@ import type { Ref } from 'vue'
 import { nextTick, ref } from 'vue'
 
 import Detail from '../[slug].vue'
+import { EnvSavedUnreadableError } from '../../../composables/useUpdateAppEnv'
 
 // Mutable holders the mocked composables read at component-setup time, so each
 // test can arrange its own data/loading/error state before mounting.
@@ -269,6 +270,57 @@ describe('apps/[slug] detail page', () => {
     expect(wrapper.find('[data-testid="env-redeploy-prompt"]').exists()).toBe(false)
   })
 
+  it('blocks the save when a variable has a value but no name, rather than dropping it', async () => {
+    s.config.data = { slug: 'my-app', env: { LOG_LEVEL: 'info' } }
+    const wrapper = await mountSuspended(Detail)
+
+    await wrapper.find('input[aria-label="env key 1"]').setValue('')
+    await wrapper.find('[data-testid="save-env"]').trigger('click')
+    await flushPromises()
+
+    expect(s.updateEnv).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('Every variable needs a name')
+  })
+
+  it('blocks the save on duplicate variable names', async () => {
+    s.config.data = { slug: 'my-app', env: { A: '1', B: '2' } }
+    const wrapper = await mountSuspended(Detail)
+
+    await wrapper.find('input[aria-label="env key 2"]').setValue('A')
+    await wrapper.find('[data-testid="save-env"]').trigger('click')
+    await flushPromises()
+
+    expect(s.updateEnv).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('Duplicate variable name "A"')
+  })
+
+  it('keeps the editor and the redeploy prompt when the post-save refetch fails', async () => {
+    const wrapper = await mountSuspended(Detail)
+
+    // refresh() reports failure through `error`, not by rejecting.
+    s.refreshConfig = vi.fn().mockImplementation(() => {
+      s.config.error = new Error('boom')
+      return Promise.resolve()
+    })
+
+    await wrapper.find('[data-testid="save-env"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="env-redeploy-prompt"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="save-env"]').exists()).toBe(true)
+  })
+
+  it('still prompts for a redeploy when the save lands but the response is unreadable', async () => {
+    s.updateEnv = vi.fn().mockRejectedValue(new EnvSavedUnreadableError())
+    const wrapper = await mountSuspended(Detail)
+
+    await wrapper.find('[data-testid="save-env"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="env-redeploy-prompt"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('could not be read')
+  })
+
   it('surfaces the API message inline and shows no prompt when the env save fails', async () => {
     s.updateEnv = vi.fn().mockRejectedValue({ data: { message: 'env must be an object' } })
     const wrapper = await mountSuspended(Detail)
@@ -281,7 +333,9 @@ describe('apps/[slug] detail page', () => {
   })
 
   it('shows an error state when the stored config fails to load', async () => {
-    s.config.error = new Error('boom')
+    // A genuine initial-load failure has no data; the card deliberately keeps
+    // rendering when a *refetch* fails on top of a config it already holds.
+    s.config = { data: null, status: 'error', error: new Error('boom') }
     const wrapper = await mountSuspended(Detail)
 
     expect(wrapper.text()).toContain('Couldn\'t load environment variables')

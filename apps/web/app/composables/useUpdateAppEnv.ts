@@ -11,6 +11,19 @@ import { zUpdateAppEnvResponse } from '~/api/zod.gen'
  * keeps its old environment until the app is redeployed, which is why the
  * response carries `redeployRequired`.
  */
+/**
+ * The PUT succeeded but its body didn't match the contract (a client generated
+ * against an older `openapi.json`, say). Distinct from a failed write, because
+ * the stored env has already changed: the caller must still prompt for a
+ * redeploy rather than reporting the save as failed.
+ */
+export class EnvSavedUnreadableError extends Error {
+  constructor(options?: ErrorOptions) {
+    super('Environment variables were saved, but the response could not be read.', options)
+    this.name = 'EnvSavedUnreadableError'
+  }
+}
+
 export function useUpdateAppEnv() {
   const { $api } = useNuxtApp()
 
@@ -22,7 +35,12 @@ export function useUpdateAppEnv() {
       method: 'PUT',
       body: { env },
     })
-    return zUpdateAppEnvResponse.parse(raw)
+
+    const parsed = zUpdateAppEnvResponse.safeParse(raw)
+    if (!parsed.success) {
+      throw new EnvSavedUnreadableError({ cause: parsed.error })
+    }
+    return parsed.data
   }
 
   return { updateEnv }

@@ -2,7 +2,7 @@
 import type { FormSubmitEvent } from '@nuxt/ui'
 import * as z from 'zod'
 
-import type { DeployAppCommand } from '~/api/types.gen'
+import type { DeployAppCommand, DeployAppResponse } from '~/api/types.gen'
 
 // useDeployApp / buildEnvRecord / extractApiError are Nuxt auto-imports
 // (app/composables/*). Keeping them un-imported lets tests mock them via
@@ -74,7 +74,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   error.value = null
   submitting.value = true
 
-  let deployed
+  let deployed: DeployAppResponse
   try {
     const env = buildEnvRecord(envRows.value)
     const command: DeployAppCommand = {

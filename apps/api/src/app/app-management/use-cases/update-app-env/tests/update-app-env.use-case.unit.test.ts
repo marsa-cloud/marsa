@@ -35,6 +35,16 @@ describe('UpdateAppEnvUseCase', () => {
     expect(response.redeployRequired).toBe(true)
   })
 
+  it('throws 404 when the app is deleted between the lookup and the write', async () => {
+    const { repository, usecase } = build()
+    repository.findBySlug.resolves(new AppBuilder().withSlug('my-app').build())
+    repository.updateEnv.resolves(undefined)
+
+    await expect(
+      usecase.execute('my-app', new UpdateAppEnvCommandBuilder().build()),
+    ).rejects.toThrow(NotFoundException)
+  })
+
   it('throws 404 for an unknown slug and writes nothing', async () => {
     const { repository, usecase } = build()
     repository.findBySlug.resolves(undefined)

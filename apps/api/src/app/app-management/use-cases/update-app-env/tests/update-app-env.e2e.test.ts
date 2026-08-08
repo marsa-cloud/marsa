@@ -44,6 +44,19 @@ describe('PUT /api/v1/apps/:slug/env (e2e)', () => {
     expect(stored.env).toEqual({ LOG_LEVEL: 'debug' })
   })
 
+  it('clears every stored variable when sent an empty record', async () => {
+    const response = await request(setup.httpServer)
+      .put(`/api/v1/apps/${SLUG}/env`)
+      .set('Cookie', sessionCookie)
+      .send(new UpdateAppEnvCommandBuilder().withEnv({}).build())
+      .expect(200)
+
+    expect(response.body.env).toEqual({})
+
+    const [stored] = await setup.db.select().from(appTable).where(eq(appTable.slug, SLUG))
+    expect(stored.env).toEqual({})
+  })
+
   it('rejects env keys that are not valid env-var names with 400', async () => {
     await request(setup.httpServer)
       .put(`/api/v1/apps/${SLUG}/env`)

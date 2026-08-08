@@ -49,9 +49,10 @@ export function useAppDetail(slug: string) {
 }
 
 /**
- * A recent run-log snapshot from the app's newest pod. `tailLines` is a ref so
- * changing the line count re-fetches: it's in the cache key and watched, which
- * is what lets the page's selector drive the API's `tailLines` query param.
+ * A recent run-log snapshot from the app's newest pod. `tailLines` is a ref
+ * because `watch` is what re-fetches when the page's selector changes it — the
+ * cache key is per-slug only, so dropping the watch would freeze the pane at
+ * whatever line count loaded first.
  */
 export function useAppRunLogs(slug: string, tailLines: Ref<number>) {
   const { $api } = useNuxtApp()

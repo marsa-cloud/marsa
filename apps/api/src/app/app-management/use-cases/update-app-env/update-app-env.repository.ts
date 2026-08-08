@@ -14,7 +14,8 @@ export class UpdateAppEnvRepository {
     return app
   }
 
-  async updateEnv(uuid: AppUuid, env: Record<string, string>): Promise<App> {
+  /** Undefined when the row vanished between the lookup and this write (concurrent delete). */
+  async updateEnv(uuid: AppUuid, env: Record<string, string>): Promise<App | undefined> {
     const [app] = await this.db
       .update(appTable)
       .set({ env })

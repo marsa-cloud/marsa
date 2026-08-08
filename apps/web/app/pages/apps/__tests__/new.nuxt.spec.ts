@@ -125,6 +125,7 @@ describe('apps/new deploy form', () => {
 
     expect(wrapper.text()).toContain('slug must be a valid DNS-1123 label')
     expect(nav).not.toHaveBeenCalled()
+    expect(toastAdd).not.toHaveBeenCalled()
   })
 
   it('blocks submit and does not call the API on invalid input', async () => {
