@@ -144,12 +144,27 @@ Conventions:
 - Feature-internal code (entities, errors, etc.) stays inside the feature folder. If something needs to be shared across features, promote it to `src/modules/` or a workspace package — don't reach into another feature.
 - Tests sit in `tests/` next to the code they cover, with `.unit.test.ts` and `.e2e.test.ts` suffixes.
 - **Test the right layer** — three test types, each with a distinct scope:
-  - **E2E tests** (`.e2e.test.ts`) — exercise the full HTTP stack for API endpoints. One happy path + one bad path per use-case is sufficient; exhaustive coverage belongs in unit tests, not here.
-    - **Seed fixtures through Drizzle, never through another endpoint.** Build rows with the entity builders and insert them via `setup.db.insert(<table>).values(...)`; the only HTTP call in an e2e file should be the endpoint under test. Driving a sibling endpoint (e.g. `POST /v1/deploy`) to arrange state couples the suite to that endpoint's contract, auth, and validation — it then fails for reasons that have nothing to do with the endpoint it covers, and it makes the arranged state implicit rather than stated. `TestSetup.authenticate()` is the one sanctioned exception: a session cookie can only be minted by the real login flow.
+  - **E2E tests** (`.e2e.test.ts`) — exercise the full HTTP stack for API endpoints. One happy path + one bad path per use-case is sufficient; exhaustive coverage belongs in unit tests, not here. Seed fixtures directly (see the dedicated bullet below).
   - **Unit tests** (`.use-case.unit.test.ts`) — test the use-case class directly (no HTTP, no DB). Focus on side-effect branches and error paths that e2e tests don't cover. Does not need to be exhaustive — be sensible about what's worth testing at this level.
   - **Integration tests** (`.integration.test.ts`) — for code that has no HTTP entry point (jobs, event handlers, scheduled tasks). Boot the module, drive the logic directly.
   - **Repositories do not get dedicated tests** — they're thin `em.fork()` wrappers covered implicitly by e2e tests.
     Handbook: `handbooks/domain/marsa-api/test-layer-boundaries.md`.
+- **Seed e2e fixtures with direct DB writes, never through another endpoint.** Arrange state via `setup.db.insert(<table>).values(new <Entity>Builder()…build())`; only the endpoint **under test** is called over HTTP. Seeding through a write endpoint (e.g. `POST /v1/deploy` to get an app to delete) couples the test to a use-case it isn't testing — that endpoint's validation, side effects, and future changes can fail or silently reshape a test whose subject is somewhere else entirely, and the failure then points at the wrong slice. It also drags in machinery the test doesn't need (a deploy seed hits the `DeployBackend`, so an unrelated backend change breaks a delete test). Direct inserts also let a test arrange states no endpoint can produce — a `failed` release, an orphaned row, a legacy shape. `TestSetup.authenticate()` is the one sanctioned exception: a session cookie can only be minted by the real login flow.
+
+  ```ts
+  // WRONG — seeds through the deploy endpoint
+  await request(setup.httpServer)
+    .post('/api/v1/deploy')
+    .set('Cookie', cookie)
+    .send(command)
+    .expect(200)
+
+  // RIGHT — arrange the rows the test needs, directly
+  const app = new AppBuilder().withSlug(SLUG).build()
+  await setup.db.insert(appTable).values(app)
+  await setup.db.insert(releaseTable).values(new ReleaseBuilder().withApp(app).build())
+  ```
+
 - **Stub collaborators with sinon `createStubInstance(Class)`** in unit tests — not object literals cast through `as unknown as <Class>`; the stub stays in sync with the class signature and gives call-tracking for free. Handbook: `handbooks/domain/marsa-api/sinon-stub-instance.md`.
 
 ## Test harness

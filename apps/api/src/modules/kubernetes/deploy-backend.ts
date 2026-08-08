@@ -21,6 +21,13 @@ export abstract class DeployBackend {
   abstract apply(namespace: string, manifests: RenderedManifests): Promise<void>
 
   /**
+   * Remove every resource `apply` created for an app. Deletes in traffic-safety
+   * order (IngressRoute first) and treats a missing resource as success, so a
+   * teardown retried after a partial failure still completes.
+   */
+  abstract destroy(namespace: string, appName: string): Promise<void>
+
+  /**
    * Read a Deployment's rollout outcome (#100). Returns a neutral
    * {@link RolloutStatus}; `NotFound` when the Deployment does not exist.
    */

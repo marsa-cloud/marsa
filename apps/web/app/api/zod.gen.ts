@@ -19,6 +19,7 @@ export const zManifestDto = z.object({
   url: z.string(),
   hook_attributes: zHookAttributesDto,
   redirect_url: z.string(),
+  setup_url: z.string(),
   callback_urls: z.array(z.string()),
   public: z.boolean(),
   request_oauth_on_install: z.boolean(),
@@ -217,3 +218,12 @@ export const zViewAppLogsV1Query = z.object({
 })
 
 export const zViewAppLogsV1Response = zViewAppLogsResponse
+
+export const zDeleteAppV1Path = z.object({
+  slug: z.string(),
+})
+
+/**
+ * The app and its Kubernetes resources were removed.
+ */
+export const zDeleteAppV1Response = z.void()

@@ -1,6 +1,7 @@
+import { flushPromises } from '@vue/test-utils'
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 
 import Detail from '../[slug].vue'
 
@@ -13,7 +14,6 @@ const s = vi.hoisted(() => ({
   refreshHealth: vi.fn(),
   refreshReleases: vi.fn(),
   redeploy: vi.fn(),
-  toastAdd: vi.fn(),
 }))
 
 mockNuxtImport('useRoute', () => () => ({ params: { slug: 'my-app' } }))
@@ -30,12 +30,19 @@ mockNuxtImport('useAppReleases', () => () => ({
   refresh: s.refreshReleases,
 }))
 mockNuxtImport('useRedeployApp', () => () => ({ redeploy: s.redeploy }))
-mockNuxtImport('useToast', () => () => ({ add: s.toastAdd }))
 mockNuxtImport('useAppRunLogs', () => () => ({
   data: ref(s.logs.data),
   status: ref(s.logs.status),
   error: ref(s.logs.error),
 }))
+
+const del = vi.hoisted(() => ({ remove: vi.fn() }))
+const nav = vi.hoisted(() => vi.fn())
+const toastAdd = vi.hoisted(() => vi.fn())
+
+mockNuxtImport('useDeleteApp', () => () => ({ remove: del.remove }))
+mockNuxtImport('navigateTo', () => nav)
+mockNuxtImport('useToast', () => () => ({ add: toastAdd }))
 
 beforeEach(() => {
   s.health = { data: null, status: 'success', error: null }
@@ -43,13 +50,16 @@ beforeEach(() => {
   s.logs = { data: { podName: null, logs: '' }, status: 'success', error: null }
   s.refreshHealth = vi.fn()
   s.refreshReleases = vi.fn()
-  s.toastAdd = vi.fn()
   s.redeploy = vi.fn().mockResolvedValue({
     appSlug: 'my-app',
     url: 'https://my-app.marsa.cc',
     releaseUuid: 'r-new',
     deployStatus: 'pending',
   })
+  del.remove.mockReset()
+  del.remove.mockResolvedValue(undefined)
+  nav.mockReset()
+  toastAdd.mockReset()
 })
 
 const clickRedeploy = async (wrapper: { findAll: (s: string) => { text: () => string, trigger: (e: string) => Promise<void> }[] }) => {
@@ -142,7 +152,7 @@ describe('apps/[slug] detail page', () => {
     expect(s.redeploy).toHaveBeenCalledWith('my-app')
     expect(s.refreshReleases).toHaveBeenCalled()
     expect(s.refreshHealth).toHaveBeenCalled()
-    expect(s.toastAdd).toHaveBeenCalledWith(
+    expect(toastAdd).toHaveBeenCalledWith(
       expect.objectContaining({ title: 'Redeploy started', color: 'success' }),
     )
   })
@@ -153,7 +163,7 @@ describe('apps/[slug] detail page', () => {
 
     await clickRedeploy(wrapper)
 
-    expect(s.toastAdd).toHaveBeenCalledWith(
+    expect(toastAdd).toHaveBeenCalledWith(
       expect.objectContaining({
         title: 'Redeploy failed',
         description: 'No app with that slug.',
@@ -161,5 +171,89 @@ describe('apps/[slug] detail page', () => {
       }),
     )
     expect(s.refreshReleases).not.toHaveBeenCalled()
+  })
+
+  it('shows a danger zone with a delete button', async () => {
+    const wrapper = await mountSuspended(Detail)
+    expect(wrapper.text()).toContain('Danger zone')
+    expect(wrapper.text()).toContain('Delete app')
+  })
+
+  it('keeps confirmation disabled until the typed slug matches, then deletes and navigates away', async () => {
+    const wrapper = await mountSuspended(Detail, { attachTo: document.body })
+
+    await wrapper.find('[data-testid="delete-app"]').trigger('click')
+    await nextTick()
+
+    const confirm = () => document.querySelector('[data-testid="confirm-delete"]') as HTMLButtonElement
+    expect(confirm().disabled).toBe(true)
+
+    const input = document.querySelector('[data-testid="confirm-slug"]') as HTMLInputElement
+    input.value = 'my-app'
+    input.dispatchEvent(new Event('input'))
+    await nextTick()
+
+    expect(confirm().disabled).toBe(false)
+    confirm().click()
+    await flushPromises()
+
+    expect(del.remove).toHaveBeenCalledWith('my-app')
+    expect(nav).toHaveBeenCalledWith('/apps')
+  })
+
+  it('confirms the deletion with a toast, since the page navigates away', async () => {
+    const wrapper = await mountSuspended(Detail, { attachTo: document.body })
+
+    await wrapper.find('[data-testid="delete-app"]').trigger('click')
+    await nextTick()
+
+    const input = document.querySelector('[data-testid="confirm-slug"]') as HTMLInputElement
+    input.value = 'my-app'
+    input.dispatchEvent(new Event('input'))
+    await nextTick()
+    ;(document.querySelector('[data-testid="confirm-delete"]') as HTMLButtonElement).click()
+    await flushPromises()
+
+    expect(toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'my-app deleted', color: 'success' }),
+    )
+  })
+
+  it('does not delete when the typed slug does not match', async () => {
+    const wrapper = await mountSuspended(Detail, { attachTo: document.body })
+
+    await wrapper.find('[data-testid="delete-app"]').trigger('click')
+    await nextTick()
+
+    const input = document.querySelector('[data-testid="confirm-slug"]') as HTMLInputElement
+    input.value = 'wrong-name'
+    input.dispatchEvent(new Event('input'))
+    await nextTick()
+    ;(document.querySelector('[data-testid="confirm-delete"]') as HTMLButtonElement).click()
+    await flushPromises()
+
+    expect(del.remove).not.toHaveBeenCalled()
+    expect(nav).not.toHaveBeenCalled()
+  })
+
+  it('surfaces the API error and stays on the page when deletion fails', async () => {
+    del.remove.mockRejectedValueOnce({ data: { message: 'Could not remove it.' } })
+    const wrapper = await mountSuspended(Detail, { attachTo: document.body })
+
+    await wrapper.find('[data-testid="delete-app"]').trigger('click')
+    await nextTick()
+
+    const input = document.querySelector('[data-testid="confirm-slug"]') as HTMLInputElement
+    input.value = 'my-app'
+    input.dispatchEvent(new Event('input'))
+    await nextTick()
+    ;(document.querySelector('[data-testid="confirm-delete"]') as HTMLButtonElement).click()
+    await flushPromises()
+
+    expect(document.body.textContent).toContain('Could not remove it.')
+    expect(nav).not.toHaveBeenCalled()
+    // The error belongs next to the retry button, not in a toast the user has
+    // to look away for.
+    expect(toastAdd).not.toHaveBeenCalled()
   })
 })

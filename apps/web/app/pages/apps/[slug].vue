@@ -73,6 +73,47 @@ function isPending(status: string) {
 function formatTime(iso: string) {
   return new Date(iso).toLocaleString()
 }
+
+const { remove } = useDeleteApp()
+
+const confirmOpen = ref(false)
+const confirmSlug = ref('')
+const deleting = ref(false)
+const deleteError = ref('')
+
+const canDelete = computed(() => confirmSlug.value === slug.value)
+
+function openConfirm() {
+  confirmSlug.value = ''
+  deleteError.value = ''
+  confirmOpen.value = true
+}
+
+async function confirmDelete() {
+  if (!canDelete.value) return
+
+  deleting.value = true
+  deleteError.value = ''
+  try {
+    await remove(slug.value)
+  } catch (err) {
+    deleteError.value = extractApiError(err, 'Could not delete this app. Please try again.')
+    return
+  } finally {
+    deleting.value = false
+  }
+
+  // Confirmation has to outlive the page — we navigate away, so a toast is the
+  // only thing the user still sees.
+  confirmOpen.value = false
+  toast.add({
+    title: `${slug.value} deleted`,
+    description: 'The app and its cluster resources were removed.',
+    icon: 'i-lucide-check',
+    color: 'success',
+  })
+  await navigateTo('/apps')
+}
 </script>
 
 <template>
@@ -236,6 +277,76 @@ function formatTime(iso: string) {
             class="overflow-x-auto rounded-md bg-elevated p-3 text-xs leading-relaxed"
           >{{ logsData.logs }}</pre>
         </UCard>
+
+        <!-- Danger zone -->
+        <UCard class="ring-error">
+          <template #header>
+            <h2 class="font-medium text-error">
+              Danger zone
+            </h2>
+          </template>
+
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <p class="text-sm text-muted">
+              Deleting removes this app and its Kubernetes resources permanently. This cannot be undone.
+            </p>
+            <UButton
+              data-testid="delete-app"
+              color="error"
+              icon="i-lucide-trash-2"
+              @click="openConfirm"
+            >
+              Delete app
+            </UButton>
+          </div>
+        </UCard>
+
+        <UModal
+          v-model:open="confirmOpen"
+          title="Delete this app?"
+        >
+          <template #body>
+            <div class="flex flex-col gap-3">
+              <p class="text-sm">
+                This permanently removes <span class="font-mono">{{ slug }}</span> and everything
+                running in the cluster for it. Type the app's name to confirm.
+              </p>
+              <UInput
+                v-model="confirmSlug"
+                data-testid="confirm-slug"
+                :placeholder="slug"
+                autocomplete="off"
+              />
+              <UAlert
+                v-if="deleteError"
+                color="error"
+                icon="i-lucide-triangle-alert"
+                :title="deleteError"
+              />
+            </div>
+          </template>
+
+          <template #footer>
+            <div class="flex justify-end gap-2 w-full">
+              <UButton
+                color="neutral"
+                variant="ghost"
+                @click="confirmOpen = false"
+              >
+                Cancel
+              </UButton>
+              <UButton
+                data-testid="confirm-delete"
+                color="error"
+                :disabled="!canDelete"
+                :loading="deleting"
+                @click="confirmDelete"
+              >
+                Delete
+              </UButton>
+            </div>
+          </template>
+        </UModal>
       </div>
     </template>
   </UDashboardPanel>

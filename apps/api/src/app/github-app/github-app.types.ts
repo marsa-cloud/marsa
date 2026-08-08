@@ -28,6 +28,9 @@ export class ManifestDto {
   @ApiProperty({ type: String })
   readonly redirect_url: string
 
+  @ApiProperty({ type: String })
+  readonly setup_url: string
+
   @ApiProperty({ type: [String] })
   readonly callback_urls: string[]
 
@@ -48,15 +51,21 @@ export class ManifestDto {
     url: string
     webhookUrl: string
     redirectUrl: string
+    setupUrl: string
     oauthCallbackUrl: string
   }) {
     this.name = params.name
     this.url = params.url
     this.hook_attributes = new HookAttributesDto(params.webhookUrl)
     this.redirect_url = params.redirectUrl
+    this.setup_url = params.setupUrl
     this.callback_urls = [params.oauthCallbackUrl]
     this.public = false
-    this.request_oauth_on_install = true
+    // Must stay false: when user authorization is requested during installation,
+    // GitHub sends the post-install redirect to `callback_urls` instead of
+    // `setup_url` — carrying installation params but no OAuth `state`, which the
+    // login callback rejects and which leaves the installation uncaptured.
+    this.request_oauth_on_install = false
     this.default_permissions = { contents: 'read', metadata: 'read' }
     this.default_events = ['push']
   }
