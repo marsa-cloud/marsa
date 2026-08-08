@@ -67,6 +67,14 @@ Consequential sub-decisions taken with it:
   target). Per-app configuration is acknowledged as the _correct_ model and deferred purely for
   scope.
 - **`AppHealthStatus.Idle`** so a sleeping app does not read as `Unavailable`.
+- **KEDA installs as its own Helm release in the `keda` namespace via `scripts/install.sh`**,
+  not as a subchart of `marsa`. Both upstream charts ship their CRDs under `templates/crds/`
+  rather than `crds/`, so Helm owns them: as subcharts, `helm uninstall marsa` would delete the
+  CRDs and cascade-delete every `ScaledObject` in the cluster, and `helm install marsa` would
+  fail outright on any cluster that already runs KEDA. Subcharts also always install into the
+  release namespace — `keda-add-ons-http` hardcodes `.Release.Namespace` with no override — so
+  the interceptor could not live in `keda` at all. A separate release costs one installer step
+  and buys independent KEDA upgrades.
 
 ## Consequences
 

@@ -46,10 +46,31 @@ ownership over cleanly. On _create_ the API server defaults the field to `1`, so
 `min=0` app runs one pod and then idles down once KEDA's HPA takes over — which conveniently
 means a first deploy still proves the image works.
 
-The exact `HTTPScaledObject` field names are **pinned at implementation time against the
-add-on version the chart vendors** — the schema moved between releases (`replicaCount` →
-`replicas`, `targetPendingRequests` → `scalingMetric.*`). Do not copy field names from this
-document.
+**Pinned schema (keda-add-ons-http 0.15.0)**, read from the chart's own CRD rather than from
+documentation, since the shape moved between releases:
+
+```yaml
+apiVersion: http.keda.sh/v1alpha1 # group http.keda.sh, plural httpscaledobjects
+kind: HTTPScaledObject
+spec:
+  hosts: [<slug>.<baseDomain>] # list, matched against the Host header
+  scaleTargetRef:
+    name: <slug> # the Deployment
+    kind: Deployment
+    apiVersion: apps/v1
+    service: <slug> # required
+    port: <containerPort> # exactly one of port | portName
+  replicas: { min: <minReplicas>, max: <maxReplicas> }
+  scaledownPeriod: 300
+```
+
+`scalingMetric.concurrency.targetValue` **defaults to 100**, so it is omitted entirely — one
+fewer platform constant to justify. `targetPendingRequests` is deprecated on this version and
+must not be used.
+
+Interceptor coordinates, confirmed from `templates/interceptor/service-proxy.yaml`
+(`{{ .Chart.Name }}-{{ .Values.interceptor.proxy.service }}`): Service
+**`keda-add-ons-http-interceptor-proxy`**, namespace **`keda`**, port **8080**.
 
 ### Ordering
 
@@ -166,33 +187,52 @@ buy back a signal that surfaces on its own. Reasonable follow-up, not this issue
 
 ### KEDA packaging
 
-KEDA core and the HTTP add-on become conditional Helm dependencies of the `marsa` umbrella
-chart, both landing in the `keda` namespace:
+KEDA core (2.20.2) and the HTTP add-on (0.15.0) are installed as **their own Helm releases in
+the `keda` namespace by `scripts/install.sh`** — not as subcharts of `marsa`. `e2e-up.sh`
+delegates to `install.sh --skip-k3s`, so one change covers both the VPS and k3d paths.
 
-```yaml
-dependencies:
-  - name: keda
-    repository: https://kedacore.github.io/charts
-    condition: keda.enabled
-  - name: keda-add-ons-http
-    repository: https://kedacore.github.io/charts
-    condition: keda.enabled
-```
+Subcharts were the obvious choice and were rejected after reading the upstream charts. Both
+ship their CRDs under `templates/crds/` rather than the special `crds/` directory, which means
+Helm owns them as ordinary resources. As subcharts of `marsa` that has two sharp consequences:
 
-The condition lets someone who already runs KEDA turn ours off; everyone else gets a working
-install from one `helm install`. Costs `Chart.lock` and a `helm dependency update` step in
-`chart-ci.yml`. Exclude subchart output from the snapshot tests so a KEDA version bump does
-not churn our fixtures.
+- `helm uninstall marsa` **deletes the CRDs**, and deleting a CRD cascades to every custom
+  resource of that kind **cluster-wide** — wiping `ScaledObject`s that Marsa never created.
+- On a cluster that already runs KEDA, `helm install marsa` fails outright with
+  "resource already exists and is not owned", because Helm refuses resources it doesn't own.
+
+Neither bites on a dedicated single-node box; both bite on "I have a cluster and want to add
+Marsa to it". A separate release also lets KEDA be upgraded without cutting a marsa-charts
+release, and makes the already-have-KEDA case a no-op rather than a hard failure.
+
+A third consideration settled it: subcharts always install into the **release** namespace, and
+`keda-add-ons-http` hardcodes `.Release.Namespace` with no `namespaceOverride`. As a subchart
+the interceptor would land in `marsa`, not `keda`, so the API could no longer hardcode the
+interceptor's namespace.
+
+The installer skips KEDA when `--skip-keda` is passed or when the `scaledobjects.keda.sh` CRD
+already exists, so it stays idempotent and safe on a cluster that already has it.
 
 ### Interceptor availability
 
-`interceptor.replicas: 2`. Marsa targets single-node k3s, where this buys nothing against node
-loss — if the node dies, Traefik and every tenant pod die with it. It does buy two things that
-are real on one node: a rolling KEDA upgrade keeps one replica serving instead of blacking out
-every app, and a crash or OOM leaves a second pod answering.
+The add-on defaults to `interceptor.replicas.min: 3` / `max: 50`. Both are wrong for a
+single-node box: three idle proxy pods is wasteful, and a ceiling of 50 on one node is a
+hazard if the interceptor's own `ScaledObject` ever scales up under load. The installer sets
+**`min: 2`, `max: 4`**.
+
+Two replicas buy nothing against node loss — if the node dies, Traefik and every tenant pod die
+with it. They buy the two things that are real on one node: a rolling KEDA upgrade keeps one
+replica serving instead of blacking out every app, and a crash or OOM leaves a second pod
+answering.
 
 **No PodDisruptionBudget.** On a single node a `minAvailable: 1` PDB protects nothing and makes
 `kubectl drain` of the only node hang. Add one if Marsa ever supports multi-node.
+
+### Timeouts are already generous enough
+
+The add-on's `interceptor.responseHeaderTimeout` defaults to 300s and `readinessTimeout`
+(the scale-from-zero wait) is disabled by default, so the 5–30s cold start a real image needs
+is comfortably inside them. No tuning required — the stacked-timeout risk raised during design
+does not materialise on 0.15.0 defaults.
 
 ### Traefik configuration — the load-bearing edit
 
