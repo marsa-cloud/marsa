@@ -196,6 +196,28 @@ require_debian() {
 
 require_cmd() { command -v "$1" >/dev/null 2>&1; }
 
+require_wireguard() {
+  # Marsa provisions flannel's wireguard-native backend, which needs in-kernel
+  # WireGuard on EVERY node. Failing here is deliberate: without the module the
+  # node either refuses to start or (worse) the operator believes inter-node
+  # traffic is encrypted when the cluster never formed. See AgDR-0041.
+  if [ -d /sys/module/wireguard ] || { require_cmd modprobe && modprobe wireguard 2>/dev/null; }; then
+    ok "WireGuard kernel support present"
+    return
+  fi
+  die "WireGuard kernel support is missing, and Marsa encrypts node-to-node traffic with it.
+    Marsa installs K3s with --flannel-backend=wireguard-native, which requires the
+    in-kernel WireGuard module on every node (server and agents).
+
+    Fixes, in order of preference:
+      • Kernel 5.6+ ships WireGuard built in — upgrade the kernel, or
+      • Debian/Ubuntu: sudo apt-get install -y wireguard, then reboot if needed
+      • Some cloud/minimal images need the matching headers/extra modules:
+          sudo apt-get install -y linux-modules-extra-\$(uname -r)
+
+    Verify with: modprobe wireguard && ls -d /sys/module/wireguard"
+}
+
 preflight() {
   info "Running pre-flight checks"
   # --skip-k3s only talks to an existing cluster via $KUBECONFIG (kubectl/helm),
@@ -207,6 +229,8 @@ preflight() {
     [ "$(id -u)" -eq 0 ] || die "curl is required but missing, and installing it needs root — install curl and re-run"
     info "Installing curl"; apt-get update -qq && apt-get install -y -qq curl
   fi
+  # --skip-k3s installs into a cluster whose CNI someone else already chose.
+  [ "$SKIP_K3S" = "true" ] || require_wireguard
   ok "Pre-flight checks passed"
 }
 
@@ -222,7 +246,9 @@ install_k3s() {
   # Marsa chart expects (see marsa-charts README § Target platform). The
   # kubeconfig is left at K3s's default mode 0600 (root-only) — this script and
   # Helm both run as root, so nothing needs it world-readable (see AgDR-0003).
-  curl -sfL https://get.k3s.io | sh -
+  # --flannel-backend is a server-only flag; agents inherit the backend from the
+  # server, so the join path sets nothing (see AgDR-0041).
+  curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --flannel-backend=wireguard-native" sh -
 
   info "Waiting for K3s node to become Ready"
   local tries=0
@@ -244,6 +270,9 @@ install_k3s_agent() {
   # it register as a worker. The token goes via the env var (not k3s's argv) so it does
   # not leak into process listings on this node. Registration over 6443 is TLS — K3s
   # generates its own PKI and the token pins the server's CA hash.
+  # No --flannel-backend here: it is a server-only flag and agents inherit the
+  # backend from the server. The agent's side of the bargain is the WireGuard
+  # kernel module (checked in preflight) and UDP 51820 reachability.
   curl -sfL https://get.k3s.io | K3S_URL="$SERVER_URL" K3S_TOKEN="$TOKEN" sh -
 
   info "Waiting for the K3s agent to start"
@@ -404,8 +433,9 @@ EOF
 
     Replace <private-ip> with this server's address on the private network the
     nodes share.
-  • Connect nodes over a private network — inter-node traffic is not encrypted by
-    default (see marsa-cloud/marsa#24).
+  • Node-to-node traffic is encrypted (flannel wireguard-native). Before adding a
+    node, open ${C_BOLD}UDP 51820${C_RESET} between nodes — WireGuard replaces VXLAN's UDP 8472,
+    so a firewall that only allows 8472 will leave the cluster unable to form.
   • Re-run this script with the same arguments at any time to update Marsa.
 EOF
 }
@@ -420,8 +450,9 @@ ${C_GREEN}${C_BOLD}This node has joined the Marsa cluster.${C_RESET}
 Next steps:
   • Verify the node is Ready by running this on the SERVER:
       sudo k3s kubectl get nodes
-  • Inter-node traffic is not encrypted by default — keep nodes on a private
-    network (see marsa-cloud/marsa#24).
+  • Traffic between this node and the rest of the cluster is encrypted (flannel
+    wireguard-native). It needs ${C_BOLD}UDP 51820${C_RESET} open to the other nodes; if the node
+    never reaches Ready, check that firewall rule first.
 EOF
 }
 
