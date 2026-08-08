@@ -366,6 +366,38 @@
           "apps"
         ]
       }
+    },
+    "/api/v1/apps/{slug}": {
+      "delete": {
+        "operationId": "deleteAppV1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The app and its Kubernetes resources were removed."
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "404": {
+            "description": "No app with that slug."
+          },
+          "502": {
+            "description": "Kubernetes teardown failed; the app was kept."
+          }
+        },
+        "tags": [
+          "apps"
+        ]
+      }
     }
   },
   "info": {

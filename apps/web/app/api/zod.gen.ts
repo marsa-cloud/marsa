@@ -205,3 +205,12 @@ export const zViewAppLogsV1Query = z.object({
 })
 
 export const zViewAppLogsV1Response = zViewAppLogsResponse
+
+export const zDeleteAppV1Path = z.object({
+  slug: z.string(),
+})
+
+/**
+ * The app and its Kubernetes resources were removed.
+ */
+export const zDeleteAppV1Response = z.void()

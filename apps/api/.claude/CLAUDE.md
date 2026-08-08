@@ -149,6 +149,22 @@ Conventions:
   - **Integration tests** (`.integration.test.ts`) — for code that has no HTTP entry point (jobs, event handlers, scheduled tasks). Boot the module, drive the logic directly.
   - **Repositories do not get dedicated tests** — they're thin `em.fork()` wrappers covered implicitly by e2e tests.
     Handbook: `handbooks/domain/marsa-api/test-layer-boundaries.md`.
+- **Seed e2e fixtures with direct DB writes, never through another endpoint.** Arrange state via `setup.db.insert(<table>).values(new <Entity>Builder()…build())`; only the endpoint **under test** is called over HTTP. Seeding through a write endpoint (e.g. `POST /v1/deploy` to get an app to delete) couples the test to a use-case it isn't testing — that endpoint's validation, side effects, and future changes can fail or silently reshape a test whose subject is somewhere else entirely, and the failure then points at the wrong slice. It also drags in machinery the test doesn't need (a deploy seed hits the `DeployBackend`, so an unrelated backend change breaks a delete test). Direct inserts also let a test arrange states no endpoint can produce — a `failed` release, an orphaned row, a legacy shape.
+
+  ```ts
+  // WRONG — seeds through the deploy endpoint
+  await request(setup.httpServer)
+    .post('/api/v1/deploy')
+    .set('Cookie', cookie)
+    .send(command)
+    .expect(200)
+
+  // RIGHT — arrange the rows the test needs, directly
+  const app = new AppBuilder().withSlug(SLUG).build()
+  await setup.db.insert(appTable).values(app)
+  await setup.db.insert(releaseTable).values(new ReleaseBuilder().withApp(app).build())
+  ```
+
 - **Stub collaborators with sinon `createStubInstance(Class)`** in unit tests — not object literals cast through `as unknown as <Class>`; the stub stays in sync with the class signature and gives call-tracking for free. Handbook: `handbooks/domain/marsa-api/sinon-stub-instance.md`.
 
 ## Test harness

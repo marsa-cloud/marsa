@@ -24,6 +24,11 @@ export class MockDeployBackend extends DeployBackend {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  destroy(_namespace: string, _appName: string): Promise<void> {
+    return Promise.resolve()
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   readRolloutStatus(_namespace: string, _deploymentName: string): Promise<RolloutStatus> {
     return Promise.resolve(RolloutStatus.Complete)
   }
