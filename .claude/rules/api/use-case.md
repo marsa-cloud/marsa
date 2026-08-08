@@ -50,8 +50,8 @@ Presence, type, and shape are already enforced by the `ValidationPipe`. A use-ca
 **domain** rules (does this app exist, is this transition legal) only. See
 `.claude/rules/api/command-dto.md`.
 
-## Naming vocabulary
+## Naming
 
-`view-<entity>-index` (list) · `view-<entity>-detail` (by id) · `create-` · `update-` ·
-`delete-`. Singleton reads drop the suffix (`view-me`). A real domain verb keeps its own
-name (`deploy-app`, not `create-release`).
+The `<Action>` prefix comes from the use-case folder name, and the folder vocabulary
+(`view-<entity>-index`, `create-<entity>`, domain-verb exceptions) is in
+`apps/api/.claude/CLAUDE.md` — you pick it before this file exists.

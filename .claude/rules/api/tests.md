@@ -60,10 +60,17 @@ silently passing. Call assertions come free.
 connections, so there is no ambient transaction to roll back — always call `teardown()`, and
 never assume a test's writes disappear on their own.
 
-## Unit tests need the bench
+## Boot with the right bench
 
 ```ts
+// unit — no app boot
 describe('CaptureInstallationUseCase', () => {
   before(() => TestBench.setupUnitTest())
 })
 ```
+
+- `TestBench.setupEndToEndTest()` — boots the full `ApiModule`.
+- `TestBench.setupModuleTest(MyModule)` — boots `AppModule.forRoot([MyModule])` to isolate one feature.
+- `TestBench.setupIntegrationTest(module)` — the primitive both delegate to; caches booted apps per module so repeated calls reuse them.
+
+All of them require `NODE_ENV=test`.
