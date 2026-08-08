@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { AppHealthStatus, DeployStatus } from '~/api/types.gen'
 
-// useAppReleases / useAppHealth / useAppRunLogs are Nuxt auto-imports
+// useAppReleases / useAppHealth / useAppRunLogs / useRedeployApp / extractApiError
+// are Nuxt auto-imports
 // (app/composables/*) — left un-imported so tests can mock them via
 // mockNuxtImport, matching the deploy-form page convention.
 
@@ -15,11 +16,39 @@ const slug = computed(() => String(route.params.slug))
 
 useSeoMeta({ title: () => `${slug.value} — Marsa` })
 
-const { data: health, status: healthStatus, error: healthError } = useAppHealth(slug.value)
-const { data: releasesData, status: releasesStatus, error: releasesError } = useAppReleases(slug.value)
+const { data: health, status: healthStatus, error: healthError, refresh: refreshHealth } = useAppHealth(slug.value)
+const { data: releasesData, status: releasesStatus, error: releasesError, refresh: refreshReleases } = useAppReleases(slug.value)
 const { data: logsData, status: logsStatus, error: logsError } = useAppRunLogs(slug.value)
 
 const releases = computed(() => releasesData.value?.releases ?? [])
+
+const { redeploy } = useRedeployApp()
+const toast = useToast()
+
+const redeploying = ref(false)
+
+async function onRedeploy() {
+  redeploying.value = true
+  try {
+    await redeploy(slug.value)
+    toast.add({
+      title: 'Redeploy started',
+      description: 'A new release is rolling out — watch its status in the release history.',
+      color: 'success',
+      icon: 'i-lucide-check',
+    })
+    await Promise.all([refreshReleases(), refreshHealth()])
+  } catch (err) {
+    toast.add({
+      title: 'Redeploy failed',
+      description: extractApiError(err),
+      color: 'error',
+      icon: 'i-lucide-triangle-alert',
+    })
+  } finally {
+    redeploying.value = false
+  }
+}
 
 type BadgeColor = 'neutral' | 'info' | 'success' | 'warning' | 'error'
 
@@ -46,7 +75,6 @@ function formatTime(iso: string) {
 }
 
 const { remove } = useDeleteApp()
-const toast = useToast()
 
 const confirmOpen = ref(false)
 const confirmSlug = ref('')
@@ -100,6 +128,19 @@ async function confirmDelete() {
             color="neutral"
             aria-label="Back to apps"
           />
+        </template>
+
+        <template #right>
+          <UButton
+            icon="i-lucide-rotate-cw"
+            color="neutral"
+            variant="subtle"
+            :loading="redeploying"
+            :disabled="redeploying"
+            @click="onRedeploy"
+          >
+            Redeploy
+          </UButton>
         </template>
       </UDashboardNavbar>
     </template>

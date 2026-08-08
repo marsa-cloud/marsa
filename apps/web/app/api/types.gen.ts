@@ -166,6 +166,16 @@ export type DeployAppResponse = {
   deployStatus: DeployStatus
 }
 
+export type RedeployAppResponse = {
+  appSlug: string
+  url: string
+  /**
+   * The Release created for this redeploy.
+   */
+  releaseUuid: string
+  deployStatus: DeployStatus
+}
+
 export type ReleaseTrigger = 'manual' | 'webhook'
 
 export type ReleaseSummary = {
@@ -408,6 +418,36 @@ export type DeployAppV1Responses = {
 }
 
 export type DeployAppV1Response = DeployAppV1Responses[keyof DeployAppV1Responses]
+
+export type RedeployAppV1Data = {
+  body?: never
+  path: {
+    slug: string
+  }
+  query?: never
+  url: '/api/v1/apps/{slug}/redeploy'
+}
+
+export type RedeployAppV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * No app with that slug.
+   */
+  404: unknown
+  /**
+   * Stored image pull credentials could not be decrypted.
+   */
+  500: unknown
+}
+
+export type RedeployAppV1Responses = {
+  200: RedeployAppResponse
+}
+
+export type RedeployAppV1Response = RedeployAppV1Responses[keyof RedeployAppV1Responses]
 
 export type ViewReleaseIndexV1Data = {
   body?: never

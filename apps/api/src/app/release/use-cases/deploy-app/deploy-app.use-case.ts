@@ -1,32 +1,26 @@
 import { Injectable } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/release/enums/release-trigger.enum.js'
-import { renderManifests } from '#src/app/release/render/render-manifests.js'
+import { ApplyReleaseService } from '#src/app/release/services/apply-release/apply-release.service.js'
 import { DeployAppCommand } from '#src/app/release/use-cases/deploy-app/deploy-app.command.js'
 import { DeployAppRepository } from '#src/app/release/use-cases/deploy-app/deploy-app.repository.js'
 import { DeployAppResponse } from '#src/app/release/use-cases/deploy-app/deploy-app.response.js'
-import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
+import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import type { Database } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
-import { OPERATOR_APPS_NAMESPACE } from '#src/modules/kubernetes/deploy-backend.constants.js'
-import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
 
 @Injectable()
 export class DeployAppUseCase {
   constructor(
     @InjectDatabase() private readonly db: Database,
     private readonly repository: DeployAppRepository,
-    private readonly deployBackend: DeployBackend,
-    private readonly config: ConfigService,
-    private readonly cipher: SecretCipherService,
+    private readonly applyRelease: ApplyReleaseService,
+    private readonly credentialsCipher: ImagePullCredentialsCipher,
   ) {}
 
   async execute(command: DeployAppCommand): Promise<DeployAppResponse> {
-    const baseDomain = this.config.getOrThrow<string>('MARSA_BASE_DOMAIN')
-
     const credentials = command.imagePullCredentials
     const app = new AppBuilder()
       .withSlug(command.slug)
@@ -35,9 +29,7 @@ export class DeployAppUseCase {
       .withContainerPort(command.containerPort)
       .withReplicas(command.replicas ?? 1)
       .withEnv(command.env ?? {})
-      .withImagePullCredentialsEnc(
-        credentials ? this.cipher.encrypt(JSON.stringify(credentials)) : null,
-      )
+      .withImagePullCredentialsEnc(credentials ? this.credentialsCipher.seal(credentials) : null)
       .build()
 
     const release = new ReleaseBuilder()
@@ -53,13 +45,12 @@ export class DeployAppUseCase {
     })
 
     try {
-      const manifests = renderManifests(app, release, baseDomain, credentials)
-      await this.deployBackend.apply(OPERATOR_APPS_NAMESPACE, manifests)
+      await this.applyRelease.apply(app, release, credentials)
     } catch (error) {
       await this.repository.setReleaseDeployStatus(release.uuid, DeployStatus.Failed)
       throw error
     }
 
-    return new DeployAppResponse(app, release, baseDomain)
+    return new DeployAppResponse(app, release, this.applyRelease.baseDomain)
   }
 }

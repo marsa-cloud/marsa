@@ -3,10 +3,11 @@ import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
+import { ApplyReleaseService } from '#src/app/release/services/apply-release/apply-release.service.js'
 import { DeployAppCommandBuilder } from '#src/app/release/use-cases/deploy-app/deploy-app.command.builder.js'
 import { DeployAppRepository } from '#src/app/release/use-cases/deploy-app/deploy-app.repository.js'
 import { DeployAppUseCase } from '#src/app/release/use-cases/deploy-app/deploy-app.use-case.js'
-import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
+import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import { OPERATOR_APPS_NAMESPACE } from '#src/modules/kubernetes/deploy-backend.constants.js'
 import { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
 import { stubDatabase } from '#src/test/setup/stub-database.js'
@@ -24,9 +25,13 @@ function build() {
   const config = createStubInstance(ConfigService)
   config.getOrThrow.returns('demo.marsa.cc')
 
-  const cipher = createStubInstance(SecretCipherService)
+  const cipher = createStubInstance(ImagePullCredentialsCipher)
 
-  const usecase = new DeployAppUseCase(stubDatabase(), repository, deployBackend, config, cipher)
+  // Real ApplyReleaseService over the stubbed backend: rendering is the
+  // behaviour under test here, so only the cluster call is faked.
+  const applyRelease = new ApplyReleaseService(deployBackend, config)
+
+  const usecase = new DeployAppUseCase(stubDatabase(), repository, applyRelease, cipher)
   return { usecase, repository, deployBackend, cipher }
 }
 
@@ -64,7 +69,7 @@ describe('DeployAppUseCase', () => {
     // Public image: no credentials touched, no pull Secret rendered.
     const [, app] = repository.upsertApp.firstCall.args
     expect(app.imagePullCredentialsEnc).toBeNull()
-    expect(cipher.encrypt.called).toBe(false)
+    expect(cipher.seal.called).toBe(false)
     expect(manifests.imagePullSecret).toBeUndefined()
 
     expect(repository.setReleaseDeployStatus.called).toBe(false)
@@ -73,8 +78,7 @@ describe('DeployAppUseCase', () => {
   it('encrypts private-registry credentials at rest and materializes a pull Secret', async () => {
     const { usecase, repository, deployBackend, cipher } = build()
     const credentials = { registry: 'ghcr.io', username: 'my-org', password: 'pw-test' }
-    const credentialsJson = JSON.stringify(credentials)
-    cipher.encrypt.returns('opaque-cipher-token')
+    cipher.seal.returns('opaque-cipher-token')
 
     const privateCommand = new DeployAppCommandBuilder()
       .withSlug('my-app')
@@ -84,14 +88,14 @@ describe('DeployAppUseCase', () => {
       .build()
     await usecase.execute(privateCommand)
 
-    // Encrypt the exact credentials JSON; persist only the opaque ciphertext.
-    expect(cipher.encrypt.calledOnceWithExactly(credentialsJson)).toBe(true)
+    // Seal the exact credentials; persist only the opaque ciphertext.
+    expect(cipher.seal.calledOnceWithExactly(credentials)).toBe(true)
     const [, app] = repository.upsertApp.firstCall.args
     expect(app.imagePullCredentialsEnc).toBe('opaque-cipher-token')
     expect(app.imagePullCredentialsEnc).not.toContain('pw-test')
 
-    // Render reuses the in-memory credentials — no decrypt round-trip on the deploy path.
-    expect(cipher.decrypt.called).toBe(false)
+    // Render reuses the in-memory credentials — no open() round-trip on the deploy path.
+    expect(cipher.open.called).toBe(false)
     const [, manifests] = deployBackend.apply.firstCall.args
     expect(manifests.imagePullSecret?.metadata?.name).toBe('my-app-registry')
     expect(manifests.deployment.spec?.template.spec?.imagePullSecrets).toEqual([
