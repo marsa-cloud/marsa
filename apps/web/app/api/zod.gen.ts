@@ -66,10 +66,32 @@ export const zCompleteGithubLoginResponse = z.object({
   login: z.string(),
 })
 
-export const zUserRole = z.enum(['operator', 'member'])
+export const zUserRole = z.enum(['operator', 'member', 'guest'])
 
 export const zViewMeResponse = z.object({
   id: z.string(),
+  login: z.string(),
+  role: zUserRole,
+})
+
+export const zUserSummary = z.object({
+  uuid: z.uuid(),
+  githubUserId: z.string(),
+  login: z.string(),
+  role: zUserRole,
+  createdAt: z.iso.datetime(),
+})
+
+export const zViewUserIndexResponse = z.object({
+  users: z.array(zUserSummary),
+})
+
+export const zUpdateUserRoleCommand = z.object({
+  role: zUserRole,
+})
+
+export const zUpdateUserRoleResponse = z.object({
+  uuid: z.uuid(),
   login: z.string(),
   role: zUserRole,
 })
@@ -205,6 +227,12 @@ export const zCompleteGithubLoginV1Body = zCompleteGithubLoginCommand
 export const zCompleteGithubLoginV1Response = zCompleteGithubLoginResponse
 
 export const zViewMeV1Response = zViewMeResponse
+
+export const zViewUserIndexV1Response = zViewUserIndexResponse
+
+export const zUpdateUserRoleV1Body = zUpdateUserRoleCommand
+
+export const zUpdateUserRoleV1Response = zUpdateUserRoleResponse
 
 export const zDeployAppV1Body = zDeployAppCommandWritable
 
