@@ -28,7 +28,13 @@ const schema = z.object({
     .int('Must be a whole number')
     .gte(1, 'Must be between 1 and 65535')
     .lte(65535, 'Must be between 1 and 65535'),
-  replicas: z
+  minReplicas: z
+    .number()
+    .int('Must be a whole number')
+    .gte(0, 'Must be between 0 and 100')
+    .lte(100, 'Must be between 0 and 100')
+    .optional(),
+  maxReplicas: z
     .number()
     .int('Must be a whole number')
     .gte(1, 'Must be between 1 and 100')
@@ -41,12 +47,14 @@ const state = reactive<{
   slug: string
   image: string
   containerPort: number | undefined
-  replicas: number | undefined
+  minReplicas: number | undefined
+  maxReplicas: number | undefined
 }>({
   slug: '',
   image: '',
   containerPort: undefined,
-  replicas: undefined,
+  minReplicas: undefined,
+  maxReplicas: undefined,
 })
 
 // Stable per-row id so :key survives removals — index keys would shift and
@@ -81,7 +89,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       slug: event.data.slug,
       image: event.data.image,
       containerPort: event.data.containerPort,
-      ...(event.data.replicas !== undefined ? { replicas: event.data.replicas } : {}),
+      ...(event.data.minReplicas !== undefined ? { minReplicas: event.data.minReplicas } : {}),
+      ...(event.data.maxReplicas !== undefined ? { maxReplicas: event.data.maxReplicas } : {}),
       ...(Object.keys(env).length ? { env } : {}),
     }
     deployed = await deploy(command)
@@ -186,13 +195,28 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           </UFormField>
 
           <UFormField
-            label="Replicas"
-            name="replicas"
+            label="Minimum replicas"
+            name="minReplicas"
+            description="0 lets the app sleep when idle and wake on the first request"
+          >
+            <UInputNumber
+              id="minReplicas"
+              v-model="state.minReplicas"
+              :min="0"
+              :max="100"
+              placeholder="1"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField
+            label="Maximum replicas"
+            name="maxReplicas"
             description="Defaults to 1"
           >
             <UInputNumber
-              id="replicas"
-              v-model="state.replicas"
+              id="maxReplicas"
+              v-model="state.maxReplicas"
               :min="1"
               :max="100"
               placeholder="1"

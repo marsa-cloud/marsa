@@ -130,6 +130,13 @@ describe('apps/[slug] detail page', () => {
     expect(wrapper.text()).toContain('2 / 3 replicas available')
   })
 
+  it('describes an idle app as sleeping rather than broken', async () => {
+    s.health.data = { status: 'idle', availableReplicas: 0, desiredReplicas: 0 }
+    const wrapper = await mountSuspended(Detail)
+    expect(wrapper.text()).toContain('idle')
+    expect(wrapper.text()).toContain('no pods running')
+  })
+
   it('lists releases with status and image', async () => {
     s.releases.data = { releases: [aRelease(), aRelease({ uuid: 'r2', imageRef: 'nginx:1.28', deployStatus: 'pending' })] }
     const wrapper = await mountSuspended(Detail)

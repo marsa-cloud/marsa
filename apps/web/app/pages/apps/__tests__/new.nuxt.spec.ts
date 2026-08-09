@@ -89,7 +89,7 @@ describe('apps/new deploy form', () => {
     })
   })
 
-  it('includes replicas in the command when set', async () => {
+  it('includes the replica range in the command when set', async () => {
     deploy.mockResolvedValueOnce({
       appSlug: 'my-app',
       url: 'https://my-app.marsa.cc',
@@ -99,9 +99,12 @@ describe('apps/new deploy form', () => {
 
     const wrapper = await mountSuspended(New)
     await fillValidForm(wrapper)
-    const replicas = wrapper.find('input#replicas')
-    await replicas.setValue('3')
-    await replicas.trigger('blur')
+    const min = wrapper.find('input#minReplicas')
+    await min.setValue('0')
+    await min.trigger('blur')
+    const max = wrapper.find('input#maxReplicas')
+    await max.setValue('3')
+    await max.trigger('blur')
     await wrapper.find('form').trigger('submit.prevent')
     await flush()
 
@@ -109,7 +112,8 @@ describe('apps/new deploy form', () => {
       slug: 'my-app',
       image: 'nginx:1.27',
       containerPort: 80,
-      replicas: 3,
+      minReplicas: 0,
+      maxReplicas: 3,
     })
   })
 
