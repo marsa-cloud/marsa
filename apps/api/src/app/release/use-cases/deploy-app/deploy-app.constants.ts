@@ -18,10 +18,3 @@ export const MAX_CONTAINER_PORT = 65535
  */
 export const MIN_REPLICAS = 0
 export const MAX_REPLICAS = 100
-
-/**
- * Idle time before KEDA scales an app back down to its floor. Platform-wide
- * rather than per-app: per-app scaling config is the correct model but is
- * deferred for scope (AgDR-0043).
- */
-export const SCALEDOWN_PERIOD_SECONDS = 300

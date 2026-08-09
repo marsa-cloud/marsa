@@ -12,8 +12,8 @@ describe('renderManifests', () => {
       .withSlug('my-app')
       .withImage('nginx:1.27')
       .withContainerPort(8080)
-      .withMinReplicas(2)
-      .withMaxReplicas(2)
+      .withMinReplicas(0)
+      .withMaxReplicas(3)
       .withEnv({ LOG_LEVEL: 'info' })
       .build()
     const release = new ReleaseBuilder().withApp(app).withImageRef('nginx:1.27').build()
@@ -24,7 +24,6 @@ describe('renderManifests', () => {
     const { deployment } = render()
 
     expect(deployment.metadata?.name).toBe('my-app')
-    expect(deployment.spec?.replicas).toBe(2)
     expect(deployment.spec?.selector.matchLabels).toEqual({ app: 'my-app' })
 
     const container = deployment.spec?.template.spec?.containers[0]
@@ -69,8 +68,44 @@ describe('renderManifests', () => {
     expect(ingressRoute.kind).toBe('IngressRoute')
     expect(ingressRoute.spec.entryPoints).toEqual(['web', 'websecure'])
     expect(ingressRoute.spec.routes[0].match).toBe('Host(`my-app.demo.marsa.cc`)')
-    expect(ingressRoute.spec.routes[0].services[0]).toEqual({ name: 'my-app', port: 8080 })
     expect(ingressRoute.spec.tls?.certResolver).toBe('le')
+  })
+
+  it('omits replicas from the Deployment so KEDA owns the count', () => {
+    const { deployment } = render()
+
+    // Absent, not 0. KEDA's HPA owns spec.replicas via the scale subresource;
+    // declaring it here makes every redeploy stomp KEDA's live count and the
+    // two field managers fight on each apply (AgDR-0043).
+    expect(deployment.spec && 'replicas' in deployment.spec).toBe(false)
+  })
+
+  it('routes the IngressRoute through the KEDA interceptor', () => {
+    const { ingressRoute } = render()
+
+    expect(ingressRoute.spec.routes[0].services[0]).toEqual({
+      name: 'keda-add-ons-http-interceptor-proxy',
+      namespace: 'keda',
+      port: 8080,
+    })
+  })
+
+  it('renders an HTTPScaledObject carrying the replica range', () => {
+    const { httpScaledObject } = render()
+
+    expect(httpScaledObject.apiVersion).toBe('http.keda.sh/v1alpha1')
+    expect(httpScaledObject.kind).toBe('HTTPScaledObject')
+    expect(httpScaledObject.metadata?.name).toBe('my-app')
+    expect(httpScaledObject.spec.hosts).toEqual(['my-app.demo.marsa.cc'])
+    expect(httpScaledObject.spec.replicas).toEqual({ min: 0, max: 3 })
+    expect(httpScaledObject.spec.scaledownPeriod).toBe(300)
+    expect(httpScaledObject.spec.scaleTargetRef).toEqual({
+      name: 'my-app',
+      kind: 'Deployment',
+      apiVersion: 'apps/v1',
+      service: 'my-app',
+      port: 8080,
+    })
   })
 
   it('renders no pull Secret and no imagePullSecrets for a public image', () => {
