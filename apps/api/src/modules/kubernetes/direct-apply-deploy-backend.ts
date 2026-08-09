@@ -38,19 +38,23 @@ function requireName(object: { metadata?: { name?: string } }, kind: string): st
   return name
 }
 
+function defaultKubeConfig(): KubeConfig {
+  const kc = new KubeConfig()
+  kc.loadFromDefault()
+  return kc
+}
+
 @Injectable()
 export class DirectApplyDeployBackend extends DeployBackend {
   private readonly apps: AppsV1Api
   private readonly core: CoreV1Api
   private readonly custom: CustomObjectsApi
 
-  constructor() {
+  constructor(kubeConfig: KubeConfig = defaultKubeConfig()) {
     super()
-    const kc = new KubeConfig()
-    kc.loadFromDefault()
-    this.apps = kc.makeApiClient(AppsV1Api)
-    this.core = kc.makeApiClient(CoreV1Api)
-    this.custom = kc.makeApiClient(CustomObjectsApi)
+    this.apps = kubeConfig.makeApiClient(AppsV1Api)
+    this.core = kubeConfig.makeApiClient(CoreV1Api)
+    this.custom = kubeConfig.makeApiClient(CustomObjectsApi)
   }
 
   async apply(namespace: string, manifests: RenderedManifests): Promise<void> {
@@ -72,9 +76,11 @@ export class DirectApplyDeployBackend extends DeployBackend {
       )
     }
 
+    const deploymentName = requireName(deployment, 'Deployment')
+
     await this.apps.patchNamespacedDeployment(
       {
-        name: requireName(deployment, 'Deployment'),
+        name: deploymentName,
         namespace,
         body: deployment,
         fieldManager: DEPLOY_FIELD_MANAGER,
@@ -82,6 +88,19 @@ export class DirectApplyDeployBackend extends DeployBackend {
       },
       ssa,
     )
+
+    // A private→public transition renders no Secret, and SSA strips the
+    // Deployment's imagePullSecrets — but the Secret object itself would linger
+    // with the old credentials (#124). Deleted after the patch, so the live
+    // Deployment never references a Secret that is already gone.
+    if (!imagePullSecret) {
+      await ignoreNotFound(() =>
+        this.core.deleteNamespacedSecret({
+          name: `${deploymentName}${REGISTRY_SECRET_SUFFIX}`,
+          namespace,
+        }),
+      )
+    }
 
     await this.core.patchNamespacedService(
       {
