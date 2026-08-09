@@ -61,21 +61,23 @@ describe('first login bootstraps the Operator (e2e)', () => {
   })
 })
 
-describe('a later user becomes a Member (e2e)', () => {
+describe('a later user becomes a Guest (e2e)', () => {
   let setup: TestSetup
 
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
     await provisionApp(setup.db)
-    await setup.db.insert(userTable).values(new UserBuilder().withGithubUserId('999').build())
+    await setup.db
+      .insert(userTable)
+      .values(new UserBuilder().withGithubUserId('999').withRole(UserRole.Operator).build())
   })
 
   after(() => setup.teardown())
 
-  it('assigns Member when a user already exists', async () => {
+  it('assigns Guest when a user already exists', async () => {
     await login(setup.httpServer)
 
     const user = await setup.db.query.userTable.findFirst({ where: { githubUserId: '1' } })
-    expect(user?.role).toBe(UserRole.Member)
+    expect(user?.role).toBe(UserRole.Guest)
   })
 })

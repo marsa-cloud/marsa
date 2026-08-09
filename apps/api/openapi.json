@@ -192,6 +192,76 @@
         ]
       }
     },
+    "/api/v1/users": {
+      "get": {
+        "operationId": "viewUserIndexV1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewUserIndexResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Operators only."
+          }
+        },
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/users/{uuid}/role": {
+      "patch": {
+        "operationId": "updateUserRoleV1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRoleCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateUserRoleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown role, or an attempt to change your own."
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Operators only."
+          },
+          "404": {
+            "description": "No user with that uuid."
+          }
+        },
+        "tags": [
+          "users"
+        ]
+      }
+    },
     "/api/v1/deploy": {
       "post": {
         "operationId": "deployAppV1",
@@ -789,7 +859,8 @@
         "type": "string",
         "enum": [
           "operator",
-          "member"
+          "member",
+          "guest"
         ]
       },
       "ViewMeResponse": {
@@ -814,6 +885,98 @@
         },
         "required": [
           "id",
+          "login",
+          "role"
+        ]
+      },
+      "UserSummary": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "githubUserId": {
+            "type": "string",
+            "example": "1"
+          },
+          "login": {
+            "type": "string",
+            "example": "octocat"
+          },
+          "role": {
+            "example": "guest",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserRole"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "uuid",
+          "githubUserId",
+          "login",
+          "role",
+          "createdAt"
+        ]
+      },
+      "ViewUserIndexResponse": {
+        "type": "object",
+        "properties": {
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserSummary"
+            }
+          }
+        },
+        "required": [
+          "users"
+        ]
+      },
+      "UpdateUserRoleCommand": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "example": "member",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserRole"
+              }
+            ]
+          }
+        },
+        "required": [
+          "role"
+        ]
+      },
+      "UpdateUserRoleResponse": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "login": {
+            "type": "string",
+            "example": "octocat"
+          },
+          "role": {
+            "example": "member",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserRole"
+              }
+            ]
+          }
+        },
+        "required": [
+          "uuid",
           "login",
           "role"
         ]

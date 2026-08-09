@@ -53,8 +53,9 @@ export class CompleteGithubLoginUseCase {
       }
 
       await this.repository.lockUserBootstrap(tx)
-      const role =
-        (await this.repository.countUsers(tx)) === 0 ? UserRole.Operator : UserRole.Member
+      // Everyone after the bootstrapping operator lands on Guest, which reaches
+      // nothing until an operator promotes them (#63).
+      const role = (await this.repository.countUsers(tx)) === 0 ? UserRole.Operator : UserRole.Guest
 
       return this.repository.upsertUser(
         tx,
