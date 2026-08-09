@@ -21,4 +21,18 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (to.path === '/login' && user.value) {
     return navigateTo('/')
   }
+
+  // A guest is authenticated but not approved: every other route would answer
+  // 403, so send them somewhere that says so (#63).
+  if (user.value?.role === 'guest' && to.path !== '/pending' && !isAuthRoute) {
+    return navigateTo('/pending')
+  }
+
+  if (user.value && user.value.role !== 'guest' && to.path === '/pending') {
+    return navigateTo('/')
+  }
+
+  if (to.path === '/team' && user.value?.role !== 'operator') {
+    return navigateTo('/')
+  }
 })
