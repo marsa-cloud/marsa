@@ -26,7 +26,7 @@ export class TestSetup {
   public async teardown(): Promise<void> {
     // TRUNCATE every table to isolate suites. The request path commits on its own
     // pooled connections, so there's no transaction to roll back — wiping is what
-    // isolates. See truncate.ts (replaces MikroORM's clearDatabase()).
+    // isolates. See truncate.ts.
     await truncateAll(this.db)
   }
 

@@ -11,7 +11,7 @@ import { EnvSavedUnreadableError } from '../../../composables/useUpdateAppEnv'
 // test can arrange its own data/loading/error state before mounting.
 const s = vi.hoisted(() => ({
   health: { data: null as unknown, status: 'success', error: null as unknown },
-  releases: { data: { releases: [] } as unknown, status: 'success', error: null as unknown },
+  releases: { items: [] as unknown[], pending: false, error: null as unknown },
   logs: { data: { podName: null, logs: '' } as unknown, status: 'success', error: null as unknown },
   config: {
     data: { slug: 'my-app', env: {} } as unknown,
@@ -38,10 +38,13 @@ mockNuxtImport('useAppHealth', () => () => ({
   refresh: s.refreshHealth,
 }))
 mockNuxtImport('useAppReleases', () => () => ({
-  data: ref(s.releases.data),
-  status: ref(s.releases.status),
+  items: ref(s.releases.items),
+  pending: ref(s.releases.pending),
   error: ref(s.releases.error),
-  refresh: s.refreshReleases,
+  exhausted: ref(true),
+  canLoadMore: () => false,
+  loadMore: vi.fn(),
+  reset: s.refreshReleases,
 }))
 mockNuxtImport('useRedeployApp', () => () => ({ redeploy: s.redeploy }))
 mockNuxtImport('useAppRunLogs', () => (_slug: string, tailLines: Ref<number>) => {
@@ -71,7 +74,7 @@ mockNuxtImport('useToast', () => () => ({ add: toastAdd }))
 
 beforeEach(() => {
   s.health = { data: null, status: 'success', error: null }
-  s.releases = { data: { releases: [] }, status: 'success', error: null }
+  s.releases = { items: [], pending: false, error: null }
   s.logs = { data: { podName: null, logs: '' }, status: 'success', error: null }
   s.config = { data: { slug: 'my-app', env: {} }, status: 'success', error: null }
   s.refreshHealth = vi.fn()
@@ -131,7 +134,7 @@ describe('apps/[slug] detail page', () => {
   })
 
   it('lists releases with status and image', async () => {
-    s.releases.data = { releases: [aRelease(), aRelease({ uuid: 'r2', imageRef: 'nginx:1.28', deployStatus: 'pending' })] }
+    s.releases.items = [aRelease(), aRelease({ uuid: 'r2', imageRef: 'nginx:1.28', deployStatus: 'pending' })]
     const wrapper = await mountSuspended(Detail)
     expect(wrapper.text()).toContain('nginx:1.27')
     expect(wrapper.text()).toContain('nginx:1.28')
@@ -140,9 +143,9 @@ describe('apps/[slug] detail page', () => {
   })
 
   it('surfaces the failure reason on a failed release', async () => {
-    s.releases.data = {
-      releases: [aRelease({ deployStatus: 'failed', failureReason: 'ImagePullBackOff', failureMessage: 'not found' })],
-    }
+    s.releases.items = [
+      aRelease({ deployStatus: 'failed', failureReason: 'ImagePullBackOff', failureMessage: 'not found' }),
+    ]
     const wrapper = await mountSuspended(Detail)
     expect(wrapper.text()).toContain('ImagePullBackOff')
     expect(wrapper.text()).toContain('not found')
@@ -193,6 +196,9 @@ describe('apps/[slug] detail page', () => {
   it('surfaces the API message and skips the refresh when redeploy fails', async () => {
     s.redeploy = vi.fn().mockRejectedValue({ data: { message: 'No app with that slug.' } })
     const wrapper = await mountSuspended(Detail)
+    // Mounting loads the first page of releases; the assertion below is about
+    // the redeploy path not triggering a *further* reload.
+    s.refreshReleases.mockClear()
 
     await clickRedeploy(wrapper)
 

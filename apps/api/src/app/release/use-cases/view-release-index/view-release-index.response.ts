@@ -2,7 +2,12 @@ import { ApiProperty } from '@nestjs/swagger'
 import type { Release } from '#src/app/release/entities/release.table.js'
 import { DeployStatus, DeployStatusApiProperty } from '#src/app/release/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/release/enums/release-trigger.enum.js'
+import { ViewReleaseIndexQueryKey } from '#src/app/release/use-cases/view-release-index/query/view-release-index.query.js'
 import type { DeployFailure } from '#src/modules/kubernetes/deploy-backend.types.js'
+import {
+  PaginatedKeysetResponse,
+  PaginatedKeysetResponseMeta,
+} from '#src/utils/pagination/keyset/paginated-keyset.response.js'
 
 export class ReleaseSummary {
   @ApiProperty({ type: String, example: '00000000-0000-0000-0000-000000000000' })
@@ -54,18 +59,36 @@ export class ReleaseSummary {
   }
 }
 
-export class ViewReleaseIndexResponse {
+export class ViewReleaseIndexResponseMeta extends PaginatedKeysetResponseMeta {
+  @ApiProperty({ type: ViewReleaseIndexQueryKey, nullable: true })
+  declare readonly next: ViewReleaseIndexQueryKey | null
+
+  constructor(releases: Release[]) {
+    super(ViewReleaseIndexQueryKey.nextKey(releases))
+  }
+}
+
+export class ViewReleaseIndexResponse extends PaginatedKeysetResponse<ReleaseSummary> {
   @ApiProperty({ type: [ReleaseSummary] })
-  readonly releases: ReleaseSummary[]
+  declare readonly items: ReleaseSummary[]
+
+  // Redeclared so OpenAPI names this use-case's meta instead of inheriting the
+  // base's schema-less one — that is what gives the cursor a generated type on
+  // the client rather than an opaque record.
+  @ApiProperty({ type: ViewReleaseIndexResponseMeta })
+  declare readonly meta: ViewReleaseIndexResponseMeta
 
   /**
-   * `headFailure` (when present) is attached to the newest release only — it's
-   * the sole release that maps to the live Deployment, so a failure reason read
-   * from the cluster can only be about it.
+   * `headFailure` is only ever passed on the first page, and is attached to its
+   * first release — the sole release that maps to the live Deployment, so a
+   * failure reason read from the cluster can only be about it.
    */
   constructor(releases: Release[], headFailure?: DeployFailure | null) {
-    this.releases = releases.map(
-      (release, index) => new ReleaseSummary(release, index === 0 ? headFailure : undefined),
+    super(
+      releases.map(
+        (release, index) => new ReleaseSummary(release, index === 0 ? headFailure : undefined),
+      ),
+      new ViewReleaseIndexResponseMeta(releases),
     )
   }
 }

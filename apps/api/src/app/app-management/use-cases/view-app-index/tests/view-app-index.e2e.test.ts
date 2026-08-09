@@ -35,13 +35,13 @@ describe('GET /api/v1/apps (e2e)', () => {
       .set('Cookie', sessionCookie)
       .expect(200)
 
-    expect(Array.isArray(response.body.apps)).toBe(true)
+    expect(Array.isArray(response.body.items)).toBe(true)
 
-    const slugs = response.body.apps.map((app: { slug: string }) => app.slug)
+    const slugs = response.body.items.map((app: { slug: string }) => app.slug)
     expect(slugs).toContain(SLUG_A)
     expect(slugs).toContain(SLUG_B)
 
-    const appA = response.body.apps.find((app: { slug: string }) => app.slug === SLUG_A)
+    const appA = response.body.items.find((app: { slug: string }) => app.slug === SLUG_A)
     expect(appA.image).toBe('nginx:1.27')
     expect(appA.url).toBe(`https://${SLUG_A}.demo.marsa.cc`)
     expect(typeof appA.createdAt).toBe('string')

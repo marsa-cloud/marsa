@@ -70,6 +70,7 @@ catalog:
   nuxt: ^4.5.1
   '@nuxt/eslint': ^1.15.2
   '@nuxt/ui': ^4.8.1
+  '@vueuse/core': ^14.3.0
   '@iconify-json/lucide': ^1.2.106
   '@iconify-json/simple-icons': ^1.2.81
   tailwindcss: ^4.3.0

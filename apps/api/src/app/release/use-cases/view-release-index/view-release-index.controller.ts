@@ -1,6 +1,7 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common'
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common'
 import { ApiOkResponse, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger'
 import { SessionAuthGuard } from '#src/app/auth/guards/session-auth.guard.js'
+import { ViewReleaseIndexQuery } from '#src/app/release/use-cases/view-release-index/query/view-release-index.query.js'
 import { ViewReleaseIndexResponse } from '#src/app/release/use-cases/view-release-index/view-release-index.response.js'
 import { ViewReleaseIndexUseCase } from '#src/app/release/use-cases/view-release-index/view-release-index.use-case.js'
 
@@ -13,7 +14,10 @@ export class ViewReleaseIndexController {
   @UseGuards(SessionAuthGuard)
   @ApiOkResponse({ type: ViewReleaseIndexResponse })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
-  handle(@Param('slug') slug: string): Promise<ViewReleaseIndexResponse> {
-    return this.usecase.execute(slug)
+  handle(
+    @Param('slug') slug: string,
+    @Query() query: ViewReleaseIndexQuery,
+  ): Promise<ViewReleaseIndexResponse> {
+    return this.usecase.execute(slug, query)
   }
 }

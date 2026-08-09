@@ -1,8 +1,9 @@
 import type {
+  ReleaseSummary,
   ViewAppDetailResponse,
   ViewAppHealthResponse,
   ViewAppLogsResponse,
-  ViewReleaseIndexResponse,
+  ViewReleaseIndexQueryKey,
 } from '~/api/types.gen'
 import {
   zViewAppDetailResponse,
@@ -18,13 +19,16 @@ import {
  * #100 (releases/health) and #105/#114 (logs).
  */
 
-/** Release history + per-release deploy status for an app. */
+/**
+ * Release history + per-release deploy status for an app. Accumulating rather
+ * than a single-shot read (#185): history grows with every deploy, so it is
+ * paginated. Only the first page carries `failureReason` — the API reconciles
+ * deploy status head-only, and the head only exists on page one.
+ */
 export function useAppReleases(slug: string) {
-  const { $api } = useNuxtApp()
-  return useAsyncData<ViewReleaseIndexResponse>(
-    `app-releases-${slug}`,
-    () => $api(`/v1/apps/${encodeURIComponent(slug)}/releases`),
-    { transform: (raw): ViewReleaseIndexResponse => zViewReleaseIndexResponse.parse(raw) },
+  return useKeysetList<ReleaseSummary, ViewReleaseIndexQueryKey>(
+    `/v1/apps/${encodeURIComponent(slug)}/releases`,
+    raw => zViewReleaseIndexResponse.parse(raw),
   )
 }
 

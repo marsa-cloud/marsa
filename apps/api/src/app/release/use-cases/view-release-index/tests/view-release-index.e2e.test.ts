@@ -37,10 +37,10 @@ describe('GET /api/v1/apps/:slug/releases (e2e)', () => {
       .set('Cookie', sessionCookie)
       .expect(200)
 
-    expect(Array.isArray(response.body.releases)).toBe(true)
-    expect(response.body.releases.length).toBeGreaterThanOrEqual(1)
-    expect(response.body.releases[0].deployStatus).toBe('succeeded')
-    expect(response.body.releases[0].imageRef).toBe('nginx:1.27')
+    expect(Array.isArray(response.body.items)).toBe(true)
+    expect(response.body.items.length).toBeGreaterThanOrEqual(1)
+    expect(response.body.items[0].deployStatus).toBe('succeeded')
+    expect(response.body.items[0].imageRef).toBe('nginx:1.27')
   })
 
   it('rejects an unauthenticated request with 401', async () => {
