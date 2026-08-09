@@ -5,6 +5,7 @@ import type { AppHealth } from '#src/modules/kubernetes/deploy-backend.types.js'
 export enum AppHealthStatus {
   Healthy = 'healthy',
   Degraded = 'degraded',
+  Idle = 'idle',
   Unavailable = 'unavailable',
   NotFound = 'not_found',
 }

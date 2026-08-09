@@ -86,7 +86,8 @@ export const zDeployAppCommand = z.object({
     .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/),
   image: z.string(),
   containerPort: z.int().gte(1).lte(65535),
-  replicas: z.int().gte(1).lte(100).optional(),
+  minReplicas: z.int().gte(0).lte(100).optional(),
+  maxReplicas: z.int().gte(1).lte(100).optional(),
   env: z.record(z.string(), z.string()).optional(),
   imagePullCredentials: zImagePullCredentials.optional(),
 })
@@ -141,13 +142,14 @@ export const zViewAppDetailResponse = z.object({
   image: z.string(),
   url: z.string(),
   containerPort: z.int(),
-  replicas: z.int(),
+  minReplicas: z.int(),
+  maxReplicas: z.int(),
   env: z.record(z.string(), z.string()),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 })
 
-export const zAppHealthStatus = z.enum(['healthy', 'degraded', 'unavailable', 'not_found'])
+export const zAppHealthStatus = z.enum(['healthy', 'degraded', 'idle', 'unavailable', 'not_found'])
 
 export const zViewAppHealthResponse = z.object({
   status: zAppHealthStatus,
@@ -183,7 +185,8 @@ export const zDeployAppCommandWritable = z.object({
     .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/),
   image: z.string(),
   containerPort: z.int().gte(1).lte(65535),
-  replicas: z.int().gte(1).lte(100).optional(),
+  minReplicas: z.int().gte(0).lte(100).optional(),
+  maxReplicas: z.int().gte(1).lte(100).optional(),
   env: z.record(z.string(), z.string()).optional(),
   imagePullCredentials: zImagePullCredentialsWritable.optional(),
 })

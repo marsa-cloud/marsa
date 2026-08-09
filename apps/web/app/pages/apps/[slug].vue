@@ -166,6 +166,7 @@ const deployStatusColor: Record<DeployStatus, BadgeColor> = {
 const healthStatusColor: Record<AppHealthStatus, BadgeColor> = {
   healthy: 'success',
   degraded: 'warning',
+  idle: 'neutral',
   unavailable: 'error',
   not_found: 'neutral',
 }
@@ -279,7 +280,16 @@ async function confirmDelete() {
             >
               {{ health.status }}
             </UBadge>
-            <span class="text-sm text-muted">
+            <span
+              v-if="health.status === 'idle'"
+              class="text-sm text-muted"
+            >
+              Sleeping — no pods running, wakes on the first request
+            </span>
+            <span
+              v-else
+              class="text-sm text-muted"
+            >
               {{ health.availableReplicas }} / {{ health.desiredReplicas }} replicas available
             </span>
           </div>

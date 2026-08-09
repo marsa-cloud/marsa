@@ -38,6 +38,22 @@ K3S_KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
 TRAEFIK_NAMESPACE="${MARSA_TRAEFIK_NAMESPACE:-kube-system}"
 TRAEFIK_WAIT_TRIES="${MARSA_TRAEFIK_WAIT_TRIES:-90}"   # x2s ≈ 3 minutes
 SKIP_K3S="false"          # --skip-k3s: install into an existing cluster (honor $KUBECONFIG)
+SKIP_KEDA="false"         # --skip-keda: the cluster already provides KEDA + the HTTP add-on
+# KEDA scales every deployed app and its interceptor sits on every app's request
+# path (#119, AgDR-0043). Installed as its own release rather than as a marsa
+# subchart: both upstream charts ship their CRDs as ordinary templates, so a
+# subchart would let `helm uninstall marsa` cascade-delete every ScaledObject in
+# the cluster, and would hard-fail install wherever KEDA already exists.
+KEDA_NAMESPACE="${MARSA_KEDA_NAMESPACE:-keda}"
+KEDA_REPO="https://kedacore.github.io/charts"
+KEDA_VERSION="${MARSA_KEDA_VERSION:-2.20.2}"
+KEDA_HTTP_VERSION="${MARSA_KEDA_HTTP_VERSION:-0.15.0}"
+# The add-on defaults to min 3 / max 50. Three idle proxy pods is wasteful on a
+# single node, and a ceiling of 50 there is a hazard if the interceptor's own
+# ScaledObject ever scales up. Two replicas still survive a rolling KEDA upgrade
+# and a crashed pod, which is what matters when the node itself is the SPOF.
+KEDA_INTERCEPTOR_MIN="${MARSA_KEDA_INTERCEPTOR_MIN:-2}"
+KEDA_INTERCEPTOR_MAX="${MARSA_KEDA_INTERCEPTOR_MAX:-4}"
 # Helm's official get-helm-4 installer, pinned to a release tag rather than the
 # moving `main` branch (supply-chain hygiene — see AgDR-0003). Overridable for
 # testing. get-helm-4 exists from v4.1.0 onward; the pin cannot go below that.
@@ -83,6 +99,10 @@ ${C_BOLD}Options (server mode)${C_RESET}
   --namespace <ns>      Namespace to install into. Default: ${NAMESPACE}.
   --release <name>      Install/release name. Default: ${RELEASE_NAME}.
   --no-tls              Disable HTTPS. Not recommended.
+  --skip-keda           Don't install KEDA + its HTTP add-on. Only pass this when
+                        the cluster already provides both — deployed apps are
+                        scaled by KEDA and routed through its interceptor, so
+                        without it every app returns 404.
   -h, --help            Show this help and exit.
 
 ${C_BOLD}Agent mode${C_RESET} — join this machine to an existing cluster as a worker node
@@ -138,6 +158,7 @@ while [ $# -gt 0 ]; do
     --release)       require_arg_value "$1" "${2:-}"; RELEASE_NAME="$2"; shift 2 ;;
     --no-tls)        TLS_ENABLED="false"; shift ;;
     --skip-k3s)      SKIP_K3S="true"; shift ;;
+    --skip-keda)     SKIP_KEDA="true"; shift ;;
     -h|--help)       usage; exit 0 ;;
     *)               die "Unknown argument: $1 (run --help for usage)" ;;
   esac
@@ -153,6 +174,7 @@ if [ "$MODE" = "agent" ]; then
   [ -z "$CHART_VERSION" ] || die "--chart-version is not valid in --agent mode"
   [ "$TLS_ENABLED" = "true" ] || die "--no-tls is not valid in --agent mode"
   [ "$SKIP_K3S" = "false" ] || die "--skip-k3s is not valid in --agent mode"
+  [ "$SKIP_KEDA" = "false" ] || die "--skip-keda is not valid in --agent mode"
 
   [ -n "$SERVER_URL" ] || { usage; echo; die "--agent requires --server-url"; }
   [ -n "$TOKEN" ]      || die "--agent requires --token (or set MARSA_K3S_TOKEN)"
@@ -360,13 +382,55 @@ wait_for_traefik() {
   ok "Traefik is ready"
 }
 
-deploy_marsa() {
+use_cluster_kubeconfig() {
   if [ "$SKIP_K3S" = "true" ]; then
     export KUBECONFIG="${KUBECONFIG:-$K3S_KUBECONFIG}"
   else
     export KUBECONFIG="$K3S_KUBECONFIG"
     [ -r "$KUBECONFIG" ] || die "kubeconfig not readable at $KUBECONFIG"
   fi
+}
+
+install_keda() {
+  use_cluster_kubeconfig
+
+  if [ "$SKIP_KEDA" = "true" ]; then
+    ok "Skipping KEDA install (--skip-keda) — deployed apps will not route without it"
+    return
+  fi
+
+  # Idempotent by detection as well as by `helm upgrade --install`: a cluster
+  # that already runs KEDA under someone else's release must not get a second
+  # operator, which would fight ours over the cluster-scoped
+  # external.metrics.k8s.io APIService.
+  if kubectl get crd scaledobjects.keda.sh >/dev/null 2>&1 \
+    && ! helm status keda --namespace "$KEDA_NAMESPACE" >/dev/null 2>&1; then
+    warn "KEDA CRDs exist but no '$KEDA_NAMESPACE/keda' release owns them — leaving KEDA alone."
+    warn "Ensure the HTTP add-on is installed too, or re-run with --skip-keda to silence this."
+    return
+  fi
+
+  info "Installing KEDA ${KEDA_VERSION} + HTTP add-on ${KEDA_HTTP_VERSION} into '${KEDA_NAMESPACE}'"
+  helm repo add kedacore "$KEDA_REPO" >/dev/null 2>&1 || true
+  helm repo update kedacore >/dev/null
+
+  helm upgrade --install keda kedacore/keda \
+    --namespace "$KEDA_NAMESPACE" --create-namespace \
+    --version "$KEDA_VERSION" \
+    --wait --timeout 5m
+
+  helm upgrade --install keda-add-ons-http kedacore/keda-add-ons-http \
+    --namespace "$KEDA_NAMESPACE" \
+    --version "$KEDA_HTTP_VERSION" \
+    --set "interceptor.replicas.min=${KEDA_INTERCEPTOR_MIN}" \
+    --set "interceptor.replicas.max=${KEDA_INTERCEPTOR_MAX}" \
+    --wait --timeout 5m
+
+  ok "KEDA ready"
+}
+
+deploy_marsa() {
+  use_cluster_kubeconfig
 
   wait_for_traefik
 
@@ -477,6 +541,7 @@ main() {
     install_k3s
   fi
   install_helm
+  install_keda
   deploy_marsa
   summary
 }

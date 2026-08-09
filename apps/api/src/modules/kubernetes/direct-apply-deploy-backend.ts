@@ -11,7 +11,10 @@ import {
 import { Injectable } from '@nestjs/common'
 import {
   DEPLOY_FIELD_MANAGER,
+  HTTP_SCALED_OBJECT_PLURAL,
   INGRESS_ROUTE_PLURAL,
+  KEDA_HTTP_GROUP,
+  KEDA_HTTP_VERSION,
   REGISTRY_SECRET_SUFFIX,
   TRAEFIK_GROUP,
   TRAEFIK_VERSION,
@@ -54,7 +57,7 @@ export class DirectApplyDeployBackend extends DeployBackend {
   }
 
   async apply(namespace: string, manifests: RenderedManifests): Promise<void> {
-    const { deployment, service, ingressRoute, imagePullSecret } = manifests
+    const { deployment, service, ingressRoute, httpScaledObject, imagePullSecret } = manifests
     const ssa = setHeaderOptions('Content-Type', PatchStrategy.ServerSideApply)
 
     // The pull Secret must exist before the Deployment's pods schedule, or the
@@ -94,6 +97,23 @@ export class DirectApplyDeployBackend extends DeployBackend {
       ssa,
     )
 
+    // Before the IngressRoute: the interceptor routes by Host from a table built
+    // out of HSOs, so an IngressRoute that lands first sends traffic to an
+    // interceptor that has never heard of the host, and it 404s.
+    await this.custom.patchNamespacedCustomObject(
+      {
+        group: KEDA_HTTP_GROUP,
+        version: KEDA_HTTP_VERSION,
+        namespace,
+        plural: HTTP_SCALED_OBJECT_PLURAL,
+        name: requireName(httpScaledObject, 'HTTPScaledObject'),
+        body: httpScaledObject,
+        fieldManager: DEPLOY_FIELD_MANAGER,
+        force: true,
+      },
+      ssa,
+    )
+
     await this.custom.patchNamespacedCustomObject(
       {
         group: TRAEFIK_GROUP,
@@ -117,6 +137,18 @@ export class DirectApplyDeployBackend extends DeployBackend {
         version: TRAEFIK_VERSION,
         namespace,
         plural: INGRESS_ROUTE_PLURAL,
+        name: appName,
+      }),
+    )
+
+    // After routing stops, before the Deployment: KEDA must not be actively
+    // managing a Deployment that is being deleted underneath it.
+    await ignoreNotFound(() =>
+      this.custom.deleteNamespacedCustomObject({
+        group: KEDA_HTTP_GROUP,
+        version: KEDA_HTTP_VERSION,
+        namespace,
+        plural: HTTP_SCALED_OBJECT_PLURAL,
         name: appName,
       }),
     )

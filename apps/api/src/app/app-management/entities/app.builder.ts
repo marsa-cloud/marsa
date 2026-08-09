@@ -15,7 +15,8 @@ export class AppBuilder {
       domain: { type: 'subdomain' },
       image: 'nginx:1.27',
       containerPort: 80,
-      replicas: 1,
+      minReplicas: 1,
+      maxReplicas: 1,
       env: {},
       imagePullCredentialsEnc: null,
       createdAt: now,
@@ -43,8 +44,13 @@ export class AppBuilder {
     return this
   }
 
-  withReplicas(replicas: number): this {
-    this.app.replicas = replicas
+  withMinReplicas(minReplicas: number): this {
+    this.app.minReplicas = minReplicas
+    return this
+  }
+
+  withMaxReplicas(maxReplicas: number): this {
+    this.app.maxReplicas = maxReplicas
     return this
   }
 
