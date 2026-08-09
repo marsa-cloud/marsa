@@ -3,10 +3,13 @@ import type { NavigationMenuItem } from '@nuxt/ui'
 
 const { data: user } = useCurrentUser()
 
-const items: NavigationMenuItem[] = [
+const items = computed<NavigationMenuItem[]>(() => [
   { label: 'Dashboard', icon: 'i-lucide-layout-dashboard', to: '/' },
   { label: 'Apps', icon: 'i-lucide-box', to: '/apps' },
-]
+  ...(user.value?.role === 'operator'
+    ? [{ label: 'Team', icon: 'i-lucide-users', to: '/team' }]
+    : []),
+])
 </script>
 
 <template>
