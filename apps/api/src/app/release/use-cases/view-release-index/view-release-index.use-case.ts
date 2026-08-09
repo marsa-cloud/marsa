@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common'
 import type { Release } from '#src/app/release/entities/release.table.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
+import { ViewReleaseIndexQuery } from '#src/app/release/use-cases/view-release-index/query/view-release-index.query.js'
 import { ViewReleaseIndexRepository } from '#src/app/release/use-cases/view-release-index/view-release-index.repository.js'
 import { ViewReleaseIndexResponse } from '#src/app/release/use-cases/view-release-index/view-release-index.response.js'
 import { OPERATOR_APPS_NAMESPACE } from '#src/modules/kubernetes/deploy-backend.constants.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
 import { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
+import { keysetLimit } from '#src/utils/pagination/pagination-mapper.js'
 
 const TERMINAL_STATUSES: ReadonlySet<DeployStatus> = new Set([
   DeployStatus.Succeeded,
@@ -33,16 +35,23 @@ export class ViewReleaseIndexUseCase {
     private readonly deployBackend: DeployBackend,
   ) {}
 
-  async execute(slug: string): Promise<ViewReleaseIndexResponse> {
-    const releases = await this.repository.findByAppSlug(slug)
+  async execute(slug: string, query: ViewReleaseIndexQuery): Promise<ViewReleaseIndexResponse> {
+    const releases = await this.repository.findByAppSlug(
+      slug,
+      keysetLimit(query.pagination),
+      query.pagination?.key?.uuid,
+    )
 
-    // Refresh-on-read (AgDR-0034): only the newest release (releases[0], desc
-    // by createdAt) maps to the current per-app Deployment, so only it is
-    // eligible. If the head is already terminal there is nothing to reconcile;
-    // an older non-terminal release is superseded by a newer deploy and must be
-    // left untouched — reconciling it would stamp it with the newer rollout's
-    // outcome.
-    const [latest] = releases
+    // Refresh-on-read (AgDR-0034) is head-only, and the head only exists on the
+    // FIRST page. Page two's releases[0] is an older release, so reconciling
+    // there would stamp it with the current rollout's outcome — the #98-class
+    // false negative this guard exists to prevent.
+    const isFirstPage = query.pagination?.key == null
+    const [latest] = isFirstPage ? releases : []
+
+    // If the head is already terminal there is nothing to reconcile; an older
+    // non-terminal release is superseded by a newer deploy and must be left
+    // untouched.
     if (latest && !TERMINAL_STATUSES.has(latest.deployStatus)) {
       await this.reconcile(latest, slug)
     }

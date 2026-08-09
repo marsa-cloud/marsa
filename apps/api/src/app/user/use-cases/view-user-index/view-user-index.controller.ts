@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common'
+import { Controller, Get, Query } from '@nestjs/common'
 import {
   ApiCookieAuth,
   ApiForbiddenResponse,
@@ -8,6 +8,7 @@ import {
 } from '@nestjs/swagger'
 import { Roles } from '#src/app/auth/decorators/roles.decorator.js'
 import { UserRole } from '#src/app/user/enums/user-role.enum.js'
+import { ViewUserIndexQuery } from '#src/app/user/use-cases/view-user-index/query/view-user-index.query.js'
 import { ViewUserIndexResponse } from '#src/app/user/use-cases/view-user-index/view-user-index.response.js'
 import { ViewUserIndexUseCase } from '#src/app/user/use-cases/view-user-index/view-user-index.use-case.js'
 import { SESSION_COOKIE_SECURITY_SCHEME } from '#src/modules/swagger/build-api-documentation.js'
@@ -23,7 +24,7 @@ export class ViewUserIndexController {
   @ApiOkResponse({ type: ViewUserIndexResponse })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   @ApiForbiddenResponse({ description: 'Operators only.' })
-  handle(): Promise<ViewUserIndexResponse> {
-    return this.usecase.execute()
+  handle(@Query() query: ViewUserIndexQuery): Promise<ViewUserIndexResponse> {
+    return this.usecase.execute(query)
   }
 }

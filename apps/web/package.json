@@ -21,6 +21,7 @@
     "@iconify-json/lucide": "catalog:",
     "@iconify-json/simple-icons": "catalog:",
     "@nuxt/ui": "catalog:",
+    "@vueuse/core": "catalog:",
     "nuxt": "catalog:",
     "tailwindcss": "catalog:",
     "zod": "catalog:"

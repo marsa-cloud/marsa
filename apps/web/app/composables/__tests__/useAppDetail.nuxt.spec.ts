@@ -7,10 +7,11 @@ import { useAppDetail, useAppHealth, useAppReleases, useAppRunLogs } from '../us
 
 const SLUG = 'my-app'
 
+const RELEASE_UUID = '11111111-1111-4111-8111-111111111111'
 const releases = {
-  releases: [
+  items: [
     {
-      uuid: '11111111-1111-1111-1111-111111111111',
+      uuid: RELEASE_UUID,
       imageRef: 'ghcr.io/acme/my-app:v2',
       triggeredBy: 'manual',
       deployStatus: 'succeeded',
@@ -18,6 +19,7 @@ const releases = {
       updatedAt: '2026-07-10T10:01:00.000Z',
     },
   ],
+  meta: { next: { uuid: RELEASE_UUID } },
 }
 const health = { status: 'healthy', availableReplicas: 2, desiredReplicas: 2 }
 const runLogs = { podName: 'my-app-abc', logs: 'listening on :8080\n' }
@@ -56,9 +58,10 @@ function mountComposable<T>(run: () => T) {
 }
 
 describe('useAppDetail read composables', () => {
-  it('useAppReleases reads the per-app releases endpoint', async () => {
-    const { data } = await mountComposable(() => useAppReleases(SLUG))
-    expect(data.value).toEqual(releases)
+  it('useAppReleases accumulates the per-app releases endpoint', async () => {
+    const list = await mountComposable(() => useAppReleases(SLUG))
+    await list.reset()
+    expect(list.items.value).toEqual(releases.items)
   })
 
   it('useAppHealth reads the per-app health endpoint', async () => {

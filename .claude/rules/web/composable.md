@@ -42,6 +42,38 @@ Why: `useAsyncData` / `useFetch` are keyed, cached, setup-scoped data loaders. C
 from a handler is a documented Nuxt anti-pattern — the second click can return the first
 response.
 
+## Paginated index endpoints: accumulate, don't re-key
+
+```ts
+// WRONG — useAsyncData REPLACES its payload, so page 2 erases page 1
+const { data } = useAsyncData('apps', () => $api('/v1/apps', { query: { pagination } }))
+
+// RIGHT — one growing items array
+export function useAppList() {
+  return useKeysetList<AppSummary, ViewAppIndexQueryKey>('/v1/apps', (raw) =>
+    zViewAppIndexResponse.parse(raw),
+  )
+}
+```
+
+Every index endpoint is keyset-paginated and answers `{ items, meta: { next } }`. `useKeysetList`
+owns the accumulation, the cursor and the stop condition; a per-endpoint wrapper supplies only
+the path and the generated Zod parse. Render it with `<InfiniteScrollFooter>`, which auto-loads
+on scroll and keeps a focusable "Load more" button.
+
+Two things that bite:
+
+```ts
+// WRONG — $fetch stringifies a nested object to "[object Object]"; the cursor never arrives
+query: { pagination: { limit: 20, key } }
+
+// RIGHT — bracketed keys, which the API's qs parser reads back as nesting
+query: { 'pagination[limit]': 20, 'pagination[key][uuid]': key.uuid }
+```
+
+And `meta.next` is **not** null on the last full page — it is null once a page comes back
+empty. Stop on an empty page, not on a null cursor.
+
 ## Bind to the schema body type, not the operation wrappers
 
 ```ts

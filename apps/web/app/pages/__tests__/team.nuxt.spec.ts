@@ -18,10 +18,13 @@ const refresh = vi.hoisted(() => vi.fn())
 const toastAdd = vi.hoisted(() => vi.fn())
 
 mockNuxtImport('useUserList', () => () => ({
-  data: ref({ users: state.users }),
-  status: ref(state.status),
+  items: ref(state.users),
+  pending: ref(false),
   error: ref(state.error),
-  refresh,
+  exhausted: ref(true),
+  canLoadMore: () => false,
+  loadMore: vi.fn(),
+  reset: refresh,
 }))
 mockNuxtImport('useUpdateUserRole', () => () => ({ updateRole }))
 mockNuxtImport('useCurrentUser', () => () => ({
@@ -54,6 +57,8 @@ describe('team page', () => {
 
   it('promotes a guest and reloads the list', async () => {
     const wrapper = await mountSuspended(Team)
+    // The page loads its first page on mount; this asserts about the change, not that.
+    refresh.mockClear()
 
     await changeRole(wrapper, 'member')
 

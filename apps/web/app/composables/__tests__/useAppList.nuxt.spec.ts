@@ -5,7 +5,7 @@ import { defineComponent, h } from 'vue'
 import { useAppList } from '../useAppList'
 
 const apps = {
-  apps: [
+  items: [
     {
       slug: 'my-app',
       image: 'ghcr.io/acme/my-app:v2',
@@ -14,6 +14,7 @@ const apps = {
       updatedAt: '2026-07-10T10:01:00.000Z',
     },
   ],
+  meta: { next: { uuid: '22222222-2222-4222-8222-222222222222' } },
 }
 
 registerEndpoint('/api/v1/apps', () => apps)
@@ -24,7 +25,7 @@ function mountComposable() {
     defineComponent({
       async setup() {
         result = useAppList()
-        await result
+        await result.reset()
         return () => h('div')
       },
     }),
@@ -33,7 +34,7 @@ function mountComposable() {
 
 describe('useAppList', () => {
   it('reads GET /v1/apps and returns the contract-validated list', async () => {
-    const { data } = await mountComposable()
-    expect(data.value).toEqual(apps)
+    const { items } = await mountComposable()
+    expect(items.value).toEqual(apps.items)
   })
 })

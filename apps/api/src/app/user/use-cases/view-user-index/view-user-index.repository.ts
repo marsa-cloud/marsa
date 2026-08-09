@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common'
-import { type User } from '#src/app/user/entities/user.table.js'
+import { asc, gt } from 'drizzle-orm'
+import { type User, userTable } from '#src/app/user/entities/user.table.js'
+import type { UserUuid } from '#src/app/user/entities/user.uuid.js'
 import type { Database } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 
@@ -7,9 +9,14 @@ import { InjectDatabase } from '#src/modules/database/inject-database.decorator.
 export class ViewUserIndexRepository {
   constructor(@InjectDatabase() private readonly db: Database) {}
 
-  // Oldest first, so the bootstrapping operator leads the list.
-  async listUsers(): Promise<User[]> {
-    // uuidv7 is time-ordered, so it breaks a createdAt tie without changing the intent.
-    return this.db.query.userTable.findMany({ orderBy: { createdAt: 'asc', uuid: 'asc' } })
+  // Ordered by uuid, not createdAt: uuidv7 is time-ordered, so one column is both the
+  // oldest-first order the list wants and a total order the keyset seek can page on.
+  async listUsers(limit: number, after?: UserUuid | null): Promise<User[]> {
+    return this.db
+      .select()
+      .from(userTable)
+      .where(after ? gt(userTable.uuid, after) : undefined)
+      .orderBy(asc(userTable.uuid))
+      .limit(limit)
   }
 }

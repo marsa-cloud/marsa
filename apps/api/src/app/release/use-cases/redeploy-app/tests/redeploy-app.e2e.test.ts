@@ -45,8 +45,8 @@ describe('POST /api/v1/apps/:slug/redeploy (e2e)', () => {
       .get(`/api/v1/apps/${SLUG}/releases`)
       .set('Cookie', sessionCookie)
       .expect(200)
-    expect(releases.body.releases.length).toBe(2)
-    expect(releases.body.releases[0].uuid).toBe(response.body.releaseUuid)
+    expect(releases.body.items.length).toBe(2)
+    expect(releases.body.items[0].uuid).toBe(response.body.releaseUuid)
   })
 
   it('rejects an unknown slug with 404', async () => {

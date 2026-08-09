@@ -17,7 +17,17 @@ const slug = computed(() => String(route.params.slug))
 useSeoMeta({ title: () => `${slug.value} — Marsa` })
 
 const { data: health, status: healthStatus, error: healthError, refresh: refreshHealth } = useAppHealth(slug.value)
-const { data: releasesData, status: releasesStatus, error: releasesError, refresh: refreshReleases } = useAppReleases(slug.value)
+const {
+  items: releases,
+  pending: releasesPending,
+  error: releasesError,
+  exhausted: releasesExhausted,
+  canLoadMore: canLoadMoreReleases,
+  loadMore: loadMoreReleases,
+  reset: refreshReleases,
+} = useAppReleases(slug.value)
+
+await refreshReleases()
 // Bounds come from the API's tailLines validator (1–1000); 100 is its default.
 const TAIL_LINE_OPTIONS = [50, 100, 200, 500, 1000]
 const tailLines = ref(100)
@@ -31,8 +41,6 @@ const {
 
 const { data: config, status: configStatus, error: configError, refresh: refreshConfig }
   = useAppDetail(slug.value)
-
-const releases = computed(() => releasesData.value?.releases ?? [])
 
 const { redeploy } = useRedeployApp()
 const { updateEnv } = useUpdateAppEnv()
@@ -300,7 +308,7 @@ async function confirmDelete() {
           </template>
 
           <div
-            v-if="isPending(releasesStatus)"
+            v-if="releasesPending && releases.length === 0"
             class="space-y-2"
           >
             <USkeleton class="h-8 w-full" />
@@ -343,6 +351,13 @@ async function confirmDelete() {
                 {{ [release.failureReason, release.failureMessage].filter(Boolean).join(': ') }}
               </p>
             </div>
+
+            <InfiniteScrollFooter
+              :pending="releasesPending"
+              :exhausted="releasesExhausted"
+              :can-load-more="canLoadMoreReleases"
+              :load-more="loadMoreReleases"
+            />
           </div>
         </UCard>
 

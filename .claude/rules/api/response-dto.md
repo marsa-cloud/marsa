@@ -81,6 +81,31 @@ Why: a bare `@ApiProperty({ enum })` without `enumName` makes the web generator 
 anonymous inline union instead of a named type. The decorator in `*.enum.ts` pairs them
 once — see `.claude/rules/api/table.md`.
 
+## An index response redeclares BOTH `items` and `meta`
+
+```ts
+// WRONG — meta inherits the base's schema-less shape, so the client's cursor
+// becomes an opaque record and loses its type
+export class ViewAppIndexResponse extends PaginatedKeysetResponse<AppSummary> {
+  @ApiProperty({ type: [AppSummary] })
+  declare readonly items: AppSummary[]
+}
+
+// RIGHT
+export class ViewAppIndexResponse extends PaginatedKeysetResponse<AppSummary> {
+  @ApiProperty({ type: [AppSummary] })
+  declare readonly items: AppSummary[]
+
+  @ApiProperty({ type: ViewAppIndexResponseMeta })
+  declare readonly meta: ViewAppIndexResponseMeta
+}
+```
+
+Why: `T` is erased at runtime, so the base declares both members with generic schemas.
+Redeclaring `items` names the item type; redeclaring `meta` with an exported per-use-case
+meta class is what gives the generated client `next: ViewAppIndexQueryKey | null` instead of
+`{ [key: string]: unknown }`.
+
 ## After changing any response
 
 Run `pnpm --filter api generate:openapi` and `pnpm --filter web generate:api`, and commit

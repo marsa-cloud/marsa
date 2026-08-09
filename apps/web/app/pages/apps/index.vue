@@ -3,13 +3,11 @@ useSeoMeta({ title: 'Apps — Marsa' })
 
 // useAppList is a Nuxt auto-import (app/composables/*) — left un-imported so
 // tests can mock it via mockNuxtImport, matching the detail-page convention.
-const { data, status, error } = useAppList()
+const { items: apps, pending, error, exhausted, canLoadMore, loadMore, reset } = useAppList()
 
-const apps = computed(() => data.value?.apps ?? [])
+await reset()
 
-function isPending(s: string) {
-  return s === 'pending' || s === 'idle'
-}
+const isFirstLoad = computed(() => pending.value && apps.value.length === 0)
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleString()
@@ -33,7 +31,7 @@ function formatTime(iso: string) {
     <template #body>
       <!-- Loading -->
       <div
-        v-if="isPending(status)"
+        v-if="isFirstLoad"
         class="flex flex-col gap-2 max-w-4xl"
       >
         <USkeleton class="h-14 w-full" />
@@ -69,9 +67,12 @@ function formatTime(iso: string) {
       </UPageCard>
 
       <!-- List -->
+      <!-- shrink-0: the panel body is a flex column, so a card left shrinkable
+           gets clamped to the viewport and clips its own overflow, making a long
+           list unreachable rather than scrollable. -->
       <UCard
         v-else
-        class="max-w-4xl"
+        class="max-w-4xl shrink-0"
       >
         <div class="divide-y divide-default">
           <NuxtLink
@@ -90,6 +91,13 @@ function formatTime(iso: string) {
             />
           </NuxtLink>
         </div>
+
+        <InfiniteScrollFooter
+          :pending="pending"
+          :exhausted="exhausted"
+          :can-load-more="canLoadMore"
+          :load-more="loadMore"
+        />
       </UCard>
     </template>
   </UDashboardPanel>
