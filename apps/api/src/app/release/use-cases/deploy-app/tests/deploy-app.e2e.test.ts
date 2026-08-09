@@ -111,13 +111,47 @@ describe('POST /api/v1/deploy (e2e)', () => {
       .expect(400)
   })
 
-  it('rejects a replica count above the maximum with 400', async () => {
+  it('rejects a replica ceiling above the maximum with 400', async () => {
     const command = new DeployAppCommandBuilder().build()
 
     await request(setup.httpServer)
       .post('/api/v1/deploy')
       .set('Cookie', sessionCookie)
-      .send({ ...command, replicas: MAX_REPLICAS + 1 })
+      .send({ ...command, maxReplicas: MAX_REPLICAS + 1 })
       .expect(400)
+  })
+
+  it('rejects a replica ceiling below the floor with 400', async () => {
+    const command = new DeployAppCommandBuilder().withMinReplicas(3).withMaxReplicas(1).build()
+
+    await request(setup.httpServer)
+      .post('/api/v1/deploy')
+      .set('Cookie', sessionCookie)
+      .send(command)
+      .expect(400)
+  })
+
+  it('accepts a floor of 0, opting the app into scale-to-zero', async () => {
+    const response = await request(setup.httpServer)
+      .post('/api/v1/deploy')
+      .set('Cookie', sessionCookie)
+      .send(
+        new DeployAppCommandBuilder()
+          .withSlug('e2e-sleepy-app')
+          .withMinReplicas(0)
+          .withMaxReplicas(3)
+          .build(),
+      )
+      .expect(200)
+
+    expect(response.body.appSlug).toBe('e2e-sleepy-app')
+  })
+
+  it('accepts a ceiling on its own, defaulting the floor', async () => {
+    await request(setup.httpServer)
+      .post('/api/v1/deploy')
+      .set('Cookie', sessionCookie)
+      .send(new DeployAppCommandBuilder().withSlug('e2e-ceiling-only').withMaxReplicas(3).build())
+      .expect(200)
   })
 })
