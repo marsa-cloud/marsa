@@ -139,9 +139,13 @@ export type DeployAppCommand = {
    */
   containerPort: number
   /**
-   * Replica count (defaults to 1).
+   * Replica floor. 0 lets the app sleep when idle and wake on the first request.
    */
-  replicas?: number
+  minReplicas?: number
+  /**
+   * Replica ceiling. Must be at least the floor, and at least 1.
+   */
+  maxReplicas?: number
   /**
    * Plain (non-secret) environment variables for the container.
    */
@@ -213,7 +217,11 @@ export type ViewAppDetailResponse = {
   image: string
   url: string
   containerPort: number
-  replicas: number
+  /**
+   * 0 means the app sleeps when idle.
+   */
+  minReplicas: number
+  maxReplicas: number
   /**
    * Stored environment variables; may differ from the running container until the app is redeployed.
    */
@@ -224,7 +232,7 @@ export type ViewAppDetailResponse = {
   updatedAt: string
 }
 
-export type AppHealthStatus = 'healthy' | 'degraded' | 'unavailable' | 'not_found'
+export type AppHealthStatus = 'healthy' | 'degraded' | 'idle' | 'unavailable' | 'not_found'
 
 export type ViewAppHealthResponse = {
   status: AppHealthStatus
@@ -289,9 +297,13 @@ export type DeployAppCommandWritable = {
    */
   containerPort: number
   /**
-   * Replica count (defaults to 1).
+   * Replica floor. 0 lets the app sleep when idle and wake on the first request.
    */
-  replicas?: number
+  minReplicas?: number
+  /**
+   * Replica ceiling. Must be at least the floor, and at least 1.
+   */
+  maxReplicas?: number
   /**
    * Plain (non-secret) environment variables for the container.
    */
