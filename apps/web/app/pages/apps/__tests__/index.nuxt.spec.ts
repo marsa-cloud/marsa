@@ -7,17 +7,21 @@ import Index from '../index.vue'
 // Mutable holder the mocked composable reads at component-setup time, so each
 // test can arrange its own data/loading/error state before mounting.
 const s = vi.hoisted(() => ({
-  list: { data: { apps: [] } as unknown, status: 'success', error: null as unknown },
+  list: { items: [] as unknown[], pending: false, error: null as unknown },
 }))
 
 mockNuxtImport('useAppList', () => () => ({
-  data: ref(s.list.data),
-  status: ref(s.list.status),
+  items: ref(s.list.items),
+  pending: ref(s.list.pending),
   error: ref(s.list.error),
+  exhausted: ref(true),
+  canLoadMore: () => false,
+  loadMore: vi.fn(),
+  reset: vi.fn(),
 }))
 
 beforeEach(() => {
-  s.list = { data: { apps: [] }, status: 'success', error: null }
+  s.list = { items: [], pending: false, error: null }
 })
 
 const anApp = (over = {}) => ({
@@ -43,7 +47,7 @@ describe('apps/index list page', () => {
   })
 
   it('lists each deployed app with its image, url, and a link to its detail view', async () => {
-    s.list.data = { apps: [anApp(), anApp({ slug: 'web-ui', image: 'ghcr.io/acme/web-ui:latest', url: 'https://web-ui.marsa.app' })] }
+    s.list.items = [anApp(), anApp({ slug: 'web-ui', image: 'ghcr.io/acme/web-ui:latest', url: 'https://web-ui.marsa.app' })]
     const wrapper = await mountSuspended(Index)
     expect(wrapper.text()).toContain('my-app')
     expect(wrapper.text()).toContain('web-ui')
@@ -54,8 +58,8 @@ describe('apps/index list page', () => {
   })
 
   it('shows a loading skeleton while pending (no empty state yet)', async () => {
-    s.list.status = 'pending'
-    s.list.data = null
+    s.list.pending = true
+    s.list.items = []
     const wrapper = await mountSuspended(Index)
     expect(wrapper.text()).not.toContain('Deploy your first app')
   })

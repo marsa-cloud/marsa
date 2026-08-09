@@ -114,6 +114,15 @@ export type ViewMeResponse = {
   role: UserRole
 }
 
+export type ViewUserIndexQueryKey = {
+  uuid: string
+}
+
+export type ViewUserIndexPaginationQuery = {
+  limit?: number
+  key?: ViewUserIndexQueryKey | null
+}
+
 export type UserSummary = {
   uuid: string
   githubUserId: string
@@ -122,8 +131,19 @@ export type UserSummary = {
   createdAt: string
 }
 
+export type ViewUserIndexResponseMeta = {
+  /**
+   * Key for the next page, or null on the last page. Opaque — send it back as-is.
+   */
+  next: ViewUserIndexQueryKey | null
+}
+
 export type ViewUserIndexResponse = {
-  users: Array<UserSummary>
+  /**
+   * The items for the current page
+   */
+  items: Array<UserSummary>
+  meta: ViewUserIndexResponseMeta
 }
 
 export type UpdateUserRoleCommand = {
@@ -198,6 +218,15 @@ export type RedeployAppResponse = {
   deployStatus: DeployStatus
 }
 
+export type ViewReleaseIndexQueryKey = {
+  uuid: string
+}
+
+export type ViewReleaseIndexPaginationQuery = {
+  limit?: number
+  key?: ViewReleaseIndexQueryKey | null
+}
+
 export type ReleaseTrigger = 'manual' | 'webhook'
 
 export type ReleaseSummary = {
@@ -214,8 +243,28 @@ export type ReleaseSummary = {
   failureMessage?: string | null
 }
 
+export type ViewReleaseIndexResponseMeta = {
+  /**
+   * Key for the next page, or null on the last page. Opaque — send it back as-is.
+   */
+  next: ViewReleaseIndexQueryKey | null
+}
+
 export type ViewReleaseIndexResponse = {
-  releases: Array<ReleaseSummary>
+  /**
+   * The items for the current page
+   */
+  items: Array<ReleaseSummary>
+  meta: ViewReleaseIndexResponseMeta
+}
+
+export type ViewAppIndexQueryKey = {
+  uuid: string
+}
+
+export type ViewAppIndexPaginationQuery = {
+  limit?: number
+  key?: ViewAppIndexQueryKey | null
 }
 
 export type AppSummary = {
@@ -226,8 +275,19 @@ export type AppSummary = {
   updatedAt: string
 }
 
+export type ViewAppIndexResponseMeta = {
+  /**
+   * Key for the next page, or null on the last page. Opaque — send it back as-is.
+   */
+  next: ViewAppIndexQueryKey | null
+}
+
 export type ViewAppIndexResponse = {
-  apps: Array<AppSummary>
+  /**
+   * The items for the current page
+   */
+  items: Array<AppSummary>
+  meta: ViewAppIndexResponseMeta
 }
 
 export type ViewAppDetailResponse = {
@@ -456,7 +516,9 @@ export type ViewMeV1Response = ViewMeV1Responses[keyof ViewMeV1Responses]
 export type ViewUserIndexV1Data = {
   body?: never
   path?: never
-  query?: never
+  query?: {
+    pagination?: ViewUserIndexPaginationQuery
+  }
   url: '/api/v1/users'
 }
 
@@ -568,7 +630,9 @@ export type ViewReleaseIndexV1Data = {
   path: {
     slug: string
   }
-  query?: never
+  query?: {
+    pagination?: ViewReleaseIndexPaginationQuery
+  }
   url: '/api/v1/apps/{slug}/releases'
 }
 
@@ -589,7 +653,9 @@ export type ViewReleaseIndexV1Response =
 export type ViewAppIndexV1Data = {
   body?: never
   path?: never
-  query?: never
+  query?: {
+    pagination?: ViewAppIndexPaginationQuery
+  }
   url: '/api/v1/apps'
 }
 

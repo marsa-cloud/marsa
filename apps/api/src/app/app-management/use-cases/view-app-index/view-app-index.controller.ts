@@ -1,5 +1,6 @@
-import { Controller, Get, UseGuards } from '@nestjs/common'
+import { Controller, Get, Query, UseGuards } from '@nestjs/common'
 import { ApiOkResponse, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger'
+import { ViewAppIndexQuery } from '#src/app/app-management/use-cases/view-app-index/query/view-app-index.query.js'
 import { ViewAppIndexResponse } from '#src/app/app-management/use-cases/view-app-index/view-app-index.response.js'
 import { ViewAppIndexUseCase } from '#src/app/app-management/use-cases/view-app-index/view-app-index.use-case.js'
 import { SessionAuthGuard } from '#src/app/auth/guards/session-auth.guard.js'
@@ -13,7 +14,7 @@ export class ViewAppIndexController {
   @UseGuards(SessionAuthGuard)
   @ApiOkResponse({ type: ViewAppIndexResponse })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
-  handle(): Promise<ViewAppIndexResponse> {
-    return this.usecase.execute()
+  handle(@Query() query: ViewAppIndexQuery): Promise<ViewAppIndexResponse> {
+    return this.usecase.execute(query)
   }
 }

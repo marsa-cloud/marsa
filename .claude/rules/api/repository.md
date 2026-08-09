@@ -16,13 +16,37 @@ feature-wide aggregate repositories.
 export class ViewAppIndexRepository {
   constructor(@InjectDatabase() private readonly db: Database) {}
 
-  async listApps(): Promise<App[]> {
-    return this.db.query.appTable.findMany({ orderBy: { createdAt: 'desc' } })
+  async listApps(limit: number, after?: AppUuid | null): Promise<App[]> {
+    return this.db
+      .select()
+      .from(appTable)
+      .where(after ? lt(appTable.uuid, after) : undefined)
+      .orderBy(desc(appTable.uuid))
+      .limit(limit)
   }
 }
 ```
 
 `DatabaseModule` is `@Global()`, so no feature-level registration is needed.
+
+## Index reads are paginated — never return a whole collection
+
+```ts
+// WRONG — unbounded; grows until it times out or blows the response
+async listApps(): Promise<App[]> {
+  return this.db.query.appTable.findMany({ orderBy: { createdAt: 'desc' } })
+}
+```
+
+Every index endpoint takes a keyset limit + cursor and seeks on the `uuidv7` primary key
+(`lt` for newest-first, `gt` for oldest-first) — the key is time-ordered, so the PK index
+already serves the seek and no composite index is needed. Clamp the page size with
+`keysetLimit(query.pagination)`, never with a raw `query.pagination?.limit`.
+
+The cursor and page assembly live on a per-use-case `<UseCase>QueryKey` DTO with
+`static from(row)` / `static nextKey(rows)` — see `.claude/rules/api/response-dto.md` and
+AgDR-0040. `nextKey` reads the last row **returned**; building it from anything else is the
+page-boundary off-by-one.
 
 ## Return row types, not response shapes
 

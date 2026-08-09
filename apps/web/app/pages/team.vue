@@ -3,7 +3,17 @@ import type { UserRole, UserSummary } from '~/api/types.gen'
 
 useSeoMeta({ title: 'Team — Marsa' })
 
-const { data, status, error, refresh } = useUserList()
+const {
+  items: users,
+  pending,
+  error,
+  exhausted,
+  canLoadMore,
+  loadMore,
+  reset: refresh,
+} = useUserList()
+
+await refresh()
 const { updateRole } = useUpdateUserRole()
 const { data: currentUser } = useCurrentUser()
 
@@ -42,7 +52,7 @@ async function onRoleChange(user: UserSummary, role: UserRole) {
       />
 
       <USkeleton
-        v-else-if="status === 'pending'"
+        v-else-if="pending && users.length === 0"
         class="h-32 w-full"
       />
 
@@ -51,7 +61,7 @@ async function onRoleChange(user: UserSummary, role: UserRole) {
         class="space-y-2"
       >
         <div
-          v-for="user in data?.users ?? []"
+          v-for="user in users"
           :key="user.uuid"
           class="flex items-center justify-between gap-4 rounded-md border border-default px-4 py-3"
         >
@@ -73,6 +83,13 @@ async function onRoleChange(user: UserSummary, role: UserRole) {
             @update:model-value="(role: UserRole) => onRoleChange(user, role)"
           />
         </div>
+
+        <InfiniteScrollFooter
+          :pending="pending"
+          :exhausted="exhausted"
+          :can-load-more="canLoadMore"
+          :load-more="loadMore"
+        />
       </div>
     </template>
   </UDashboardPanel>
