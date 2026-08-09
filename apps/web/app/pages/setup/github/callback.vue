@@ -5,7 +5,7 @@ import type { ConvertManifestResponse } from '~/api/types.gen'
 const route = useRoute()
 const { convert, captureInstallation } = useGithubProvisioning()
 
-const status = ref<'loading' | 'created' | 'installed' | 'error'>('loading')
+const status = ref<'loading' | 'created' | 'installed' | 'cancelled' | 'error'>('loading')
 const result = ref<ConvertManifestResponse | null>(null)
 const message = ref('')
 
@@ -13,6 +13,8 @@ const installQuery = z.object({
   installation_id: z.string().min(1),
   setup_action: z.string().min(1),
 })
+
+const denialQuery = z.object({ error: z.string().min(1) })
 
 const manifestQuery = z.object({
   code: z.string().min(1),
@@ -40,6 +42,20 @@ async function completeInstall(installationId: string, setupAction: string) {
 }
 
 onMounted(async () => {
+  // GitHub also sends error_description, but it is attacker-influenceable text
+  // and never actionable for the person reading it, so we branch on the code only.
+  const denial = denialQuery.safeParse(route.query)
+  if (denial.success) {
+    if (denial.data.error === 'access_denied') {
+      status.value = 'cancelled'
+      message.value = 'GitHub App setup was cancelled. You can start the connection again whenever you’re ready.'
+    } else {
+      status.value = 'error'
+      message.value = 'GitHub declined the setup request. Please try again.'
+    }
+    return
+  }
+
   // GitHub returns here twice in the flow: first from the manifest conversion
   // (code + state), then from the post-install redirect (installation_id +
   // setup_action). Dispatch on which params are present.
@@ -71,6 +87,24 @@ onMounted(async () => {
         class="animate-spin"
       />
       <span>Finishing GitHub App setup…</span>
+    </div>
+
+    <div
+      v-else-if="status === 'cancelled'"
+      class="space-y-4"
+    >
+      <UAlert
+        color="neutral"
+        variant="subtle"
+        icon="i-lucide-circle-slash"
+        :title="message"
+      />
+      <UButton
+        variant="ghost"
+        to="/setup/github"
+      >
+        Back to setup
+      </UButton>
     </div>
 
     <UAlert

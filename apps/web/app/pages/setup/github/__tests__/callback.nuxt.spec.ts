@@ -24,6 +24,26 @@ describe('setup/github/callback', () => {
     expect(convert).not.toHaveBeenCalled()
   })
 
+  it('reports a cancelled setup when the user denies consent', async () => {
+    routeRef.value = { query: { error: 'access_denied' } }
+
+    const wrapper = await mountSuspended(Callback)
+    await settle()
+
+    expect(wrapper.text()).toContain('GitHub App setup was cancelled')
+    expect(convert).not.toHaveBeenCalled()
+  })
+
+  it('reports a declined request for any other GitHub error', async () => {
+    routeRef.value = { query: { error: 'redirect_uri_mismatch' } }
+
+    const wrapper = await mountSuspended(Callback)
+    await settle()
+
+    expect(wrapper.text()).toContain('GitHub declined the setup request')
+    expect(convert).not.toHaveBeenCalled()
+  })
+
   it('shows success after a successful conversion', async () => {
     routeRef.value = { query: { code: 'c', state: 's' } }
     convert.mockResolvedValueOnce({
