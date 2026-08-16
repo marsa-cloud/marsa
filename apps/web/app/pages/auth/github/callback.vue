@@ -1,37 +1,36 @@
 <script setup lang="ts">
-import * as z from 'zod'
-import { zCompleteGithubLoginV1Response } from '~/api/zod.gen'
-
 definePageMeta({ layout: 'auth' })
 useSeoMeta({ title: 'Signing in… — Marsa' })
 
-const { $api } = useNuxtApp()
+type Status = 'loading' | 'cancelled' | 'declined' | 'failed'
+
+const MESSAGES: Record<Status, string> = {
+  loading: 'Completing sign-in…',
+  cancelled: 'Sign-in was cancelled. You can try again whenever you’re ready.',
+  declined: 'GitHub declined the sign-in request. Please try again.',
+  failed: 'Sign-in failed. Please try again.',
+}
+
+const { completeLogin } = useGithubLogin()
 const { refresh } = useCurrentUser()
 
-const error = ref<string | null>(null)
-
-const callbackQuery = z.object({
-  code: z.string().min(1),
-  state: z.string().min(1),
-})
+const status = ref<Status>('loading')
+const message = computed(() => MESSAGES[status.value])
 
 onMounted(async () => {
-  const parsed = callbackQuery.safeParse(useRoute().query)
-  if (!parsed.success) {
-    error.value = 'Sign-in failed. Please try again.'
+  const outcome = resolveGithubLoginQuery(useRoute().query)
+  if (outcome.status !== 'proceed') {
+    status.value = outcome.status
     return
   }
-  const { code, state } = parsed.data
 
   try {
-    const raw = await $api('/v1/auth/github/session', {
-      method: 'POST',
-      body: { code, state },
-    })
-    zCompleteGithubLoginV1Response.parse(raw)
+    await completeLogin(outcome.code, outcome.state)
     await refresh()
     await navigateTo('/')
-  } catch { error.value = 'Sign-in failed. Please try again.' }
+  } catch {
+    status.value = 'failed'
+  }
 })
 </script>
 
@@ -42,14 +41,29 @@ onMounted(async () => {
       aria-live="polite"
       class="flex flex-col items-center gap-4 py-6"
     >
-      <template v-if="!error">
+      <template v-if="status === 'loading'">
         <UIcon
           name="i-lucide-loader-circle"
           class="animate-spin text-2xl"
         />
         <p class="text-sm text-muted">
-          Completing sign-in…
+          {{ message }}
         </p>
+      </template>
+      <template v-else-if="status === 'cancelled'">
+        <UIcon
+          name="i-lucide-circle-slash"
+          class="text-2xl text-muted"
+        />
+        <p class="text-sm text-muted">
+          {{ message }}
+        </p>
+        <UButton
+          variant="ghost"
+          to="/login"
+        >
+          Back to sign in
+        </UButton>
       </template>
       <template v-else>
         <UIcon
@@ -57,7 +71,7 @@ onMounted(async () => {
           class="text-2xl text-error"
         />
         <p class="text-sm">
-          {{ error }}
+          {{ message }}
         </p>
         <UButton
           variant="ghost"
