@@ -14,8 +14,6 @@ const installQuery = z.object({
   setup_action: z.string().min(1),
 })
 
-const denialQuery = z.object({ error: z.string().min(1) })
-
 const manifestQuery = z.object({
   code: z.string().min(1),
   state: z.string().min(1),
@@ -42,17 +40,15 @@ async function completeInstall(installationId: string, setupAction: string) {
 }
 
 onMounted(async () => {
-  // GitHub also sends error_description, but it is attacker-influenceable text
-  // and never actionable for the person reading it, so we branch on the code only.
-  const denial = denialQuery.safeParse(route.query)
-  if (denial.success) {
-    if (denial.data.error === 'access_denied') {
-      status.value = 'cancelled'
-      message.value = 'GitHub App setup was cancelled. You can start the connection again whenever you’re ready.'
-    } else {
-      status.value = 'error'
-      message.value = 'GitHub declined the setup request. Please try again.'
-    }
+  const denial = parseGithubDenial(route.query)
+  if (denial === 'cancelled') {
+    status.value = 'cancelled'
+    message.value = 'GitHub App setup was cancelled. You can start the connection again whenever you’re ready.'
+    return
+  }
+  if (denial === 'declined') {
+    status.value = 'error'
+    message.value = 'GitHub declined the setup request. Please try again.'
     return
   }
 
