@@ -1,6 +1,7 @@
 import { after, before, describe, it } from 'node:test'
 import { expect } from 'expect'
 import request from 'supertest'
+import { userTable } from '#src/app/user/entities/user.table.js'
 import { UserRole } from '#src/app/user/enums/user-role.enum.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
@@ -44,5 +45,20 @@ describe('RolesGuard (e2e)', () => {
 
   it('leaves unauthenticated routes alone', async () => {
     await request(setup.httpServer).get('/api/v1/auth/github').expect(302)
+  })
+
+  it('lets a Guest still reach a @Public route, so a denied user can log in again', async () => {
+    const { cookie } = await setup.authenticateAs(UserRole.Guest)
+
+    await request(setup.httpServer).get('/api/v1/auth/github').set('Cookie', cookie).expect(302)
+    await request(setup.httpServer).get('/api/v1/status').set('Cookie', cookie).expect(200)
+  })
+
+  it('lets a session whose user row is gone reach a @Public route', async () => {
+    const { cookie } = await setup.authenticateAs(UserRole.Guest)
+    await setup.db.delete(userTable)
+
+    await request(setup.httpServer).get('/api/v1/status').set('Cookie', cookie).expect(200)
+    await request(setup.httpServer).get('/api/v1/apps').set('Cookie', cookie).expect(403)
   })
 })

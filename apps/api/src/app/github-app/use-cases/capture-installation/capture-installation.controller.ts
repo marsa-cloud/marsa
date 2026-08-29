@@ -5,6 +5,7 @@ import {
   ApiOkResponse,
   ApiTags,
 } from '@nestjs/swagger'
+import { Public } from '#src/app/auth/decorators/roles.decorator.js'
 import { CaptureInstallationCommand } from '#src/app/github-app/use-cases/capture-installation/capture-installation.command.js'
 import { CaptureInstallationResponse } from '#src/app/github-app/use-cases/capture-installation/capture-installation.response.js'
 import { CaptureInstallationUseCase } from '#src/app/github-app/use-cases/capture-installation/capture-installation.use-case.js'
@@ -15,6 +16,7 @@ export class CaptureInstallationController {
   constructor(private readonly usecase: CaptureInstallationUseCase) {}
 
   @Post()
+  @Public()
   @HttpCode(200)
   @ApiOkResponse({ type: CaptureInstallationResponse })
   @ApiBadRequestResponse({

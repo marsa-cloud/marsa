@@ -47,8 +47,10 @@ export async function migrate(db: Database, migrationsFolder: string): Promise<s
       // Drizzle's migrator takes no lock at all, and every replica migrates on boot.
       await tx.execute(sql`select pg_advisory_xact_lock(${AdvisoryLock.Migration})`)
 
+      // Keyed on name, matching getMigrationsToRun — selecting pending work by one identity
+      // and claiming it by another would let the two disagree.
       const claimed = await tx.execute(
-        sql`select hash from ${sql.identifier(MIGRATIONS_SCHEMA)}.${sql.identifier(MIGRATIONS_TABLE)} where hash = ${migration.hash}`,
+        sql`select name from ${sql.identifier(MIGRATIONS_SCHEMA)}.${sql.identifier(MIGRATIONS_TABLE)} where name = ${migration.name}`,
       )
       if (claimed.rows.length > 0) {
         return

@@ -46,6 +46,25 @@ describe('PATCH /api/v1/users/:uuid/role (e2e)', () => {
       .expect(400)
   })
 
+  // A second operator first, or the last-operator check answers 400 on its own and the
+  // casing bypass this asserts against would pass unnoticed.
+  it('refuses a self-change disguised by uuid casing', async () => {
+    await request(setup.httpServer)
+      .patch(`/api/v1/users/${guest}/role`)
+      .set('Cookie', cookie)
+      .send({ role: UserRole.Operator })
+      .expect(200)
+
+    await request(setup.httpServer)
+      .patch(`/api/v1/users/${operator.toUpperCase()}/role`)
+      .set('Cookie', cookie)
+      .send({ role: UserRole.Member })
+      .expect(400)
+
+    const stored = await setup.db.query.userTable.findFirst({ where: { githubUserId: '1' } })
+    expect(stored?.role).toBe(UserRole.Operator)
+  })
+
   it('rejects an unknown role', async () => {
     await request(setup.httpServer)
       .patch(`/api/v1/users/${guest}/role`)

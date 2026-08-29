@@ -15,12 +15,18 @@ what an unapproved user sees.
 | Registered         | Per route, `@UseGuards(SessionAuthGuard)`   | Globally, via `APP_GUARD` in `AccessControlModule` |
 | Needs a decorator? | **Yes** — it does nothing unless you add it | **No** — it runs on every route already            |
 | No session present | 401                                         | Passes through                                     |
-| Session present    | Passes through                              | 403 unless the role is admitted                    |
+| Session present    | Passes through                              | 403 unless the role is admitted, or `@Public()`    |
 
 The asymmetry is deliberate. `RolesGuard` cannot reject an anonymous request, because plenty
 of routes are meant to be anonymous (`GET /auth/github` starts the login). What it can do is
 guarantee that a route added later is **closed by default**: forget to decorate a new
 endpoint and a Guest still cannot reach it.
+
+That default has one sharp edge, which is why `@Public()` exists. The guard keys off whether
+the request _carries_ a session, not whether the route _requires_ one — so without `@Public()`
+a signed-in Guest would be refused on the login route itself, and with no logout endpoint
+their cookie could never be cleared. Every genuinely anonymous route is marked `@Public()`,
+which short-circuits the gate before the role is ever read.
 
 `AccessControlModule` is imported by `AppModule.forRoot`, not `AuthModule`, so the gate also
 covers `TestBench.setupModuleTest`, which boots a single feature without `AuthModule`.
@@ -51,7 +57,7 @@ handle() {}
 
 | You want                               | Write                                                        |
 | -------------------------------------- | ------------------------------------------------------------ |
-| Anonymous access                       | Nothing — no `@UseGuards`, no role decorator                 |
+| Anonymous access                       | `@Public()` — and no `@UseGuards`                            |
 | Any approved user (operator or member) | `@UseGuards(SessionAuthGuard)`                               |
 | Operators only                         | `@UseGuards(SessionAuthGuard)` + `@Roles(UserRole.Operator)` |
 | Reachable by a not-yet-approved user   | `@UseGuards(SessionAuthGuard)` + `@AllowGuest()`             |
@@ -103,7 +109,9 @@ never the role. That is what makes a promotion take effect without a re-login.
 
 ```mermaid
 flowchart TD
-    A[Request] --> B{Route has SessionAuthGuard?}
+    A[Request] --> P{Route marked @Public?}
+    P -- yes --> C[Handler runs]
+    P -- no --> B{Route has SessionAuthGuard?}
     B -- no --> C[Handler runs]
     B -- yes --> D{Session carries userUuid?}
     D -- no --> E[401 No active session]
@@ -118,9 +126,12 @@ flowchart TD
 The allowed set is `@Roles(...)` if present, `@AllowGuest()`'s widened set if present, and
 otherwise the default `operator | member`.
 
-Note the ordering consequence: `RolesGuard` runs globally, so on a route **without**
-`SessionAuthGuard` an anonymous request reaches the handler untouched. Authentication is
-never implied by the role gate — if a route needs a user, say so with `@UseGuards`.
+Two consequences worth holding on to. `RolesGuard` runs globally but never authenticates —
+on a route without `SessionAuthGuard` an anonymous request reaches the handler untouched, so
+if a route needs a user, say so with `@UseGuards`. And a route that should be reachable by
+_anyone_, signed in or not, needs `@Public()`: leaving it undecorated does not mean "open", it
+means "open to anonymous requests, closed to Guests" — which is how a denied user would get
+locked out of the login flow.
 
 ## Promoting a guest
 
@@ -141,15 +152,15 @@ independently, and an install can end up with zero operators and no recovery pat
 
 ## Where the code lives
 
-| Piece                    | Path                                                            |
-| ------------------------ | --------------------------------------------------------------- |
-| Session guard            | `apps/api/src/app/auth/guards/session-auth.guard.ts`            |
-| Role gate                | `apps/api/src/app/auth/guards/roles.guard.ts`                   |
-| Global registration      | `apps/api/src/app/auth/access-control.module.ts`                |
-| `@Roles` / `@AllowGuest` | `apps/api/src/app/auth/decorators/roles.decorator.ts`           |
-| Per-request role read    | `apps/api/src/app/auth/services/user-role/user-role.service.ts` |
-| Session field types      | `apps/api/src/app/auth/auth-session.types.ts`                   |
-| Advisory lock keys       | `apps/api/src/modules/database/advisory-locks.ts`               |
+| Piece                                | Path                                                            |
+| ------------------------------------ | --------------------------------------------------------------- |
+| Session guard                        | `apps/api/src/app/auth/guards/session-auth.guard.ts`            |
+| Role gate                            | `apps/api/src/app/auth/guards/roles.guard.ts`                   |
+| Global registration                  | `apps/api/src/app/auth/access-control.module.ts`                |
+| `@Roles` / `@AllowGuest` / `@Public` | `apps/api/src/app/auth/decorators/roles.decorator.ts`           |
+| Per-request role read                | `apps/api/src/app/auth/services/user-role/user-role.service.ts` |
+| Session field types                  | `apps/api/src/app/auth/auth-session.types.ts`                   |
+| Advisory lock keys                   | `apps/api/src/modules/database/advisory-locks.ts`               |
 
 Decisions behind this: [AgDR-0004](agdr/AgDR-0004-authentication-and-idp-strategy.md) (why
 GitHub OAuth), [AgDR-0016](agdr/AgDR-0016-oauth-seam-and-session-mechanism.md) (why a signed

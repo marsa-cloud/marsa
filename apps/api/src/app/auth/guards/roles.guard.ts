@@ -6,7 +6,10 @@ import {
 } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import type { FastifyRequest } from 'fastify'
-import { ROLES_METADATA_KEY } from '#src/app/auth/decorators/roles.decorator.js'
+import {
+  PUBLIC_METADATA_KEY,
+  ROLES_METADATA_KEY,
+} from '#src/app/auth/decorators/roles.decorator.js'
 import { UserRoleService } from '#src/app/auth/services/user-role/user-role.service.js'
 import { UserRole } from '#src/app/user/enums/user-role.enum.js'
 
@@ -21,18 +24,20 @@ export class RolesGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const targets = [context.getHandler(), context.getClass()]
+    if (this.reflector.getAllAndOverride<boolean>(PUBLIC_METADATA_KEY, targets)) {
+      return true
+    }
+
     const request = context.switchToHttp().getRequest<FastifyRequest>()
-    // No session means the route is public by design, or SessionAuthGuard already refused it.
+    // SessionAuthGuard has already refused a request that needed a session and had none.
     const userUuid = request.session.get('userUuid')
     if (!userUuid) {
       return true
     }
 
     const allowed =
-      this.reflector.getAllAndOverride<UserRole[]>(ROLES_METADATA_KEY, [
-        context.getHandler(),
-        context.getClass(),
-      ]) ?? ADMITTED_ROLES
+      this.reflector.getAllAndOverride<UserRole[]>(ROLES_METADATA_KEY, targets) ?? ADMITTED_ROLES
 
     const role = await this.userRoles.loadRole(userUuid)
     if (!role || !allowed.includes(role)) {

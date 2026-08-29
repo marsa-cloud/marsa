@@ -13,8 +13,10 @@ export class UpdateUserRoleUseCase {
     targetUuid: UserUuid,
     command: UpdateUserRoleCommand,
   ): Promise<UpdateUserRoleResponse> {
-    // The acting operator always survives the edit, so an install can never lock itself out.
-    if (actingUserUuid === targetUuid) {
+    // Compared case-insensitively: ParseUUIDPipe accepts any case and does not normalise,
+    // while Postgres matches uuids case-insensitively — a plain === lets an uppercased
+    // uuid slip past this check and edit the caller's own row.
+    if (actingUserUuid.toLowerCase() === targetUuid.toLowerCase()) {
       throw new BadRequestException('You cannot change your own role.')
     }
 
