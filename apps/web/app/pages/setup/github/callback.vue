@@ -5,7 +5,7 @@ import type { ConvertManifestResponse } from '~/api/types.gen'
 const route = useRoute()
 const { convert, captureInstallation } = useGithubProvisioning()
 
-const status = ref<'loading' | 'created' | 'installed' | 'error'>('loading')
+const status = ref<'loading' | 'created' | 'installed' | 'cancelled' | 'error'>('loading')
 const result = ref<ConvertManifestResponse | null>(null)
 const message = ref('')
 
@@ -40,6 +40,18 @@ async function completeInstall(installationId: string, setupAction: string) {
 }
 
 onMounted(async () => {
+  const denial = parseGithubDenial(route.query)
+  if (denial === 'cancelled') {
+    status.value = 'cancelled'
+    message.value = 'GitHub App setup was cancelled. You can start the connection again whenever you’re ready.'
+    return
+  }
+  if (denial === 'declined') {
+    status.value = 'error'
+    message.value = 'GitHub declined the setup request. Please try again.'
+    return
+  }
+
   // GitHub returns here twice in the flow: first from the manifest conversion
   // (code + state), then from the post-install redirect (installation_id +
   // setup_action). Dispatch on which params are present.
@@ -71,6 +83,24 @@ onMounted(async () => {
         class="animate-spin"
       />
       <span>Finishing GitHub App setup…</span>
+    </div>
+
+    <div
+      v-else-if="status === 'cancelled'"
+      class="space-y-4"
+    >
+      <UAlert
+        color="neutral"
+        variant="subtle"
+        icon="i-lucide-circle-slash"
+        :title="message"
+      />
+      <UButton
+        variant="ghost"
+        to="/setup/github"
+      >
+        Back to setup
+      </UButton>
     </div>
 
     <UAlert
