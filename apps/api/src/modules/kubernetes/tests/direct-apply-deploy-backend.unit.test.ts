@@ -1,4 +1,4 @@
-import { beforeEach, describe, it } from 'node:test'
+import { afterEach, beforeEach, describe, it } from 'node:test'
 import {
   ApiException,
   AppsV1Api,
@@ -8,7 +8,12 @@ import {
   type V1Status,
 } from '@kubernetes/client-node'
 import { expect } from 'expect'
-import { createStubInstance, type SinonStubbedInstance } from 'sinon'
+import {
+  createSandbox,
+  createStubInstance,
+  type SinonSandbox,
+  type SinonStubbedInstance,
+} from 'sinon'
 import {
   OPERATOR_APPS_NAMESPACE,
   REGISTRY_SECRET_SUFFIX,
@@ -31,6 +36,7 @@ describe('DirectApplyDeployBackend.apply', () => {
   let apps: SinonStubbedInstance<AppsV1Api>
   let core: SinonStubbedInstance<CoreV1Api>
   let custom: SinonStubbedInstance<CustomObjectsApi>
+  let sandbox: SinonSandbox
   let backend: DirectApplyDeployBackend
 
   beforeEach(() => {
@@ -38,12 +44,22 @@ describe('DirectApplyDeployBackend.apply', () => {
     core = createStubInstance(CoreV1Api)
     custom = createStubInstance(CustomObjectsApi)
 
-    const kubeConfig = createStubInstance(KubeConfig)
-    kubeConfig.makeApiClient.withArgs(AppsV1Api).returns(apps)
-    kubeConfig.makeApiClient.withArgs(CoreV1Api).returns(core)
-    kubeConfig.makeApiClient.withArgs(CustomObjectsApi).returns(custom)
+    sandbox = createSandbox()
+    sandbox.stub(KubeConfig.prototype, 'loadFromDefault')
+    sandbox
+      .stub(KubeConfig.prototype, 'makeApiClient')
+      .withArgs(AppsV1Api)
+      .returns(apps)
+      .withArgs(CoreV1Api)
+      .returns(core)
+      .withArgs(CustomObjectsApi)
+      .returns(custom)
 
-    backend = new DirectApplyDeployBackend(kubeConfig)
+    backend = new DirectApplyDeployBackend()
+  })
+
+  afterEach(() => {
+    sandbox.restore()
   })
 
   it('deletes the orphaned pull Secret when the bundle renders none', async () => {

@@ -38,23 +38,19 @@ function requireName(object: { metadata?: { name?: string } }, kind: string): st
   return name
 }
 
-function defaultKubeConfig(): KubeConfig {
-  const kc = new KubeConfig()
-  kc.loadFromDefault()
-  return kc
-}
-
 @Injectable()
 export class DirectApplyDeployBackend extends DeployBackend {
   private readonly apps: AppsV1Api
   private readonly core: CoreV1Api
   private readonly custom: CustomObjectsApi
 
-  constructor(kubeConfig: KubeConfig = defaultKubeConfig()) {
+  constructor() {
     super()
-    this.apps = kubeConfig.makeApiClient(AppsV1Api)
-    this.core = kubeConfig.makeApiClient(CoreV1Api)
-    this.custom = kubeConfig.makeApiClient(CustomObjectsApi)
+    const kc = new KubeConfig()
+    kc.loadFromDefault()
+    this.apps = kc.makeApiClient(AppsV1Api)
+    this.core = kc.makeApiClient(CoreV1Api)
+    this.custom = kc.makeApiClient(CustomObjectsApi)
   }
 
   async apply(namespace: string, manifests: RenderedManifests): Promise<void> {
@@ -89,10 +85,8 @@ export class DirectApplyDeployBackend extends DeployBackend {
       ssa,
     )
 
-    // A private→public transition renders no Secret, and SSA strips the
-    // Deployment's imagePullSecrets — but the Secret object itself would linger
-    // with the old credentials (#124). Deleted after the patch, so the live
-    // Deployment never references a Secret that is already gone.
+    // After the Deployment patch, so the live pod spec never references a Secret
+    // that is already gone (#124).
     if (!imagePullSecret) {
       await ignoreNotFound(() =>
         this.core.deleteNamespacedSecret({
