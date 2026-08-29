@@ -64,6 +64,26 @@ See `.claude/rules/api/response-dto.md`.
 Why: the contract should describe the real response set, not just the happy path. The web
 generates its error handling from it.
 
+## Declare a path parameter Swagger cannot reflect
+
+```ts
+// WRONG — the branded type reflects as unknown, so the operation gets no parameter at all
+handle(@Param('uuid', ParseUUIDPipe) uuid: UserUuid)
+
+// RIGHT
+@ApiParam({ name: 'uuid', required: true, format: 'uuid', type: String })
+handle(@Param('uuid', ParseUUIDPipe) uuid: UserUuid)
+```
+
+Why: `@nestjs/swagger` reads the parameter's emitted design type. A plain `string` (as every
+`:slug` route uses) reflects fine; a **type-only branded alias** like `UserUuid` erases to
+nothing, and the operation silently ships with `"parameters": []`. The generated web client
+then types the request as `path?: never` — the endpoint becomes uncallable from the frontend,
+and nothing in the build or the api's own tests notices.
+
+Rule of thumb: plain `string` param, no decorator needed; branded alias, always `@ApiParam`.
+Check the regenerated `openapi.json` names every `{placeholder}` in the route.
+
 ## Inject the use-case under the name `usecase`
 
 ```ts

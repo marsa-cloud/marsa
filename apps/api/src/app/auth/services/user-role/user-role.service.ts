@@ -6,12 +6,8 @@ import type { UserRole } from '#src/app/user/enums/user-role.enum.js'
 import type { Database } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 
-/**
- * Reads the current role of a session's user for `RolesGuard` (#63). Read per
- * request rather than stamped into the session cookie, so an operator's
- * promotion takes effect on the promoted user's next request instead of their
- * next login.
- */
+// Read per request, not stamped into the session cookie, so a promotion takes
+// effect on the promoted user's next request rather than their next login.
 @Injectable()
 export class UserRoleService {
   constructor(@InjectDatabase() private readonly db: Database) {}

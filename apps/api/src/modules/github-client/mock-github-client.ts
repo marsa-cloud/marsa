@@ -24,7 +24,7 @@ const MOCK_CREDENTIALS: GitHubAppCredentials = {
 }
 
 /** Canned authenticated user returned by the mock for the user-OAuth flow (#62). */
-const MOCK_USER: GitHubUser = {
+export const MOCK_GITHUB_USER: GitHubUser = {
   id: 1,
   login: 'marsa-mock-user',
 }
@@ -48,6 +48,6 @@ export class MockGithubClient extends GithubClient {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   loginUser(_params: UserOAuthExchangeParams): Promise<GitHubUser> {
-    return Promise.resolve({ ...MOCK_USER })
+    return Promise.resolve({ ...MOCK_GITHUB_USER })
   }
 }

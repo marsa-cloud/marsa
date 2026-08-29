@@ -3,7 +3,6 @@ import { Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { NestFactory } from '@nestjs/core'
 import { eq } from 'drizzle-orm'
-import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import Fastify from 'fastify'
 import { AppModule } from '#src/app.module.js'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
@@ -17,6 +16,7 @@ import { UserRole } from '#src/app/user/enums/user-role.enum.js'
 import { DEFAULT_AUTH_COOKIE_NAME } from '#src/config/env.config.js'
 import { DATABASE } from '#src/modules/database/database.tokens.js'
 import { type Database, MIGRATIONS_FOLDER } from '#src/modules/database/drizzle.factory.js'
+import { migrate } from '#src/modules/database/migrate.js'
 
 /**
  * Seed a dev operator + sample apps and print a ready-to-paste
@@ -62,7 +62,7 @@ async function rawDogFe(): Promise<void> {
 
   try {
     const db = context.get<Database>(DATABASE)
-    await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER })
+    await migrate(db, MIGRATIONS_FOLDER)
 
     let [user] = await db
       .select()

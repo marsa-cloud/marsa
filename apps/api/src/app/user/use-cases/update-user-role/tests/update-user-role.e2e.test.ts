@@ -12,11 +12,12 @@ import { generateUuid } from '#src/utils/uuid.js'
 describe('PATCH /api/v1/users/:uuid/role (e2e)', () => {
   let setup: TestSetup
   let cookie: string
+  let operator: UserUuid
   let guest: UserUuid
 
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
-    cookie = await setup.authenticate()
+    ;({ cookie, uuid: operator } = await setup.authenticateAs(UserRole.Operator))
     const user = new UserBuilder().withGithubUserId('999').build()
     await setup.db.insert(userTable).values(user)
     guest = user.uuid
@@ -35,6 +36,14 @@ describe('PATCH /api/v1/users/:uuid/role (e2e)', () => {
 
     const stored = await setup.db.query.userTable.findFirst({ where: { githubUserId: '999' } })
     expect(stored?.role).toBe(UserRole.Member)
+  })
+
+  it('refuses an operator changing their own role', async () => {
+    await request(setup.httpServer)
+      .patch(`/api/v1/users/${operator}/role`)
+      .set('Cookie', cookie)
+      .send({ role: UserRole.Member })
+      .expect(400)
   })
 
   it('rejects an unknown role', async () => {

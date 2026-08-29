@@ -13,16 +13,18 @@ export class UpdateUserRoleUseCase {
     targetUuid: UserUuid,
     command: UpdateUserRoleCommand,
   ): Promise<UpdateUserRoleResponse> {
-    // Blocking self-change is what keeps an install from being locked out: the
-    // acting operator always survives the edit, so at least one operator remains.
+    // The acting operator always survives the edit, so an install can never lock itself out.
     if (actingUserUuid === targetUuid) {
       throw new BadRequestException('You cannot change your own role.')
     }
 
-    const updated = await this.repository.updateRole(targetUuid, command.role)
-    if (!updated) {
+    const outcome = await this.repository.updateRole(targetUuid, command.role)
+    if (outcome.status === 'not-found') {
       throw new NotFoundException('No user with that uuid.')
     }
-    return new UpdateUserRoleResponse(updated)
+    if (outcome.status === 'last-operator') {
+      throw new BadRequestException('Cannot demote the last operator.')
+    }
+    return new UpdateUserRoleResponse(outcome.user)
   }
 }

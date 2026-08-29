@@ -7,18 +7,12 @@ import {
 import { Reflector } from '@nestjs/core'
 import type { FastifyRequest } from 'fastify'
 import { ROLES_METADATA_KEY } from '#src/app/auth/decorators/roles.decorator.js'
-import { UserRoleService } from '#src/app/auth/user-role.service.js'
+import { UserRoleService } from '#src/app/auth/services/user-role/user-role.service.js'
 import { UserRole } from '#src/app/user/enums/user-role.enum.js'
 
 const ADMITTED_ROLES = [UserRole.Operator, UserRole.Member]
 
-/**
- * Deny-by-default role gate (#63), registered globally so a route cannot be
- * added without it. Requests carrying no session pass straight through — those
- * routes are either public by design or already rejected by `SessionAuthGuard`.
- * A session whose user is a Guest (or whose row has vanished) is refused unless
- * the route opts in via `@AllowGuest()`; `@Roles()` narrows further.
- */
+// Registered globally, so a route added later is closed by default rather than open.
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(
@@ -28,7 +22,8 @@ export class RolesGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<FastifyRequest>()
-    const userUuid = request.session?.get('userUuid')
+    // No session means the route is public by design, or SessionAuthGuard already refused it.
+    const userUuid = request.session.get('userUuid')
     if (!userUuid) {
       return true
     }

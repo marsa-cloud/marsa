@@ -10,13 +10,15 @@ in `dist/` — there is no watch mode. Change code, then `pnpm --filter api test
 
 ## Pick the layer by what has an HTTP entry point
 
-| Suffix                   | Scope                                 | How much                           |
-| ------------------------ | ------------------------------------- | ---------------------------------- |
-| `.e2e.test.ts`           | full HTTP stack for one endpoint      | one happy path + one bad path      |
-| `.use-case.unit.test.ts` | the use-case class, no HTTP, no DB    | side-effect branches, error paths  |
-| `.integration.test.ts`   | jobs, event handlers, scheduled tasks | boot the module, drive it directly |
+| Suffix                   | Scope                                           | How much                           |
+| ------------------------ | ----------------------------------------------- | ---------------------------------- |
+| `.e2e.test.ts`           | full HTTP stack for one endpoint                | one happy path + one bad path      |
+| `.use-case.unit.test.ts` | the use-case class, no HTTP, no DB              | side-effect branches, error paths  |
+| `.integration.test.ts`   | jobs, event handlers, scheduled tasks           | boot the module, drive it directly |
+| `.db.test.ts`            | a service or repository against a real database | the invariant it owns              |
 
-Repositories get **no** dedicated tests — see `.claude/rules/api/repository.md`.
+Repositories get **no** dedicated tests unless they own an invariant no request can reach —
+see `.claude/rules/api/repository.md`.
 
 ## Seed e2e fixtures with direct inserts
 

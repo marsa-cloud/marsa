@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "f52c1ce0-b5ff-4aad-80f8-32aafeb42c43",
+  "id": "1064e386-12c1-4add-8f75-2217d279c5be",
   "prevIds": ["256b5ddf-b442-4599-85eb-d6a70fdbe310"],
   "ddl": [
     {
@@ -641,7 +641,7 @@
       "typeSchema": "public",
       "notNull": true,
       "dimensions": 0,
-      "default": null,
+      "default": "'member'",
       "generated": null,
       "identity": null,
       "name": "role",

@@ -10,9 +10,10 @@ Installing on a VPS and adding nodes are covered in the [root README](../README.
 
 ## Working on Marsa
 
-| Page                           | What it covers                                                          |
-| ------------------------------ | ----------------------------------------------------------------------- |
-| [`local-dev.md`](local-dev.md) | No-cluster inner loop for UI work, and the k3d harness for real deploys |
-| [`agdr/`](agdr/)               | Agent Decision Records — why the architecture is the way it is          |
-| [`specs/`](specs/)             | Feature specs                                                           |
-| [`plans/`](plans/)             | Implementation plans                                                    |
+| Page                                     | What it covers                                                          |
+| ---------------------------------------- | ----------------------------------------------------------------------- |
+| [`local-dev.md`](local-dev.md)           | No-cluster inner loop for UI work, and the k3d harness for real deploys |
+| [`authentication.md`](authentication.md) | The two guards, the role model, and how to decorate a new route         |
+| [`agdr/`](agdr/)                         | Agent Decision Records — why the architecture is the way it is          |
+| [`specs/`](specs/)                       | Feature specs                                                           |
+| [`plans/`](plans/)                       | Implementation plans                                                    |

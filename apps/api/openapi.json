@@ -222,7 +222,17 @@
     "/api/v1/users/{uuid}/role": {
       "patch": {
         "operationId": "updateUserRoleV1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "uuid",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -245,7 +255,7 @@
             }
           },
           "400": {
-            "description": "Unknown role, or an attempt to change your own."
+            "description": "Unknown role, a self-change, or demoting the last operator."
           },
           "401": {
             "description": "No active session."

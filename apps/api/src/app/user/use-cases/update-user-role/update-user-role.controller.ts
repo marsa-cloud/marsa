@@ -4,6 +4,7 @@ import {
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
+  ApiParam,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger'
@@ -24,8 +25,12 @@ export class UpdateUserRoleController {
   @Patch()
   @UseGuards(SessionAuthGuard)
   @Roles(UserRole.Operator)
+  // Branded param types reflect as unknown, so Swagger emits no parameter without this.
+  @ApiParam({ name: 'uuid', required: true, format: 'uuid', type: String })
   @ApiOkResponse({ type: UpdateUserRoleResponse })
-  @ApiBadRequestResponse({ description: 'Unknown role, or an attempt to change your own.' })
+  @ApiBadRequestResponse({
+    description: 'Unknown role, a self-change, or demoting the last operator.',
+  })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   @ApiForbiddenResponse({ description: 'Operators only.' })
   @ApiNotFoundResponse({ description: 'No user with that uuid.' })

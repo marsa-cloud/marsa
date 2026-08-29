@@ -479,14 +479,16 @@ export type ViewUserIndexV1Response = ViewUserIndexV1Responses[keyof ViewUserInd
 
 export type UpdateUserRoleV1Data = {
   body: UpdateUserRoleCommand
-  path?: never
+  path: {
+    uuid: string
+  }
   query?: never
   url: '/api/v1/users/{uuid}/role'
 }
 
 export type UpdateUserRoleV1Errors = {
   /**
-   * Unknown role, or an attempt to change your own.
+   * Unknown role, a self-change, or demoting the last operator.
    */
   400: unknown
   /**

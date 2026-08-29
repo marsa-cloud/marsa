@@ -1,11 +1,7 @@
 import { ApiProperty, type ApiPropertyOptions } from '@nestjs/swagger'
 import { pgEnum } from 'drizzle-orm/pg-core'
 
-/**
- * `Guest` is the deny-by-default tier every new sign-in lands on (#63): a real
- * user row, keyed on the GitHub id, with access to nothing until an operator
- * promotes it. Retired once invite-by-login lands (#192).
- */
+// Guest is the deny-by-default tier every new sign-in lands on; retired once #192 lands.
 export enum UserRole {
   Operator = 'operator',
   Member = 'member',

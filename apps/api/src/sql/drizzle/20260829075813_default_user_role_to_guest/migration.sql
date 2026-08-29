@@ -1,0 +1,1 @@
+ALTER TABLE "user" ALTER COLUMN "role" SET DEFAULT 'guest'::"user_role_enum";

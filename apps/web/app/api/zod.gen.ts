@@ -232,6 +232,10 @@ export const zViewUserIndexV1Response = zViewUserIndexResponse
 
 export const zUpdateUserRoleV1Body = zUpdateUserRoleCommand
 
+export const zUpdateUserRoleV1Path = z.object({
+  uuid: z.uuid(),
+})
+
 export const zUpdateUserRoleV1Response = zUpdateUserRoleResponse
 
 export const zDeployAppV1Body = zDeployAppCommandWritable

@@ -27,7 +27,7 @@ describe('UpdateUserRoleUseCase', () => {
 
   it('throws NotFound when the target row is gone', async () => {
     const repository = createStubInstance(UpdateUserRoleRepository)
-    repository.updateRole.resolves(null)
+    repository.updateRole.resolves({ status: 'not-found' })
     const usecase = new UpdateUserRoleUseCase(repository)
 
     await expect(
@@ -39,10 +39,24 @@ describe('UpdateUserRoleUseCase', () => {
     ).rejects.toThrow(NotFoundException)
   })
 
+  it('refuses a demotion that would strand the install without an operator', async () => {
+    const repository = createStubInstance(UpdateUserRoleRepository)
+    repository.updateRole.resolves({ status: 'last-operator' })
+    const usecase = new UpdateUserRoleUseCase(repository)
+
+    await expect(
+      usecase.execute(
+        generateUuid<UserUuid>(),
+        generateUuid<UserUuid>(),
+        new UpdateUserRoleCommandBuilder().build(),
+      ),
+    ).rejects.toThrow(BadRequestException)
+  })
+
   it('returns the updated user on success', async () => {
     const repository = createStubInstance(UpdateUserRoleRepository)
     const promoted = new UserBuilder().withRole(UserRole.Member).build()
-    repository.updateRole.resolves(promoted)
+    repository.updateRole.resolves({ status: 'updated', user: promoted })
     const usecase = new UpdateUserRoleUseCase(repository)
 
     const response = await usecase.execute(

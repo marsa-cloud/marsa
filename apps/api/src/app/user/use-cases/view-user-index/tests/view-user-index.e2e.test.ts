@@ -13,7 +13,7 @@ describe('GET /api/v1/users (e2e)', () => {
 
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
-    cookie = await setup.authenticate()
+    ;({ cookie } = await setup.authenticateAs(UserRole.Operator))
     await setup.db.insert(userTable).values(new UserBuilder().withGithubUserId('999').build())
   })
 
@@ -34,9 +34,9 @@ describe('GET /api/v1/users (e2e)', () => {
   })
 
   it('refuses a non-operator', async () => {
-    await setup.db.update(userTable).set({ role: UserRole.Member })
+    const { cookie: member } = await setup.authenticateAs(UserRole.Member)
 
-    await request(setup.httpServer).get('/api/v1/users').set('Cookie', cookie).expect(403)
+    await request(setup.httpServer).get('/api/v1/users').set('Cookie', member).expect(403)
   })
 
   it('rejects with 401 when no session cookie is present', async () => {

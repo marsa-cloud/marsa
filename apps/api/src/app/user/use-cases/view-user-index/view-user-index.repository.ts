@@ -7,7 +7,7 @@ import { InjectDatabase } from '#src/modules/database/inject-database.decorator.
 export class ViewUserIndexRepository {
   constructor(@InjectDatabase() private readonly db: Database) {}
 
-  /** Everyone who has ever signed in, oldest first — the operator leads the list. */
+  // Oldest first, so the bootstrapping operator leads the list.
   async listUsers(): Promise<User[]> {
     return this.db.query.userTable.findMany({ orderBy: { createdAt: 'asc' } })
   }
