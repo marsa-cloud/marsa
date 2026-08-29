@@ -12,6 +12,16 @@ describe('parseGithubDenial', () => {
     expect(parseGithubDenial({ error: 'application_suspended' } as LocationQuery)).toBe('declined')
   })
 
+  it('reads the first value when the error param is repeated', () => {
+    expect(parseGithubDenial({ error: ['access_denied', 'access_denied'] } as LocationQuery)).toBe('cancelled')
+  })
+
+  it('declines a blank or valueless error param rather than ignoring it', () => {
+    expect(parseGithubDenial({ error: '' } as LocationQuery)).toBe('declined')
+    expect(parseGithubDenial({ error: null } as LocationQuery)).toBe('declined')
+    expect(parseGithubDenial({ error: [] } as LocationQuery)).toBe('declined')
+  })
+
   it('returns null when the query carries no error', () => {
     expect(parseGithubDenial({ code: 'c', state: 's' } as LocationQuery)).toBeNull()
   })
@@ -30,6 +40,15 @@ describe('resolveGithubLoginQuery', () => {
     expect(resolveGithubLoginQuery({ error: 'access_denied' } as LocationQuery)).toEqual({
       status: 'cancelled',
     })
+  })
+
+  it('never proceeds when an error param rides alongside valid credentials', () => {
+    const malformed = ['', null, [], ['a', 'b'], 'access_denied']
+
+    for (const error of malformed) {
+      const outcome = resolveGithubLoginQuery({ error, code: 'c', state: 's' } as LocationQuery)
+      expect(outcome.status).not.toBe('proceed')
+    }
   })
 
   it('fails when code or state is missing', () => {

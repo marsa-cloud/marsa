@@ -1,10 +1,19 @@
 import { registerEndpoint } from '@nuxt/test-utils/runtime'
+import { readBody } from 'h3'
 import { describe, expect, it, vi } from 'vitest'
 
 import { useGithubLogin } from '../useGithubCallback'
 
 const handler = vi.fn(() => ({ id: '1', login: 'octocat' }))
-registerEndpoint('/api/v1/auth/github/session', { method: 'POST', handler: () => handler() })
+const received = vi.fn()
+
+registerEndpoint('/api/v1/auth/github/session', {
+  method: 'POST',
+  handler: async (event) => {
+    received(await readBody(event))
+    return handler()
+  },
+})
 
 describe('useGithubLogin.completeLogin', () => {
   it('POSTs the callback code and state to the session endpoint', async () => {
@@ -12,7 +21,7 @@ describe('useGithubLogin.completeLogin', () => {
 
     await completeLogin('c', 's')
 
-    expect(handler).toHaveBeenCalled()
+    expect(received).toHaveBeenCalledWith({ code: 'c', state: 's' })
   })
 
   it('rejects when the response does not match the contract', async () => {

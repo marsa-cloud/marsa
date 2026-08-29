@@ -8,19 +8,23 @@ export type GithubLoginOutcome
   = | { status: 'proceed', code: string, state: string }
     | { status: GithubDenial | 'failed' }
 
-const denialQuery = z.object({ error: z.string().min(1) })
-
 const loginQuery = z.object({
   code: z.string().min(1),
   state: z.string().min(1),
 })
 
+// Presence of `error` is terminal, whatever its value: a blank, valueless or
+// repeated param must not fall through to the code/state exchange, and a
+// duplicated `error=access_denied` must still read as a cancellation.
 // GitHub also sends error_description, but it is attacker-influenceable text
 // and never actionable for the person reading it, so we branch on the code only.
 export function parseGithubDenial(query: LocationQuery): GithubDenial | null {
-  const denial = denialQuery.safeParse(query)
-  if (!denial.success) return null
-  return denial.data.error === 'access_denied' ? 'cancelled' : 'declined'
+  if (!('error' in query)) return null
+
+  const raw = query.error
+  const code = Array.isArray(raw) ? raw[0] : raw
+
+  return code === 'access_denied' ? 'cancelled' : 'declined'
 }
 
 export function resolveGithubLoginQuery(query: LocationQuery): GithubLoginOutcome {
