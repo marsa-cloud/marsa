@@ -1,6 +1,5 @@
 import { Global, Inject, Module, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
-import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { Pool } from 'pg'
 import { DATABASE, DATABASE_POOL } from '#src/modules/database/database.tokens.js'
 import {
@@ -8,6 +7,7 @@ import {
   type Database,
   MIGRATIONS_FOLDER,
 } from '#src/modules/database/drizzle.factory.js'
+import { migrate } from '#src/modules/database/migrate.js'
 
 @Global()
 @Module({
@@ -41,7 +41,7 @@ export class DatabaseModule implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit(): Promise<void> {
     if (process.env.NODE_ENV === 'production') {
-      await migrate(this.db, { migrationsFolder: MIGRATIONS_FOLDER })
+      await migrate(this.db, MIGRATIONS_FOLDER)
     }
   }
 

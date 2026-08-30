@@ -54,7 +54,22 @@ async createRelease(tx: Executor, release: Release): Promise<void> {
 Why: `Executor = Database | Transaction`. Taking it as the first parameter lets one unit of
 work span several repositories. Reads that stand alone keep using `this.db`.
 
-## Repositories get no dedicated tests
+## Repositories get no dedicated tests — unless they hold an invariant
 
-They are thin query wrappers, covered implicitly by the slice's e2e test. See
-`.claude/rules/api/tests.md`.
+A repository that is a thin query wrapper is covered implicitly by the slice's e2e test.
+Write a `<action>.repository.db.test.ts` only when the repository enforces a rule of its own
+— a transaction, a lock, a conditional write — **and** that rule cannot be reached through
+the endpoint.
+
+```ts
+// The last-operator check in update-user-role lives behind a self-change rule and an
+// operator-only guard, so no single request can reach it. Concurrency can.
+const outcomes = await Promise.all([
+  repository.updateRole(first.uuid, UserRole.Member),
+  repository.updateRole(second.uuid, UserRole.Member),
+])
+```
+
+Why: the "no tests" rule exists because a query wrapper has nothing of its own to assert.
+Once one owns an invariant, the e2e test can no longer see it, and an untested lock is a
+lock that quietly stops working. See `.claude/rules/api/tests.md`.

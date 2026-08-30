@@ -12,7 +12,7 @@ export class UserBuilder {
       uuid: generateUuid<UserUuid>(),
       githubUserId: '1',
       githubLogin: 'marsa-user',
-      role: UserRole.Member,
+      role: UserRole.Guest,
       createdAt: now,
       updatedAt: now,
     }

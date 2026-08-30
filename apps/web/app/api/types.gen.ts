@@ -106,10 +106,32 @@ export type CompleteGithubLoginResponse = {
   login: string
 }
 
-export type UserRole = 'operator' | 'member'
+export type UserRole = 'operator' | 'member' | 'guest'
 
 export type ViewMeResponse = {
   id: string
+  login: string
+  role: UserRole
+}
+
+export type UserSummary = {
+  uuid: string
+  githubUserId: string
+  login: string
+  role: UserRole
+  createdAt: string
+}
+
+export type ViewUserIndexResponse = {
+  users: Array<UserSummary>
+}
+
+export type UpdateUserRoleCommand = {
+  role: UserRole
+}
+
+export type UpdateUserRoleResponse = {
+  uuid: string
   login: string
   role: UserRole
 }
@@ -423,6 +445,10 @@ export type ViewMeV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
 }
 
 export type ViewMeV1Responses = {
@@ -430,6 +456,64 @@ export type ViewMeV1Responses = {
 }
 
 export type ViewMeV1Response = ViewMeV1Responses[keyof ViewMeV1Responses]
+
+export type ViewUserIndexV1Data = {
+  body?: never
+  path?: never
+  query?: never
+  url: '/api/v1/users'
+}
+
+export type ViewUserIndexV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Operators only.
+   */
+  403: unknown
+}
+
+export type ViewUserIndexV1Responses = {
+  200: ViewUserIndexResponse
+}
+
+export type ViewUserIndexV1Response = ViewUserIndexV1Responses[keyof ViewUserIndexV1Responses]
+
+export type UpdateUserRoleV1Data = {
+  body: UpdateUserRoleCommand
+  path: {
+    uuid: string
+  }
+  query?: never
+  url: '/api/v1/users/{uuid}/role'
+}
+
+export type UpdateUserRoleV1Errors = {
+  /**
+   * Unknown role, a self-change, or demoting the last operator.
+   */
+  400: unknown
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Operators only.
+   */
+  403: unknown
+  /**
+   * No user with that uuid.
+   */
+  404: unknown
+}
+
+export type UpdateUserRoleV1Responses = {
+  200: UpdateUserRoleResponse
+}
+
+export type UpdateUserRoleV1Response = UpdateUserRoleV1Responses[keyof UpdateUserRoleV1Responses]
 
 export type DeployAppV1Data = {
   body: DeployAppCommandWritable
@@ -447,6 +531,10 @@ export type DeployAppV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
 }
 
 export type DeployAppV1Responses = {
@@ -469,6 +557,10 @@ export type RedeployAppV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
   /**
    * No app with that slug.
    */
@@ -499,6 +591,10 @@ export type ViewReleaseIndexV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
 }
 
 export type ViewReleaseIndexV1Responses = {
@@ -520,6 +616,10 @@ export type ViewAppIndexV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
 }
 
 export type ViewAppIndexV1Responses = {
@@ -542,6 +642,10 @@ export type DeleteAppV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
   /**
    * No app with that slug.
    */
@@ -576,6 +680,10 @@ export type ViewAppDetailV1Errors = {
    */
   401: unknown
   /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
    * No app with that slug.
    */
   404: unknown
@@ -601,6 +709,10 @@ export type ViewAppHealthV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
 }
 
 export type ViewAppHealthV1Responses = {
@@ -632,6 +744,10 @@ export type ViewAppLogsV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
 }
 
 export type ViewAppLogsV1Responses = {
@@ -658,6 +774,10 @@ export type UpdateAppEnvV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
   /**
    * No app with that slug.
    */

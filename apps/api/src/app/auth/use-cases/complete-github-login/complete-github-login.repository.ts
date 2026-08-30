@@ -4,10 +4,9 @@ import { oauthStateTable } from '#src/app/auth/entities/oauth-state.table.js'
 import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { type GitHubApp } from '#src/app/github-app/entities/github-app.table.js'
 import { type User, userTable } from '#src/app/user/entities/user.table.js'
+import { AdvisoryLock } from '#src/modules/database/advisory-locks.js'
 import type { Database, Executor } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
-
-const USER_BOOTSTRAP_LOCK_KEY = 49170001
 
 @Injectable()
 export class CompleteGithubLoginRepository {
@@ -25,7 +24,7 @@ export class CompleteGithubLoginRepository {
    * and both claim Operator; the lock releases when the transaction ends.
    */
   async lockUserBootstrap(tx: Executor): Promise<void> {
-    await tx.execute(sql`select pg_advisory_xact_lock(${USER_BOOTSTRAP_LOCK_KEY})`)
+    await tx.execute(sql`select pg_advisory_xact_lock(${AdvisoryLock.UserBootstrap})`)
   }
 
   async consumeState(tx: Executor, state: OAuthStateUuid): Promise<boolean> {
