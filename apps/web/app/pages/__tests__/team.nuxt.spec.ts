@@ -1,4 +1,5 @@
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
+import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 
@@ -41,6 +42,41 @@ describe('team page', () => {
     expect(wrapper.text()).toContain('octocat')
     expect(wrapper.text()).toContain('hubot')
     expect(wrapper.text()).toContain('GitHub id 2')
+  })
+
+  // The dropdown is a Nuxt UI menu, so the handler is driven through its event
+  // rather than by clicking through the overlay.
+  async function changeRole(wrapper: Awaited<ReturnType<typeof mountSuspended>>, role: string) {
+    const menus = wrapper.findAllComponents({ name: 'USelectMenu' })
+    await menus[1]!.vm.$emit('update:model-value', role)
+    await flushPromises()
+  }
+
+  it('promotes a guest and reloads the list', async () => {
+    const wrapper = await mountSuspended(Team)
+
+    await changeRole(wrapper, 'member')
+
+    expect(updateRole).toHaveBeenCalledWith('u-2', 'member')
+    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'hubot is now member', color: 'success' }),
+    )
+  })
+
+  it('tells the operator why a role change was refused', async () => {
+    updateRole.mockRejectedValueOnce({ data: { message: 'Cannot demote the last operator.' } })
+    const wrapper = await mountSuspended(Team)
+
+    await changeRole(wrapper, 'member')
+
+    expect(toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        color: 'error',
+        description: 'Cannot demote the last operator.',
+      }),
+    )
+    expect(toastAdd).not.toHaveBeenCalledWith(expect.objectContaining({ color: 'success' }))
   })
 
   it('surfaces a load failure instead of an empty list', async () => {

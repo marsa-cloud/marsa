@@ -17,13 +17,19 @@ async function onRoleChange(user: UserSummary, role: UserRole) {
   try {
     await updateRole(user.uuid, role)
     toast.add({ title: `${user.login} is now ${role}`, color: 'success' })
-    await refresh()
-  } catch {
-    toast.add({ title: `Could not change ${user.login}'s role`, color: 'error' })
-    await refresh()
+  } catch (err) {
+    toast.add({
+      title: `Could not change ${user.login}'s role`,
+      description: extractApiError(err),
+      color: 'error',
+    })
   } finally {
     savingUuid.value = null
   }
+
+  // Outside the try: refreshing after a role change that succeeded must not be able
+  // to follow the success toast with a contradictory error one.
+  await refresh()
 }
 </script>
 
