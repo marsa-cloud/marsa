@@ -16,7 +16,7 @@ One controller per use-case. It injects the use-case and delegates — no logic.
 
 // RIGHT — one route; a second endpoint gets its own use-case folder
 @Get()
-@UseGuards(SessionAuthGuard)
+@Roles(UserRole.Operator, UserRole.Member)
 @ApiOkResponse({ type: ViewAppIndexResponse })
 handle(): Promise<ViewAppIndexResponse> {
   return this.usecase.execute()
@@ -63,6 +63,33 @@ See `.claude/rules/api/response-dto.md`.
 
 Why: the contract should describe the real response set, not just the happy path. The web
 generates its error handling from it.
+
+## Every route declares its access
+
+```ts
+// WRONG — no decorator. This is not "open", it is closed to everyone, including operators.
+@Get()
+handle() {}
+
+// RIGHT — name the roles admitted
+@Get()
+@Roles(UserRole.Operator, UserRole.Member)
+handle() {}
+
+// RIGHT — reachable by anyone, signed in or not
+@Get()
+@Public()
+handle() {}
+```
+
+Why: `SessionAuthGuard` and `RolesGuard` are both global. A route is either `@Public()`, or it
+requires a session and admits exactly the roles it names — there is no implicit default, and a
+route that names none admits nobody. Write the roles out in full rather than behind a named
+set; the list is short and stays translatable when permissions replace roles.
+
+`@Public()` means the guard chain does not apply, **not** that the endpoint is unauthenticated.
+If it is reachable by the internet and does something meaningful, it needs its own verification
+(a signed webhook, a single-use state token) in the use-case. See `docs/authentication.md`.
 
 ## Declare a path parameter Swagger cannot reflect
 

@@ -1,35 +1,30 @@
 # Authentication and authorization
 
-Marsa answers two separate questions on every request:
+Every route in Marsa is closed until it says otherwise. Two guards run globally, in this
+order, on every request:
 
-1. **Who are you?** — `SessionAuthGuard`, opt-in per route.
-2. **Are you allowed?** — `RolesGuard`, applied globally.
+1. **Who are you?** — `SessionAuthGuard`. 401 without a session.
+2. **Are you allowed?** — `RolesGuard`. 403 unless the route names your role.
 
-They are independent. A route can have neither, either, or both, and the combination decides
-what an unapproved user sees.
+A route escapes both by declaring `@Public()`. There is no third state: a route is either
+public, or it requires a session **and** names the roles it admits.
 
-## The two guards
+## The rule that matters
 
-|                    | `SessionAuthGuard`                          | `RolesGuard`                                       |
-| ------------------ | ------------------------------------------- | -------------------------------------------------- |
-| Registered         | Per route, `@UseGuards(SessionAuthGuard)`   | Globally, via `APP_GUARD` in `AccessControlModule` |
-| Needs a decorator? | **Yes** — it does nothing unless you add it | **No** — it runs on every route already            |
-| No session present | 401                                         | Passes through                                     |
-| Session present    | Passes through                              | 403 unless the role is admitted, or `@Public()`    |
+**A route that declares no roles admits nobody.**
 
-The asymmetry is deliberate. `RolesGuard` cannot reject an anonymous request, because plenty
-of routes are meant to be anonymous (`GET /auth/github` starts the login). What it can do is
-guarantee that a route added later is **closed by default**: forget to decorate a new
-endpoint and a Guest still cannot reach it.
+Forgetting to decorate a new endpoint does not leave it open — it leaves it shut, for
+everyone, including operators. That is deliberate: a misconfigured route should be a locked
+door you trip over on the first request, not a quiet hole you find out about later. The
+refusal is logged as a misconfiguration (`… declares no roles and is not @Public`) while the
+client still gets the same generic 403 as a real denial.
 
-That default has one sharp edge, which is why `@Public()` exists. The guard keys off whether
-the request _carries_ a session, not whether the route _requires_ one — so without `@Public()`
-a signed-in Guest would be refused on the login route itself, and with no logout endpoint
-their cookie could never be cleared. Every genuinely anonymous route is marked `@Public()`,
-which short-circuits the gate before the role is ever read.
-
-`AccessControlModule` is imported by `AppModule.forRoot`, not `AuthModule`, so the gate also
-covers `TestBench.setupModuleTest`, which boots a single feature without `AuthModule`.
+`AccessControlModule` registers both guards and is imported by `AppModule.forRoot`, not
+`AuthModule`, so the gate also covers `TestBench.setupModuleTest`, which boots a single
+feature without `AuthModule`. Registration order is load-bearing — `APP_GUARD` providers run
+in the order they are listed, and `RolesGuard` assumes a sessionless request has already been
+refused. The observable proof is that a gated route answers **401** rather than 403 when no
+cookie is present; `roles.guard.e2e.test.ts` asserts exactly that.
 
 ## Roles
 
@@ -46,25 +41,38 @@ reaches nothing until an operator promotes them.
 The role is read from the database **per request**, not stamped into the session cookie, so
 a promotion takes effect on the promoted user's next request rather than their next login.
 
+Roles are written out in full at each route rather than hidden behind named sets like
+`ANY_APPROVED`. The list stays short (a permissions model is expected to replace roles before
+it grows), and an explicit list is data a future migration can translate mechanically, where
+a named set is a policy someone has to re-interpret first.
+
 ## Decorating a route
 
 ```ts
 @Get()
-@UseGuards(SessionAuthGuard)   // 401 without a session
-@Roles(UserRole.Operator)      // narrower: operators only
+@Roles(UserRole.Operator)   // session required, operators only
 handle() {}
 ```
 
-| You want                               | Write                                                        |
-| -------------------------------------- | ------------------------------------------------------------ |
-| Anonymous access                       | `@Public()` — and no `@UseGuards`                            |
-| Any approved user (operator or member) | `@UseGuards(SessionAuthGuard)`                               |
-| Operators only                         | `@UseGuards(SessionAuthGuard)` + `@Roles(UserRole.Operator)` |
-| Reachable by a not-yet-approved user   | `@UseGuards(SessionAuthGuard)` + `@AllowGuest()`             |
+| You want                              | Write                                                        |
+| ------------------------------------- | ------------------------------------------------------------ |
+| Reachable by anyone, signed in or not | `@Public()`                                                  |
+| Any approved user                     | `@Roles(UserRole.Operator, UserRole.Member)`                 |
+| Operators only                        | `@Roles(UserRole.Operator)`                                  |
+| Reachable by a not-yet-approved user  | `@Roles(UserRole.Operator, UserRole.Member, UserRole.Guest)` |
+| Nobody (and you did not mean to)      | nothing — this is the default, and it is a bug               |
 
-`@AllowGuest()` exists for exactly one route today: `GET /auth/me`. A guest has to be able to
-read its own role, or the dashboard cannot tell them _why_ they are blocked and they just see
-a wall of 403s. Adding a second one should need an argument.
+The last row is the point of the design. There is no decorator you can forget that quietly
+opens a route.
+
+Only `GET /auth/me` admits `guest` today. A guest has to be able to read its own role, or the
+dashboard cannot tell them _why_ they are blocked and they just see a wall of 403s. Adding a
+second one should need an argument.
+
+`@Public()` means the guard chain does not apply — **not** that the endpoint is unauthenticated
+by design. `capture-installation` and `convert-manifest` are GitHub redirects that carry their
+own state verification; that is their real authentication, and it lives in the use-case rather
+than in a guard.
 
 ## Logging in
 
@@ -111,27 +119,21 @@ never the role. That is what makes a promotion take effect without a re-login.
 flowchart TD
     A[Request] --> P{Route marked @Public?}
     P -- yes --> C[Handler runs]
-    P -- no --> B{Route has SessionAuthGuard?}
-    B -- no --> C[Handler runs]
-    B -- yes --> D{Session carries userUuid?}
+    P -- no --> D{Session carries userUuid?}
     D -- no --> E[401 No active session]
-    D -- yes --> F[RolesGuard: load role for userUuid]
+    D -- yes --> R{Route declares @Roles?}
+    R -- no --> H[403 Not approved
+    logged as a misconfiguration]
+    R -- yes --> F[Load role for userUuid]
     F --> G{Row still exists?}
-    G -- no --> H[403 Not approved]
-    G -- yes --> I{Role in the route's allowed set?}
+    G -- no --> H
+    G -- yes --> I{Role among the declared ones?}
     I -- no --> H
     I -- yes --> C
 ```
 
-The allowed set is `@Roles(...)` if present, `@AllowGuest()`'s widened set if present, and
-otherwise the default `operator | member`.
-
-Two consequences worth holding on to. `RolesGuard` runs globally but never authenticates —
-on a route without `SessionAuthGuard` an anonymous request reaches the handler untouched, so
-if a route needs a user, say so with `@UseGuards`. And a route that should be reachable by
-_anyone_, signed in or not, needs `@Public()`: leaving it undecorated does not mean "open", it
-means "open to anonymous requests, closed to Guests" — which is how a denied user would get
-locked out of the login flow.
+There is no implicit default. The allowed set is whatever `@Roles(...)` names, and an absent
+or empty list admits nobody.
 
 ## Promoting a guest
 
@@ -152,15 +154,15 @@ independently, and an install can end up with zero operators and no recovery pat
 
 ## Where the code lives
 
-| Piece                                | Path                                                            |
-| ------------------------------------ | --------------------------------------------------------------- |
-| Session guard                        | `apps/api/src/app/auth/guards/session-auth.guard.ts`            |
-| Role gate                            | `apps/api/src/app/auth/guards/roles.guard.ts`                   |
-| Global registration                  | `apps/api/src/app/auth/access-control.module.ts`                |
-| `@Roles` / `@AllowGuest` / `@Public` | `apps/api/src/app/auth/decorators/roles.decorator.ts`           |
-| Per-request role read                | `apps/api/src/app/auth/services/user-role/user-role.service.ts` |
-| Session field types                  | `apps/api/src/app/auth/auth-session.types.ts`                   |
-| Advisory lock keys                   | `apps/api/src/modules/database/advisory-locks.ts`               |
+| Piece                 | Path                                                            |
+| --------------------- | --------------------------------------------------------------- |
+| Session guard         | `apps/api/src/app/auth/guards/session-auth.guard.ts`            |
+| Role gate             | `apps/api/src/app/auth/guards/roles.guard.ts`                   |
+| Global registration   | `apps/api/src/app/auth/access-control.module.ts`                |
+| `@Roles` / `@Public`  | `apps/api/src/app/auth/decorators/roles.decorator.ts`           |
+| Per-request role read | `apps/api/src/app/auth/services/user-role/user-role.service.ts` |
+| Session field types   | `apps/api/src/app/auth/auth-session.types.ts`                   |
+| Advisory lock keys    | `apps/api/src/modules/database/advisory-locks.ts`               |
 
 Decisions behind this: [AgDR-0004](agdr/AgDR-0004-authentication-and-idp-strategy.md) (why
 GitHub OAuth), [AgDR-0016](agdr/AgDR-0016-oauth-seam-and-session-mechanism.md) (why a signed

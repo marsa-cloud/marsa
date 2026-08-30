@@ -1,4 +1,4 @@
-import { Controller, Delete, HttpCode, Param, UseGuards } from '@nestjs/common'
+import { Controller, Delete, HttpCode, Param } from '@nestjs/common'
 import {
   ApiNoContentResponse,
   ApiNotFoundResponse,
@@ -7,7 +7,8 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger'
 import { DeleteAppUseCase } from '#src/app/app-management/use-cases/delete-app/delete-app.use-case.js'
-import { SessionAuthGuard } from '#src/app/auth/guards/session-auth.guard.js'
+import { Roles } from '#src/app/auth/decorators/roles.decorator.js'
+import { UserRole } from '#src/app/user/enums/user-role.enum.js'
 
 @ApiTags('apps')
 @Controller({ path: 'apps/:slug', version: '1' })
@@ -15,8 +16,8 @@ export class DeleteAppController {
   constructor(private readonly usecase: DeleteAppUseCase) {}
 
   @Delete()
+  @Roles(UserRole.Operator, UserRole.Member)
   @HttpCode(204)
-  @UseGuards(SessionAuthGuard)
   @ApiNoContentResponse({ description: 'The app and its Kubernetes resources were removed.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   @ApiNotFoundResponse({ description: 'No app with that slug.' })

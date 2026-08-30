@@ -43,6 +43,12 @@ describe('RolesGuard (e2e)', () => {
     expect(response.body.role).toBe(UserRole.Guest)
   })
 
+  // 401 not 403 is the observable proof that SessionAuthGuard is registered ahead of
+  // RolesGuard: reversed, the role gate would refuse the sessionless request first.
+  it('401s without a session on a gated route', async () => {
+    await request(setup.httpServer).get('/api/v1/apps').expect(401)
+  })
+
   it('leaves unauthenticated routes alone', async () => {
     await request(setup.httpServer).get('/api/v1/auth/github').expect(302)
   })

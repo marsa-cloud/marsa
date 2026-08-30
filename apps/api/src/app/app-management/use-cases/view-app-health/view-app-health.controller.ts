@@ -1,8 +1,9 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common'
+import { Controller, Get, Param } from '@nestjs/common'
 import { ApiOkResponse, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger'
 import { ViewAppHealthResponse } from '#src/app/app-management/use-cases/view-app-health/view-app-health.response.js'
 import { ViewAppHealthUseCase } from '#src/app/app-management/use-cases/view-app-health/view-app-health.use-case.js'
-import { SessionAuthGuard } from '#src/app/auth/guards/session-auth.guard.js'
+import { Roles } from '#src/app/auth/decorators/roles.decorator.js'
+import { UserRole } from '#src/app/user/enums/user-role.enum.js'
 
 @ApiTags('apps')
 @Controller({ path: 'apps/:slug/health', version: '1' })
@@ -10,7 +11,7 @@ export class ViewAppHealthController {
   constructor(private readonly usecase: ViewAppHealthUseCase) {}
 
   @Get()
-  @UseGuards(SessionAuthGuard)
+  @Roles(UserRole.Operator, UserRole.Member)
   @ApiOkResponse({ type: ViewAppHealthResponse })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   handle(@Param('slug') slug: string): Promise<ViewAppHealthResponse> {

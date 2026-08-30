@@ -3,6 +3,7 @@ import {
   type ExecutionContext,
   ForbiddenException,
   Injectable,
+  Logger,
 } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import type { FastifyRequest } from 'fastify'
@@ -13,11 +14,12 @@ import {
 import { UserRoleService } from '#src/app/auth/services/user-role/user-role.service.js'
 import { UserRole } from '#src/app/user/enums/user-role.enum.js'
 
-const ADMITTED_ROLES = [UserRole.Operator, UserRole.Member]
+const DENIED = 'Your account is not approved for this action.'
 
-// Registered globally, so a route added later is closed by default rather than open.
 @Injectable()
 export class RolesGuard implements CanActivate {
+  private readonly logger = new Logger(RolesGuard.name)
+
   constructor(
     private readonly reflector: Reflector,
     private readonly userRoles: UserRoleService,
@@ -29,19 +31,25 @@ export class RolesGuard implements CanActivate {
       return true
     }
 
-    const request = context.switchToHttp().getRequest<FastifyRequest>()
-    // SessionAuthGuard has already refused a request that needed a session and had none.
-    const userUuid = request.session.get('userUuid')
-    if (!userUuid) {
-      return true
+    const allowed = this.reflector.getAllAndOverride<UserRole[]>(ROLES_METADATA_KEY, targets)
+    if (!allowed?.length) {
+      // Logged apart from a genuine denial: the client sees the same 403 either way, and
+      // without this line a misconfigured route is indistinguishable from a real refusal.
+      this.logger.error(
+        `${context.getClass().name} declares no roles and is not @Public — refusing everyone.`,
+      )
+      throw new ForbiddenException(DENIED)
     }
 
-    const allowed =
-      this.reflector.getAllAndOverride<UserRole[]>(ROLES_METADATA_KEY, targets) ?? ADMITTED_ROLES
+    const request = context.switchToHttp().getRequest<FastifyRequest>()
+    const userUuid = request.session.get('userUuid')
+    if (!userUuid) {
+      throw new ForbiddenException(DENIED)
+    }
 
     const role = await this.userRoles.loadRole(userUuid)
     if (!role || !allowed.includes(role)) {
-      throw new ForbiddenException('Your account is not approved for this action.')
+      throw new ForbiddenException(DENIED)
     }
     return true
   }

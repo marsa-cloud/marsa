@@ -1,4 +1,4 @@
-import { Body, Controller, Param, ParseUUIDPipe, Patch, UseGuards } from '@nestjs/common'
+import { Body, Controller, Param, ParseUUIDPipe, Patch } from '@nestjs/common'
 import {
   ApiBadRequestResponse,
   ApiForbiddenResponse,
@@ -9,7 +9,6 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger'
 import { Roles } from '#src/app/auth/decorators/roles.decorator.js'
-import { SessionAuthGuard } from '#src/app/auth/guards/session-auth.guard.js'
 import { CurrentUser } from '#src/app/user/decorators/current-user.decorator.js'
 import type { UserUuid } from '#src/app/user/entities/user.uuid.js'
 import { UserRole } from '#src/app/user/enums/user-role.enum.js'
@@ -23,7 +22,6 @@ export class UpdateUserRoleController {
   constructor(private readonly usecase: UpdateUserRoleUseCase) {}
 
   @Patch()
-  @UseGuards(SessionAuthGuard)
   @Roles(UserRole.Operator)
   // Branded param types reflect as unknown, so Swagger emits no parameter without this.
   @ApiParam({ name: 'uuid', required: true, format: 'uuid', type: String })
