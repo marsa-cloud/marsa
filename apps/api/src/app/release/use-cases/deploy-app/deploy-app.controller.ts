@@ -1,6 +1,7 @@
 import { Body, Controller, HttpCode, Post } from '@nestjs/common'
 import {
   ApiBadRequestResponse,
+  ApiForbiddenResponse,
   ApiOkResponse,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -20,6 +21,7 @@ export class DeployAppController {
   @Roles(UserRole.Operator, UserRole.Member)
   @HttpCode(200)
   @ApiOkResponse({ type: DeployAppResponse })
+  @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiBadRequestResponse({ description: 'Malformed body, or an invalid slug / image / port.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   handle(@Body() body: DeployAppCommand): Promise<DeployAppResponse> {

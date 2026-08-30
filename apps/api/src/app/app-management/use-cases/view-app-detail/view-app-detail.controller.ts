@@ -1,5 +1,6 @@
 import { Controller, Get, Param } from '@nestjs/common'
 import {
+  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
@@ -18,6 +19,7 @@ export class ViewAppDetailController {
   @Get()
   @Roles(UserRole.Operator, UserRole.Member)
   @ApiOkResponse({ type: ViewAppDetailResponse })
+  @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   @ApiNotFoundResponse({ description: 'No app with that slug.' })
   handle(@Param('slug') slug: string): Promise<ViewAppDetailResponse> {

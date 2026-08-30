@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common'
 import {
   ApiBadRequestResponse,
+  ApiForbiddenResponse,
   ApiOkResponse,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -19,6 +20,7 @@ export class ViewAppLogsController {
   @Get()
   @Roles(UserRole.Operator, UserRole.Member)
   @ApiOkResponse({ type: ViewAppLogsResponse })
+  @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiBadRequestResponse({ description: 'tailLines out of range (1–1000) or not an integer.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   handle(

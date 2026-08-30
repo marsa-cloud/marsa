@@ -9,6 +9,7 @@ export class ViewUserIndexRepository {
 
   // Oldest first, so the bootstrapping operator leads the list.
   async listUsers(): Promise<User[]> {
-    return this.db.query.userTable.findMany({ orderBy: { createdAt: 'asc' } })
+    // uuidv7 is time-ordered, so it breaks a createdAt tie without changing the intent.
+    return this.db.query.userTable.findMany({ orderBy: { createdAt: 'asc', uuid: 'asc' } })
   }
 }

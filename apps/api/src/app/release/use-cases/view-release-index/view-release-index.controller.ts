@@ -1,5 +1,10 @@
 import { Controller, Get, Param } from '@nestjs/common'
-import { ApiOkResponse, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger'
+import {
+  ApiForbiddenResponse,
+  ApiOkResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger'
 import { Roles } from '#src/app/auth/decorators/roles.decorator.js'
 import { ViewReleaseIndexResponse } from '#src/app/release/use-cases/view-release-index/view-release-index.response.js'
 import { ViewReleaseIndexUseCase } from '#src/app/release/use-cases/view-release-index/view-release-index.use-case.js'
@@ -13,6 +18,7 @@ export class ViewReleaseIndexController {
   @Get()
   @Roles(UserRole.Operator, UserRole.Member)
   @ApiOkResponse({ type: ViewReleaseIndexResponse })
+  @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   handle(@Param('slug') slug: string): Promise<ViewReleaseIndexResponse> {
     return this.usecase.execute(slug)

@@ -35,6 +35,8 @@ export class TestSetup {
     // pooled connections, so there's no transaction to roll back — wiping is what
     // isolates. See truncate.ts (replaces MikroORM's clearDatabase()).
     await truncateAll(this.db)
+    // The memoised session points at a row TRUNCATE just removed.
+    this.session = undefined
   }
 
   public get httpServer(): Server {

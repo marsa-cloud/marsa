@@ -1,5 +1,6 @@
 import { Controller, Delete, HttpCode, Param } from '@nestjs/common'
 import {
+  ApiForbiddenResponse,
   ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiResponse,
@@ -19,6 +20,7 @@ export class DeleteAppController {
   @Roles(UserRole.Operator, UserRole.Member)
   @HttpCode(204)
   @ApiNoContentResponse({ description: 'The app and its Kubernetes resources were removed.' })
+  @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   @ApiNotFoundResponse({ description: 'No app with that slug.' })
   @ApiResponse({ status: 502, description: 'Kubernetes teardown failed; the app was kept.' })

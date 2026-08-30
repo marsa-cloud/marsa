@@ -185,6 +185,9 @@
           },
           "401": {
             "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
           }
         },
         "tags": [
@@ -302,6 +305,9 @@
           },
           "401": {
             "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
           }
         },
         "tags": [
@@ -335,6 +341,9 @@
           },
           "401": {
             "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
           },
           "404": {
             "description": "No app with that slug."
@@ -374,6 +383,9 @@
           },
           "401": {
             "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
           }
         },
         "tags": [
@@ -398,6 +410,9 @@
           },
           "401": {
             "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
           }
         },
         "tags": [
@@ -432,6 +447,9 @@
           "401": {
             "description": "No active session."
           },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
           "404": {
             "description": "No app with that slug."
           }
@@ -458,6 +476,9 @@
           },
           "401": {
             "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
           },
           "404": {
             "description": "No app with that slug."
@@ -497,6 +518,9 @@
           },
           "401": {
             "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
           }
         },
         "tags": [
@@ -545,6 +569,9 @@
           },
           "401": {
             "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
           }
         },
         "tags": [
@@ -591,6 +618,9 @@
           },
           "401": {
             "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
           },
           "404": {
             "description": "No app with that slug."

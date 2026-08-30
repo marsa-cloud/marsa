@@ -1,6 +1,7 @@
 import { Body, Controller, Param, Put } from '@nestjs/common'
 import {
   ApiBadRequestResponse,
+  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
@@ -20,6 +21,7 @@ export class UpdateAppEnvController {
   @Put()
   @Roles(UserRole.Operator, UserRole.Member)
   @ApiOkResponse({ type: UpdateAppEnvResponse })
+  @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiBadRequestResponse({ description: 'env is not an object of string values with valid keys.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   @ApiNotFoundResponse({ description: 'No app with that slug.' })

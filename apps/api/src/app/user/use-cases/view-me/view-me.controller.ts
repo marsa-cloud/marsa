@@ -1,5 +1,10 @@
 import { Controller, Get } from '@nestjs/common'
-import { ApiOkResponse, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger'
+import {
+  ApiForbiddenResponse,
+  ApiOkResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger'
 import { Roles } from '#src/app/auth/decorators/roles.decorator.js'
 import { CurrentUser } from '#src/app/user/decorators/current-user.decorator.js'
 import type { UserUuid } from '#src/app/user/entities/user.uuid.js'
@@ -15,6 +20,7 @@ export class ViewMeController {
   @Get()
   @Roles(UserRole.Operator, UserRole.Member, UserRole.Guest)
   @ApiOkResponse({ type: ViewMeResponse })
+  @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   async handle(@CurrentUser() userUuid: UserUuid): Promise<ViewMeResponse> {
     const user = await this.usecase.execute(userUuid)

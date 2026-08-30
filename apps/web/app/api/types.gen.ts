@@ -445,6 +445,10 @@ export type ViewMeV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
 }
 
 export type ViewMeV1Responses = {
@@ -527,6 +531,10 @@ export type DeployAppV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
 }
 
 export type DeployAppV1Responses = {
@@ -549,6 +557,10 @@ export type RedeployAppV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
   /**
    * No app with that slug.
    */
@@ -579,6 +591,10 @@ export type ViewReleaseIndexV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
 }
 
 export type ViewReleaseIndexV1Responses = {
@@ -600,6 +616,10 @@ export type ViewAppIndexV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
 }
 
 export type ViewAppIndexV1Responses = {
@@ -622,6 +642,10 @@ export type DeleteAppV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
   /**
    * No app with that slug.
    */
@@ -656,6 +680,10 @@ export type ViewAppDetailV1Errors = {
    */
   401: unknown
   /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
    * No app with that slug.
    */
   404: unknown
@@ -681,6 +709,10 @@ export type ViewAppHealthV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
 }
 
 export type ViewAppHealthV1Responses = {
@@ -712,6 +744,10 @@ export type ViewAppLogsV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
 }
 
 export type ViewAppLogsV1Responses = {
@@ -738,6 +774,10 @@ export type UpdateAppEnvV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
   /**
    * No app with that slug.
    */

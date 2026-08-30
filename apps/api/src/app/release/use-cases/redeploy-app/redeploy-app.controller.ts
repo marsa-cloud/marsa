@@ -1,5 +1,6 @@
 import { Controller, HttpCode, Param, Post } from '@nestjs/common'
 import {
+  ApiForbiddenResponse,
   ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -20,6 +21,7 @@ export class RedeployAppController {
   @Roles(UserRole.Operator, UserRole.Member)
   @HttpCode(200)
   @ApiOkResponse({ type: RedeployAppResponse })
+  @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiNotFoundResponse({ description: 'No app with that slug.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   @ApiInternalServerErrorResponse({

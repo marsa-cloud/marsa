@@ -65,14 +65,21 @@ handle() {}
 The last row is the point of the design. There is no decorator you can forget that quietly
 opens a route.
 
+Both decorators go on the **route method, never the controller class**. `RolesGuard` reads
+`@Public()` before `@Roles(...)`, and class-level metadata applies to every method in the
+class — so a class-level `@Public()` silently beats a method-level `@Roles(...)`, which is the
+one way this model can still leak an unauthenticated route. Every route in the codebase is
+decorated at the method, and one route per controller makes the class form pointless.
+
 Only `GET /auth/me` admits `guest` today. A guest has to be able to read its own role, or the
 dashboard cannot tell them _why_ they are blocked and they just see a wall of 403s. Adding a
 second one should need an argument.
 
 `@Public()` means the guard chain does not apply — **not** that the endpoint is unauthenticated
-by design. `capture-installation` and `convert-manifest` are GitHub redirects that carry their
-own state verification; that is their real authentication, and it lives in the use-case rather
-than in a guard.
+by design. `convert-manifest` consumes a single-use manifest state token, and `capture-installation`
+mints an installation token against GitHub — which only succeeds for a real installation of
+our App. Those are their real authentication, and both live in the use-case rather than in a
+guard.
 
 ## Logging in
 

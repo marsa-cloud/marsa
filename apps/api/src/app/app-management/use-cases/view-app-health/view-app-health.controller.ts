@@ -1,5 +1,10 @@
 import { Controller, Get, Param } from '@nestjs/common'
-import { ApiOkResponse, ApiTags, ApiUnauthorizedResponse } from '@nestjs/swagger'
+import {
+  ApiForbiddenResponse,
+  ApiOkResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger'
 import { ViewAppHealthResponse } from '#src/app/app-management/use-cases/view-app-health/view-app-health.response.js'
 import { ViewAppHealthUseCase } from '#src/app/app-management/use-cases/view-app-health/view-app-health.use-case.js'
 import { Roles } from '#src/app/auth/decorators/roles.decorator.js'
@@ -13,6 +18,7 @@ export class ViewAppHealthController {
   @Get()
   @Roles(UserRole.Operator, UserRole.Member)
   @ApiOkResponse({ type: ViewAppHealthResponse })
+  @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   handle(@Param('slug') slug: string): Promise<ViewAppHealthResponse> {
     return this.usecase.execute(slug)

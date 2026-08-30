@@ -87,6 +87,12 @@ requires a session and admits exactly the roles it names — there is no implici
 route that names none admits nobody. Write the roles out in full rather than behind a named
 set; the list is short and stays translatable when permissions replace roles.
 
+Put both decorators on the **route method, never the controller class**. `RolesGuard` resolves
+`@Public()` before it looks at `@Roles(...)`, and a class-level value applies to every method —
+so a class-level `@Public()` would silently beat a method-level `@Roles(...)` and ship an
+unauthenticated endpoint with no log line. One route per controller makes class-level
+decoration pointless anyway; keeping it on the method removes the trap.
+
 `@Public()` means the guard chain does not apply, **not** that the endpoint is unauthenticated.
 If it is reachable by the internet and does something meaningful, it needs its own verification
 (a signed webhook, a single-use state token) in the use-case. See `docs/authentication.md`.
