@@ -35,8 +35,11 @@ export class ViewAppDetailUseCase {}
 src/app/<feature>/services/<service-name>/
   <service-name>.service.ts
   <service-name>.module.ts
-  tests/<service-name>.db.test.ts
+  tests/<service-name>.db.test.ts     # only if the service touches the database
 ```
+
+A service with no data access takes the test layer that matches what it does — see
+`.claude/rules/api/tests.md`.
 
 ```ts
 // RIGHT — user-role.module.ts

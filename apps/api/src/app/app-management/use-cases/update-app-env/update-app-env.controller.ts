@@ -1,6 +1,7 @@
 import { Body, Controller, Param, Put } from '@nestjs/common'
 import {
   ApiBadRequestResponse,
+  ApiCookieAuth,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -12,6 +13,7 @@ import { UpdateAppEnvResponse } from '#src/app/app-management/use-cases/update-a
 import { UpdateAppEnvUseCase } from '#src/app/app-management/use-cases/update-app-env/update-app-env.use-case.js'
 import { Roles } from '#src/app/auth/decorators/roles.decorator.js'
 import { UserRole } from '#src/app/user/enums/user-role.enum.js'
+import { SESSION_COOKIE_SECURITY_SCHEME } from '#src/modules/swagger/build-api-documentation.js'
 
 @ApiTags('apps')
 @Controller({ path: 'apps/:slug/env', version: '1' })
@@ -20,6 +22,7 @@ export class UpdateAppEnvController {
 
   @Put()
   @Roles(UserRole.Operator, UserRole.Member)
+  @ApiCookieAuth(SESSION_COOKIE_SECURITY_SCHEME)
   @ApiOkResponse({ type: UpdateAppEnvResponse })
   @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiBadRequestResponse({ description: 'env is not an object of string values with valid keys.' })

@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common'
 import {
+  ApiCookieAuth,
   ApiForbiddenResponse,
   ApiOkResponse,
   ApiTags,
@@ -9,6 +10,7 @@ import { Roles } from '#src/app/auth/decorators/roles.decorator.js'
 import { UserRole } from '#src/app/user/enums/user-role.enum.js'
 import { ViewUserIndexResponse } from '#src/app/user/use-cases/view-user-index/view-user-index.response.js'
 import { ViewUserIndexUseCase } from '#src/app/user/use-cases/view-user-index/view-user-index.use-case.js'
+import { SESSION_COOKIE_SECURITY_SCHEME } from '#src/modules/swagger/build-api-documentation.js'
 
 @ApiTags('users')
 @Controller({ path: 'users', version: '1' })
@@ -17,6 +19,7 @@ export class ViewUserIndexController {
 
   @Get()
   @Roles(UserRole.Operator)
+  @ApiCookieAuth(SESSION_COOKIE_SECURITY_SCHEME)
   @ApiOkResponse({ type: ViewUserIndexResponse })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   @ApiForbiddenResponse({ description: 'Operators only.' })

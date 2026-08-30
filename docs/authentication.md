@@ -144,7 +144,7 @@ or empty list admits nobody.
 
 ## Promoting a guest
 
-```
+```text
 GET   /api/v1/users            → operators only; everyone who has signed in, with their role
 PATCH /api/v1/users/:uuid/role → operators only; sets one user's role
 ```

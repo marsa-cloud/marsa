@@ -1,6 +1,7 @@
 import { Body, Controller, HttpCode, Post } from '@nestjs/common'
 import {
   ApiBadRequestResponse,
+  ApiCookieAuth,
   ApiForbiddenResponse,
   ApiOkResponse,
   ApiTags,
@@ -11,6 +12,7 @@ import { DeployAppCommand } from '#src/app/release/use-cases/deploy-app/deploy-a
 import { DeployAppResponse } from '#src/app/release/use-cases/deploy-app/deploy-app.response.js'
 import { DeployAppUseCase } from '#src/app/release/use-cases/deploy-app/deploy-app.use-case.js'
 import { UserRole } from '#src/app/user/enums/user-role.enum.js'
+import { SESSION_COOKIE_SECURITY_SCHEME } from '#src/modules/swagger/build-api-documentation.js'
 
 @ApiTags('releases')
 @Controller({ path: 'deploy', version: '1' })
@@ -19,6 +21,7 @@ export class DeployAppController {
 
   @Post()
   @Roles(UserRole.Operator, UserRole.Member)
+  @ApiCookieAuth(SESSION_COOKIE_SECURITY_SCHEME)
   @HttpCode(200)
   @ApiOkResponse({ type: DeployAppResponse })
   @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })

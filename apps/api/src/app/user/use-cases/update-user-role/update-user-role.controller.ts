@@ -1,6 +1,7 @@
 import { Body, Controller, Param, ParseUUIDPipe, Patch } from '@nestjs/common'
 import {
   ApiBadRequestResponse,
+  ApiCookieAuth,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -15,6 +16,7 @@ import { UserRole } from '#src/app/user/enums/user-role.enum.js'
 import { UpdateUserRoleCommand } from '#src/app/user/use-cases/update-user-role/update-user-role.command.js'
 import { UpdateUserRoleResponse } from '#src/app/user/use-cases/update-user-role/update-user-role.response.js'
 import { UpdateUserRoleUseCase } from '#src/app/user/use-cases/update-user-role/update-user-role.use-case.js'
+import { SESSION_COOKIE_SECURITY_SCHEME } from '#src/modules/swagger/build-api-documentation.js'
 
 @ApiTags('users')
 @Controller({ path: 'users/:uuid/role', version: '1' })
@@ -23,6 +25,7 @@ export class UpdateUserRoleController {
 
   @Patch()
   @Roles(UserRole.Operator)
+  @ApiCookieAuth(SESSION_COOKIE_SECURITY_SCHEME)
   // Branded param types reflect as unknown, so Swagger emits no parameter without this.
   @ApiParam({ name: 'uuid', required: true, format: 'uuid', type: String })
   @ApiOkResponse({ type: UpdateUserRoleResponse })

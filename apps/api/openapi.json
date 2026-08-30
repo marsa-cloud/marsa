@@ -190,6 +190,11 @@
             "description": "Your account is not approved for this action."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "auth"
         ]
@@ -217,6 +222,11 @@
             "description": "Operators only."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "users"
         ]
@@ -270,6 +280,11 @@
             "description": "No user with that uuid."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "users"
         ]
@@ -310,6 +325,11 @@
             "description": "Your account is not approved for this action."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "releases"
         ]
@@ -352,6 +372,11 @@
             "description": "Stored image pull credentials could not be decrypted."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "releases"
         ]
@@ -388,6 +413,11 @@
             "description": "Your account is not approved for this action."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "releases"
         ]
@@ -415,6 +445,11 @@
             "description": "Your account is not approved for this action."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "apps"
         ]
@@ -454,6 +489,11 @@
             "description": "No app with that slug."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "apps"
         ]
@@ -487,6 +527,11 @@
             "description": "Kubernetes teardown failed; the app was kept."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "apps"
         ]
@@ -523,6 +568,11 @@
             "description": "Your account is not approved for this action."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "apps"
         ]
@@ -574,6 +624,11 @@
             "description": "Your account is not approved for this action."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "apps"
         ]
@@ -626,6 +681,11 @@
             "description": "No app with that slug."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "apps"
         ]
@@ -641,6 +701,13 @@
   "tags": [],
   "servers": [],
   "components": {
+    "securitySchemes": {
+      "session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "marsa_session"
+      }
+    },
     "schemas": {
       "GetApiInfoResponse": {
         "type": "object",

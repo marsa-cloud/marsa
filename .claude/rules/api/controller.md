@@ -71,9 +71,13 @@ generates its error handling from it.
 @Get()
 handle() {}
 
-// RIGHT — name the roles admitted
+// RIGHT — name the roles admitted, and say so in the contract
 @Get()
 @Roles(UserRole.Operator, UserRole.Member)
+@ApiCookieAuth(SESSION_COOKIE_SECURITY_SCHEME)
+@ApiOkResponse({ type: ViewAppIndexResponse })
+@ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
+@ApiUnauthorizedResponse({ description: 'No active session.' })
 handle() {}
 
 // RIGHT — reachable by anyone, signed in or not
@@ -81,6 +85,15 @@ handle() {}
 @Public()
 handle() {}
 ```
+
+A `@Roles(...)` route carries three contract decorators with it: `@ApiCookieAuth` (declares the
+session cookie the guards require), `@ApiForbiddenResponse` (the guards can 403), and
+`@ApiUnauthorizedResponse` (they can 401). Without them `openapi.json` advertises the endpoint
+as unauthenticated and the generated web client has no typed error — the guard behaviour and
+the published contract silently disagree. The scheme name is exported from
+`#src/modules/swagger/build-api-documentation.js`; it is declared per route rather than as a
+root requirement because Nest has no decorator that clears an inherited one, so a `@Public()`
+route could not opt back out.
 
 Why: `SessionAuthGuard` and `RolesGuard` are both global. A route is either `@Public()`, or it
 requires a session and admits exactly the roles it names — there is no implicit default, and a
