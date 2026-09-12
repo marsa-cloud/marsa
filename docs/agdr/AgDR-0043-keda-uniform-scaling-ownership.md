@@ -88,6 +88,16 @@ Consequential sub-decisions taken with it:
 - `Deployment.spec.replicas` must be **omitted, not zeroed**, from the applied config. KEDA's
   HPA owns that field via the scale subresource; a `marsa-deployer` field manager that keeps
   declaring it will fight KEDA on every redeploy.
+- **An app deployed with `replicas > 1` briefly drops to one pod on its first redeploy after
+  this ships.** Under server-side apply, a field manager that stops declaring a field it solely
+  owns causes that field to be _removed_, and the API server re-defaults `spec.replicas` to 1.
+  On the upgrade path the `HTTPScaledObject` is applied after the Deployment and KEDA's HPA does
+  not exist yet, so `marsa-deployer` is still the sole owner at that moment. The floor is
+  restored seconds later once KEDA reconciles. Steady-state redeploys are unaffected — the HPA
+  co-owns the field by then — and apps at the default `replicas: 1` never dip. Accepted rather
+  than worked around: the alternatives (pre-creating every app's HSO at migration time, or
+  applying the HSO before the Deployment) trade a seconds-long dip for either a batch job or
+  KEDA reconcile errors on every newly created app.
 - A redeploy of a sleeping app **cannot report failure** — a 0-replica Deployment satisfies
   `Available=True` trivially, so a broken image reports `Succeeded` until a request wakes it.
   Accepted: `Succeeded` means "applied and settled", and the failure surfaces within one

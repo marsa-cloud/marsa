@@ -41,6 +41,12 @@ const schema = z.object({
     .lte(100, 'Must be between 1 and 100')
     .optional(),
 })
+  // Mirrors the api's IsGteField so the range is rejected inline rather than as a bare 400.
+  .refine(
+    d =>
+      d.minReplicas === undefined || d.maxReplicas === undefined || d.maxReplicas >= d.minReplicas,
+    { message: 'Must be at least the minimum', path: ['maxReplicas'] },
+  )
 type Schema = z.output<typeof schema>
 
 const state = reactive<{

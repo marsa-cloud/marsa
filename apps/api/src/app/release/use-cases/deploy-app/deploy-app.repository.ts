@@ -12,6 +12,11 @@ import { InjectDatabase } from '#src/modules/database/inject-database.decorator.
 export class DeployAppRepository {
   constructor(@InjectDatabase() private readonly db: Database) {}
 
+  async findAppBySlug(slug: string): Promise<App | undefined> {
+    const [app] = await this.db.select().from(appTable).where(eq(appTable.slug, slug)).limit(1)
+    return app
+  }
+
   /** Returns the stored uuid, which on a slug conflict is the existing app's, not `app.uuid`. */
   async upsertApp(tx: Executor, app: App): Promise<AppUuid> {
     const [persisted] = await tx

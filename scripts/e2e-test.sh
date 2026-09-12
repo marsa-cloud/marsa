@@ -6,6 +6,8 @@ CLUSTER="${MARSA_E2E_CLUSTER:-marsa-e2e}"
 BASE_DOMAIN="${MARSA_E2E_DOMAIN:-127.0.0.1.nip.io}"
 NS="${MARSA_NAMESPACE:-marsa}"
 APPS_NS="${MARSA_APPS_NAMESPACE:-marsa-apps}"
+KEDA_NS="${MARSA_KEDA_NAMESPACE:-keda}"
+TRAEFIK_NS="${MARSA_TRAEFIK_NAMESPACE:-kube-system}"
 APP_SLUG="e2e-app"
 APP_IMAGE="nginx:1.27"
 
@@ -99,6 +101,30 @@ echo "== stage: k8s resources created =="
 kubectl -n "$APPS_NS" get deploy "$APP_SLUG" || fail resources "deployment ${APP_SLUG} missing in ${APPS_NS}"
 kubectl -n "$APPS_NS" get service "$APP_SLUG" || fail resources "service ${APP_SLUG} missing in ${APPS_NS}"
 kubectl -n "$APPS_NS" get ingressroutes.traefik.io "$APP_SLUG" || fail resources "ingressroute ${APP_SLUG} missing in ${APPS_NS}"
+kubectl -n "$APPS_NS" get httpscaledobjects.http.keda.sh "$APP_SLUG" || fail resources "httpscaledobject ${APP_SLUG} missing in ${APPS_NS}"
+
+# The reachability stage below cannot distinguish "app broken" from "scaling
+# never wired up" — both are a timeout on the same URL. Assert the three pieces
+# the request path depends on first, so a failure names the piece that is missing.
+echo "== stage: KEDA owns scaling and Traefik can reach the interceptor =="
+kubectl -n "$KEDA_NS" rollout status deploy/keda-add-ons-http-interceptor --timeout=180s \
+  || fail scaling "KEDA HTTP interceptor is not ready in ${KEDA_NS}"
+
+kubectl -n "$TRAEFIK_NS" get deploy traefik \
+  -o jsonpath='{.spec.template.spec.containers[*].args}' 2>/dev/null \
+  | grep -q 'allowCrossNamespace=true' \
+  || fail scaling "Traefik lacks --providers.kubernetescrd.allowCrossNamespace=true; every app will 404"
+
+# KEDA translates the HTTPScaledObject into a ScaledObject and then an HPA. The
+# HPA existing is the evidence that KEDA -- not marsa-deployer -- owns replicas.
+for _ in $(seq 1 30); do
+  if kubectl -n "$APPS_NS" get hpa -o name 2>/dev/null | grep -q "$APP_SLUG"; then
+    break
+  fi
+  sleep 2
+done
+kubectl -n "$APPS_NS" get hpa -o name 2>/dev/null | grep -q "$APP_SLUG" \
+  || fail scaling "no HPA for ${APP_SLUG} — KEDA never took ownership of spec.replicas"
 
 echo "== stage: app reachable over HTTPS =="
 for _ in $(seq 1 30); do

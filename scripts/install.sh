@@ -44,7 +44,10 @@ SKIP_KEDA="false"         # --skip-keda: the cluster already provides KEDA + the
 # subchart: both upstream charts ship their CRDs as ordinary templates, so a
 # subchart would let `helm uninstall marsa` cascade-delete every ScaledObject in
 # the cluster, and would hard-fail install wherever KEDA already exists.
-KEDA_NAMESPACE="${MARSA_KEDA_NAMESPACE:-keda}"
+# Not overridable: the api hardcodes this namespace when rendering every app's
+# IngressRoute, so an override here would route apps at an interceptor that
+# lives somewhere else and 404 every one of them.
+KEDA_NAMESPACE="keda"
 KEDA_REPO="https://kedacore.github.io/charts"
 KEDA_VERSION="${MARSA_KEDA_VERSION:-2.20.2}"
 KEDA_HTTP_VERSION="${MARSA_KEDA_HTTP_VERSION:-0.15.0}"
@@ -346,10 +349,6 @@ wait_for_traefik() {
   # fails with "no matches for kind IngressRoute". Both waits are needed and
   # they check different things: the CRD is what Helm needs to render, the
   # rollout is what serves traffic once the release is up.
-  # Without this, a missing kubectl is indistinguishable from an absent CRD:
-  # the loop below would poll for three minutes and then blame Traefik.
-  require_cmd kubectl || die "kubectl not found — required to verify Traefik before installing the chart"
-
   local tries=0
   info "Waiting for Traefik CRDs (the chart's IngressRoute needs them)"
   until kubectl get crd ingressroutes.traefik.io >/dev/null 2>&1; do
@@ -383,6 +382,11 @@ wait_for_traefik() {
 }
 
 use_cluster_kubeconfig() {
+  # Checked here rather than at the first kubectl call: install_keda reads CRDs
+  # before Traefik is verified, and a missing binary would read as "CRDs absent"
+  # and silently take the wrong branch.
+  require_cmd kubectl || die "kubectl not found — required to talk to the cluster"
+
   if [ "$SKIP_K3S" = "true" ]; then
     export KUBECONFIG="${KUBECONFIG:-$K3S_KUBECONFIG}"
   else
@@ -411,7 +415,9 @@ install_keda() {
   fi
 
   info "Installing KEDA ${KEDA_VERSION} + HTTP add-on ${KEDA_HTTP_VERSION} into '${KEDA_NAMESPACE}'"
-  helm repo add kedacore "$KEDA_REPO" >/dev/null 2>&1 || true
+  # --force-update: without it `helm repo add` fails when the name already exists
+  # pointing elsewhere, and KEDA would install from that URL instead of ours.
+  helm repo add kedacore "$KEDA_REPO" --force-update >/dev/null
   helm repo update kedacore >/dev/null
 
   helm upgrade --install keda kedacore/keda \
@@ -459,6 +465,36 @@ deploy_marsa() {
 
   helm "${args[@]}"
   ok "Marsa deployed"
+}
+
+verify_cross_namespace() {
+  # Every app's IngressRoute points at the KEDA interceptor in another namespace,
+  # which Traefik refuses unless allowCrossNamespace is set. The flag ships in the
+  # marsa chart's Traefik HelmChartConfig; k3s's helm-controller then reinstalls
+  # Traefik asynchronously, outside anything `helm --wait` observes (AgDR-0003) —
+  # hence the poll rather than a single check. Without the flag every deployed app
+  # 404s while every resource looks healthy, so this is fatal, not advisory.
+  info "Verifying Traefik allows cross-namespace backends"
+  local tries=0
+  until kubectl -n "$TRAEFIK_NAMESPACE" get deploy traefik \
+    -o jsonpath='{.spec.template.spec.containers[*].args}' 2>/dev/null \
+    | grep -q 'allowCrossNamespace=true'; do
+    tries=$((tries + 1))
+    if [ "$tries" -ge "$TRAEFIK_WAIT_TRIES" ]; then
+      die "Traefik is not configured with --providers.kubernetescrd.allowCrossNamespace=true
+    after ~$((TRAEFIK_WAIT_TRIES * 2)) seconds. Deployed apps route through the KEDA
+    interceptor in the '${KEDA_NAMESPACE}' namespace, so without this flag every app
+    returns 404 while its Deployment, Service and IngressRoute all look healthy.
+
+    The flag ships in the Marsa chart. Upgrade to a chart version that includes it
+    (see marsa-charts) and re-run this installer."
+    fi
+    sleep 2
+  done
+
+  kubectl -n "$TRAEFIK_NAMESPACE" rollout status deploy/traefik --timeout=180s \
+    || die "Traefik did not become ready after picking up allowCrossNamespace"
+  ok "Traefik allows cross-namespace backends"
 }
 
 # --- Summary ------------------------------------------------------------------
@@ -543,6 +579,7 @@ main() {
   install_helm
   install_keda
   deploy_marsa
+  verify_cross_namespace
   summary
 }
 

@@ -2,9 +2,12 @@ import { before, describe, it } from 'node:test'
 import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
+import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
+import type { App } from '#src/app/app-management/entities/app.table.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { ApplyReleaseService } from '#src/app/release/services/apply-release/apply-release.service.js'
 import { DeployAppCommandBuilder } from '#src/app/release/use-cases/deploy-app/deploy-app.command.builder.js'
+import type { DeployAppCommand } from '#src/app/release/use-cases/deploy-app/deploy-app.command.js'
 import { DeployAppRepository } from '#src/app/release/use-cases/deploy-app/deploy-app.repository.js'
 import { DeployAppUseCase } from '#src/app/release/use-cases/deploy-app/deploy-app.use-case.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
@@ -15,6 +18,7 @@ import { TestBench } from '#src/test/setup/test-bench.js'
 
 function build() {
   const repository = createStubInstance(DeployAppRepository)
+  repository.findAppBySlug.resolves(undefined)
   repository.upsertApp.callsFake((_tx, app) => Promise.resolve(app.uuid))
   repository.createRelease.resolves()
   repository.setReleaseDeployStatus.resolves()
@@ -101,6 +105,57 @@ describe('DeployAppUseCase', () => {
     expect(manifests.deployment.spec?.template.spec?.imagePullSecrets).toEqual([
       { name: 'my-app-registry' },
     ])
+  })
+
+  describe('replica range', () => {
+    async function persistedRange(cmd: DeployAppCommand, existing?: App) {
+      const { usecase, repository } = build()
+      if (existing) {
+        repository.findAppBySlug.resolves(existing)
+      }
+
+      await usecase.execute(cmd)
+
+      const [, app] = repository.upsertApp.firstCall.args
+      return { min: app.minReplicas, max: app.maxReplicas }
+    }
+
+    const withRange = (min?: number, max?: number) => {
+      const builder = new DeployAppCommandBuilder().withSlug('my-app').withImage('nginx:1.27')
+      if (min !== undefined) builder.withMinReplicas(min)
+      if (max !== undefined) builder.withMaxReplicas(max)
+      return builder.build()
+    }
+
+    it('defaults a new app to a single always-on replica', async () => {
+      expect(await persistedRange(withRange())).toEqual({ min: 1, max: 1 })
+    })
+
+    it('lifts the ceiling to the floor when only a floor is sent', async () => {
+      expect(await persistedRange(withRange(4, undefined))).toEqual({ min: 4, max: 4 })
+    })
+
+    it('keeps the floor at 1 when only a ceiling is sent', async () => {
+      expect(await persistedRange(withRange(undefined, 3))).toEqual({ min: 1, max: 3 })
+    })
+
+    it('keeps the stored range when a redeploy omits it', async () => {
+      const existing = new AppBuilder().withMinReplicas(0).withMaxReplicas(10).build()
+
+      expect(await persistedRange(withRange(), existing)).toEqual({ min: 0, max: 10 })
+    })
+
+    it('raises a stored ceiling that a new floor would overtake', async () => {
+      const existing = new AppBuilder().withMinReplicas(0).withMaxReplicas(2).build()
+
+      expect(await persistedRange(withRange(5, undefined), existing)).toEqual({ min: 5, max: 5 })
+    })
+
+    it('honours an explicit ceiling that narrows the stored range', async () => {
+      const existing = new AppBuilder().withMinReplicas(0).withMaxReplicas(10).build()
+
+      expect(await persistedRange(withRange(undefined, 2), existing)).toEqual({ min: 0, max: 2 })
+    })
   })
 
   it('marks the Release Failed and rethrows when the cluster apply fails', async () => {

@@ -34,6 +34,14 @@ const { data: config, status: configStatus, error: configError, refresh: refresh
 
 const releases = computed(() => releasesData.value?.releases ?? [])
 
+const replicaRange = computed(() => {
+  const min = config.value?.minReplicas
+  const max = config.value?.maxReplicas
+  if (typeof min !== 'number' || typeof max !== 'number') return ''
+  if (min === max) return `${min} replica${min === 1 ? '' : 's'}`
+  return `${min}–${max} replicas${min === 0 ? ', sleeps when idle' : ''}`
+})
+
 const { redeploy } = useRedeployApp()
 const { updateEnv } = useUpdateAppEnv()
 const toast = useToast()
@@ -298,6 +306,12 @@ async function confirmDelete() {
             class="text-sm text-muted"
           >
             No health data yet.
+          </p>
+          <p
+            v-if="replicaRange"
+            class="mt-3 text-sm text-muted"
+          >
+            Scaling: {{ replicaRange }}
           </p>
         </UCard>
 

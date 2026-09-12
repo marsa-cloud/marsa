@@ -73,7 +73,11 @@ beforeEach(() => {
   s.health = { data: null, status: 'success', error: null }
   s.releases = { data: { releases: [] }, status: 'success', error: null }
   s.logs = { data: { podName: null, logs: '' }, status: 'success', error: null }
-  s.config = { data: { slug: 'my-app', env: {} }, status: 'success', error: null }
+  s.config = {
+    data: { slug: 'my-app', env: {}, minReplicas: 1, maxReplicas: 1 },
+    status: 'success',
+    error: null,
+  }
   s.refreshHealth = vi.fn()
   s.refreshReleases = vi.fn()
   s.refreshLogs = vi.fn()
@@ -135,6 +139,17 @@ describe('apps/[slug] detail page', () => {
     const wrapper = await mountSuspended(Detail)
     expect(wrapper.text()).toContain('idle')
     expect(wrapper.text()).toContain('no pods running')
+  })
+
+  it('shows a single always-on replica without a range', async () => {
+    const wrapper = await mountSuspended(Detail)
+    expect(wrapper.text()).toContain('Scaling: 1 replica')
+  })
+
+  it('spells out that a zero floor means the app sleeps', async () => {
+    s.config.data = { slug: 'my-app', env: {}, minReplicas: 0, maxReplicas: 3 }
+    const wrapper = await mountSuspended(Detail)
+    expect(wrapper.text()).toContain('Scaling: 0–3 replicas, sleeps when idle')
   })
 
   it('lists releases with status and image', async () => {

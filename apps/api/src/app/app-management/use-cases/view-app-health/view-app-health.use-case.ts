@@ -13,8 +13,10 @@ function verdict(health: AppHealth, minReplicas: number): AppHealthStatus {
     return AppHealthStatus.NotFound
   }
   // Ahead of the arms below: a scale-to-zero app asleep at 0 pods is idle by
-  // design, not unavailable (AgDR-0043).
-  if (minReplicas === 0 && health.desiredReplicas === 0 && health.availableReplicas === 0) {
+  // design, not unavailable (AgDR-0043). availableReplicas is deliberately not
+  // checked — a pod still draining is counted there, and would fall through to
+  // Degraded for the length of its shutdown.
+  if (minReplicas === 0 && health.desiredReplicas === 0) {
     return AppHealthStatus.Idle
   }
   if (health.desiredReplicas > 0 && health.availableReplicas >= health.desiredReplicas) {

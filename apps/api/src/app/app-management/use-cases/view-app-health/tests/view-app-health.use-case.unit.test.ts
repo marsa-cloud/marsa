@@ -72,6 +72,17 @@ describe('ViewAppHealthUseCase', () => {
     expect(result.status).toBe(AppHealthStatus.Idle)
   })
 
+  it('reports Idle while a sleeping app still has a pod draining', async () => {
+    const usecase = build(
+      { found: true, desiredReplicas: 0, availableReplicas: 1, updatedReplicas: 0 },
+      0,
+    )
+
+    const result = await usecase.execute('my-app')
+
+    expect(result.status).toBe(AppHealthStatus.Idle)
+  })
+
   it('reports Unavailable when a woken scale-to-zero app has no ready pod', async () => {
     const usecase = build(
       { found: true, desiredReplicas: 1, availableReplicas: 0, updatedReplicas: 1 },

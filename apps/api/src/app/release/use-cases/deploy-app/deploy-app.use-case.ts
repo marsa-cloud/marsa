@@ -22,13 +22,21 @@ export class DeployAppUseCase {
 
   async execute(command: DeployAppCommand): Promise<DeployAppResponse> {
     const credentials = command.imagePullCredentials
+    // A redeploy that omits the range keeps the stored one: falling back to 1
+    // would silently wake a scale-to-zero app and cap its ceiling. The Math.max
+    // holds max >= min when only one end is sent (the DTO can only compare the
+    // two values the caller actually supplied).
+    const existing = await this.repository.findAppBySlug(command.slug)
+    const minReplicas = command.minReplicas ?? existing?.minReplicas ?? 1
+    const maxReplicas = command.maxReplicas ?? Math.max(existing?.maxReplicas ?? 1, minReplicas)
+
     const app = new AppBuilder()
       .withSlug(command.slug)
       .withDomain({ type: 'subdomain' })
       .withImage(command.image)
       .withContainerPort(command.containerPort)
-      .withMinReplicas(command.minReplicas ?? 1)
-      .withMaxReplicas(command.maxReplicas ?? Math.max(command.minReplicas ?? 1, 1))
+      .withMinReplicas(minReplicas)
+      .withMaxReplicas(maxReplicas)
       .withEnv(command.env ?? {})
       .withImagePullCredentialsEnc(credentials ? this.credentialsCipher.seal(credentials) : null)
       .build()

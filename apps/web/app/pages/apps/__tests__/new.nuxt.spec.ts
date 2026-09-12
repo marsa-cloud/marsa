@@ -117,6 +117,22 @@ describe('apps/new deploy form', () => {
     })
   })
 
+  it('blocks a ceiling below the floor without calling the API', async () => {
+    const wrapper = await mountSuspended(New)
+    await fillValidForm(wrapper)
+    const min = wrapper.find('input#minReplicas')
+    await min.setValue('3')
+    await min.trigger('blur')
+    const max = wrapper.find('input#maxReplicas')
+    await max.setValue('1')
+    await max.trigger('blur')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flush()
+
+    expect(deploy).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('Must be at least the minimum')
+  })
+
   it('surfaces a useful message when the API rejects with a 400', async () => {
     deploy.mockRejectedValueOnce({
       data: { statusCode: 400, message: 'slug must be a valid DNS-1123 label', error: 'Bad Request' },
