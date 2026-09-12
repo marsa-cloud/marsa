@@ -18,10 +18,13 @@ const refresh = vi.hoisted(() => vi.fn())
 const toastAdd = vi.hoisted(() => vi.fn())
 
 mockNuxtImport('useUserList', () => () => ({
-  data: ref({ users: state.users }),
-  status: ref(state.status),
+  items: ref(state.users),
+  pending: ref(false),
   error: ref(state.error),
-  refresh,
+  exhausted: ref(true),
+  canLoadMore: () => false,
+  loadMore: vi.fn(),
+  reset: refresh,
 }))
 mockNuxtImport('useUpdateUserRole', () => () => ({ updateRole }))
 mockNuxtImport('useCurrentUser', () => () => ({
@@ -54,6 +57,8 @@ describe('team page', () => {
 
   it('promotes a guest and reloads the list', async () => {
     const wrapper = await mountSuspended(Team)
+    // The page loads its first page on mount; this asserts about the change, not that.
+    refresh.mockClear()
 
     await changeRole(wrapper, 'member')
 
@@ -80,11 +85,26 @@ describe('team page', () => {
   })
 
   it('surfaces a load failure instead of an empty list', async () => {
+    const loaded = state.users
+    state.users = []
     state.error = new Error('boom')
 
     const wrapper = await mountSuspended(Team)
 
     expect(wrapper.text()).toContain('Could not load the team')
+    state.users = loaded
+    state.error = null
+  })
+
+  // Replacing the list would take the already-loaded members off screen along with the
+  // footer's Retry button, leaving no way back.
+  it('keeps the loaded members when a later page fails', async () => {
+    state.error = new Error('boom')
+
+    const wrapper = await mountSuspended(Team)
+
+    expect(wrapper.text()).not.toContain('Could not load the team')
+    expect(wrapper.text()).toContain('octocat')
     state.error = null
   })
 })

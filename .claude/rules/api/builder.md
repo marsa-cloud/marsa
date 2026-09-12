@@ -5,8 +5,8 @@ paths:
 
 # Builders
 
-Every entity and every command gets a fluent builder. Tests never assemble either from an
-object literal.
+Every entity, every command and every query gets a fluent builder. Tests never assemble any
+of them from an object literal.
 
 ## Seed valid defaults in the constructor
 
@@ -60,3 +60,45 @@ build(): App {
 A new non-nullable column with no builder default breaks every existing test with an error
 that names the column, not the cause. When you add a `withX` to one builder, check its
 siblings in the same feature.
+
+## Query builders extend the shared keyset base
+
+A paginated query DTO is three nested classes (`<Action>Query` → `<Action>PaginationQuery` →
+`<Action>QueryKey`), so assembling one inline costs four lines before the test says anything.
+`KeysetQueryBuilder` owns `withLimit` / `withKey` / `withoutPagination` / `build`; the
+per-use-case subclass supplies the concrete DTOs and a `withCursorAt(row)` that builds the key
+from a row.
+
+```ts
+// WRONG — the nesting, in every test that pages
+const query = new ViewAppIndexQuery()
+query.pagination = new ViewAppIndexPaginationQuery()
+query.pagination.limit = 3
+query.pagination.key = ViewAppIndexQueryKey.from(app)
+
+// RIGHT
+const query = new ViewAppIndexQueryBuilder().withLimit(3).withCursorAt(app).build()
+```
+
+```ts
+export class ViewAppIndexQueryBuilder extends KeysetQueryBuilder<
+  ViewAppIndexQuery,
+  ViewAppIndexPaginationQuery,
+  ViewAppIndexQueryKey
+> {
+  constructor() {
+    super(new ViewAppIndexQuery(), new ViewAppIndexPaginationQuery())
+  }
+
+  withCursorAt(app: App): this {
+    return this.withKey(ViewAppIndexQueryKey.from(app))
+  }
+}
+```
+
+It lives next to the DTO it builds — `use-cases/<use-case>/query/<use-case>.query.builder.ts` —
+mirroring `<use-case>.command.builder.ts`. `withoutPagination()` is how a test asks for the
+no-pagination default; do not reach for an `if (limit === undefined)` branch in a local helper.
+
+The built object doubles as the HTTP query in an e2e test — `.query(builder.build())` serializes
+the same nesting supertest's `qs` produces.

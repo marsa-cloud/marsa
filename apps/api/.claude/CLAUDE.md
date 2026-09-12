@@ -94,6 +94,8 @@ src/app/<feature>/
     <use-case>.use-case.ts       # application logic — <Action>UseCase
     <use-case>.command.ts        # input DTO — <Action>Command
     <use-case>.command.builder.ts
+    query/<use-case>.query.ts    # paginated read input — <Action>Query
+    query/<use-case>.query.builder.ts
     <use-case>.repository.ts     # use-case-scoped DB access
     <use-case>.response.ts       # output DTO — <Action>Response
     tests/                       # *.unit.test.ts · *.e2e.test.ts

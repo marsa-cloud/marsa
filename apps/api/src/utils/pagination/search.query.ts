@@ -20,8 +20,8 @@ export abstract class SortQuery {
 
 // Marker base for a use-case's filter DTO — each one defines its own fields.
 // A class, not an interface, so class-transformer can nest it via @Type().
-// Named BaseFilterQuery, not FilterQuery, so it never collides with MikroORM's
-// own FilterQuery<T> in repositories that import both.
+// Named BaseFilterQuery, not FilterQuery, to leave the plain name free for an
+// ORM's own filter type in repositories that import both.
 export abstract class BaseFilterQuery {}
 
 // Members are deliberately NOT abstract. An abstract member forces every

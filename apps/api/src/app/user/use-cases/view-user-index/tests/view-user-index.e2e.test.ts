@@ -25,9 +25,9 @@ describe('GET /api/v1/users (e2e)', () => {
       .set('Cookie', cookie)
       .expect(200)
 
-    expect(response.body.users).toHaveLength(2)
-    expect(response.body.users[0]).toMatchObject({ role: UserRole.Operator })
-    expect(response.body.users[1]).toMatchObject({
+    expect(response.body.items).toHaveLength(2)
+    expect(response.body.items[0]).toMatchObject({ role: UserRole.Operator })
+    expect(response.body.items[1]).toMatchObject({
       githubUserId: '999',
       role: UserRole.Guest,
     })

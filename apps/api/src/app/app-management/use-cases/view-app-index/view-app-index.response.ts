@@ -1,5 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger'
 import type { App } from '#src/app/app-management/entities/app.table.js'
+import { ViewAppIndexQueryKey } from '#src/app/app-management/use-cases/view-app-index/query/view-app-index.query.js'
+import {
+  PaginatedKeysetResponse,
+  PaginatedKeysetResponseMeta,
+} from '#src/utils/pagination/keyset/paginated-keyset.response.js'
 
 export class AppSummary {
   @ApiProperty({ type: String, example: 'my-app' })
@@ -26,11 +31,27 @@ export class AppSummary {
   }
 }
 
-export class ViewAppIndexResponse {
+export class ViewAppIndexResponseMeta extends PaginatedKeysetResponseMeta {
+  @ApiProperty({ type: ViewAppIndexQueryKey, nullable: true })
+  declare readonly next: ViewAppIndexQueryKey | null
+
+  constructor(apps: App[]) {
+    super(ViewAppIndexQueryKey.nextKey(apps))
+  }
+}
+
+export class ViewAppIndexResponse extends PaginatedKeysetResponse<AppSummary> {
   @ApiProperty({ type: [AppSummary] })
-  readonly apps: AppSummary[]
+  declare readonly items: AppSummary[]
+
+  // Redeclared so the generated client types the cursor; inheriting `meta` loses it.
+  @ApiProperty({ type: ViewAppIndexResponseMeta })
+  declare readonly meta: ViewAppIndexResponseMeta
 
   constructor(apps: App[], baseDomain: string) {
-    this.apps = apps.map((app) => new AppSummary(app, baseDomain))
+    super(
+      apps.map((app) => new AppSummary(app, baseDomain)),
+      new ViewAppIndexResponseMeta(apps),
+    )
   }
 }

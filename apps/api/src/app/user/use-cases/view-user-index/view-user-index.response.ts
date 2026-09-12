@@ -2,6 +2,11 @@ import { ApiProperty } from '@nestjs/swagger'
 import type { User } from '#src/app/user/entities/user.table.js'
 import type { UserUuid } from '#src/app/user/entities/user.uuid.js'
 import { UserRole, UserRoleApiProperty } from '#src/app/user/enums/user-role.enum.js'
+import { ViewUserIndexQueryKey } from '#src/app/user/use-cases/view-user-index/query/view-user-index.query.js'
+import {
+  PaginatedKeysetResponse,
+  PaginatedKeysetResponseMeta,
+} from '#src/utils/pagination/keyset/paginated-keyset.response.js'
 
 export class UserSummary {
   @ApiProperty({ type: String, format: 'uuid' })
@@ -28,11 +33,26 @@ export class UserSummary {
   }
 }
 
-export class ViewUserIndexResponse {
-  @ApiProperty({ type: [UserSummary] })
-  readonly users: UserSummary[]
+export class ViewUserIndexResponseMeta extends PaginatedKeysetResponseMeta {
+  @ApiProperty({ type: ViewUserIndexQueryKey, nullable: true })
+  declare readonly next: ViewUserIndexQueryKey | null
 
   constructor(users: User[]) {
-    this.users = users.map((user) => new UserSummary(user))
+    super(ViewUserIndexQueryKey.nextKey(users))
+  }
+}
+
+export class ViewUserIndexResponse extends PaginatedKeysetResponse<UserSummary> {
+  @ApiProperty({ type: [UserSummary] })
+  declare readonly items: UserSummary[]
+
+  @ApiProperty({ type: ViewUserIndexResponseMeta })
+  declare readonly meta: ViewUserIndexResponseMeta
+
+  constructor(users: User[]) {
+    super(
+      users.map((user) => new UserSummary(user)),
+      new ViewUserIndexResponseMeta(users),
+    )
   }
 }

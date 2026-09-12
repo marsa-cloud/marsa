@@ -203,7 +203,16 @@
     "/api/v1/users": {
       "get": {
         "operationId": "viewUserIndexV1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "pagination",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ViewUserIndexPaginationQuery"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -393,6 +402,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "pagination",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ViewReleaseIndexPaginationQuery"
+            }
           }
         ],
         "responses": {
@@ -426,7 +443,16 @@
     "/api/v1/apps": {
       "get": {
         "operationId": "viewAppIndexV1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "pagination",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ViewAppIndexPaginationQuery"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -996,6 +1022,37 @@
           "role"
         ]
       },
+      "ViewUserIndexQueryKey": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "uuid"
+        ]
+      },
+      "ViewUserIndexPaginationQuery": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "key": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ViewUserIndexQueryKey"
+              }
+            ]
+          }
+        }
+      },
       "UserSummary": {
         "type": "object",
         "properties": {
@@ -1032,18 +1089,41 @@
           "createdAt"
         ]
       },
+      "ViewUserIndexResponseMeta": {
+        "type": "object",
+        "properties": {
+          "next": {
+            "nullable": true,
+            "description": "Key for the next page, or null on the last page. Opaque — send it back as-is.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ViewUserIndexQueryKey"
+              }
+            ]
+          }
+        },
+        "required": [
+          "next"
+        ]
+      },
       "ViewUserIndexResponse": {
         "type": "object",
         "properties": {
-          "users": {
+          "items": {
+            "description": "The items for the current page",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/UserSummary"
             }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ViewUserIndexResponseMeta"
           }
         },
         "required": [
-          "users"
+          "items",
+          "meta"
         ]
       },
       "UpdateUserRoleCommand": {
@@ -1243,6 +1323,37 @@
           "deployStatus"
         ]
       },
+      "ViewReleaseIndexQueryKey": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "uuid"
+        ]
+      },
+      "ViewReleaseIndexPaginationQuery": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "key": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ViewReleaseIndexQueryKey"
+              }
+            ]
+          }
+        }
+      },
       "ReleaseTrigger": {
         "type": "string",
         "enum": [
@@ -1306,19 +1417,73 @@
           "updatedAt"
         ]
       },
+      "ViewReleaseIndexResponseMeta": {
+        "type": "object",
+        "properties": {
+          "next": {
+            "nullable": true,
+            "description": "Key for the next page, or null on the last page. Opaque — send it back as-is.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ViewReleaseIndexQueryKey"
+              }
+            ]
+          }
+        },
+        "required": [
+          "next"
+        ]
+      },
       "ViewReleaseIndexResponse": {
         "type": "object",
         "properties": {
-          "releases": {
+          "items": {
+            "description": "The items for the current page",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ReleaseSummary"
             }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ViewReleaseIndexResponseMeta"
           }
         },
         "required": [
-          "releases"
+          "items",
+          "meta"
         ]
+      },
+      "ViewAppIndexQueryKey": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "uuid"
+        ]
+      },
+      "ViewAppIndexPaginationQuery": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "key": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ViewAppIndexQueryKey"
+              }
+            ]
+          }
+        }
       },
       "AppSummary": {
         "type": "object",
@@ -1352,18 +1517,41 @@
           "updatedAt"
         ]
       },
+      "ViewAppIndexResponseMeta": {
+        "type": "object",
+        "properties": {
+          "next": {
+            "nullable": true,
+            "description": "Key for the next page, or null on the last page. Opaque — send it back as-is.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ViewAppIndexQueryKey"
+              }
+            ]
+          }
+        },
+        "required": [
+          "next"
+        ]
+      },
       "ViewAppIndexResponse": {
         "type": "object",
         "properties": {
-          "apps": {
+          "items": {
+            "description": "The items for the current page",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/AppSummary"
             }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ViewAppIndexResponseMeta"
           }
         },
         "required": [
-          "apps"
+          "items",
+          "meta"
         ]
       },
       "ViewAppDetailResponse": {
