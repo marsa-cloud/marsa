@@ -71,9 +71,14 @@ query: { pagination: { limit: 20, key } }
 query: { 'pagination[limit]': 20, 'pagination[key][uuid]': key.uuid }
 ```
 
-And `meta.next` is **not** null on the last full page — it is null once a page comes back
-empty. Stop on a **short** page (fewer rows than the limit), and on an empty one; never on a
-null cursor.
+And `meta.next` is **not** null on the last full page — this API nulls it only once a page
+comes back empty. So stop on a **short** page (fewer rows than the limit) and on an empty
+one; `useKeysetList` also stops on a null cursor, defensively, so it cannot loop if that
+convention ever changes (#200).
+
+A page render must not replace the accumulated rows with an error alert: gate the full-page
+error on `error && !items.length` so a mid-list failure keeps what is on screen and retries
+through `<InfiniteScrollFooter>`'s button instead.
 
 Load the first page in `onMounted`, not with a top-level `await` in `<script setup>`. A
 top-level await suspends the whole component until the request resolves, so the page's own

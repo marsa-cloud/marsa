@@ -85,11 +85,26 @@ describe('team page', () => {
   })
 
   it('surfaces a load failure instead of an empty list', async () => {
+    const loaded = state.users
+    state.users = []
     state.error = new Error('boom')
 
     const wrapper = await mountSuspended(Team)
 
     expect(wrapper.text()).toContain('Could not load the team')
+    state.users = loaded
+    state.error = null
+  })
+
+  // Replacing the list would take the already-loaded members off screen along with the
+  // footer's Retry button, leaving no way back.
+  it('keeps the loaded members when a later page fails', async () => {
+    state.error = new Error('boom')
+
+    const wrapper = await mountSuspended(Team)
+
+    expect(wrapper.text()).not.toContain('Could not load the team')
+    expect(wrapper.text()).toContain('octocat')
     state.error = null
   })
 })

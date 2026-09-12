@@ -314,8 +314,9 @@ async function confirmDelete() {
             <USkeleton class="h-8 w-full" />
             <USkeleton class="h-8 w-full" />
           </div>
+          <!-- First load only; a mid-list failure retries from the footer. -->
           <UAlert
-            v-else-if="releasesError"
+            v-else-if="releasesError && !releases.length"
             color="error"
             icon="i-lucide-triangle-alert"
             title="Couldn't load releases"

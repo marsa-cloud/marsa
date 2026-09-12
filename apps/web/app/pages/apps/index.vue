@@ -41,9 +41,10 @@ function formatTime(iso: string) {
         <USkeleton class="h-14 w-full" />
       </div>
 
-      <!-- Error -->
+      <!-- Error — first load only; a mid-list failure keeps the rows and retries
+           from the footer instead of replacing everything already on screen. -->
       <UAlert
-        v-else-if="error"
+        v-else-if="error && !apps.length"
         color="error"
         icon="i-lucide-triangle-alert"
         title="Couldn't load apps"

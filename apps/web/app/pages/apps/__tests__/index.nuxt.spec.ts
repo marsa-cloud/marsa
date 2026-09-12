@@ -7,7 +7,7 @@ import Index from '../index.vue'
 // Mutable holder the mocked composable reads at component-setup time, so each
 // test can arrange its own data/loading/error state before mounting.
 const s = vi.hoisted(() => ({
-  list: { items: [] as unknown[], pending: false, error: null as unknown },
+  list: { items: [] as unknown[], pending: false, error: null as unknown, exhausted: true },
   reset: vi.fn(),
 }))
 
@@ -15,14 +15,14 @@ mockNuxtImport('useAppList', () => () => ({
   items: ref(s.list.items),
   pending: ref(s.list.pending),
   error: ref(s.list.error),
-  exhausted: ref(true),
+  exhausted: ref(s.list.exhausted),
   canLoadMore: () => false,
   loadMore: vi.fn(),
   reset: s.reset,
 }))
 
 beforeEach(() => {
-  s.list = { items: [], pending: false, error: null }
+  s.list = { items: [], pending: false, error: null, exhausted: true }
   s.reset.mockClear()
 })
 
@@ -73,9 +73,22 @@ describe('apps/index list page', () => {
     expect(wrapper.text()).not.toContain('Deploy your first app')
   })
 
-  it('shows an error alert when the request fails', async () => {
+  it('shows an error alert when the first page fails', async () => {
     s.list.error = new Error('boom')
     const wrapper = await mountSuspended(Index)
     expect(wrapper.text()).toContain('Couldn\'t load apps')
+  })
+
+  // Replacing the list would take the already-loaded rows off screen along with the
+  // footer's Retry button, leaving no way back.
+  it('keeps the loaded rows when a later page fails, and offers a retry', async () => {
+    s.list.items = [anApp()]
+    s.list.error = new Error('boom')
+    s.list.exhausted = false
+    const wrapper = await mountSuspended(Index)
+
+    expect(wrapper.text()).not.toContain('Couldn\'t load apps')
+    expect(wrapper.text()).toContain('my-app')
+    expect(wrapper.text()).toContain('Retry')
   })
 })

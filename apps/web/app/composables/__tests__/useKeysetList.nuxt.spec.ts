@@ -12,18 +12,21 @@ const rows: Row[] = [{ uuid: 'a' }, { uuid: 'b' }, { uuid: 'c' }, { uuid: 'd' }]
 
 const seenQueries: unknown[] = []
 let failNext = false
+let delayMs = 0
+let nullNext = false
 
-registerEndpoint('/api/v1/things', (event) => {
+registerEndpoint('/api/v1/things', async (event) => {
   const query = getQuery(event)
   seenQueries.push(query)
   if (failNext) throw new Error('boom')
+  if (delayMs) await new Promise(resolve => setTimeout(resolve, delayMs))
 
   // h3 does not bracket-parse; the real API (Fastify + qs) does. Read the key
   // exactly as the composable serializes it.
   const after = (query as Record<string, string | undefined>)['pagination[key][uuid]']
   const start = after ? rows.findIndex(row => row.uuid === after) + 1 : 0
   const items = rows.slice(start, start + PAGE_SIZE)
-  return { items, meta: { next: items.at(-1) ?? null } }
+  return { items, meta: { next: nullNext ? null : (items.at(-1) ?? null) } }
 })
 
 function mountList() {
@@ -45,6 +48,8 @@ function mountList() {
 beforeEach(() => {
   seenQueries.length = 0
   failNext = false
+  delayMs = 0
+  nullNext = false
 })
 
 describe('useKeysetList', () => {
@@ -127,6 +132,34 @@ describe('useKeysetList', () => {
     expect(list.error.value).toBeNull()
     expect(list.items.value.map(row => row.uuid)).toEqual(['a', 'b'])
     expect(list.canLoadMore()).toBe(true)
+  })
+
+  // The API only nulls the cursor on an empty page, so a full page with a null `next`
+  // cannot happen today — the guard exists so the composable cannot loop if it ever does.
+  it('stops on a null cursor even when the page is full', async () => {
+    nullNext = true
+    const list = await mountList()
+
+    await list.reset()
+
+    expect(list.items.value.map(row => row.uuid)).toEqual(['a', 'b'])
+    expect(list.exhausted.value).toBe(true)
+    expect(list.canLoadMore()).toBe(false)
+  })
+
+  it('discards a page that lands after a reset instead of grafting it onto the cleared list', async () => {
+    const list = await mountList()
+    await list.reset()
+
+    delayMs = 30
+    const superseded = list.loadMore()
+    await list.reset()
+    await superseded
+
+    // Without the generation guard the stale page two lands on the emptied array, so the
+    // list shows ['c','d'] with the cursor past them and page one silently skipped.
+    expect(list.items.value.map(row => row.uuid)).toEqual(['a', 'b'])
+    expect(list.next.value).toEqual({ uuid: 'b' })
   })
 
   it('clears accumulated rows on reset', async () => {

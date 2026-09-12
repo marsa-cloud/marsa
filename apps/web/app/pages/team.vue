@@ -50,8 +50,9 @@ async function onRoleChange(user: UserSummary, role: UserRole) {
     </template>
 
     <template #body>
+      <!-- First load only; a mid-list failure retries from the footer. -->
       <UAlert
-        v-if="error"
+        v-if="error && !users.length"
         color="error"
         icon="i-lucide-triangle-alert"
         title="Could not load the team."
