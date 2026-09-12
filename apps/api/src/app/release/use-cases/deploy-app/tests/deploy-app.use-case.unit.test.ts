@@ -156,6 +156,14 @@ describe('DeployAppUseCase', () => {
 
       expect(await persistedRange(withRange(undefined, 2), existing)).toEqual({ min: 0, max: 2 })
     })
+
+    // The DTO compares the two values one command carries, so a ceiling sent on
+    // its own passes validation while still sitting under the stored floor.
+    it('lifts a ceiling sent alone that would land under the stored floor', async () => {
+      const existing = new AppBuilder().withMinReplicas(5).withMaxReplicas(5).build()
+
+      expect(await persistedRange(withRange(undefined, 3), existing)).toEqual({ min: 5, max: 5 })
+    })
   })
 
   it('marks the Release Failed and rethrows when the cluster apply fails', async () => {

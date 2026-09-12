@@ -56,7 +56,9 @@ the trade knowingly.
 Consequential sub-decisions taken with it:
 
 - **`minReplicas` / `maxReplicas` as real columns**, replacing the single `replicas`. Existing
-  apps backfill to `min = max = N`, so no app changes its replica count on upgrade.
+  apps backfill to `min = max = N`, so no app's configured range changes on upgrade. The
+  _running_ count is a separate question: see the first-redeploy dip under Consequences, which
+  this backfill does not prevent.
 - **Vocabulary stays "replicas"**, not "instances". Cloud Run and Render say "instances"
   because they hide Kubernetes; Marsa does not.
 - **Traefik `allowCrossNamespace: true`**, not per-app `ExternalName`. Both need a flag k3s
