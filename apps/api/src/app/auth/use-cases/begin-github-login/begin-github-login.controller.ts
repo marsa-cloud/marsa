@@ -1,6 +1,7 @@
 import { Controller, Get, HttpStatus, Req, Res } from '@nestjs/common'
 import { ApiResponse, ApiTags } from '@nestjs/swagger'
 import type { FastifyReply, FastifyRequest } from 'fastify'
+import { Public } from '#src/app/auth/decorators/roles.decorator.js'
 import { BeginGithubLoginUseCase } from '#src/app/auth/use-cases/begin-github-login/begin-github-login.use-case.js'
 
 @ApiTags('auth')
@@ -9,6 +10,7 @@ export class BeginGithubLoginController {
   constructor(private readonly usecase: BeginGithubLoginUseCase) {}
 
   @Get()
+  @Public()
   @ApiResponse({
     status: HttpStatus.FOUND,
     description:

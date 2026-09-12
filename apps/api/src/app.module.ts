@@ -1,5 +1,6 @@
 import { type DynamicModule, Module, type Type } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
+import { AccessControlModule } from '#src/app/auth/access-control.module.js'
 import { envValidationSchema } from '#src/config/env.config.js'
 import { CryptoModule } from '#src/modules/crypto/crypto.module.js'
 import { DatabaseModule } from '#src/modules/database/database.module.js'
@@ -17,6 +18,7 @@ export class AppModule {
         }),
         DatabaseModule,
         CryptoModule,
+        AccessControlModule,
         ...modules,
       ],
     }

@@ -63,4 +63,34 @@ describe('auth.global middleware', () => {
     await middleware(to('/login'), to('/login'))
     expect(createError).not.toHaveBeenCalled()
   })
+
+  it('sends an unapproved guest to the awaiting-approval page', async () => {
+    s.user = { id: '1', login: 'octocat', role: 'guest' }
+    await middleware(to('/apps'), to('/apps'))
+    expect(navigateTo).toHaveBeenCalledWith('/pending')
+  })
+
+  it('leaves a guest on /pending rather than looping', async () => {
+    s.user = { id: '1', login: 'octocat', role: 'guest' }
+    await middleware(to('/pending'), to('/pending'))
+    expect(navigateTo).not.toHaveBeenCalled()
+  })
+
+  it('sends an approved user off /pending', async () => {
+    s.user = { id: '1', login: 'octocat', role: 'member' }
+    await middleware(to('/pending'), to('/pending'))
+    expect(navigateTo).toHaveBeenCalledWith('/')
+  })
+
+  it('keeps a non-operator out of /team', async () => {
+    s.user = { id: '1', login: 'octocat', role: 'member' }
+    await middleware(to('/team'), to('/team'))
+    expect(navigateTo).toHaveBeenCalledWith('/')
+  })
+
+  it('lets an operator into /team', async () => {
+    s.user = { id: '1', login: 'octocat', role: 'operator' }
+    await middleware(to('/team'), to('/team'))
+    expect(navigateTo).not.toHaveBeenCalled()
+  })
 })

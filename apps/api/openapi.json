@@ -185,10 +185,117 @@
           },
           "401": {
             "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "operationId": "viewUserIndexV1",
+        "parameters": [
+          {
+            "name": "pagination",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ViewUserIndexPaginationQuery"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewUserIndexResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Operators only."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/users/{uuid}/role": {
+      "patch": {
+        "operationId": "updateUserRoleV1",
+        "parameters": [
+          {
+            "name": "uuid",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRoleCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateUserRoleResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown role, a self-change, or demoting the last operator."
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Operators only."
+          },
+          "404": {
+            "description": "No user with that uuid."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "users"
         ]
       }
     },
@@ -222,8 +329,16 @@
           },
           "401": {
             "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "releases"
         ]
@@ -256,6 +371,9 @@
           "401": {
             "description": "No active session."
           },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
           "404": {
             "description": "No app with that slug."
           },
@@ -263,6 +381,11 @@
             "description": "Stored image pull credentials could not be decrypted."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "releases"
         ]
@@ -279,6 +402,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "pagination",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ViewReleaseIndexPaginationQuery"
+            }
           }
         ],
         "responses": {
@@ -294,8 +425,16 @@
           },
           "401": {
             "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "releases"
         ]
@@ -304,7 +443,16 @@
     "/api/v1/apps": {
       "get": {
         "operationId": "viewAppIndexV1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "pagination",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ViewAppIndexPaginationQuery"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -318,8 +466,16 @@
           },
           "401": {
             "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "apps"
         ]
@@ -352,10 +508,18 @@
           "401": {
             "description": "No active session."
           },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
           "404": {
             "description": "No app with that slug."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "apps"
         ]
@@ -379,6 +543,9 @@
           "401": {
             "description": "No active session."
           },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
           "404": {
             "description": "No app with that slug."
           },
@@ -386,6 +553,11 @@
             "description": "Kubernetes teardown failed; the app was kept."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "apps"
         ]
@@ -417,8 +589,16 @@
           },
           "401": {
             "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "apps"
         ]
@@ -465,8 +645,16 @@
           },
           "401": {
             "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "apps"
         ]
@@ -512,10 +700,18 @@
           "401": {
             "description": "No active session."
           },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
           "404": {
             "description": "No app with that slug."
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
         "tags": [
           "apps"
         ]
@@ -531,6 +727,13 @@
   "tags": [],
   "servers": [],
   "components": {
+    "securitySchemes": {
+      "session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "marsa_session"
+      }
+    },
     "schemas": {
       "GetApiInfoResponse": {
         "type": "object",
@@ -789,7 +992,8 @@
         "type": "string",
         "enum": [
           "operator",
-          "member"
+          "member",
+          "guest"
         ]
       },
       "ViewMeResponse": {
@@ -814,6 +1018,152 @@
         },
         "required": [
           "id",
+          "login",
+          "role"
+        ]
+      },
+      "ViewUserIndexQueryKey": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "uuid"
+        ]
+      },
+      "ViewUserIndexPaginationQuery": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "key": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ViewUserIndexQueryKey"
+              }
+            ]
+          }
+        }
+      },
+      "UserSummary": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "githubUserId": {
+            "type": "string",
+            "example": "1"
+          },
+          "login": {
+            "type": "string",
+            "example": "octocat"
+          },
+          "role": {
+            "example": "guest",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserRole"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "uuid",
+          "githubUserId",
+          "login",
+          "role",
+          "createdAt"
+        ]
+      },
+      "ViewUserIndexResponseMeta": {
+        "type": "object",
+        "properties": {
+          "next": {
+            "nullable": true,
+            "description": "Key for the next page, or null on the last page. Opaque — send it back as-is.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ViewUserIndexQueryKey"
+              }
+            ]
+          }
+        },
+        "required": [
+          "next"
+        ]
+      },
+      "ViewUserIndexResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "The items for the current page",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserSummary"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ViewUserIndexResponseMeta"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
+      "UpdateUserRoleCommand": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "example": "member",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserRole"
+              }
+            ]
+          }
+        },
+        "required": [
+          "role"
+        ]
+      },
+      "UpdateUserRoleResponse": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "login": {
+            "type": "string",
+            "example": "octocat"
+          },
+          "role": {
+            "example": "member",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserRole"
+              }
+            ]
+          }
+        },
+        "required": [
+          "uuid",
           "login",
           "role"
         ]
@@ -980,6 +1330,37 @@
           "deployStatus"
         ]
       },
+      "ViewReleaseIndexQueryKey": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "uuid"
+        ]
+      },
+      "ViewReleaseIndexPaginationQuery": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "key": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ViewReleaseIndexQueryKey"
+              }
+            ]
+          }
+        }
+      },
       "ReleaseTrigger": {
         "type": "string",
         "enum": [
@@ -1043,19 +1424,73 @@
           "updatedAt"
         ]
       },
+      "ViewReleaseIndexResponseMeta": {
+        "type": "object",
+        "properties": {
+          "next": {
+            "nullable": true,
+            "description": "Key for the next page, or null on the last page. Opaque — send it back as-is.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ViewReleaseIndexQueryKey"
+              }
+            ]
+          }
+        },
+        "required": [
+          "next"
+        ]
+      },
       "ViewReleaseIndexResponse": {
         "type": "object",
         "properties": {
-          "releases": {
+          "items": {
+            "description": "The items for the current page",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ReleaseSummary"
             }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ViewReleaseIndexResponseMeta"
           }
         },
         "required": [
-          "releases"
+          "items",
+          "meta"
         ]
+      },
+      "ViewAppIndexQueryKey": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "uuid"
+        ]
+      },
+      "ViewAppIndexPaginationQuery": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "key": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ViewAppIndexQueryKey"
+              }
+            ]
+          }
+        }
       },
       "AppSummary": {
         "type": "object",
@@ -1089,18 +1524,41 @@
           "updatedAt"
         ]
       },
+      "ViewAppIndexResponseMeta": {
+        "type": "object",
+        "properties": {
+          "next": {
+            "nullable": true,
+            "description": "Key for the next page, or null on the last page. Opaque — send it back as-is.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ViewAppIndexQueryKey"
+              }
+            ]
+          }
+        },
+        "required": [
+          "next"
+        ]
+      },
       "ViewAppIndexResponse": {
         "type": "object",
         "properties": {
-          "apps": {
+          "items": {
+            "description": "The items for the current page",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/AppSummary"
             }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ViewAppIndexResponseMeta"
           }
         },
         "required": [
-          "apps"
+          "items",
+          "meta"
         ]
       },
       "ViewAppDetailResponse": {

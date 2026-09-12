@@ -6,6 +6,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger'
 import type { FastifyRequest } from 'fastify'
+import { Public } from '#src/app/auth/decorators/roles.decorator.js'
 import { CompleteGithubLoginCommand } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.js'
 import { CompleteGithubLoginResponse } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.response.js'
 import { CompleteGithubLoginUseCase } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.use-case.js'
@@ -16,6 +17,7 @@ export class CompleteGithubLoginController {
   constructor(private readonly usecase: CompleteGithubLoginUseCase) {}
 
   @Post()
+  @Public()
   @HttpCode(200)
   @ApiOkResponse({ type: CompleteGithubLoginResponse })
   @ApiBadRequestResponse({ description: 'Invalid/expired OAuth state, or no provisioned App.' })

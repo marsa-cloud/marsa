@@ -42,6 +42,48 @@ Why: `useAsyncData` / `useFetch` are keyed, cached, setup-scoped data loaders. C
 from a handler is a documented Nuxt anti-pattern — the second click can return the first
 response.
 
+## Paginated index endpoints: accumulate, don't re-key
+
+```ts
+// WRONG — useAsyncData REPLACES its payload, so page 2 erases page 1
+const { data } = useAsyncData('apps', () => $api('/v1/apps', { query: { pagination } }))
+
+// RIGHT — one growing items array
+export function useAppList() {
+  return useKeysetList<AppSummary, ViewAppIndexQueryKey>('/v1/apps', (raw) =>
+    zViewAppIndexResponse.parse(raw),
+  )
+}
+```
+
+Every index endpoint is keyset-paginated and answers `{ items, meta: { next } }`. `useKeysetList`
+owns the accumulation, the cursor and the stop condition; a per-endpoint wrapper supplies only
+the path and the generated Zod parse. Render it with `<InfiniteScrollFooter>`, which auto-loads
+on scroll and keeps a focusable "Load more" button.
+
+Two things that bite:
+
+```ts
+// WRONG — $fetch stringifies a nested object to "[object Object]"; the cursor never arrives
+query: { pagination: { limit: 20, key } }
+
+// RIGHT — bracketed keys, which the API's qs parser reads back as nesting
+query: { 'pagination[limit]': 20, 'pagination[key][uuid]': key.uuid }
+```
+
+And `meta.next` is **not** null on the last full page — this API nulls it only once a page
+comes back empty. So stop on a **short** page (fewer rows than the limit) and on an empty
+one; `useKeysetList` also stops on a null cursor, defensively, so it cannot loop if that
+convention ever changes (#200).
+
+A page render must not replace the accumulated rows with an error alert: gate the full-page
+error on `error && !items.length` so a mid-list failure keeps what is on screen and retries
+through `<InfiniteScrollFooter>`'s button instead.
+
+Load the first page in `onMounted`, not with a top-level `await` in `<script setup>`. A
+top-level await suspends the whole component until the request resolves, so the page's own
+loading skeleton never renders.
+
 ## Bind to the schema body type, not the operation wrappers
 
 ```ts

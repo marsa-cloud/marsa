@@ -106,10 +106,52 @@ export type CompleteGithubLoginResponse = {
   login: string
 }
 
-export type UserRole = 'operator' | 'member'
+export type UserRole = 'operator' | 'member' | 'guest'
 
 export type ViewMeResponse = {
   id: string
+  login: string
+  role: UserRole
+}
+
+export type ViewUserIndexQueryKey = {
+  uuid: string
+}
+
+export type ViewUserIndexPaginationQuery = {
+  limit?: number
+  key?: ViewUserIndexQueryKey | null
+}
+
+export type UserSummary = {
+  uuid: string
+  githubUserId: string
+  login: string
+  role: UserRole
+  createdAt: string
+}
+
+export type ViewUserIndexResponseMeta = {
+  /**
+   * Key for the next page, or null on the last page. Opaque — send it back as-is.
+   */
+  next: ViewUserIndexQueryKey | null
+}
+
+export type ViewUserIndexResponse = {
+  /**
+   * The items for the current page
+   */
+  items: Array<UserSummary>
+  meta: ViewUserIndexResponseMeta
+}
+
+export type UpdateUserRoleCommand = {
+  role: UserRole
+}
+
+export type UpdateUserRoleResponse = {
+  uuid: string
   login: string
   role: UserRole
 }
@@ -180,6 +222,15 @@ export type RedeployAppResponse = {
   deployStatus: DeployStatus
 }
 
+export type ViewReleaseIndexQueryKey = {
+  uuid: string
+}
+
+export type ViewReleaseIndexPaginationQuery = {
+  limit?: number
+  key?: ViewReleaseIndexQueryKey | null
+}
+
 export type ReleaseTrigger = 'manual' | 'webhook'
 
 export type ReleaseSummary = {
@@ -196,8 +247,28 @@ export type ReleaseSummary = {
   failureMessage?: string | null
 }
 
+export type ViewReleaseIndexResponseMeta = {
+  /**
+   * Key for the next page, or null on the last page. Opaque — send it back as-is.
+   */
+  next: ViewReleaseIndexQueryKey | null
+}
+
 export type ViewReleaseIndexResponse = {
-  releases: Array<ReleaseSummary>
+  /**
+   * The items for the current page
+   */
+  items: Array<ReleaseSummary>
+  meta: ViewReleaseIndexResponseMeta
+}
+
+export type ViewAppIndexQueryKey = {
+  uuid: string
+}
+
+export type ViewAppIndexPaginationQuery = {
+  limit?: number
+  key?: ViewAppIndexQueryKey | null
 }
 
 export type AppSummary = {
@@ -208,8 +279,19 @@ export type AppSummary = {
   updatedAt: string
 }
 
+export type ViewAppIndexResponseMeta = {
+  /**
+   * Key for the next page, or null on the last page. Opaque — send it back as-is.
+   */
+  next: ViewAppIndexQueryKey | null
+}
+
 export type ViewAppIndexResponse = {
-  apps: Array<AppSummary>
+  /**
+   * The items for the current page
+   */
+  items: Array<AppSummary>
+  meta: ViewAppIndexResponseMeta
 }
 
 export type ViewAppDetailResponse = {
@@ -435,6 +517,10 @@ export type ViewMeV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
 }
 
 export type ViewMeV1Responses = {
@@ -442,6 +528,66 @@ export type ViewMeV1Responses = {
 }
 
 export type ViewMeV1Response = ViewMeV1Responses[keyof ViewMeV1Responses]
+
+export type ViewUserIndexV1Data = {
+  body?: never
+  path?: never
+  query?: {
+    pagination?: ViewUserIndexPaginationQuery
+  }
+  url: '/api/v1/users'
+}
+
+export type ViewUserIndexV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Operators only.
+   */
+  403: unknown
+}
+
+export type ViewUserIndexV1Responses = {
+  200: ViewUserIndexResponse
+}
+
+export type ViewUserIndexV1Response = ViewUserIndexV1Responses[keyof ViewUserIndexV1Responses]
+
+export type UpdateUserRoleV1Data = {
+  body: UpdateUserRoleCommand
+  path: {
+    uuid: string
+  }
+  query?: never
+  url: '/api/v1/users/{uuid}/role'
+}
+
+export type UpdateUserRoleV1Errors = {
+  /**
+   * Unknown role, a self-change, or demoting the last operator.
+   */
+  400: unknown
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Operators only.
+   */
+  403: unknown
+  /**
+   * No user with that uuid.
+   */
+  404: unknown
+}
+
+export type UpdateUserRoleV1Responses = {
+  200: UpdateUserRoleResponse
+}
+
+export type UpdateUserRoleV1Response = UpdateUserRoleV1Responses[keyof UpdateUserRoleV1Responses]
 
 export type DeployAppV1Data = {
   body: DeployAppCommandWritable
@@ -459,6 +605,10 @@ export type DeployAppV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
 }
 
 export type DeployAppV1Responses = {
@@ -482,6 +632,10 @@ export type RedeployAppV1Errors = {
    */
   401: unknown
   /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
    * No app with that slug.
    */
   404: unknown
@@ -502,7 +656,9 @@ export type ViewReleaseIndexV1Data = {
   path: {
     slug: string
   }
-  query?: never
+  query?: {
+    pagination?: ViewReleaseIndexPaginationQuery
+  }
   url: '/api/v1/apps/{slug}/releases'
 }
 
@@ -511,6 +667,10 @@ export type ViewReleaseIndexV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
 }
 
 export type ViewReleaseIndexV1Responses = {
@@ -523,7 +683,9 @@ export type ViewReleaseIndexV1Response =
 export type ViewAppIndexV1Data = {
   body?: never
   path?: never
-  query?: never
+  query?: {
+    pagination?: ViewAppIndexPaginationQuery
+  }
   url: '/api/v1/apps'
 }
 
@@ -532,6 +694,10 @@ export type ViewAppIndexV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
 }
 
 export type ViewAppIndexV1Responses = {
@@ -554,6 +720,10 @@ export type DeleteAppV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
   /**
    * No app with that slug.
    */
@@ -588,6 +758,10 @@ export type ViewAppDetailV1Errors = {
    */
   401: unknown
   /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
    * No app with that slug.
    */
   404: unknown
@@ -613,6 +787,10 @@ export type ViewAppHealthV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
 }
 
 export type ViewAppHealthV1Responses = {
@@ -644,6 +822,10 @@ export type ViewAppLogsV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
 }
 
 export type ViewAppLogsV1Responses = {
@@ -670,6 +852,10 @@ export type UpdateAppEnvV1Errors = {
    * No active session.
    */
   401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
   /**
    * No app with that slug.
    */

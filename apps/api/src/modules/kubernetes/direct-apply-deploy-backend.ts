@@ -75,9 +75,11 @@ export class DirectApplyDeployBackend extends DeployBackend {
       )
     }
 
+    const deploymentName = requireName(deployment, 'Deployment')
+
     await this.apps.patchNamespacedDeployment(
       {
-        name: requireName(deployment, 'Deployment'),
+        name: deploymentName,
         namespace,
         body: deployment,
         fieldManager: DEPLOY_FIELD_MANAGER,
@@ -85,6 +87,17 @@ export class DirectApplyDeployBackend extends DeployBackend {
       },
       ssa,
     )
+
+    // After the Deployment patch, so the live pod spec never references a Secret
+    // that is already gone (#124).
+    if (!imagePullSecret) {
+      await ignoreNotFound(() =>
+        this.core.deleteNamespacedSecret({
+          name: `${deploymentName}${REGISTRY_SECRET_SUFFIX}`,
+          namespace,
+        }),
+      )
+    }
 
     await this.core.patchNamespacedService(
       {

@@ -1,9 +1,9 @@
 import { NestFactory } from '@nestjs/core'
-import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { Pool } from 'pg'
 import { AppModule } from '#src/app.module.js'
 import { DATABASE, DATABASE_POOL } from '#src/modules/database/database.tokens.js'
 import { type Database, MIGRATIONS_FOLDER } from '#src/modules/database/drizzle.factory.js'
+import { migrate } from '#src/modules/database/migrate.js'
 
 async function globalTestSetup(): Promise<void> {
   const context = await NestFactory.createApplicationContext(AppModule.forRoot([]), {
@@ -20,7 +20,7 @@ async function globalTestSetup(): Promise<void> {
       .query(
         'DROP SCHEMA IF EXISTS drizzle CASCADE; DROP SCHEMA public CASCADE; CREATE SCHEMA public;',
       )
-    await migrate(context.get<Database>(DATABASE), { migrationsFolder: MIGRATIONS_FOLDER })
+    await migrate(context.get<Database>(DATABASE), MIGRATIONS_FOLDER)
     console.log('Global setup completed')
   } finally {
     await context.close()

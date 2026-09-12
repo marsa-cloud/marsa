@@ -11,9 +11,9 @@ import {
 describe('app-detail response contracts', () => {
   it('accepts a valid release-history payload', () => {
     const valid = {
-      releases: [
+      items: [
         {
-          uuid: '11111111-1111-1111-1111-111111111111',
+          uuid: '11111111-1111-4111-8111-111111111111',
           imageRef: 'nginx:1.27',
           triggeredBy: 'manual',
           deployStatus: 'succeeded',
@@ -23,16 +23,20 @@ describe('app-detail response contracts', () => {
           failureMessage: null,
         },
       ],
+      meta: { next: { uuid: '11111111-1111-4111-8111-111111111111' } },
     }
     expect(zViewReleaseIndexResponse.parse(valid)).toEqual(valid)
   })
 
+  // `meta` is required, so omitting it would throw on its own and the assertion could not
+  // tell an enum regression from a missing-meta one. Match the message, not just a throw.
   it('rejects a release with an unknown deployStatus', () => {
     expect(() =>
       zViewReleaseIndexResponse.parse({
-        releases: [{ uuid: 'x', imageRef: 'i', triggeredBy: 'manual', deployStatus: 'boom', createdAt: '2026-07-10T10:00:00.000Z', updatedAt: '2026-07-10T10:00:00.000Z' }],
+        items: [{ uuid: 'x', imageRef: 'i', triggeredBy: 'manual', deployStatus: 'boom', createdAt: '2026-07-10T10:00:00.000Z', updatedAt: '2026-07-10T10:00:00.000Z' }],
+        meta: { next: null },
       }),
-    ).toThrow()
+    ).toThrow(/deployStatus/)
   })
 
   it('accepts a valid health payload', () => {
@@ -43,7 +47,7 @@ describe('app-detail response contracts', () => {
   it('rejects a health payload with an unknown status', () => {
     expect(() =>
       zViewAppHealthResponse.parse({ status: 'on-fire', availableReplicas: 0, desiredReplicas: 1 }),
-    ).toThrow()
+    ).toThrow(/status/)
   })
 
   it('accepts a valid run-logs payload (incl. null podName)', () => {

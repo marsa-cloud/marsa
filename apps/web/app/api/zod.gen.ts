@@ -66,10 +66,46 @@ export const zCompleteGithubLoginResponse = z.object({
   login: z.string(),
 })
 
-export const zUserRole = z.enum(['operator', 'member'])
+export const zUserRole = z.enum(['operator', 'member', 'guest'])
 
 export const zViewMeResponse = z.object({
   id: z.string(),
+  login: z.string(),
+  role: zUserRole,
+})
+
+export const zViewUserIndexQueryKey = z.object({
+  uuid: z.uuid(),
+})
+
+export const zViewUserIndexPaginationQuery = z.object({
+  limit: z.number().gte(1).lte(100).optional(),
+  key: zViewUserIndexQueryKey.nullish(),
+})
+
+export const zUserSummary = z.object({
+  uuid: z.uuid(),
+  githubUserId: z.string(),
+  login: z.string(),
+  role: zUserRole,
+  createdAt: z.iso.datetime(),
+})
+
+export const zViewUserIndexResponseMeta = z.object({
+  next: zViewUserIndexQueryKey.nullable(),
+})
+
+export const zViewUserIndexResponse = z.object({
+  items: z.array(zUserSummary),
+  meta: zViewUserIndexResponseMeta,
+})
+
+export const zUpdateUserRoleCommand = z.object({
+  role: zUserRole,
+})
+
+export const zUpdateUserRoleResponse = z.object({
+  uuid: z.uuid(),
   login: z.string(),
   role: zUserRole,
 })
@@ -108,6 +144,15 @@ export const zRedeployAppResponse = z.object({
   deployStatus: zDeployStatus,
 })
 
+export const zViewReleaseIndexQueryKey = z.object({
+  uuid: z.uuid(),
+})
+
+export const zViewReleaseIndexPaginationQuery = z.object({
+  limit: z.number().gte(1).lte(100).optional(),
+  key: zViewReleaseIndexQueryKey.nullish(),
+})
+
 export const zReleaseTrigger = z.enum(['manual', 'webhook'])
 
 export const zReleaseSummary = z.object({
@@ -121,8 +166,22 @@ export const zReleaseSummary = z.object({
   failureMessage: z.string().nullish(),
 })
 
+export const zViewReleaseIndexResponseMeta = z.object({
+  next: zViewReleaseIndexQueryKey.nullable(),
+})
+
 export const zViewReleaseIndexResponse = z.object({
-  releases: z.array(zReleaseSummary),
+  items: z.array(zReleaseSummary),
+  meta: zViewReleaseIndexResponseMeta,
+})
+
+export const zViewAppIndexQueryKey = z.object({
+  uuid: z.uuid(),
+})
+
+export const zViewAppIndexPaginationQuery = z.object({
+  limit: z.number().gte(1).lte(100).optional(),
+  key: zViewAppIndexQueryKey.nullish(),
 })
 
 export const zAppSummary = z.object({
@@ -133,8 +192,13 @@ export const zAppSummary = z.object({
   updatedAt: z.iso.datetime(),
 })
 
+export const zViewAppIndexResponseMeta = z.object({
+  next: zViewAppIndexQueryKey.nullable(),
+})
+
 export const zViewAppIndexResponse = z.object({
-  apps: z.array(zAppSummary),
+  items: z.array(zAppSummary),
+  meta: zViewAppIndexResponseMeta,
 })
 
 export const zViewAppDetailResponse = z.object({
@@ -209,6 +273,20 @@ export const zCompleteGithubLoginV1Response = zCompleteGithubLoginResponse
 
 export const zViewMeV1Response = zViewMeResponse
 
+export const zViewUserIndexV1Query = z.object({
+  pagination: zViewUserIndexPaginationQuery.optional(),
+})
+
+export const zViewUserIndexV1Response = zViewUserIndexResponse
+
+export const zUpdateUserRoleV1Body = zUpdateUserRoleCommand
+
+export const zUpdateUserRoleV1Path = z.object({
+  uuid: z.uuid(),
+})
+
+export const zUpdateUserRoleV1Response = zUpdateUserRoleResponse
+
 export const zDeployAppV1Body = zDeployAppCommandWritable
 
 export const zDeployAppV1Response = zDeployAppResponse
@@ -223,7 +301,15 @@ export const zViewReleaseIndexV1Path = z.object({
   slug: z.string(),
 })
 
+export const zViewReleaseIndexV1Query = z.object({
+  pagination: zViewReleaseIndexPaginationQuery.optional(),
+})
+
 export const zViewReleaseIndexV1Response = zViewReleaseIndexResponse
+
+export const zViewAppIndexV1Query = z.object({
+  pagination: zViewAppIndexPaginationQuery.optional(),
+})
 
 export const zViewAppIndexV1Response = zViewAppIndexResponse
 

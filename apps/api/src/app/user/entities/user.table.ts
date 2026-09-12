@@ -11,7 +11,7 @@ export const userTable = pgTable('user', {
     .default(sql`uuidv7()`),
   githubUserId: varchar('github_user_id', { length: 255 }).unique().notNull(),
   githubLogin: varchar('github_login', { length: 255 }).notNull(),
-  role: userRoleEnum().notNull().default(UserRole.Member),
+  role: userRoleEnum().notNull().default(UserRole.Guest),
   ...timestamps,
 })
 

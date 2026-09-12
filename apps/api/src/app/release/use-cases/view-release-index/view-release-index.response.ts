@@ -1,8 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger'
 import type { Release } from '#src/app/release/entities/release.table.js'
+import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import { DeployStatus, DeployStatusApiProperty } from '#src/app/release/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/release/enums/release-trigger.enum.js'
+import { ViewReleaseIndexQueryKey } from '#src/app/release/use-cases/view-release-index/query/view-release-index.query.js'
 import type { DeployFailure } from '#src/modules/kubernetes/deploy-backend.types.js'
+import {
+  PaginatedKeysetResponse,
+  PaginatedKeysetResponseMeta,
+} from '#src/utils/pagination/keyset/paginated-keyset.response.js'
 
 export class ReleaseSummary {
   @ApiProperty({ type: String, example: '00000000-0000-0000-0000-000000000000' })
@@ -54,18 +60,36 @@ export class ReleaseSummary {
   }
 }
 
-export class ViewReleaseIndexResponse {
-  @ApiProperty({ type: [ReleaseSummary] })
-  readonly releases: ReleaseSummary[]
+export interface ReleaseHead {
+  readonly uuid: ReleaseUuid
+  readonly deployStatus: DeployStatus
+  readonly failure: DeployFailure | null
+}
 
-  /**
-   * `headFailure` (when present) is attached to the newest release only — it's
-   * the sole release that maps to the live Deployment, so a failure reason read
-   * from the cluster can only be about it.
-   */
-  constructor(releases: Release[], headFailure?: DeployFailure | null) {
-    this.releases = releases.map(
-      (release, index) => new ReleaseSummary(release, index === 0 ? headFailure : undefined),
+export class ViewReleaseIndexResponseMeta extends PaginatedKeysetResponseMeta {
+  @ApiProperty({ type: ViewReleaseIndexQueryKey, nullable: true })
+  declare readonly next: ViewReleaseIndexQueryKey | null
+
+  constructor(releases: Release[]) {
+    super(ViewReleaseIndexQueryKey.nextKey(releases))
+  }
+}
+
+export class ViewReleaseIndexResponse extends PaginatedKeysetResponse<ReleaseSummary> {
+  @ApiProperty({ type: [ReleaseSummary] })
+  declare readonly items: ReleaseSummary[]
+
+  @ApiProperty({ type: ViewReleaseIndexResponseMeta })
+  declare readonly meta: ViewReleaseIndexResponseMeta
+
+  constructor(releases: Release[], head?: ReleaseHead | null) {
+    super(
+      releases.map((release) =>
+        head && head.uuid === release.uuid
+          ? new ReleaseSummary({ ...release, deployStatus: head.deployStatus }, head.failure)
+          : new ReleaseSummary(release),
+      ),
+      new ViewReleaseIndexResponseMeta(releases),
     )
   }
 }

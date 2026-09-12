@@ -57,8 +57,24 @@ Deviations from the reference, each deliberate:
 - The design and plan documents that described the cursor-based approach were deleted in the same change; this record is the surviving rationale.
 - If a second keyset endpoint appears, revisit whether a shared helper is now justified by observed duplication.
 
+## Amendment (marsa-cloud/marsa#185, 2026-08-09) — three adopters landed; the helper stayed unbuilt
+
+The record above said to _"revisit whether a shared helper is now justified"_ once a second keyset endpoint appeared. Three appeared at once (`view-app-index`, `view-release-index`, `view-user-index`). The revisit concluded **no shared assembly helper**, for a reason the original record could not see: the reference convention puts the mechanics on a **per-use-case key DTO**, not in shared code.
+
+Each adopter declares a `<UseCase>QueryKey` with `static from(row)` and `static nextKey(rows)`. `nextKey` reads `rows.at(-1)` — the last row _returned_ — which is structurally the same guarantee the deleted `build-keyset-page.ts` provided, expressed once per use-case in three lines instead of once globally behind an abstraction over row shapes. The only thing promoted to shared code is `keysetLimit()`, a sibling of the offset clamp, for the same reason: the DTO's `@Max` guards the HTTP path but not a query object constructed in code.
+
+Four further decisions recorded here:
+
+- **The cursor is the `uuidv7` primary key alone.** Both `app` and `release` (and `user`) default their PK to `uuidv7()`, which is time-ordered, so `WHERE uuid < :cursor ORDER BY uuid DESC` is the whole seek and the PK index already serves it — no `(createdAt, uuid)` composite, no duplicate-timestamp handling, no new index. **The trade:** ordering by `uuid` is ordering by _insert_ order, not by the `createdAt` **value**. They agree today because both are stamped at insert; a backfill or an explicit `createdAt` write would diverge. Accepted, and recorded here so a future backfill knows it changes list order.
+- **`next` is not null-on-last-page.** It is built from the last row returned and is `null` only once a page comes back empty, so a client paging an exact multiple of `limit` spends one final request that returns `[]`. This is the reference convention; the alternative — over-fetching `limit + 1` to detect the boundary — was considered and rejected as more machinery than the saved round trip is worth. The frontend's stop condition is therefore "empty page", plus a short-page shortcut.
+- **The key is a structured DTO, not an opaque string.** This is what makes the cursor _typed_ end-to-end: because each response redeclares `meta` with its own decorated meta class, the generated client gets `next: ViewAppIndexQueryKey | null` instead of the base's schema-less record. The "cursor loses type safety at the boundary" gap the ticket anticipated does not exist. Redeclaring `meta` is required — inheriting it silently falls back to the opaque base schema.
+- **`mikroormPagination` → `offsetPagination`.** Persistence moved to Drizzle in #107; the name outlived the ORM. `BaseFilterQuery`'s rationale comment was reworded for the same reason.
+
+One wire-format consequence worth its own line, discovered in testing: the declared query shape is **nested** (`?pagination[limit]=20&pagination[key][uuid]=…`), and `$fetch`/`ofetch` serializes query values with `URLSearchParams`, which stringifies a nested object to `[object Object]`. The cursor silently never arrives and the list loops on page one. Clients must emit bracketed keys; `useKeysetList` does this in one small helper. Anything else calling a paginated endpoint has to do the same.
+
 ## Artifacts
 
-- Ticket: marsa-cloud/marsa#132
+- Ticket: marsa-cloud/marsa#132; amended by marsa-cloud/marsa#185
 - PR: marsa-cloud/marsa#163
 - Commits: `2a2268a` (reshape), `a318d89` (review findings), `f5b1634` (keyset response as a class)
+- Follow-up: marsa-cloud/marsa#195 (measure whether `release` needs a composite index)
