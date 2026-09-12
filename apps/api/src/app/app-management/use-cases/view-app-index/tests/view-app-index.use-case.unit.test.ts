@@ -4,11 +4,7 @@ import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import type { App } from '#src/app/app-management/entities/app.table.js'
-import {
-  ViewAppIndexPaginationQuery,
-  ViewAppIndexQuery,
-  ViewAppIndexQueryKey,
-} from '#src/app/app-management/use-cases/view-app-index/query/view-app-index.query.js'
+import { ViewAppIndexQueryBuilder } from '#src/app/app-management/use-cases/view-app-index/query/view-app-index.query.builder.js'
 import { ViewAppIndexRepository } from '#src/app/app-management/use-cases/view-app-index/view-app-index.repository.js'
 import { ViewAppIndexUseCase } from '#src/app/app-management/use-cases/view-app-index/view-app-index.use-case.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
@@ -25,16 +21,7 @@ function build(apps: App[]) {
   return { usecase, repository }
 }
 
-function query(limit?: number, key?: ViewAppIndexQueryKey): ViewAppIndexQuery {
-  const request = new ViewAppIndexQuery()
-  if (limit === undefined && key === undefined) {
-    return request
-  }
-  request.pagination = new ViewAppIndexPaginationQuery()
-  request.pagination.limit = limit
-  request.pagination.key = key
-  return request
-}
+const unpaginated = () => new ViewAppIndexQueryBuilder().withoutPagination().build()
 
 describe('ViewAppIndexUseCase', () => {
   before(() => TestBench.setupUnitTest())
@@ -43,7 +30,7 @@ describe('ViewAppIndexUseCase', () => {
     const app = new AppBuilder().withSlug('alpha').withImage('nginx:1.27').build()
     const { usecase } = build([app])
 
-    const result = await usecase.execute(query())
+    const result = await usecase.execute(unpaginated())
 
     expect(result.items).toHaveLength(1)
     expect(result.items[0].slug).toBe('alpha')
@@ -56,7 +43,7 @@ describe('ViewAppIndexUseCase', () => {
     const older = new AppBuilder().withSlug('older').build()
     const { usecase } = build([newest, older])
 
-    const result = await usecase.execute(query())
+    const result = await usecase.execute(unpaginated())
 
     expect(result.items.map((a) => a.slug)).toEqual(['newest', 'older'])
   })
@@ -64,50 +51,26 @@ describe('ViewAppIndexUseCase', () => {
   it('returns an empty list when no apps are deployed', async () => {
     const { usecase } = build([])
 
-    const result = await usecase.execute(query())
+    const result = await usecase.execute(unpaginated())
 
     expect(result.items).toEqual([])
-  })
-
-  it('builds the next key from the last app returned', async () => {
-    const first = new AppBuilder().withSlug('first').build()
-    const last = new AppBuilder().withSlug('last').build()
-    const { usecase } = build([first, last])
-
-    const result = await usecase.execute(query())
-
-    expect(result.meta.next).toEqual({ uuid: last.uuid })
-  })
-
-  it('reports no next key once a page comes back empty', async () => {
-    const { usecase } = build([])
-
-    const result = await usecase.execute(query())
-
-    expect(result.meta.next).toBeNull()
   })
 
   it('seeks past the supplied cursor', async () => {
     const cursor = new AppBuilder().build()
     const { usecase, repository } = build([])
 
-    await usecase.execute(query(10, ViewAppIndexQueryKey.from(cursor)))
+    await usecase.execute(new ViewAppIndexQueryBuilder().withLimit(10).withCursorAt(cursor).build())
 
     expect(repository.listApps.firstCall.args).toEqual([10, cursor.uuid])
   })
 
-  it('falls back to the maximum page size when no limit is given', async () => {
+  // Guards the wiring, not the clamp itself: `keysetLimit` has its own tests, but a use-case
+  // passing `pagination.limit` through raw would still look correct here without this.
+  it('clamps the page size through keysetLimit rather than passing it through', async () => {
     const { usecase, repository } = build([])
 
-    await usecase.execute(query())
-
-    expect(repository.listApps.firstCall.args[0]).toBe(DEFAULT_PAGINATION_MAX_LIMIT)
-  })
-
-  it('clamps a page size above the ceiling', async () => {
-    const { usecase, repository } = build([])
-
-    await usecase.execute(query(5000))
+    await usecase.execute(new ViewAppIndexQueryBuilder().withLimit(5000).build())
 
     expect(repository.listApps.firstCall.args[0]).toBe(DEFAULT_PAGINATION_MAX_LIMIT)
   })

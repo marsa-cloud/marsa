@@ -11,11 +11,6 @@ import { InjectDatabase } from '#src/modules/database/inject-database.decorator.
 export class ViewReleaseIndexRepository {
   constructor(@InjectDatabase() private readonly db: Database) {}
 
-  /**
-   * One page of an app's releases, newest first. Ordered by the uuidv7 primary
-   * key rather than `createdAt` — both are stamped at insert, and the key is
-   * what the seek needs.
-   */
   async findByAppSlug(slug: string, limit: number, after?: ReleaseUuid | null): Promise<Release[]> {
     const rows = await this.db
       .select({ release: releaseTable })

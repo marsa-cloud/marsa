@@ -8,7 +8,6 @@ import {
   PaginatedKeysetSearchQuery,
 } from '#src/utils/pagination/keyset/paginated-keyset.query.js'
 
-/** Seek position for the user list — the uuidv7 primary key, ascending. */
 export class ViewUserIndexQueryKey {
   @ApiProperty({ type: String, format: 'uuid' })
   @IsUUID()
@@ -21,7 +20,6 @@ export class ViewUserIndexQueryKey {
     return key
   }
 
-  /** From the last user returned; `null` once a page comes back empty. */
   static nextKey(users: User[]): ViewUserIndexQueryKey | null {
     const last = users.at(-1)
     return last ? this.from(last) : null

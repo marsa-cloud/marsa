@@ -8,11 +8,6 @@ import {
   PaginatedKeysetSearchQuery,
 } from '#src/utils/pagination/keyset/paginated-keyset.query.js'
 
-/**
- * Seek position for the apps list. `uuid` alone is enough: the column defaults
- * to `uuidv7()`, which is time-ordered, so the primary key already sorts by
- * creation and its index already serves the seek — no composite tiebreaker.
- */
 export class ViewAppIndexQueryKey {
   @ApiProperty({ type: String, format: 'uuid' })
   @IsUUID()
@@ -25,11 +20,6 @@ export class ViewAppIndexQueryKey {
     return key
   }
 
-  /**
-   * Built from the last item *returned*, never from an extra row fetched to
-   * probe for a next page — that is the classic keyset off-by-one. `null` only
-   * when the page came back empty, which is how a client learns it is done.
-   */
   static nextKey(apps: App[]): ViewAppIndexQueryKey | null {
     const last = apps.at(-1)
     return last ? this.from(last) : null

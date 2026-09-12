@@ -1,21 +1,7 @@
 /**
- * Accumulating reader for a keyset-paginated index endpoint.
- *
- * Not `useAsyncData`: that is a keyed single-request cache which *replaces* its
- * payload on every fetch, so paging through it would discard the rows already
- * on screen. This keeps one growing `items` array instead.
- *
- * A page that comes back empty is how the API says "no more" — `next` is built
- * from the last row returned, so the final request of an exact multiple is an
- * empty one.
- */
-/**
- * Flattens a nested query object into `parent[child]` keys.
- *
- * `$fetch` serializes query values with `URLSearchParams`, which stringifies a
- * nested object to `[object Object]` — the cursor silently never reaches the
- * API. The backend's `qs` parser reads the bracket form (percent-encoded
- * brackets included), so the nesting has to be expressed in the key.
+ * `$fetch` serializes query values with `URLSearchParams`, which stringifies a nested object
+ * to `[object Object]` — the cursor silently never reaches the API. The backend's `qs` parser
+ * reads the bracket form, so the nesting has to be expressed in the key (#200 removes this).
  */
 function bracketQuery(prefix: string, value: Record<string, unknown>): Record<string, unknown> {
   const flat: Record<string, unknown> = {}
@@ -43,12 +29,14 @@ export function useKeysetList<TItem, TKey>(
   const error = ref<unknown>(null)
   const exhausted = ref(false)
 
+  // Excludes `error`: a failed page must not auto-retry on scroll, but the button must.
   const canLoadMore = () => !pending.value && !exhausted.value && error.value === null
 
   async function loadMore(): Promise<void> {
-    if (!canLoadMore()) return
+    if (pending.value || exhausted.value) return
 
     pending.value = true
+    error.value = null
     try {
       const page = parse(
         await $api(path, {

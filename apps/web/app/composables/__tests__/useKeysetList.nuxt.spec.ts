@@ -113,6 +113,22 @@ describe('useKeysetList', () => {
     expect(list.canLoadMore()).toBe(false)
   })
 
+  it('retries after a failure instead of latching shut', async () => {
+    const list = await mountList()
+    failNext = true
+
+    await list.reset()
+    expect(list.error.value).toBeTruthy()
+    expect(list.canLoadMore()).toBe(false)
+
+    failNext = false
+    await list.loadMore()
+
+    expect(list.error.value).toBeNull()
+    expect(list.items.value.map(row => row.uuid)).toEqual(['a', 'b'])
+    expect(list.canLoadMore()).toBe(true)
+  })
+
   it('clears accumulated rows on reset', async () => {
     const list = await mountList()
 

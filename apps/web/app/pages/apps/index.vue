@@ -5,9 +5,11 @@ useSeoMeta({ title: 'Apps — Marsa' })
 // tests can mock it via mockNuxtImport, matching the detail-page convention.
 const { items: apps, pending, error, exhausted, canLoadMore, loadMore, reset } = useAppList()
 
-await reset()
+// Not a top-level await: that suspends the whole component until page one resolves, so
+// the skeleton below never renders.
+onMounted(() => void reset())
 
-const isFirstLoad = computed(() => pending.value && apps.value.length === 0)
+const isFirstLoad = computed(() => pending.value && apps.value.length === 0 && !error.value)
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleString()
@@ -95,6 +97,7 @@ function formatTime(iso: string) {
         <InfiniteScrollFooter
           :pending="pending"
           :exhausted="exhausted"
+          :failed="!!error"
           :can-load-more="canLoadMore"
           :load-more="loadMore"
         />

@@ -3,6 +3,7 @@ import { expect } from 'expect'
 import request from 'supertest'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
+import { ViewAppIndexQueryBuilder } from '#src/app/app-management/use-cases/view-app-index/query/view-app-index.query.builder.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -45,6 +46,17 @@ describe('GET /api/v1/apps (e2e)', () => {
     expect(appA.image).toBe('nginx:1.27')
     expect(appA.url).toBe(`https://${SLUG_A}.demo.marsa.cc`)
     expect(typeof appA.createdAt).toBe('string')
+  })
+
+  it('returns one page plus a cursor when a limit is given', async () => {
+    const response = await request(setup.httpServer)
+      .get('/api/v1/apps')
+      .query(new ViewAppIndexQueryBuilder().withLimit(1).build())
+      .set('Cookie', sessionCookie)
+      .expect(200)
+
+    expect(response.body.items).toHaveLength(1)
+    expect(response.body.meta.next.uuid).toMatch(/^[0-9a-f-]{36}$/)
   })
 
   it('rejects an unauthenticated request with 401', async () => {

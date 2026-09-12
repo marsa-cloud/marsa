@@ -72,7 +72,12 @@ query: { 'pagination[limit]': 20, 'pagination[key][uuid]': key.uuid }
 ```
 
 And `meta.next` is **not** null on the last full page — it is null once a page comes back
-empty. Stop on an empty page, not on a null cursor.
+empty. Stop on a **short** page (fewer rows than the limit), and on an empty one; never on a
+null cursor.
+
+Load the first page in `onMounted`, not with a top-level `await` in `<script setup>`. A
+top-level await suspends the whole component until the request resolves, so the page's own
+loading skeleton never renders.
 
 ## Bind to the schema body type, not the operation wrappers
 

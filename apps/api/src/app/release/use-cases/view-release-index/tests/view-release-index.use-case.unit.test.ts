@@ -3,12 +3,9 @@ import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
+import type { Release } from '#src/app/release/entities/release.table.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
-import {
-  ViewReleaseIndexPaginationQuery,
-  ViewReleaseIndexQuery,
-  ViewReleaseIndexQueryKey,
-} from '#src/app/release/use-cases/view-release-index/query/view-release-index.query.js'
+import { ViewReleaseIndexQueryBuilder } from '#src/app/release/use-cases/view-release-index/query/view-release-index.query.builder.js'
 import { ViewReleaseIndexRepository } from '#src/app/release/use-cases/view-release-index/view-release-index.repository.js'
 import { ViewReleaseIndexUseCase } from '#src/app/release/use-cases/view-release-index/view-release-index.use-case.js'
 import { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
@@ -17,17 +14,11 @@ import { TestBench } from '#src/test/setup/test-bench.js'
 
 const SLUG = 'my-app'
 
-/** No cursor — the first page, where refresh-on-read is allowed to run. */
-function firstPage(): ViewReleaseIndexQuery {
-  return new ViewReleaseIndexQuery()
-}
+// No cursor — the first page, where refresh-on-read is allowed to run.
+const firstPage = () => new ViewReleaseIndexQueryBuilder().withoutPagination().build()
 
-function pageAfter(key: ViewReleaseIndexQueryKey): ViewReleaseIndexQuery {
-  const query = new ViewReleaseIndexQuery()
-  query.pagination = new ViewReleaseIndexPaginationQuery()
-  query.pagination.key = key
-  return query
-}
+const pageAfter = (release: Release) =>
+  new ViewReleaseIndexQueryBuilder().withCursorAt(release).build()
 
 function release(deployStatus: DeployStatus) {
   const app = new AppBuilder().withSlug(SLUG).build()
@@ -152,32 +143,12 @@ describe('ViewReleaseIndexUseCase', () => {
     const { usecase, repository, deployBackend } = build(releases)
     deployBackend.readRolloutStatus.resolves(RolloutStatus.Complete)
 
-    const result = await usecase.execute(
-      SLUG,
-      pageAfter(ViewReleaseIndexQueryKey.from(releases[0])),
-    )
+    const result = await usecase.execute(SLUG, pageAfter(releases[0]))
 
     expect(deployBackend.readRolloutStatus.called).toBe(false)
     expect(repository.setReleaseDeployStatus.called).toBe(false)
     expect(deployBackend.readDeployFailure.called).toBe(false)
     expect(result.items[0].deployStatus).toBe(DeployStatus.Pending)
-  })
-
-  it('builds the next key from the last release returned', async () => {
-    const releases = [release(DeployStatus.Succeeded), release(DeployStatus.Succeeded)]
-    const { usecase } = build(releases)
-
-    const result = await usecase.execute(SLUG, firstPage())
-
-    expect(result.meta.next).toEqual({ uuid: releases[1].uuid })
-  })
-
-  it('reports no next key once a page comes back empty', async () => {
-    const { usecase } = build([])
-
-    const result = await usecase.execute(SLUG, firstPage())
-
-    expect(result.meta.next).toBeNull()
   })
 
   it('leaves an older non-terminal release untouched when the newest is terminal', async () => {

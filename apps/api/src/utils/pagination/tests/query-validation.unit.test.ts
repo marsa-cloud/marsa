@@ -2,6 +2,11 @@ import { before, describe, it } from 'node:test'
 import { plainToInstance } from 'class-transformer'
 import { validateSync, type ValidationError } from 'class-validator'
 import { expect } from 'expect'
+import {
+  ViewAppIndexPaginationQuery,
+  ViewAppIndexQuery,
+  ViewAppIndexQueryKey,
+} from '#src/app/app-management/use-cases/view-app-index/query/view-app-index.query.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import {
   PaginatedOffsetQuery,
@@ -84,6 +89,48 @@ describe('pagination query DTOs through the validation pipeline', () => {
 
   it('treats the nested pagination object as optional', () => {
     const q = transform(TestOffsetSearch, {})
+
+    expect(q.pagination).toBeUndefined()
+    expect(errorsFor(q)).toEqual([])
+  })
+})
+
+// The keyset DTOs are structurally identical across the three index endpoints; the app one
+// stands in for all of them.
+describe('keyset pagination query DTOs through the validation pipeline', () => {
+  before(() => TestBench.setupUnitTest())
+
+  it('accepts a limit and a uuid cursor', () => {
+    const q = transform(ViewAppIndexQuery, {
+      pagination: { limit: '20', key: { uuid: '019a0532-67b1-737a-93a7-c1f102cd63cb' } },
+    })
+
+    expect(q.pagination).toBeInstanceOf(ViewAppIndexPaginationQuery)
+    expect(q.pagination?.key).toBeInstanceOf(ViewAppIndexQueryKey)
+    expect(q.pagination?.limit).toBe(20)
+    expect(errorsFor(q)).toEqual([])
+  })
+
+  it('rejects a limit above the max', () => {
+    expect(errorsFor(transform(ViewAppIndexQuery, { pagination: { limit: '5000' } }))).toContain(
+      'max',
+    )
+  })
+
+  it('rejects a non-positive limit', () => {
+    expect(errorsFor(transform(ViewAppIndexQuery, { pagination: { limit: '0' } }))).toContain(
+      'isPositive',
+    )
+  })
+
+  it('rejects a cursor that is not a uuid', () => {
+    const q = transform(ViewAppIndexQuery, { pagination: { key: { uuid: 'not-a-uuid' } } })
+
+    expect(errorsFor(q)).toContain('isUuid')
+  })
+
+  it('treats limit and cursor as optional — the unpaginated first page', () => {
+    const q = transform(ViewAppIndexQuery, {})
 
     expect(q.pagination).toBeUndefined()
     expect(errorsFor(q)).toEqual([])

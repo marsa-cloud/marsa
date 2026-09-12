@@ -8,7 +8,6 @@ import {
   PaginatedKeysetSearchQuery,
 } from '#src/utils/pagination/keyset/paginated-keyset.query.js'
 
-/** Seek position for an app's release history — the uuidv7 primary key. */
 export class ViewReleaseIndexQueryKey {
   @ApiProperty({ type: String, format: 'uuid' })
   @IsUUID()
@@ -21,7 +20,6 @@ export class ViewReleaseIndexQueryKey {
     return key
   }
 
-  /** From the last release returned; `null` once a page comes back empty. */
   static nextKey(releases: Release[]): ViewReleaseIndexQueryKey | null {
     const last = releases.at(-1)
     return last ? this.from(last) : null

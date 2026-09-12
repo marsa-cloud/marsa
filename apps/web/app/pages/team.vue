@@ -13,7 +13,7 @@ const {
   reset: refresh,
 } = useUserList()
 
-await refresh()
+onMounted(() => void refresh())
 const { updateRole } = useUpdateUserRole()
 const { data: currentUser } = useCurrentUser()
 
@@ -93,6 +93,7 @@ async function onRoleChange(user: UserSummary, role: UserRole) {
         <InfiniteScrollFooter
           :pending="pending"
           :exhausted="exhausted"
+          :failed="!!error"
           :can-load-more="canLoadMore"
           :load-more="loadMore"
         />

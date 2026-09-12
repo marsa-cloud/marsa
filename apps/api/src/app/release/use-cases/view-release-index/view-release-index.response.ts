@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger'
 import type { Release } from '#src/app/release/entities/release.table.js'
+import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import { DeployStatus, DeployStatusApiProperty } from '#src/app/release/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/release/enums/release-trigger.enum.js'
 import { ViewReleaseIndexQueryKey } from '#src/app/release/use-cases/view-release-index/query/view-release-index.query.js'
@@ -59,6 +60,12 @@ export class ReleaseSummary {
   }
 }
 
+export interface ReleaseHead {
+  readonly uuid: ReleaseUuid
+  readonly deployStatus: DeployStatus
+  readonly failure: DeployFailure | null
+}
+
 export class ViewReleaseIndexResponseMeta extends PaginatedKeysetResponseMeta {
   @ApiProperty({ type: ViewReleaseIndexQueryKey, nullable: true })
   declare readonly next: ViewReleaseIndexQueryKey | null
@@ -72,21 +79,15 @@ export class ViewReleaseIndexResponse extends PaginatedKeysetResponse<ReleaseSum
   @ApiProperty({ type: [ReleaseSummary] })
   declare readonly items: ReleaseSummary[]
 
-  // Redeclared so OpenAPI names this use-case's meta instead of inheriting the
-  // base's schema-less one — that is what gives the cursor a generated type on
-  // the client rather than an opaque record.
   @ApiProperty({ type: ViewReleaseIndexResponseMeta })
   declare readonly meta: ViewReleaseIndexResponseMeta
 
-  /**
-   * `headFailure` is only ever passed on the first page, and is attached to its
-   * first release — the sole release that maps to the live Deployment, so a
-   * failure reason read from the cluster can only be about it.
-   */
-  constructor(releases: Release[], headFailure?: DeployFailure | null) {
+  constructor(releases: Release[], head?: ReleaseHead | null) {
     super(
-      releases.map(
-        (release, index) => new ReleaseSummary(release, index === 0 ? headFailure : undefined),
+      releases.map((release) =>
+        head && head.uuid === release.uuid
+          ? new ReleaseSummary({ ...release, deployStatus: head.deployStatus }, head.failure)
+          : new ReleaseSummary(release),
       ),
       new ViewReleaseIndexResponseMeta(releases),
     )

@@ -1,14 +1,12 @@
 <script setup lang="ts">
-/**
- * Load trigger for an accumulating list. The sentinel auto-loads as it comes
- * into view; the button stays visible and focusable because a scroll-only
- * trigger strands keyboard and screen-reader users at the end of page one.
- */
+// The button stays visible and focusable: a scroll-only trigger strands keyboard and
+// screen-reader users at the end of page one.
 import { useInfiniteScroll } from '@vueuse/core'
 
 const props = defineProps<{
   pending: boolean
   exhausted: boolean
+  failed?: boolean
   canLoadMore: () => boolean
   loadMore: () => Promise<void>
 }>()
@@ -16,12 +14,8 @@ const props = defineProps<{
 const sentinel = useTemplateRef<HTMLElement>('sentinel')
 const scrollRoot = shallowRef<HTMLElement | null>(null)
 
-/**
- * The window never scrolls here: `UDashboardPanel`'s `#body` slot owns the
- * scroll container (`flex-1 overflow-y-auto`) and the dashboard root is
- * `fixed inset-0 overflow-hidden`. Resolved by walking up rather than by a
- * marker class, so this keeps working if the panel's internals change.
- */
+// The window never scrolls here: `UDashboardPanel`'s `#body` slot owns the scroll
+// container and the dashboard root is `fixed inset-0 overflow-hidden` (#199).
 function findScrollParent(from: HTMLElement | null): HTMLElement | null {
   let node = from?.parentElement ?? null
   while (node) {
@@ -50,11 +44,12 @@ useInfiniteScroll(scrollRoot, () => props.loadMore(), {
     <UButton
       v-if="!exhausted"
       variant="ghost"
+      :color="failed ? 'error' : 'neutral'"
       :loading="pending"
       :disabled="pending"
       @click="loadMore()"
     >
-      Load more
+      {{ failed ? 'Retry' : 'Load more' }}
     </UButton>
     <p
       v-else-if="!pending"

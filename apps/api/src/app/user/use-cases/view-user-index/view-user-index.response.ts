@@ -46,9 +46,6 @@ export class ViewUserIndexResponse extends PaginatedKeysetResponse<UserSummary> 
   @ApiProperty({ type: [UserSummary] })
   declare readonly items: UserSummary[]
 
-  // Redeclared so OpenAPI names this use-case's meta instead of inheriting the
-  // base's schema-less one — that is what gives the cursor a generated type on
-  // the client rather than an opaque record.
   @ApiProperty({ type: ViewUserIndexResponseMeta })
   declare readonly meta: ViewUserIndexResponseMeta
 

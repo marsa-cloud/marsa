@@ -3,7 +3,10 @@ import type { Release } from '#src/app/release/entities/release.table.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { ViewReleaseIndexQuery } from '#src/app/release/use-cases/view-release-index/query/view-release-index.query.js'
 import { ViewReleaseIndexRepository } from '#src/app/release/use-cases/view-release-index/view-release-index.repository.js'
-import { ViewReleaseIndexResponse } from '#src/app/release/use-cases/view-release-index/view-release-index.response.js'
+import {
+  type ReleaseHead,
+  ViewReleaseIndexResponse,
+} from '#src/app/release/use-cases/view-release-index/view-release-index.response.js'
 import { OPERATOR_APPS_NAMESPACE } from '#src/modules/kubernetes/deploy-backend.constants.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
 import { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
@@ -14,7 +17,6 @@ const TERMINAL_STATUSES: ReadonlySet<DeployStatus> = new Set([
   DeployStatus.Failed,
 ])
 
-/** Rollout signal → domain status. `NotFound` yields `null`: no state to persist. */
 function toDeployStatus(rollout: RolloutStatus): DeployStatus | null {
   switch (rollout) {
     case RolloutStatus.Complete:
@@ -42,41 +44,39 @@ export class ViewReleaseIndexUseCase {
       query.pagination?.key?.uuid,
     )
 
-    // Refresh-on-read (AgDR-0034) is head-only, and the head only exists on the
-    // FIRST page. Page two's releases[0] is an older release, so reconciling
-    // there would stamp it with the current rollout's outcome — the #98-class
-    // false negative this guard exists to prevent.
-    const isFirstPage = query.pagination?.key == null
-    const [latest] = isFirstPage ? releases : []
+    // Refresh-on-read (AgDR-0034) is head-only, and the head only exists on the first page.
+    const head = query.pagination?.key == null ? await this.refreshHead(releases, slug) : null
 
-    // If the head is already terminal there is nothing to reconcile; an older
-    // non-terminal release is superseded by a newer deploy and must be left
-    // untouched.
-    if (latest && !TERMINAL_STATUSES.has(latest.deployStatus)) {
-      await this.reconcile(latest, slug)
-    }
+    return new ViewReleaseIndexResponse(releases, head)
+  }
 
-    // A failed head release carries a *why*: read it live from the pods (never
-    // stored, #115). Only the head maps to the live Deployment, so this is the
-    // only release a cluster-read failure reason can describe.
-    const headFailure =
-      latest?.deployStatus === DeployStatus.Failed
+  private async refreshHead(releases: Release[], slug: string): Promise<ReleaseHead | null> {
+    const head = releases.at(0)
+    if (!head) return null
+
+    const deployStatus = TERMINAL_STATUSES.has(head.deployStatus)
+      ? head.deployStatus
+      : await this.reconcile(head, slug)
+
+    // A failure reason is read live from the pods (never stored, #115), and only the head
+    // maps to the live Deployment — no older release's failure can be described this way.
+    const failure =
+      deployStatus === DeployStatus.Failed
         ? await this.deployBackend.readDeployFailure(OPERATOR_APPS_NAMESPACE, slug)
         : null
 
-    return new ViewReleaseIndexResponse(releases, headFailure)
+    return { uuid: head.uuid, deployStatus, failure }
   }
 
-  private async reconcile(release: Release, slug: string): Promise<void> {
+  private async reconcile(release: Release, slug: string): Promise<DeployStatus> {
     const rollout = await this.deployBackend.readRolloutStatus(OPERATOR_APPS_NAMESPACE, slug)
     const observed = toDeployStatus(rollout)
 
-    // Write-on-change only. `null` (NotFound) is absence of observation, never a
-    // state — persisting a terminal value there would repeat the #98 false
-    // negative (pod not yet observable → wrongly marked terminal).
-    if (observed !== null && observed !== release.deployStatus) {
-      await this.repository.setReleaseDeployStatus(release.uuid, observed)
-      release.deployStatus = observed
-    }
+    // `null` (NotFound) is absence of observation, never a state — persisting one there
+    // would repeat the #98 false negative (pod not yet observable → wrongly terminal).
+    if (observed === null || observed === release.deployStatus) return release.deployStatus
+
+    await this.repository.setReleaseDeployStatus(release.uuid, observed)
+    return observed
   }
 }

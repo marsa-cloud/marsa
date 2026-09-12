@@ -8,6 +8,7 @@ import Index from '../index.vue'
 // test can arrange its own data/loading/error state before mounting.
 const s = vi.hoisted(() => ({
   list: { items: [] as unknown[], pending: false, error: null as unknown },
+  reset: vi.fn(),
 }))
 
 mockNuxtImport('useAppList', () => () => ({
@@ -17,11 +18,12 @@ mockNuxtImport('useAppList', () => () => ({
   exhausted: ref(true),
   canLoadMore: () => false,
   loadMore: vi.fn(),
-  reset: vi.fn(),
+  reset: s.reset,
 }))
 
 beforeEach(() => {
   s.list = { items: [], pending: false, error: null }
+  s.reset.mockClear()
 })
 
 const anApp = (over = {}) => ({
@@ -39,6 +41,13 @@ describe('apps/index list page', () => {
     expect(wrapper.text()).toContain('Apps')
     const deployLink = wrapper.findAll('a').find(a => a.attributes('href') === '/apps/new')
     expect(deployLink).toBeTruthy()
+  })
+
+  // Loaded in onMounted, not with a top-level await — a top-level await suspends the
+  // component until the request resolves and the skeleton below never renders.
+  it('loads the first page on mount', async () => {
+    await mountSuspended(Index)
+    expect(s.reset).toHaveBeenCalledTimes(1)
   })
 
   it('renders the empty state when no apps are deployed', async () => {

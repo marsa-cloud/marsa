@@ -9,11 +9,6 @@ import { InjectDatabase } from '#src/modules/database/inject-database.decorator.
 export class ViewAppIndexRepository {
   constructor(@InjectDatabase() private readonly db: Database) {}
 
-  /**
-   * One page of apps, newest first. Ordered by the uuidv7 primary key rather
-   * than `createdAt`: the two agree (both stamped at insert) and the PK index
-   * already serves the seek, so no composite index is needed.
-   */
   async listApps(limit: number, after?: AppUuid | null): Promise<App[]> {
     return this.db
       .select()

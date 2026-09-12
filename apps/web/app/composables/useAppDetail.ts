@@ -19,12 +19,6 @@ import {
  * #100 (releases/health) and #105/#114 (logs).
  */
 
-/**
- * Release history + per-release deploy status for an app. Accumulating rather
- * than a single-shot read (#185): history grows with every deploy, so it is
- * paginated. Only the first page carries `failureReason` — the API reconciles
- * deploy status head-only, and the head only exists on page one.
- */
 export function useAppReleases(slug: string) {
   return useKeysetList<ReleaseSummary, ViewReleaseIndexQueryKey>(
     `/v1/apps/${encodeURIComponent(slug)}/releases`,

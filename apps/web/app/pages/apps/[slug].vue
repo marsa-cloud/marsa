@@ -27,7 +27,7 @@ const {
   reset: refreshReleases,
 } = useAppReleases(slug.value)
 
-await refreshReleases()
+onMounted(() => void refreshReleases())
 // Bounds come from the API's tailLines validator (1–1000); 100 is its default.
 const TAIL_LINE_OPTIONS = [50, 100, 200, 500, 1000]
 const tailLines = ref(100)
@@ -355,6 +355,7 @@ async function confirmDelete() {
             <InfiniteScrollFooter
               :pending="releasesPending"
               :exhausted="releasesExhausted"
+              :failed="!!releasesError"
               :can-load-more="canLoadMoreReleases"
               :load-more="loadMoreReleases"
             />
