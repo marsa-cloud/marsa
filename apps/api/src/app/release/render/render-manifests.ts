@@ -2,10 +2,17 @@ import type { V1Deployment, V1Secret, V1Service } from '@kubernetes/client-node'
 import type { App } from '#src/app/app-management/entities/app.table.js'
 import type { Release } from '#src/app/release/entities/release.table.js'
 import {
+  INTERCEPTOR_PORT,
+  INTERCEPTOR_SERVICE_NAME,
+  KEDA_HTTP_GROUP,
+  KEDA_HTTP_VERSION,
+  KEDA_NAMESPACE,
   REGISTRY_SECRET_SUFFIX,
   RELEASE_UUID_ANNOTATION,
+  SCALEDOWN_PERIOD_SECONDS,
 } from '#src/modules/kubernetes/deploy-backend.constants.js'
 import type {
+  HttpScaledObject,
   IngressRoute,
   RegistryCredentials,
   RenderedManifests,
@@ -47,7 +54,8 @@ export function renderManifests(
     kind: 'Deployment',
     metadata: { name, labels },
     spec: {
-      replicas: app.replicas,
+      // No `replicas`: KEDA's HPA owns it via the scale subresource, and a
+      // field manager that keeps declaring it fights KEDA on every redeploy.
       selector: { matchLabels: labels },
       template: {
         metadata: { labels, annotations: { [RELEASE_UUID_ANNOTATION]: release.uuid } },
@@ -91,12 +99,42 @@ export function renderManifests(
         {
           match: `Host(\`${host}\`)`,
           kind: 'Rule',
-          services: [{ name, port: app.containerPort }],
+          services: [
+            {
+              name: INTERCEPTOR_SERVICE_NAME,
+              namespace: KEDA_NAMESPACE,
+              port: INTERCEPTOR_PORT,
+            },
+          ],
         },
       ],
       tls: { certResolver: 'le' },
     },
   }
 
-  return { deployment, service, ingressRoute, ...(imagePullSecret ? { imagePullSecret } : {}) }
+  const httpScaledObject: HttpScaledObject = {
+    apiVersion: `${KEDA_HTTP_GROUP}/${KEDA_HTTP_VERSION}`,
+    kind: 'HTTPScaledObject',
+    metadata: { name, labels },
+    spec: {
+      hosts: [host],
+      scaleTargetRef: {
+        name,
+        kind: 'Deployment',
+        apiVersion: 'apps/v1',
+        service: name,
+        port: app.containerPort,
+      },
+      replicas: { min: app.minReplicas, max: app.maxReplicas },
+      scaledownPeriod: SCALEDOWN_PERIOD_SECONDS,
+    },
+  }
+
+  return {
+    deployment,
+    service,
+    ingressRoute,
+    httpScaledObject,
+    ...(imagePullSecret ? { imagePullSecret } : {}),
+  }
 }

@@ -29,7 +29,8 @@ describe('GET /api/v1/apps/:slug (e2e)', () => {
           .withSlug(SLUG)
           .withImage('nginx:1.27')
           .withContainerPort(8080)
-          .withReplicas(2)
+          .withMinReplicas(2)
+          .withMaxReplicas(2)
           .withEnv({ LOG_LEVEL: 'debug' })
           .build(),
       )
@@ -43,7 +44,8 @@ describe('GET /api/v1/apps/:slug (e2e)', () => {
       slug: SLUG,
       image: 'nginx:1.27',
       containerPort: 8080,
-      replicas: 2,
+      minReplicas: 2,
+      maxReplicas: 2,
       env: { LOG_LEVEL: 'debug' },
     })
   })

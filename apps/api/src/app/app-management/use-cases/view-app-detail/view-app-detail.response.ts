@@ -14,8 +14,11 @@ export class ViewAppDetailResponse {
   @ApiProperty({ type: 'integer', example: 80 })
   readonly containerPort: number
 
+  @ApiProperty({ type: 'integer', example: 1, description: '0 means the app sleeps when idle.' })
+  readonly minReplicas: number
+
   @ApiProperty({ type: 'integer', example: 1 })
-  readonly replicas: number
+  readonly maxReplicas: number
 
   @ApiProperty({
     type: Object,
@@ -37,7 +40,8 @@ export class ViewAppDetailResponse {
     this.image = app.image
     this.url = `https://${app.slug}.${baseDomain}`
     this.containerPort = app.containerPort
-    this.replicas = app.replicas
+    this.minReplicas = app.minReplicas
+    this.maxReplicas = app.maxReplicas
     this.env = app.env
     this.createdAt = app.createdAt.toISOString()
     this.updatedAt = app.updatedAt.toISOString()

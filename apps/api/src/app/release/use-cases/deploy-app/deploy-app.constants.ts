@@ -11,9 +11,10 @@ export const MIN_CONTAINER_PORT = 1
 export const MAX_CONTAINER_PORT = 65535
 
 /**
- * Replica bounds for a deploy. The max is a sane guard against an operator
- * requesting an unbounded replica count that could exhaust cluster capacity;
- * tune as the platform's capacity model firms up.
+ * Replica bounds for a deploy. A floor of 0 is scale-to-zero: KEDA sleeps the
+ * app while idle and cold-starts it on the first HTTP request (AgDR-0043). The
+ * ceiling guards against an operator exhausting cluster capacity; tune as the
+ * platform's capacity model firms up.
  */
-export const MIN_REPLICAS = 1
+export const MIN_REPLICAS = 0
 export const MAX_REPLICAS = 100

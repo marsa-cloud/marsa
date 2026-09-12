@@ -42,6 +42,14 @@ const {
 const { data: config, status: configStatus, error: configError, refresh: refreshConfig }
   = useAppDetail(slug.value)
 
+const replicaRange = computed(() => {
+  const min = config.value?.minReplicas
+  const max = config.value?.maxReplicas
+  if (typeof min !== 'number' || typeof max !== 'number') return ''
+  if (min === max) return `${min} replica${min === 1 ? '' : 's'}`
+  return `${min}–${max} replicas${min === 0 ? ', sleeps when idle' : ''}`
+})
+
 const { redeploy } = useRedeployApp()
 const { updateEnv } = useUpdateAppEnv()
 const toast = useToast()
@@ -174,6 +182,7 @@ const deployStatusColor: Record<DeployStatus, BadgeColor> = {
 const healthStatusColor: Record<AppHealthStatus, BadgeColor> = {
   healthy: 'success',
   degraded: 'warning',
+  idle: 'neutral',
   unavailable: 'error',
   not_found: 'neutral',
 }
@@ -287,7 +296,16 @@ async function confirmDelete() {
             >
               {{ health.status }}
             </UBadge>
-            <span class="text-sm text-muted">
+            <span
+              v-if="health.status === 'idle'"
+              class="text-sm text-muted"
+            >
+              Sleeping — no pods running, wakes on the first request
+            </span>
+            <span
+              v-else
+              class="text-sm text-muted"
+            >
               {{ health.availableReplicas }} / {{ health.desiredReplicas }} replicas available
             </span>
           </div>
@@ -296,6 +314,12 @@ async function confirmDelete() {
             class="text-sm text-muted"
           >
             No health data yet.
+          </p>
+          <p
+            v-if="replicaRange"
+            class="mt-3 text-sm text-muted"
+          >
+            Scaling: {{ replicaRange }}
           </p>
         </UCard>
 

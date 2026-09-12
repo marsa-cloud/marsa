@@ -1220,10 +1220,17 @@
             "minimum": 1,
             "maximum": 65535
           },
-          "replicas": {
+          "minReplicas": {
             "type": "integer",
             "example": 1,
-            "description": "Replica count (defaults to 1).",
+            "description": "Replica floor. 0 lets the app sleep when idle and wake on the first request.",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "maxReplicas": {
+            "type": "integer",
+            "example": 1,
+            "description": "Replica ceiling. Must be at least the floor, and at least 1.",
             "minimum": 1,
             "maximum": 100
           },
@@ -1573,7 +1580,12 @@
             "type": "integer",
             "example": 80
           },
-          "replicas": {
+          "minReplicas": {
+            "type": "integer",
+            "example": 1,
+            "description": "0 means the app sleeps when idle."
+          },
+          "maxReplicas": {
             "type": "integer",
             "example": 1
           },
@@ -1601,7 +1613,8 @@
           "image",
           "url",
           "containerPort",
-          "replicas",
+          "minReplicas",
+          "maxReplicas",
           "env",
           "createdAt",
           "updatedAt"
@@ -1612,6 +1625,7 @@
         "enum": [
           "healthy",
           "degraded",
+          "idle",
           "unavailable",
           "not_found"
         ]

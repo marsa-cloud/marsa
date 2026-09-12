@@ -21,6 +21,7 @@ import {
   SLUG_PATTERN,
 } from '#src/app/release/use-cases/deploy-app/deploy-app.constants.js'
 import { ImagePullCredentials } from '#src/app/release/use-cases/deploy-app/image-pull-credentials.js'
+import { IsGteField } from '#src/app/release/use-cases/deploy-app/is-gte-field.validator.js'
 
 export class DeployAppCommand {
   @ApiProperty({
@@ -60,7 +61,7 @@ export class DeployAppCommand {
   @ApiPropertyOptional({
     type: 'integer',
     example: 1,
-    description: 'Replica count (defaults to 1).',
+    description: 'Replica floor. 0 lets the app sleep when idle and wake on the first request.',
     minimum: MIN_REPLICAS,
     maximum: MAX_REPLICAS,
   })
@@ -68,7 +69,21 @@ export class DeployAppCommand {
   @IsInt()
   @Min(MIN_REPLICAS)
   @Max(MAX_REPLICAS)
-  replicas?: number
+  minReplicas?: number
+
+  @ApiPropertyOptional({
+    type: 'integer',
+    example: 1,
+    description: 'Replica ceiling. Must be at least the floor, and at least 1.',
+    minimum: 1,
+    maximum: MAX_REPLICAS,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(MAX_REPLICAS)
+  @IsGteField('minReplicas')
+  maxReplicas?: number
 
   @ApiPropertyOptional({
     type: Object,

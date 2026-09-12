@@ -14,3 +14,4 @@ apps/web/**
 
 # Generated / committed artifacts — do not reformat
 apps/api/openapi.json
+apps/api/src/sql/drizzle/**/snapshot.json

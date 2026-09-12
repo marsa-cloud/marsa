@@ -28,6 +28,21 @@ function manifests(overrides: Partial<RenderedManifests> = {}): RenderedManifest
     deployment: { metadata: { name: SLUG } },
     service: { metadata: { name: SLUG } },
     ingressRoute: { metadata: { name: SLUG }, spec: { entryPoints: [], routes: [] } },
+    httpScaledObject: {
+      metadata: { name: SLUG },
+      spec: {
+        hosts: [],
+        scaleTargetRef: {
+          name: SLUG,
+          kind: 'Deployment',
+          apiVersion: 'apps/v1',
+          service: SLUG,
+          port: 80,
+        },
+        replicas: { min: 1, max: 1 },
+        scaledownPeriod: 300,
+      },
+    },
     ...overrides,
   }
 }
@@ -90,7 +105,8 @@ describe('DirectApplyDeployBackend.apply', () => {
 
     await backend.apply(OPERATOR_APPS_NAMESPACE, manifests())
 
-    expect(custom.patchNamespacedCustomObject.calledOnce).toBe(true)
+    // HTTPScaledObject then IngressRoute — apply got past the tolerated 404.
+    expect(custom.patchNamespacedCustomObject.calledTwice).toBe(true)
   })
 
   it('propagates a non-404 failure from the delete', async () => {

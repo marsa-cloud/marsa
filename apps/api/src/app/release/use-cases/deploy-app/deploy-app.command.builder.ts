@@ -27,8 +27,13 @@ export class DeployAppCommandBuilder {
     return this
   }
 
-  withReplicas(replicas: number): this {
-    this.command.replicas = replicas
+  withMinReplicas(minReplicas: number): this {
+    this.command.minReplicas = minReplicas
+    return this
+  }
+
+  withMaxReplicas(maxReplicas: number): this {
+    this.command.maxReplicas = maxReplicas
     return this
   }
 
