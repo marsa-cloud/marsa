@@ -47,6 +47,7 @@ describe('GET /api/v1/apps/:slug (e2e)', () => {
       minReplicas: 2,
       maxReplicas: 2,
       env: { LOG_LEVEL: 'debug' },
+      hasUndeployedChanges: true,
     })
   })
 

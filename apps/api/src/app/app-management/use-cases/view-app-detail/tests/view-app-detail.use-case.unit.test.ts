@@ -6,10 +6,12 @@ import { createStubInstance } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { ViewAppDetailRepository } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.repository.js'
 import { ViewAppDetailUseCase } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.use-case.js'
+import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 function build() {
   const repository = createStubInstance(ViewAppDetailRepository)
+  repository.findNewestRelease.resolves(undefined)
   const config = createStubInstance(ConfigService)
   config.getOrThrow.returns('demo.marsa.cc')
   const usecase = new ViewAppDetailUseCase(repository, config)
@@ -36,5 +38,20 @@ describe('ViewAppDetailUseCase', () => {
     repository.findBySlug.resolves(undefined)
 
     await expect(usecase.execute('ghost')).rejects.toThrow(NotFoundException)
+  })
+  it('reports undeployed changes until the saved config matches the newest release', async () => {
+    const { repository, usecase } = build()
+    const app = new AppBuilder().withSlug('my-app').withEnv({ A: '1' }).build()
+    repository.findBySlug.resolves(app)
+
+    expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(true)
+
+    repository.findNewestRelease.resolves(new ReleaseBuilder().withApp(app).build())
+    expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(false)
+
+    repository.findNewestRelease.resolves(
+      new ReleaseBuilder().withApp({ ...app, env: { A: 'old' } }).build(),
+    )
+    expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(true)
   })
 })

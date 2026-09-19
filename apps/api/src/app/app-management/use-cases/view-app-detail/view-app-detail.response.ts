@@ -1,5 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger'
 import type { App } from '#src/app/app-management/entities/app.table.js'
+import type { Release } from '#src/app/release/entities/release.table.js'
+import { isSnapshotOf } from '#src/app/release/entities/release-snapshot.js'
 
 export class ViewAppDetailResponse {
   @ApiProperty({ type: String, example: 'my-app' })
@@ -24,10 +26,16 @@ export class ViewAppDetailResponse {
     type: Object,
     additionalProperties: { type: 'string' },
     example: { LOG_LEVEL: 'info' },
-    description:
-      'Stored environment variables; may differ from the running container until the app is redeployed.',
+    description: 'Saved environment variables.',
   })
   readonly env: Record<string, string>
+
+  @ApiProperty({
+    type: Boolean,
+    description:
+      'True when the saved config has never been released or differs from the newest release.',
+  })
+  readonly hasUndeployedChanges: boolean
 
   @ApiProperty({ type: String, format: 'date-time' })
   readonly createdAt: string
@@ -35,7 +43,7 @@ export class ViewAppDetailResponse {
   @ApiProperty({ type: String, format: 'date-time' })
   readonly updatedAt: string
 
-  constructor(app: App, baseDomain: string) {
+  constructor(app: App, baseDomain: string, newest?: Release) {
     this.slug = app.slug
     this.image = app.image
     this.url = `https://${app.slug}.${baseDomain}`
@@ -43,6 +51,7 @@ export class ViewAppDetailResponse {
     this.minReplicas = app.minReplicas
     this.maxReplicas = app.maxReplicas
     this.env = app.env
+    this.hasUndeployedChanges = !newest || !isSnapshotOf(newest, app)
     this.createdAt = app.createdAt.toISOString()
     this.updatedAt = app.updatedAt.toISOString()
   }

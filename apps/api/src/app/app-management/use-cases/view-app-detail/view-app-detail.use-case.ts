@@ -16,6 +16,11 @@ export class ViewAppDetailUseCase {
       throw new NotFoundException(`App '${slug}' was not found.`)
     }
 
-    return new ViewAppDetailResponse(app, this.config.getOrThrow<string>('MARSA_BASE_DOMAIN'))
+    const newest = await this.repository.findNewestRelease(app.uuid)
+    return new ViewAppDetailResponse(
+      app,
+      this.config.getOrThrow<string>('MARSA_BASE_DOMAIN'),
+      newest,
+    )
   }
 }
