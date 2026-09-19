@@ -24,6 +24,8 @@ export const envValidationSchema = Joi.object({
   // (e.g. `demo.marsa.cc`). Bare host, no scheme. Used to render the
   // Traefik IngressRoute Host rule for deployed apps (#98).
   MARSA_BASE_DOMAIN: Joi.string().hostname().required(),
+  // Namespace marsa-api runs in; each environment's RoleBinding names its service account there.
+  MARSA_API_NAMESPACE: Joi.string().hostname().default('marsa'),
   VERSION: Joi.string().default('0.0.0'),
   COMMIT: Joi.string().optional(),
 })
