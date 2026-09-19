@@ -6,7 +6,8 @@ ALTER TABLE "release" ADD COLUMN "max_replicas" integer;--> statement-breakpoint
 ALTER TABLE "release" ADD COLUMN "image_pull_credentials_enc" text;--> statement-breakpoint
 ALTER TABLE "release" ADD COLUMN "source_release_uuid" uuid;--> statement-breakpoint
 --> Backfill hand-authored: drizzle-kit adds NOT NULL columns with no default, which fails on
---> existing rows. Every existing release was rendered from its app's current row, so copy it.
+--> existing rows. Only the image of a pre-snapshot release was ever recorded, so every one gets
+--> its app's current config: exact for the newest, best-effort for rollbacks to older ones.
 UPDATE "release" SET
   "env" = "app"."env",
   "container_port" = "app"."container_port",
