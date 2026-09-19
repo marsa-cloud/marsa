@@ -3,26 +3,17 @@ import { NotFoundException } from '@nestjs/common'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
-import type { App } from '#src/app/app-management/entities/app.table.js'
 import { UpdateAppCommandBuilder } from '#src/app/app-management/use-cases/update-app/update-app.command.builder.js'
 import { UpdateAppRepository } from '#src/app/app-management/use-cases/update-app/update-app.repository.js'
 import { UpdateAppUseCase } from '#src/app/app-management/use-cases/update-app/update-app.use-case.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
-const stored = () =>
-  new AppBuilder()
-    .withImage('nginx:1.27')
-    .withMinReplicas(0)
-    .withMaxReplicas(2)
-    .withEnv({ A: '1' })
-    .withImagePullCredentialsEnc('old-sealed')
-    .build()
+const saved = new AppBuilder().withImage('nginx:1.28').withEnv({ A: '1' }).build()
 
-function build(app: App = stored()) {
+function build() {
   const repository = createStubInstance(UpdateAppRepository)
-  repository.findBySlug.resolves(app)
-  repository.update.callsFake((_uuid, patch) => Promise.resolve({ ...app, ...patch }))
+  repository.updateBySlug.resolves(saved)
   const cipher = createStubInstance(ImagePullCredentialsCipher)
   cipher.seal.returns('new-sealed')
   return { usecase: new UpdateAppUseCase(repository, cipher), repository, cipher }
@@ -31,27 +22,21 @@ function build(app: App = stored()) {
 describe('UpdateAppUseCase', () => {
   before(() => TestBench.setupUnitTest())
 
-  it('keeps every field the command omits', async () => {
+  it('patches only the fields the command carries, leaving credentials alone when omitted', async () => {
     const { usecase, repository } = build()
 
     await usecase.execute('my-app', new UpdateAppCommandBuilder().withImage('nginx:1.28').build())
 
-    expect(repository.update.firstCall.args[1]).toEqual({
+    const [slug, patch] = repository.updateBySlug.firstCall.args
+    expect(slug).toBe('my-app')
+    expect(patch).toEqual({
       image: 'nginx:1.28',
-      containerPort: 80,
-      minReplicas: 0,
-      maxReplicas: 2,
-      env: { A: '1' },
-      imagePullCredentialsEnc: 'old-sealed',
+      containerPort: undefined,
+      minReplicas: undefined,
+      maxReplicas: undefined,
+      env: undefined,
+      imagePullCredentialsEnc: undefined,
     })
-  })
-
-  it('lifts the stored ceiling when a new floor exceeds it', async () => {
-    const { usecase, repository } = build()
-
-    await usecase.execute('my-app', new UpdateAppCommandBuilder().withMinReplicas(5).build())
-
-    expect(repository.update.firstCall.args[1]).toMatchObject({ minReplicas: 5, maxReplicas: 5 })
   })
 
   it('clears credentials on null and seals replacements', async () => {
@@ -60,7 +45,7 @@ describe('UpdateAppUseCase', () => {
       'my-app',
       new UpdateAppCommandBuilder().withImagePullCredentials(null).build(),
     )
-    expect(cleared.repository.update.firstCall.args[1].imagePullCredentialsEnc).toBeNull()
+    expect(cleared.repository.updateBySlug.firstCall.args[1].imagePullCredentialsEnc).toBeNull()
 
     const replaced = build()
     const credentials = { registry: 'ghcr.io', username: 'org', password: 'pw' }
@@ -69,34 +54,32 @@ describe('UpdateAppUseCase', () => {
       new UpdateAppCommandBuilder().withImagePullCredentials(credentials).build(),
     )
     expect(replaced.cipher.seal.calledOnceWithExactly(credentials)).toBe(true)
-    expect(replaced.repository.update.firstCall.args[1].imagePullCredentialsEnc).toBe('new-sealed')
+    expect(replaced.repository.updateBySlug.firstCall.args[1].imagePullCredentialsEnc).toBe(
+      'new-sealed',
+    )
   })
 
-  it('returns the stored config without the sealed credentials', async () => {
+  it('returns the saved config without the sealed credentials', async () => {
     const { usecase } = build()
 
-    const result = await usecase.execute(
-      'my-app',
-      new UpdateAppCommandBuilder().withEnv({}).build(),
-    )
+    const result = await usecase.execute('my-app', new UpdateAppCommandBuilder().build())
 
     expect(result).toEqual({
       slug: 'my-app',
-      image: 'nginx:1.27',
+      image: 'nginx:1.28',
       containerPort: 80,
-      minReplicas: 0,
-      maxReplicas: 2,
-      env: {},
+      minReplicas: 1,
+      maxReplicas: 1,
+      env: { A: '1' },
     })
   })
 
-  it('throws NotFound for an unknown slug', async () => {
+  it('throws NotFound when no app has the slug', async () => {
     const { usecase, repository } = build()
-    repository.findBySlug.resolves(undefined)
+    repository.updateBySlug.resolves(undefined)
 
     await expect(usecase.execute('ghost', new UpdateAppCommandBuilder().build())).rejects.toThrow(
       NotFoundException,
     )
-    expect(repository.update.called).toBe(false)
   })
 })

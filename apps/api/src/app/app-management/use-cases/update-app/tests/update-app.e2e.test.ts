@@ -21,6 +21,8 @@ describe('PATCH /api/v1/apps/:slug (e2e)', () => {
       .values(
         new AppBuilder()
           .withSlug(SLUG)
+          .withMinReplicas(0)
+          .withMaxReplicas(2)
           .withEnv({ A: '1' })
           .withImagePullCredentialsEnc('x')
           .build(),
@@ -42,12 +44,22 @@ describe('PATCH /api/v1/apps/:slug (e2e)', () => {
       slug: SLUG,
       image: 'nginx:1.28',
       containerPort: 80,
-      minReplicas: 1,
-      maxReplicas: 1,
+      minReplicas: 0,
+      maxReplicas: 2,
       env: { B: '2' },
     })
     const [app] = await setup.db.select().from(appTable).where(eq(appTable.slug, SLUG))
     expect(app.imagePullCredentialsEnc).toBe('x')
+  })
+
+  it('lifts the stored ceiling when a new floor exceeds it', async () => {
+    const response = await request(setup.httpServer)
+      .patch(`/api/v1/apps/${SLUG}`)
+      .set('Cookie', cookie)
+      .send({ minReplicas: 5 })
+      .expect(200)
+
+    expect(response.body).toMatchObject({ minReplicas: 5, maxReplicas: 5 })
   })
 
   it('clears credentials when sent null', async () => {
