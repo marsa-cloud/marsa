@@ -4,8 +4,10 @@ import { expect } from 'expect'
 import request from 'supertest'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
+import type { Environment } from '#src/app/environment/entities/environment.table.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
+import { seedEnvironment } from '#src/test/fixtures/seed-environment.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -13,13 +15,16 @@ const SLUG = 'create-release-e2e'
 
 describe('POST /api/v1/apps/:slug/releases (e2e)', () => {
   let setup: TestSetup
+  let environment: Environment
   let cookie: string
   let oldUuid: string
 
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
     cookie = await setup.authenticate()
+    environment = (await seedEnvironment(setup.db)).environment
     const old = new AppBuilder()
+      .withEnvironment(environment)
       .withSlug(SLUG)
       .withImage('nginx:1.27')
       .withEnv({ OLD: '1' })
@@ -70,7 +75,10 @@ describe('POST /api/v1/apps/:slug/releases (e2e)', () => {
   })
 
   it('returns 404 for a release of another app, 400 for a non-uuid', async () => {
-    const other = new AppBuilder().withSlug('create-release-other').build()
+    const other = new AppBuilder()
+      .withEnvironment(environment)
+      .withSlug('create-release-other')
+      .build()
     const foreign = new ReleaseBuilder().withApp(other).build()
     await setup.db.insert(appTable).values(other)
     await setup.db.insert(releaseTable).values(foreign)

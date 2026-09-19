@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common'
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { CreateAppCommand } from '#src/app/app-management/use-cases/create-app/create-app.command.js'
@@ -15,10 +15,15 @@ export class CreateAppUseCase {
   ) {}
 
   async execute(command: CreateAppCommand): Promise<CreateAppResponse> {
+    if (!(await this.repository.environmentExists(command.environmentUuid))) {
+      throw new NotFoundException(`Environment '${command.environmentUuid}' was not found.`)
+    }
+
     const minReplicas = command.minReplicas ?? 1
     const credentials = command.imagePullCredentials
 
     const app = new AppBuilder()
+      .withEnvironmentUuid(command.environmentUuid)
       .withSlug(command.slug)
       .withDomain({ type: 'subdomain' })
       .withImage(command.image)

@@ -2,6 +2,8 @@ import { sql } from 'drizzle-orm'
 import { integer, jsonb, pgTable, text, uuid, varchar } from 'drizzle-orm/pg-core'
 import type { AppUuid } from '#src/app/app-management/entities/app.uuid.js'
 import type { AppDomain } from '#src/app/app-management/entities/app-domain.types.js'
+import { environmentTable } from '#src/app/environment/entities/environment.table.js'
+import type { EnvironmentUuid } from '#src/app/environment/entities/environment.uuid.js'
 import { timestamps } from '#src/sql/timestamps.js'
 
 export const appTable = pgTable('app', {
@@ -9,6 +11,10 @@ export const appTable = pgTable('app', {
     .$type<AppUuid>()
     .primaryKey()
     .default(sql`uuidv7()`),
+  environmentUuid: uuid('environment_uuid')
+    .$type<EnvironmentUuid>()
+    .notNull()
+    .references(() => environmentTable.uuid, { onDelete: 'restrict', onUpdate: 'cascade' }),
   slug: varchar({ length: 255 }).unique().notNull(),
   domain: jsonb().$type<AppDomain>().notNull(),
   image: varchar({ length: 255 }).notNull(),

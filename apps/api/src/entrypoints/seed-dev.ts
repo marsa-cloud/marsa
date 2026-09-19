@@ -2,11 +2,15 @@ import fastifySecureSession from '@fastify/secure-session'
 import { Logger } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { NestFactory } from '@nestjs/core'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import Fastify from 'fastify'
 import { AppModule } from '#src/app.module.js'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
+import { EnvironmentBuilder } from '#src/app/environment/entities/environment.builder.js'
+import { environmentTable } from '#src/app/environment/entities/environment.table.js'
+import { ProjectBuilder } from '#src/app/project/entities/project.builder.js'
+import { projectTable } from '#src/app/project/entities/project.table.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
@@ -79,6 +83,25 @@ async function rawDogFe(): Promise<void> {
     }
 
     if (!userOnly) {
+      let [project] = await db.select().from(projectTable).where(eq(projectTable.slug, 'dev'))
+      if (!project) {
+        project = new ProjectBuilder().withName('Dev').withSlug('dev').build()
+        await db.insert(projectTable).values(project)
+      }
+      let [environment] = await db
+        .select()
+        .from(environmentTable)
+        .where(
+          and(
+            eq(environmentTable.projectUuid, project.uuid),
+            eq(environmentTable.slug, 'production'),
+          ),
+        )
+      if (!environment) {
+        environment = new EnvironmentBuilder().withProject(project).build()
+        await db.insert(environmentTable).values(environment)
+      }
+
       for (const slug of SAMPLE_APP_SLUGS) {
         await db.transaction(async (tx) => {
           const [existing] = await tx
@@ -90,6 +113,7 @@ async function rawDogFe(): Promise<void> {
             return
           }
           const app = new AppBuilder()
+            .withEnvironment(environment)
             .withSlug(slug)
             .withImage('nginx:1.27')
             .withContainerPort(80)

@@ -4,10 +4,12 @@ import { expect } from 'expect'
 import request from 'supertest'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
+import type { Environment } from '#src/app/environment/entities/environment.table.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
+import { seedEnvironment } from '#src/test/fixtures/seed-environment.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -16,16 +18,20 @@ const BARE_SLUG = 'deploy-release-e2e-bare'
 
 describe('POST /api/v1/apps/:slug/deploy (e2e)', () => {
   let setup: TestSetup
+  let environment: Environment
   let cookie: string
   let newestUuid: ReleaseUuid
 
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
     cookie = await setup.authenticate()
-    const app = new AppBuilder().withSlug(SLUG).build()
+    environment = (await seedEnvironment(setup.db)).environment
+    const app = new AppBuilder().withEnvironment(environment).withSlug(SLUG).build()
     const older = new ReleaseBuilder().withApp(app).withDeployStatus(DeployStatus.Succeeded).build()
     const newest = new ReleaseBuilder().withApp(app).build()
-    await setup.db.insert(appTable).values([app, new AppBuilder().withSlug(BARE_SLUG).build()])
+    await setup.db
+      .insert(appTable)
+      .values([app, new AppBuilder().withEnvironment(environment).withSlug(BARE_SLUG).build()])
     await setup.db.insert(releaseTable).values([older, newest])
     newestUuid = newest.uuid
   })

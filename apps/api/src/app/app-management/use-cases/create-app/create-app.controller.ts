@@ -5,6 +5,7 @@ import {
   ApiCookieAuth,
   ApiCreatedResponse,
   ApiForbiddenResponse,
+  ApiNotFoundResponse,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger'
@@ -25,6 +26,7 @@ export class CreateAppController {
   @ApiCookieAuth(SESSION_COOKIE_SECURITY_SCHEME)
   @ApiCreatedResponse({ type: CreateAppResponse })
   @ApiBadRequestResponse({ description: 'Malformed body, or an invalid slug / image / port.' })
+  @ApiNotFoundResponse({ description: 'No environment with that uuid.' })
   @ApiConflictResponse({ description: 'An app with that slug already exists.' })
   @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
