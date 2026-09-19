@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { pgTable, uuid, varchar } from 'drizzle-orm/pg-core'
+import { type AnyPgColumn, integer, jsonb, pgTable, text, uuid, varchar } from 'drizzle-orm/pg-core'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
 import type { AppUuid } from '#src/app/app-management/entities/app.uuid.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
@@ -17,6 +17,14 @@ export const releaseTable = pgTable('release', {
     .notNull()
     .references(() => appTable.uuid, { onUpdate: 'cascade' }),
   imageRef: varchar('image_ref', { length: 255 }).notNull(),
+  env: jsonb().$type<Record<string, string>>().notNull(),
+  containerPort: integer('container_port').notNull(),
+  minReplicas: integer('min_replicas').notNull(),
+  maxReplicas: integer('max_replicas').notNull(),
+  imagePullCredentialsEnc: text('image_pull_credentials_enc'),
+  sourceReleaseUuid: uuid('source_release_uuid')
+    .$type<ReleaseUuid>()
+    .references((): AnyPgColumn => releaseTable.uuid, { onDelete: 'set null' }),
   triggeredBy: releaseTriggerEnum('triggered_by').notNull().default(ReleaseTrigger.Manual),
   deployStatus: deployStatusEnum('deploy_status').notNull().default(DeployStatus.Pending),
   ...timestamps,

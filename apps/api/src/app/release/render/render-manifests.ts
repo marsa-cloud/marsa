@@ -1,5 +1,4 @@
 import type { V1Deployment, V1Secret, V1Service } from '@kubernetes/client-node'
-import type { App } from '#src/app/app-management/entities/app.table.js'
 import type { Release } from '#src/app/release/entities/release.table.js'
 import {
   INTERCEPTOR_PORT,
@@ -29,15 +28,15 @@ function buildDockerConfigJson(credentials: RegistryCredentials): string {
 }
 
 export function renderManifests(
-  app: App,
+  slug: string,
   release: Release,
   baseDomain: string,
   credentials?: RegistryCredentials,
 ): RenderedManifests {
-  const name = app.slug
-  const host = `${app.slug}.${baseDomain}`
+  const name = slug
+  const host = `${slug}.${baseDomain}`
   const labels = { app: name }
-  const env = Object.entries(app.env).map(([key, value]) => ({ name: key, value }))
+  const env = Object.entries(release.env).map(([key, value]) => ({ name: key, value }))
 
   const imagePullSecret: V1Secret | undefined = credentials
     ? {
@@ -67,10 +66,10 @@ export function renderManifests(
             {
               name,
               image: release.imageRef,
-              ports: [{ containerPort: app.containerPort }],
+              ports: [{ containerPort: release.containerPort }],
               env,
-              readinessProbe: { tcpSocket: { port: app.containerPort } },
-              livenessProbe: { tcpSocket: { port: app.containerPort } },
+              readinessProbe: { tcpSocket: { port: release.containerPort } },
+              livenessProbe: { tcpSocket: { port: release.containerPort } },
             },
           ],
         },
@@ -85,7 +84,7 @@ export function renderManifests(
     spec: {
       type: 'ClusterIP',
       selector: labels,
-      ports: [{ port: app.containerPort, targetPort: app.containerPort }],
+      ports: [{ port: release.containerPort, targetPort: release.containerPort }],
     },
   }
 
@@ -123,9 +122,9 @@ export function renderManifests(
         kind: 'Deployment',
         apiVersion: 'apps/v1',
         service: name,
-        port: app.containerPort,
+        port: release.containerPort,
       },
-      replicas: { min: app.minReplicas, max: app.maxReplicas },
+      replicas: { min: release.minReplicas, max: release.maxReplicas },
       scaledownPeriod: SCALEDOWN_PERIOD_SECONDS,
     },
   }

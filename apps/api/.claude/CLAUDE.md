@@ -79,7 +79,7 @@ The folder name sets the `<Action>` class prefix, the `operationId`, and the rou
 Two deliberate exceptions:
 
 - **Singleton / self reads drop the suffix** — `view-me`, settings-style singletons.
-- **Domain-verb actions keep their ubiquitous-language verb** — `deploy-app` writes a `Release`, but the domain says "deploy", not "create release". A write scoped to one facet takes a qualifier: `update-<entity>-<facet>`.
+- **Domain-verb actions keep their ubiquitous-language verb** — `deploy-release` applies a Release to the cluster; the domain says "deploy", not "update". A write scoped to one facet takes a qualifier: `update-<entity>-<facet>`.
 
 ## Feature shape (vertical slice)
 

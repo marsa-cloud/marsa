@@ -1,0 +1,71 @@
+import { before, describe, it } from 'node:test'
+import { ConflictException } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+import { expect } from 'expect'
+import { createStubInstance } from 'sinon'
+import { CreateAppCommandBuilder } from '#src/app/app-management/use-cases/create-app/create-app.command.builder.js'
+import { CreateAppRepository } from '#src/app/app-management/use-cases/create-app/create-app.repository.js'
+import { CreateAppUseCase } from '#src/app/app-management/use-cases/create-app/create-app.use-case.js'
+import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
+import { TestBench } from '#src/test/setup/test-bench.js'
+
+function build() {
+  const repository = createStubInstance(CreateAppRepository)
+  repository.insert.resolves(true)
+  const config = createStubInstance(ConfigService)
+  config.getOrThrow.returns('demo.marsa.cc')
+  const cipher = createStubInstance(ImagePullCredentialsCipher)
+  cipher.seal.returns('sealed')
+  return { usecase: new CreateAppUseCase(repository, cipher, config), repository, cipher }
+}
+
+describe('CreateAppUseCase', () => {
+  before(() => TestBench.setupUnitTest())
+
+  it('stores the app without touching the cluster and returns its URL', async () => {
+    const { usecase, repository } = build()
+
+    const result = await usecase.execute(new CreateAppCommandBuilder().withEnv({ A: '1' }).build())
+
+    expect(result).toEqual({ slug: 'my-app', url: 'https://my-app.demo.marsa.cc' })
+    const [app] = repository.insert.firstCall.args
+    expect(app).toMatchObject({
+      slug: 'my-app',
+      image: 'nginx:1.27',
+      containerPort: 80,
+      minReplicas: 1,
+      maxReplicas: 1,
+      env: { A: '1' },
+      imagePullCredentialsEnc: null,
+    })
+  })
+
+  it('lifts a default ceiling to a floor above it', async () => {
+    const { usecase, repository } = build()
+
+    await usecase.execute(new CreateAppCommandBuilder().withMinReplicas(3).build())
+
+    expect(repository.insert.firstCall.args[0]).toMatchObject({ minReplicas: 3, maxReplicas: 3 })
+  })
+
+  it('seals pull credentials', async () => {
+    const { usecase, repository, cipher } = build()
+    const credentials = { registry: 'ghcr.io', username: 'org', password: 'pw' }
+
+    await usecase.execute(
+      new CreateAppCommandBuilder().withImagePullCredentials(credentials).build(),
+    )
+
+    expect(cipher.seal.calledOnceWithExactly(credentials)).toBe(true)
+    expect(repository.insert.firstCall.args[0].imagePullCredentialsEnc).toBe('sealed')
+  })
+
+  it('rejects a taken slug with 409', async () => {
+    const { usecase, repository } = build()
+    repository.insert.resolves(false)
+
+    await expect(usecase.execute(new CreateAppCommandBuilder().build())).rejects.toThrow(
+      ConflictException,
+    )
+  })
+})

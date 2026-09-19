@@ -299,54 +299,9 @@
         ]
       }
     },
-    "/api/v1/deploy": {
+    "/api/v1/apps/{slug}/releases": {
       "post": {
-        "operationId": "deployAppV1",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeployAppCommand"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeployAppResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Malformed body, or an invalid slug / image / port."
-          },
-          "401": {
-            "description": "No active session."
-          },
-          "403": {
-            "description": "Your account is not approved for this action."
-          }
-        },
-        "security": [
-          {
-            "session": []
-          }
-        ],
-        "tags": [
-          "releases"
-        ]
-      }
-    },
-    "/api/v1/apps/{slug}/redeploy": {
-      "post": {
-        "operationId": "redeployAppV1",
+        "operationId": "createReleaseV1",
         "parameters": [
           {
             "name": "slug",
@@ -357,16 +312,29 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReleaseCommand"
+              }
+            }
+          }
+        },
         "responses": {
-          "200": {
+          "201": {
             "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RedeployAppResponse"
+                  "$ref": "#/components/schemas/CreateReleaseResponse"
                 }
               }
             }
+          },
+          "400": {
+            "description": "fromReleaseUuid is not a uuid."
           },
           "401": {
             "description": "No active session."
@@ -375,10 +343,7 @@
             "description": "Your account is not approved for this action."
           },
           "404": {
-            "description": "No app with that slug."
-          },
-          "500": {
-            "description": "Stored image pull credentials could not be decrypted."
+            "description": "No app with that slug, or no such release for it."
           }
         },
         "security": [
@@ -389,9 +354,7 @@
         "tags": [
           "releases"
         ]
-      }
-    },
-    "/api/v1/apps/{slug}/releases": {
+      },
       "get": {
         "operationId": "viewReleaseIndexV1",
         "parameters": [
@@ -440,7 +403,103 @@
         ]
       }
     },
+    "/api/v1/apps/{slug}/deploy": {
+      "post": {
+        "operationId": "deployReleaseV1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeployReleaseResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
+          "404": {
+            "description": "No app with that slug."
+          },
+          "409": {
+            "description": "The app has no release to deploy."
+          },
+          "500": {
+            "description": "Stored pull credentials could not be decrypted."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "releases"
+        ]
+      }
+    },
     "/api/v1/apps": {
+      "post": {
+        "operationId": "createAppV1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAppCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateAppResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body, or an invalid slug / image / port."
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
+          "409": {
+            "description": "An app with that slug already exists."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "apps"
+        ]
+      },
       "get": {
         "operationId": "viewAppIndexV1",
         "parameters": [
@@ -504,6 +563,61 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
+          "404": {
+            "description": "No app with that slug."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "apps"
+        ]
+      },
+      "patch": {
+        "operationId": "updateAppV1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAppCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateAppResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A field is out of range or malformed."
           },
           "401": {
             "description": "No active session."
@@ -648,63 +762,6 @@
           },
           "403": {
             "description": "Your account is not approved for this action."
-          }
-        },
-        "security": [
-          {
-            "session": []
-          }
-        ],
-        "tags": [
-          "apps"
-        ]
-      }
-    },
-    "/api/v1/apps/{slug}/env": {
-      "put": {
-        "operationId": "updateAppEnvV1",
-        "parameters": [
-          {
-            "name": "slug",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateAppEnvCommand"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UpdateAppEnvResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "env is not an object of string values with valid keys."
-          },
-          "401": {
-            "description": "No active session."
-          },
-          "403": {
-            "description": "Your account is not approved for this action."
-          },
-          "404": {
-            "description": "No app with that slug."
           }
         },
         "security": [
@@ -1168,95 +1225,53 @@
           "role"
         ]
       },
-      "ImagePullCredentials": {
+      "CreateReleaseCommand": {
         "type": "object",
         "properties": {
-          "registry": {
+          "fromReleaseUuid": {
             "type": "string",
-            "maxLength": 253,
-            "example": "ghcr.io",
-            "description": "Registry host the credentials authenticate against."
-          },
-          "username": {
-            "type": "string",
-            "maxLength": 255,
-            "example": "my-org",
-            "description": "Registry username — an account username, or a registry sentinel (e.g. `AWS`, `_json_key`)."
-          },
-          "password": {
-            "type": "string",
-            "format": "password",
-            "writeOnly": true,
-            "maxLength": 4096,
-            "example": "ghp_xxxxxxxxxxxxxxxxxxxx",
-            "description": "Password or access token (PAT / API key) — placed in the dockerconfigjson `auth` field."
+            "format": "uuid",
+            "description": "Roll back: copy this release’s config instead of the app’s current config."
           }
-        },
-        "required": [
-          "registry",
-          "username",
-          "password"
+        }
+      },
+      "ReleaseTrigger": {
+        "type": "string",
+        "enum": [
+          "manual",
+          "webhook",
+          "rollback"
         ]
       },
-      "DeployAppCommand": {
+      "CreateReleaseResponse": {
         "type": "object",
         "properties": {
-          "slug": {
+          "releaseUuid": {
             "type": "string",
-            "example": "my-app",
-            "description": "Public subdomain label + K8s object name.",
-            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
-            "maxLength": 63
+            "format": "uuid"
           },
-          "image": {
+          "appSlug": {
             "type": "string",
-            "example": "nginx:1.27",
-            "description": "Fully-qualified public image ref."
+            "example": "my-app"
           },
-          "containerPort": {
-            "type": "integer",
-            "example": 80,
-            "description": "Port the container listens on.",
-            "minimum": 1,
-            "maximum": 65535
-          },
-          "minReplicas": {
-            "type": "integer",
-            "example": 1,
-            "description": "Replica floor. 0 lets the app sleep when idle and wake on the first request.",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "maxReplicas": {
-            "type": "integer",
-            "example": 1,
-            "description": "Replica ceiling. Must be at least the floor, and at least 1.",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "env": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            },
-            "example": {
-              "LOG_LEVEL": "info"
-            },
-            "description": "Plain (non-secret) environment variables for the container."
-          },
-          "imagePullCredentials": {
-            "description": "Registry credentials for a private image; encrypted at rest, omitted for public images.",
+          "triggeredBy": {
             "allOf": [
               {
-                "$ref": "#/components/schemas/ImagePullCredentials"
+                "$ref": "#/components/schemas/ReleaseTrigger"
               }
             ]
+          },
+          "sourceReleaseUuid": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "required": [
-          "slug",
-          "image",
-          "containerPort"
+          "releaseUuid",
+          "appSlug",
+          "triggeredBy",
+          "sourceReleaseUuid"
         ]
       },
       "DeployStatus": {
@@ -1268,9 +1283,13 @@
           "failed"
         ]
       },
-      "DeployAppResponse": {
+      "DeployReleaseResponse": {
         "type": "object",
         "properties": {
+          "releaseUuid": {
+            "type": "string",
+            "format": "uuid"
+          },
           "appSlug": {
             "type": "string",
             "example": "my-app"
@@ -1278,11 +1297,6 @@
           "url": {
             "type": "string",
             "example": "https://my-app.demo.marsa.cc"
-          },
-          "releaseUuid": {
-            "type": "string",
-            "example": "00000000-0000-0000-0000-000000000000",
-            "description": "The Release created for this deploy."
           },
           "deployStatus": {
             "allOf": [
@@ -1293,40 +1307,9 @@
           }
         },
         "required": [
+          "releaseUuid",
           "appSlug",
           "url",
-          "releaseUuid",
-          "deployStatus"
-        ]
-      },
-      "RedeployAppResponse": {
-        "type": "object",
-        "properties": {
-          "appSlug": {
-            "type": "string",
-            "example": "my-app"
-          },
-          "url": {
-            "type": "string",
-            "example": "https://my-app.demo.marsa.cc"
-          },
-          "releaseUuid": {
-            "type": "string",
-            "example": "00000000-0000-0000-0000-000000000000",
-            "description": "The Release created for this redeploy."
-          },
-          "deployStatus": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/DeployStatus"
-              }
-            ]
-          }
-        },
-        "required": [
-          "appSlug",
-          "url",
-          "releaseUuid",
           "deployStatus"
         ]
       },
@@ -1361,13 +1344,6 @@
           }
         }
       },
-      "ReleaseTrigger": {
-        "type": "string",
-        "enum": [
-          "manual",
-          "webhook"
-        ]
-      },
       "ReleaseSummary": {
         "type": "object",
         "properties": {
@@ -1395,6 +1371,12 @@
               }
             ]
           },
+          "sourceReleaseUuid": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Set on a rollback."
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -1420,6 +1402,7 @@
           "imageRef",
           "triggeredBy",
           "deployStatus",
+          "sourceReleaseUuid",
           "createdAt",
           "updatedAt"
         ]
@@ -1459,6 +1442,114 @@
         "required": [
           "items",
           "meta"
+        ]
+      },
+      "ImagePullCredentials": {
+        "type": "object",
+        "properties": {
+          "registry": {
+            "type": "string",
+            "maxLength": 253,
+            "example": "ghcr.io",
+            "description": "Registry host the credentials authenticate against."
+          },
+          "username": {
+            "type": "string",
+            "maxLength": 255,
+            "example": "my-org",
+            "description": "Registry username — an account username, or a registry sentinel (e.g. `AWS`, `_json_key`)."
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "writeOnly": true,
+            "maxLength": 4096,
+            "example": "ghp_xxxxxxxxxxxxxxxxxxxx",
+            "description": "Password or access token (PAT / API key) — placed in the dockerconfigjson `auth` field."
+          }
+        },
+        "required": [
+          "registry",
+          "username",
+          "password"
+        ]
+      },
+      "CreateAppCommand": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "example": "my-app",
+            "description": "Public subdomain label + K8s object name.",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "maxLength": 63
+          },
+          "image": {
+            "type": "string",
+            "example": "nginx:1.27",
+            "description": "Fully-qualified image ref."
+          },
+          "containerPort": {
+            "type": "integer",
+            "example": 80,
+            "description": "Port the container listens on.",
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "minReplicas": {
+            "type": "integer",
+            "example": 1,
+            "description": "Replica floor. 0 lets the app sleep when idle and wake on the first request.",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "maxReplicas": {
+            "type": "integer",
+            "example": 1,
+            "description": "Replica ceiling. Must be at least the floor, and at least 1.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "example": {
+              "LOG_LEVEL": "info"
+            },
+            "description": "Plain (non-secret) environment variables for the container."
+          },
+          "imagePullCredentials": {
+            "description": "Registry credentials for a private image; encrypted at rest.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImagePullCredentials"
+              }
+            ]
+          }
+        },
+        "required": [
+          "slug",
+          "image",
+          "containerPort"
+        ]
+      },
+      "CreateAppResponse": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "example": "my-app"
+          },
+          "url": {
+            "type": "string",
+            "example": "https://my-app.demo.marsa.cc"
+          }
+        },
+        "required": [
+          "slug",
+          "url"
         ]
       },
       "ViewAppIndexQueryKey": {
@@ -1597,7 +1688,11 @@
             "example": {
               "LOG_LEVEL": "info"
             },
-            "description": "Stored environment variables; may differ from the running container until the app is redeployed."
+            "description": "Saved environment variables."
+          },
+          "hasUndeployedChanges": {
+            "type": "boolean",
+            "description": "True when the saved config differs from the release the cluster is running, or nothing is running."
           },
           "createdAt": {
             "type": "string",
@@ -1616,6 +1711,7 @@
           "minReplicas",
           "maxReplicas",
           "env",
+          "hasUndeployedChanges",
           "createdAt",
           "updatedAt"
         ]
@@ -1675,9 +1771,31 @@
           "logs"
         ]
       },
-      "UpdateAppEnvCommand": {
+      "UpdateAppCommand": {
         "type": "object",
         "properties": {
+          "image": {
+            "type": "string",
+            "example": "nginx:1.28"
+          },
+          "containerPort": {
+            "type": "integer",
+            "example": 80,
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "minReplicas": {
+            "type": "integer",
+            "example": 1,
+            "minimum": 0,
+            "maximum": 100
+          },
+          "maxReplicas": {
+            "type": "integer",
+            "example": 1,
+            "minimum": 1,
+            "maximum": 100
+          },
           "env": {
             "type": "object",
             "additionalProperties": {
@@ -1686,39 +1804,60 @@
             "example": {
               "LOG_LEVEL": "info"
             },
-            "description": "The complete set of environment variables to store. Replaces the existing set — omit a key to remove it, send {} to clear them all."
+            "description": "Replaces the whole set — omit a key to remove it, send {} to clear."
+          },
+          "imagePullCredentials": {
+            "nullable": true,
+            "description": "Omit to keep the stored credentials, null to clear them, an object to replace.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImagePullCredentials"
+              }
+            ]
           }
-        },
-        "required": [
-          "env"
-        ]
+        }
       },
-      "UpdateAppEnvResponse": {
+      "UpdateAppResponse": {
         "type": "object",
         "properties": {
           "slug": {
             "type": "string",
             "example": "my-app"
           },
+          "image": {
+            "type": "string",
+            "example": "nginx:1.27"
+          },
+          "containerPort": {
+            "type": "integer",
+            "example": 80
+          },
+          "minReplicas": {
+            "type": "integer",
+            "example": 1
+          },
+          "maxReplicas": {
+            "type": "integer",
+            "example": 1
+          },
           "env": {
             "type": "object",
             "additionalProperties": {
               "type": "string"
             },
             "example": {
-              "LOG_LEVEL": "info"
+              "A": "1"
             }
-          },
-          "redeployRequired": {
-            "type": "boolean",
-            "example": true,
-            "description": "The stored env now differs from the running container until the app redeploys."
           }
         },
         "required": [
           "slug",
-          "env",
-          "redeployRequired"
+          "image",
+          "containerPort",
+          "minReplicas",
+          "maxReplicas",
+          "env"
         ]
       }
     }

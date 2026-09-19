@@ -156,69 +156,28 @@ export type UpdateUserRoleResponse = {
   role: UserRole
 }
 
-export type ImagePullCredentials = {
+export type CreateReleaseCommand = {
   /**
-   * Registry host the credentials authenticate against.
+   * Roll back: copy this release’s config instead of the app’s current config.
    */
-  registry: string
-  /**
-   * Registry username — an account username, or a registry sentinel (e.g. `AWS`, `_json_key`).
-   */
-  username: string
+  fromReleaseUuid?: string
 }
 
-export type DeployAppCommand = {
-  /**
-   * Public subdomain label + K8s object name.
-   */
-  slug: string
-  /**
-   * Fully-qualified public image ref.
-   */
-  image: string
-  /**
-   * Port the container listens on.
-   */
-  containerPort: number
-  /**
-   * Replica floor. 0 lets the app sleep when idle and wake on the first request.
-   */
-  minReplicas?: number
-  /**
-   * Replica ceiling. Must be at least the floor, and at least 1.
-   */
-  maxReplicas?: number
-  /**
-   * Plain (non-secret) environment variables for the container.
-   */
-  env?: {
-    [key: string]: string
-  }
-  /**
-   * Registry credentials for a private image; encrypted at rest, omitted for public images.
-   */
-  imagePullCredentials?: ImagePullCredentials
+export type ReleaseTrigger = 'manual' | 'webhook' | 'rollback'
+
+export type CreateReleaseResponse = {
+  releaseUuid: string
+  appSlug: string
+  triggeredBy: ReleaseTrigger
+  sourceReleaseUuid: string | null
 }
 
 export type DeployStatus = 'pending' | 'in_progress' | 'succeeded' | 'failed'
 
-export type DeployAppResponse = {
+export type DeployReleaseResponse = {
+  releaseUuid: string
   appSlug: string
   url: string
-  /**
-   * The Release created for this deploy.
-   */
-  releaseUuid: string
-  deployStatus: DeployStatus
-}
-
-export type RedeployAppResponse = {
-  appSlug: string
-  url: string
-  /**
-   * The Release created for this redeploy.
-   */
-  releaseUuid: string
   deployStatus: DeployStatus
 }
 
@@ -231,13 +190,15 @@ export type ViewReleaseIndexPaginationQuery = {
   key?: ViewReleaseIndexQueryKey | null
 }
 
-export type ReleaseTrigger = 'manual' | 'webhook'
-
 export type ReleaseSummary = {
   uuid: string
   imageRef: string
   triggeredBy: ReleaseTrigger
   deployStatus: DeployStatus
+  /**
+   * Set on a rollback.
+   */
+  sourceReleaseUuid: string | null
   createdAt: string
   updatedAt: string
   /**
@@ -260,6 +221,55 @@ export type ViewReleaseIndexResponse = {
    */
   items: Array<ReleaseSummary>
   meta: ViewReleaseIndexResponseMeta
+}
+
+export type ImagePullCredentials = {
+  /**
+   * Registry host the credentials authenticate against.
+   */
+  registry: string
+  /**
+   * Registry username — an account username, or a registry sentinel (e.g. `AWS`, `_json_key`).
+   */
+  username: string
+}
+
+export type CreateAppCommand = {
+  /**
+   * Public subdomain label + K8s object name.
+   */
+  slug: string
+  /**
+   * Fully-qualified image ref.
+   */
+  image: string
+  /**
+   * Port the container listens on.
+   */
+  containerPort: number
+  /**
+   * Replica floor. 0 lets the app sleep when idle and wake on the first request.
+   */
+  minReplicas?: number
+  /**
+   * Replica ceiling. Must be at least the floor, and at least 1.
+   */
+  maxReplicas?: number
+  /**
+   * Plain (non-secret) environment variables for the container.
+   */
+  env?: {
+    [key: string]: string
+  }
+  /**
+   * Registry credentials for a private image; encrypted at rest.
+   */
+  imagePullCredentials?: ImagePullCredentials
+}
+
+export type CreateAppResponse = {
+  slug: string
+  url: string
 }
 
 export type ViewAppIndexQueryKey = {
@@ -305,11 +315,15 @@ export type ViewAppDetailResponse = {
   minReplicas: number
   maxReplicas: number
   /**
-   * Stored environment variables; may differ from the running container until the app is redeployed.
+   * Saved environment variables.
    */
   env: {
     [key: string]: string
   }
+  /**
+   * True when the saved config differs from the release the cluster is running, or nothing is running.
+   */
+  hasUndeployedChanges: boolean
   createdAt: string
   updatedAt: string
 }
@@ -330,24 +344,32 @@ export type ViewAppLogsResponse = {
   logs: string
 }
 
-export type UpdateAppEnvCommand = {
+export type UpdateAppCommand = {
+  image?: string
+  containerPort?: number
+  minReplicas?: number
+  maxReplicas?: number
   /**
-   * The complete set of environment variables to store. Replaces the existing set — omit a key to remove it, send {} to clear them all.
+   * Replaces the whole set — omit a key to remove it, send {} to clear.
    */
-  env: {
+  env?: {
     [key: string]: string
   }
+  /**
+   * Omit to keep the stored credentials, null to clear them, an object to replace.
+   */
+  imagePullCredentials?: ImagePullCredentials | null
 }
 
-export type UpdateAppEnvResponse = {
+export type UpdateAppResponse = {
   slug: string
+  image: string
+  containerPort: number
+  minReplicas: number
+  maxReplicas: number
   env: {
     [key: string]: string
   }
-  /**
-   * The stored env now differs from the running container until the app redeploys.
-   */
-  redeployRequired: boolean
 }
 
 export type ImagePullCredentialsWritable = {
@@ -365,13 +387,13 @@ export type ImagePullCredentialsWritable = {
   password: string
 }
 
-export type DeployAppCommandWritable = {
+export type CreateAppCommandWritable = {
   /**
    * Public subdomain label + K8s object name.
    */
   slug: string
   /**
-   * Fully-qualified public image ref.
+   * Fully-qualified image ref.
    */
   image: string
   /**
@@ -393,9 +415,26 @@ export type DeployAppCommandWritable = {
     [key: string]: string
   }
   /**
-   * Registry credentials for a private image; encrypted at rest, omitted for public images.
+   * Registry credentials for a private image; encrypted at rest.
    */
   imagePullCredentials?: ImagePullCredentialsWritable
+}
+
+export type UpdateAppCommandWritable = {
+  image?: string
+  containerPort?: number
+  minReplicas?: number
+  maxReplicas?: number
+  /**
+   * Replaces the whole set — omit a key to remove it, send {} to clear.
+   */
+  env?: {
+    [key: string]: string
+  }
+  /**
+   * Omit to keep the stored credentials, null to clear them, an object to replace.
+   */
+  imagePullCredentials?: ImagePullCredentialsWritable | null
 }
 
 export type GetApiInfoV1Data = {
@@ -589,68 +628,6 @@ export type UpdateUserRoleV1Responses = {
 
 export type UpdateUserRoleV1Response = UpdateUserRoleV1Responses[keyof UpdateUserRoleV1Responses]
 
-export type DeployAppV1Data = {
-  body: DeployAppCommandWritable
-  path?: never
-  query?: never
-  url: '/api/v1/deploy'
-}
-
-export type DeployAppV1Errors = {
-  /**
-   * Malformed body, or an invalid slug / image / port.
-   */
-  400: unknown
-  /**
-   * No active session.
-   */
-  401: unknown
-  /**
-   * Your account is not approved for this action.
-   */
-  403: unknown
-}
-
-export type DeployAppV1Responses = {
-  200: DeployAppResponse
-}
-
-export type DeployAppV1Response = DeployAppV1Responses[keyof DeployAppV1Responses]
-
-export type RedeployAppV1Data = {
-  body?: never
-  path: {
-    slug: string
-  }
-  query?: never
-  url: '/api/v1/apps/{slug}/redeploy'
-}
-
-export type RedeployAppV1Errors = {
-  /**
-   * No active session.
-   */
-  401: unknown
-  /**
-   * Your account is not approved for this action.
-   */
-  403: unknown
-  /**
-   * No app with that slug.
-   */
-  404: unknown
-  /**
-   * Stored image pull credentials could not be decrypted.
-   */
-  500: unknown
-}
-
-export type RedeployAppV1Responses = {
-  200: RedeployAppResponse
-}
-
-export type RedeployAppV1Response = RedeployAppV1Responses[keyof RedeployAppV1Responses]
-
 export type ViewReleaseIndexV1Data = {
   body?: never
   path: {
@@ -680,6 +657,78 @@ export type ViewReleaseIndexV1Responses = {
 export type ViewReleaseIndexV1Response =
   ViewReleaseIndexV1Responses[keyof ViewReleaseIndexV1Responses]
 
+export type CreateReleaseV1Data = {
+  body: CreateReleaseCommand
+  path: {
+    slug: string
+  }
+  query?: never
+  url: '/api/v1/apps/{slug}/releases'
+}
+
+export type CreateReleaseV1Errors = {
+  /**
+   * fromReleaseUuid is not a uuid.
+   */
+  400: unknown
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
+   * No app with that slug, or no such release for it.
+   */
+  404: unknown
+}
+
+export type CreateReleaseV1Responses = {
+  201: CreateReleaseResponse
+}
+
+export type CreateReleaseV1Response = CreateReleaseV1Responses[keyof CreateReleaseV1Responses]
+
+export type DeployReleaseV1Data = {
+  body?: never
+  path: {
+    slug: string
+  }
+  query?: never
+  url: '/api/v1/apps/{slug}/deploy'
+}
+
+export type DeployReleaseV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
+   * No app with that slug.
+   */
+  404: unknown
+  /**
+   * The app has no release to deploy.
+   */
+  409: unknown
+  /**
+   * Stored pull credentials could not be decrypted.
+   */
+  500: unknown
+}
+
+export type DeployReleaseV1Responses = {
+  200: DeployReleaseResponse
+}
+
+export type DeployReleaseV1Response = DeployReleaseV1Responses[keyof DeployReleaseV1Responses]
+
 export type ViewAppIndexV1Data = {
   body?: never
   path?: never
@@ -705,6 +754,38 @@ export type ViewAppIndexV1Responses = {
 }
 
 export type ViewAppIndexV1Response = ViewAppIndexV1Responses[keyof ViewAppIndexV1Responses]
+
+export type CreateAppV1Data = {
+  body: CreateAppCommandWritable
+  path?: never
+  query?: never
+  url: '/api/v1/apps'
+}
+
+export type CreateAppV1Errors = {
+  /**
+   * Malformed body, or an invalid slug / image / port.
+   */
+  400: unknown
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
+   * An app with that slug already exists.
+   */
+  409: unknown
+}
+
+export type CreateAppV1Responses = {
+  201: CreateAppResponse
+}
+
+export type CreateAppV1Response = CreateAppV1Responses[keyof CreateAppV1Responses]
 
 export type DeleteAppV1Data = {
   body?: never
@@ -773,6 +854,40 @@ export type ViewAppDetailV1Responses = {
 
 export type ViewAppDetailV1Response = ViewAppDetailV1Responses[keyof ViewAppDetailV1Responses]
 
+export type UpdateAppV1Data = {
+  body: UpdateAppCommandWritable
+  path: {
+    slug: string
+  }
+  query?: never
+  url: '/api/v1/apps/{slug}'
+}
+
+export type UpdateAppV1Errors = {
+  /**
+   * A field is out of range or malformed.
+   */
+  400: unknown
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
+   * No app with that slug.
+   */
+  404: unknown
+}
+
+export type UpdateAppV1Responses = {
+  200: UpdateAppResponse
+}
+
+export type UpdateAppV1Response = UpdateAppV1Responses[keyof UpdateAppV1Responses]
+
 export type ViewAppHealthV1Data = {
   body?: never
   path: {
@@ -833,37 +948,3 @@ export type ViewAppLogsV1Responses = {
 }
 
 export type ViewAppLogsV1Response = ViewAppLogsV1Responses[keyof ViewAppLogsV1Responses]
-
-export type UpdateAppEnvV1Data = {
-  body: UpdateAppEnvCommand
-  path: {
-    slug: string
-  }
-  query?: never
-  url: '/api/v1/apps/{slug}/env'
-}
-
-export type UpdateAppEnvV1Errors = {
-  /**
-   * env is not an object of string values with valid keys.
-   */
-  400: unknown
-  /**
-   * No active session.
-   */
-  401: unknown
-  /**
-   * Your account is not approved for this action.
-   */
-  403: unknown
-  /**
-   * No app with that slug.
-   */
-  404: unknown
-}
-
-export type UpdateAppEnvV1Responses = {
-  200: UpdateAppEnvResponse
-}
-
-export type UpdateAppEnvV1Response = UpdateAppEnvV1Responses[keyof UpdateAppEnvV1Responses]

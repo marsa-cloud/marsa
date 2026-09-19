@@ -2,51 +2,28 @@
 import type { FormSubmitEvent } from '@nuxt/ui'
 import * as z from 'zod'
 
-import type { DeployAppCommand, DeployAppResponse } from '~/api/types.gen'
+import type { CreateAppCommand, CreateAppResponse } from '~/api/types.gen'
+import { appConfigFields, isReplicaRangeValid, REPLICA_RANGE_ERROR } from '~/utils/appConfigSchema'
 
-// useDeployApp / buildEnvRecord / extractApiError are Nuxt auto-imports
-// (app/composables/*). Keeping them un-imported lets tests mock them via
-// mockNuxtImport, matching the setup/github page convention.
+// useCreateApp / useShipRelease / buildEnvRecord / extractApiError are Nuxt auto-imports,
+// left un-imported so tests can mock them via mockNuxtImport.
 
 useSeoMeta({ title: 'Deploy an app — Marsa' })
 
-const { deploy } = useDeployApp()
+const { create } = useCreateApp()
+const { ship } = useShipRelease()
 const toast = useToast()
 
-// Mirror the API contract (zDeployAppCommandWritable) so invalid input is caught
-// inline before we ever hit the network. Env rows aren't schema-validated — they
-// are collapsed into the `env` record by buildEnvRecord (blank keys dropped).
-const schema = z.object({
-  slug: z
-    .string()
-    .min(1, 'Required')
-    .max(63, 'Max 63 characters')
-    .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/, 'Lowercase letters, numbers and hyphens only'),
-  image: z.string().min(1, 'Required'),
-  containerPort: z
-    .number({ message: 'Required' })
-    .int('Must be a whole number')
-    .gte(1, 'Must be between 1 and 65535')
-    .lte(65535, 'Must be between 1 and 65535'),
-  minReplicas: z
-    .number()
-    .int('Must be a whole number')
-    .gte(0, 'Must be between 0 and 100')
-    .lte(100, 'Must be between 0 and 100')
-    .optional(),
-  maxReplicas: z
-    .number()
-    .int('Must be a whole number')
-    .gte(1, 'Must be between 1 and 100')
-    .lte(100, 'Must be between 1 and 100')
-    .optional(),
-})
-  // Mirrors the api's IsGteField so the range is rejected inline rather than as a bare 400.
-  .refine(
-    d =>
-      d.minReplicas === undefined || d.maxReplicas === undefined || d.maxReplicas >= d.minReplicas,
-    { message: 'Must be at least the minimum', path: ['maxReplicas'] },
-  )
+const schema = z
+  .object({
+    slug: z
+      .string()
+      .min(1, 'Required')
+      .max(63, 'Max 63 characters')
+      .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/, 'Lowercase letters, numbers and hyphens only'),
+    ...appConfigFields,
+  })
+  .refine(isReplicaRangeValid, REPLICA_RANGE_ERROR)
 type Schema = z.output<typeof schema>
 
 const state = reactive<{
@@ -63,8 +40,7 @@ const state = reactive<{
   maxReplicas: undefined,
 })
 
-// Stable per-row id so :key survives removals — index keys would shift and
-// let v-model bind to the wrong row after a middle row is deleted.
+// Stable per-row id so :key survives removals.
 let nextEnvId = 0
 function makeEnvRow() {
   return { id: nextEnvId++, key: '', value: '' }
@@ -84,38 +60,51 @@ function removeEnvRow(index: number) {
 const submitting = ref(false)
 const error = ref<string | null>(null)
 
+function toCommand(data: Schema): CreateAppCommand {
+  const env = buildEnvRecord(envRows.value)
+  return {
+    slug: data.slug,
+    image: data.image,
+    containerPort: data.containerPort,
+    ...(data.minReplicas !== undefined ? { minReplicas: data.minReplicas } : {}),
+    ...(data.maxReplicas !== undefined ? { maxReplicas: data.maxReplicas } : {}),
+    ...(Object.keys(env).length ? { env } : {}),
+  }
+}
+
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   error.value = null
   submitting.value = true
 
-  let deployed: DeployAppResponse
+  let created: CreateAppResponse
   try {
-    const env = buildEnvRecord(envRows.value)
-    const command: DeployAppCommand = {
-      slug: event.data.slug,
-      image: event.data.image,
-      containerPort: event.data.containerPort,
-      ...(event.data.minReplicas !== undefined ? { minReplicas: event.data.minReplicas } : {}),
-      ...(event.data.maxReplicas !== undefined ? { maxReplicas: event.data.maxReplicas } : {}),
-      ...(Object.keys(env).length ? { env } : {}),
-    }
-    deployed = await deploy(command)
+    created = await create(toCommand(event.data))
   } catch (err) {
     error.value = extractApiError(err)
+    submitting.value = false
     return
+  }
+
+  // The app exists now, so a failed deploy still belongs on its page, where Deploy retries it.
+  try {
+    await ship(created.slug)
+    toast.add({
+      title: 'Deploy started',
+      description: `${created.slug} is rolling out at ${created.url}`,
+      color: 'success',
+      icon: 'i-lucide-check',
+    })
+  } catch (err) {
+    toast.add({
+      title: 'App created, but the deploy failed',
+      description: extractApiError(err),
+      color: 'warning',
+      icon: 'i-lucide-triangle-alert',
+    })
   } finally {
     submitting.value = false
   }
-
-  // The rollout is what the operator wants to watch next, and it only exists on
-  // the detail page — so confirmation has to be a toast that outlives this page.
-  toast.add({
-    title: 'Deploy started',
-    description: `${deployed.appSlug} is rolling out at ${deployed.url}`,
-    color: 'success',
-    icon: 'i-lucide-check',
-  })
-  await navigateTo(`/apps/${deployed.appSlug}`)
+  await navigateTo(`/apps/${created.slug}`)
 }
 </script>
 

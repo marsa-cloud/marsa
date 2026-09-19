@@ -16,6 +16,7 @@ import {
   KEDA_HTTP_GROUP,
   KEDA_HTTP_VERSION,
   REGISTRY_SECRET_SUFFIX,
+  RELEASE_UUID_ANNOTATION,
   TRAEFIK_GROUP,
   TRAEFIK_VERSION,
 } from '#src/modules/kubernetes/deploy-backend.constants.js'
@@ -183,6 +184,11 @@ export class DirectApplyDeployBackend extends DeployBackend {
   async readRolloutStatus(namespace: string, deploymentName: string): Promise<RolloutStatus> {
     const deployment = await this.readDeployment(namespace, deploymentName)
     return mapRolloutStatus(deployment)
+  }
+
+  async readLiveReleaseUuid(namespace: string, deploymentName: string): Promise<string | null> {
+    const deployment = await this.readDeployment(namespace, deploymentName)
+    return deployment?.spec?.template.metadata?.annotations?.[RELEASE_UUID_ANNOTATION] ?? null
   }
 
   async readAppHealth(namespace: string, deploymentName: string): Promise<AppHealth> {

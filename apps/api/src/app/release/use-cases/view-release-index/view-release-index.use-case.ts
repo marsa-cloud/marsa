@@ -69,6 +69,10 @@ export class ViewReleaseIndexUseCase {
   }
 
   private async reconcile(release: Release, slug: string): Promise<DeployStatus> {
+    // A release that was created but never deployed must not inherit the live rollout.
+    const live = await this.deployBackend.readLiveReleaseUuid(OPERATOR_APPS_NAMESPACE, slug)
+    if (live !== release.uuid) return release.deployStatus
+
     const rollout = await this.deployBackend.readRolloutStatus(OPERATOR_APPS_NAMESPACE, slug)
     const observed = toDeployStatus(rollout)
 

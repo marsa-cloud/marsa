@@ -110,37 +110,25 @@ export const zUpdateUserRoleResponse = z.object({
   role: zUserRole,
 })
 
-export const zImagePullCredentials = z.object({
-  registry: z.string().max(253),
-  username: z.string().max(255),
+export const zCreateReleaseCommand = z.object({
+  fromReleaseUuid: z.uuid().optional(),
 })
 
-export const zDeployAppCommand = z.object({
-  slug: z
-    .string()
-    .max(63)
-    .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/),
-  image: z.string(),
-  containerPort: z.int().gte(1).lte(65535),
-  minReplicas: z.int().gte(0).lte(100).optional(),
-  maxReplicas: z.int().gte(1).lte(100).optional(),
-  env: z.record(z.string(), z.string()).optional(),
-  imagePullCredentials: zImagePullCredentials.optional(),
+export const zReleaseTrigger = z.enum(['manual', 'webhook', 'rollback'])
+
+export const zCreateReleaseResponse = z.object({
+  releaseUuid: z.uuid(),
+  appSlug: z.string(),
+  triggeredBy: zReleaseTrigger,
+  sourceReleaseUuid: z.uuid().nullable(),
 })
 
 export const zDeployStatus = z.enum(['pending', 'in_progress', 'succeeded', 'failed'])
 
-export const zDeployAppResponse = z.object({
+export const zDeployReleaseResponse = z.object({
+  releaseUuid: z.uuid(),
   appSlug: z.string(),
   url: z.string(),
-  releaseUuid: z.string(),
-  deployStatus: zDeployStatus,
-})
-
-export const zRedeployAppResponse = z.object({
-  appSlug: z.string(),
-  url: z.string(),
-  releaseUuid: z.string(),
   deployStatus: zDeployStatus,
 })
 
@@ -153,13 +141,12 @@ export const zViewReleaseIndexPaginationQuery = z.object({
   key: zViewReleaseIndexQueryKey.nullish(),
 })
 
-export const zReleaseTrigger = z.enum(['manual', 'webhook'])
-
 export const zReleaseSummary = z.object({
   uuid: z.string(),
   imageRef: z.string(),
   triggeredBy: zReleaseTrigger,
   deployStatus: zDeployStatus,
+  sourceReleaseUuid: z.uuid().nullable(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
   failureReason: z.string().nullish(),
@@ -173,6 +160,29 @@ export const zViewReleaseIndexResponseMeta = z.object({
 export const zViewReleaseIndexResponse = z.object({
   items: z.array(zReleaseSummary),
   meta: zViewReleaseIndexResponseMeta,
+})
+
+export const zImagePullCredentials = z.object({
+  registry: z.string().max(253),
+  username: z.string().max(255),
+})
+
+export const zCreateAppCommand = z.object({
+  slug: z
+    .string()
+    .max(63)
+    .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/),
+  image: z.string(),
+  containerPort: z.int().gte(1).lte(65535),
+  minReplicas: z.int().gte(0).lte(100).optional(),
+  maxReplicas: z.int().gte(1).lte(100).optional(),
+  env: z.record(z.string(), z.string()).optional(),
+  imagePullCredentials: zImagePullCredentials.optional(),
+})
+
+export const zCreateAppResponse = z.object({
+  slug: z.string(),
+  url: z.string(),
 })
 
 export const zViewAppIndexQueryKey = z.object({
@@ -209,6 +219,7 @@ export const zViewAppDetailResponse = z.object({
   minReplicas: z.int(),
   maxReplicas: z.int(),
   env: z.record(z.string(), z.string()),
+  hasUndeployedChanges: z.boolean(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 })
@@ -226,14 +237,22 @@ export const zViewAppLogsResponse = z.object({
   logs: z.string(),
 })
 
-export const zUpdateAppEnvCommand = z.object({
-  env: z.record(z.string(), z.string()),
+export const zUpdateAppCommand = z.object({
+  image: z.string().optional(),
+  containerPort: z.int().gte(1).lte(65535).optional(),
+  minReplicas: z.int().gte(0).lte(100).optional(),
+  maxReplicas: z.int().gte(1).lte(100).optional(),
+  env: z.record(z.string(), z.string()).optional(),
+  imagePullCredentials: zImagePullCredentials.nullish(),
 })
 
-export const zUpdateAppEnvResponse = z.object({
+export const zUpdateAppResponse = z.object({
   slug: z.string(),
+  image: z.string(),
+  containerPort: z.int(),
+  minReplicas: z.int(),
+  maxReplicas: z.int(),
   env: z.record(z.string(), z.string()),
-  redeployRequired: z.boolean(),
 })
 
 export const zImagePullCredentialsWritable = z.object({
@@ -242,7 +261,7 @@ export const zImagePullCredentialsWritable = z.object({
   password: z.string().max(4096),
 })
 
-export const zDeployAppCommandWritable = z.object({
+export const zCreateAppCommandWritable = z.object({
   slug: z
     .string()
     .max(63)
@@ -253,6 +272,15 @@ export const zDeployAppCommandWritable = z.object({
   maxReplicas: z.int().gte(1).lte(100).optional(),
   env: z.record(z.string(), z.string()).optional(),
   imagePullCredentials: zImagePullCredentialsWritable.optional(),
+})
+
+export const zUpdateAppCommandWritable = z.object({
+  image: z.string().optional(),
+  containerPort: z.int().gte(1).lte(65535).optional(),
+  minReplicas: z.int().gte(0).lte(100).optional(),
+  maxReplicas: z.int().gte(1).lte(100).optional(),
+  env: z.record(z.string(), z.string()).optional(),
+  imagePullCredentials: zImagePullCredentialsWritable.nullish(),
 })
 
 export const zGetApiInfoV1Response = zGetApiInfoResponse
@@ -287,16 +315,6 @@ export const zUpdateUserRoleV1Path = z.object({
 
 export const zUpdateUserRoleV1Response = zUpdateUserRoleResponse
 
-export const zDeployAppV1Body = zDeployAppCommandWritable
-
-export const zDeployAppV1Response = zDeployAppResponse
-
-export const zRedeployAppV1Path = z.object({
-  slug: z.string(),
-})
-
-export const zRedeployAppV1Response = zRedeployAppResponse
-
 export const zViewReleaseIndexV1Path = z.object({
   slug: z.string(),
 })
@@ -307,11 +325,29 @@ export const zViewReleaseIndexV1Query = z.object({
 
 export const zViewReleaseIndexV1Response = zViewReleaseIndexResponse
 
+export const zCreateReleaseV1Body = zCreateReleaseCommand
+
+export const zCreateReleaseV1Path = z.object({
+  slug: z.string(),
+})
+
+export const zCreateReleaseV1Response = zCreateReleaseResponse
+
+export const zDeployReleaseV1Path = z.object({
+  slug: z.string(),
+})
+
+export const zDeployReleaseV1Response = zDeployReleaseResponse
+
 export const zViewAppIndexV1Query = z.object({
   pagination: zViewAppIndexPaginationQuery.optional(),
 })
 
 export const zViewAppIndexV1Response = zViewAppIndexResponse
+
+export const zCreateAppV1Body = zCreateAppCommandWritable
+
+export const zCreateAppV1Response = zCreateAppResponse
 
 export const zDeleteAppV1Path = z.object({
   slug: z.string(),
@@ -328,6 +364,14 @@ export const zViewAppDetailV1Path = z.object({
 
 export const zViewAppDetailV1Response = zViewAppDetailResponse
 
+export const zUpdateAppV1Body = zUpdateAppCommandWritable
+
+export const zUpdateAppV1Path = z.object({
+  slug: z.string(),
+})
+
+export const zUpdateAppV1Response = zUpdateAppResponse
+
 export const zViewAppHealthV1Path = z.object({
   slug: z.string(),
 })
@@ -343,11 +387,3 @@ export const zViewAppLogsV1Query = z.object({
 })
 
 export const zViewAppLogsV1Response = zViewAppLogsResponse
-
-export const zUpdateAppEnvV1Body = zUpdateAppEnvCommand
-
-export const zUpdateAppEnvV1Path = z.object({
-  slug: z.string(),
-})
-
-export const zUpdateAppEnvV1Response = zUpdateAppEnvResponse

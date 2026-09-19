@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  zUpdateAppEnvResponse,
+  zUpdateAppResponse,
   zViewAppDetailResponse,
   zViewAppHealthResponse,
   zViewAppLogsResponse,
@@ -17,6 +17,7 @@ describe('app-detail response contracts', () => {
           imageRef: 'nginx:1.27',
           triggeredBy: 'manual',
           deployStatus: 'succeeded',
+          sourceReleaseUuid: null,
           createdAt: '2026-07-10T10:00:00.000Z',
           updatedAt: '2026-07-10T10:01:00.000Z',
           failureReason: null,
@@ -71,15 +72,23 @@ describe('app-detail response contracts', () => {
       minReplicas: 1,
       maxReplicas: 1,
       env: { LOG_LEVEL: 'info' },
+      hasUndeployedChanges: false,
       createdAt: '2026-07-10T10:00:00.000Z',
       updatedAt: '2026-07-10T10:01:00.000Z',
     }
     expect(zViewAppDetailResponse.parse(valid)).toEqual(valid)
   })
 
-  it('rejects an env-update payload with a non-string value', () => {
+  it('rejects an app-update payload with a non-string env value', () => {
     expect(() =>
-      zUpdateAppEnvResponse.parse({ slug: 'my-app', env: { PORT: 8080 }, redeployRequired: true }),
+      zUpdateAppResponse.parse({
+        slug: 'my-app',
+        image: 'nginx:1.27',
+        containerPort: 80,
+        minReplicas: 1,
+        maxReplicas: 1,
+        env: { PORT: 8080 },
+      }),
     ).toThrow()
   })
 })

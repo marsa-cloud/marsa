@@ -15,6 +15,7 @@ const releases = {
       imageRef: 'ghcr.io/acme/my-app:v2',
       triggeredBy: 'manual',
       deployStatus: 'succeeded',
+      sourceReleaseUuid: null,
       createdAt: '2026-07-10T10:00:00.000Z',
       updatedAt: '2026-07-10T10:01:00.000Z',
     },
@@ -31,6 +32,7 @@ const detail = {
   minReplicas: 1,
   maxReplicas: 1,
   env: { LOG_LEVEL: 'info' },
+  hasUndeployedChanges: false,
   createdAt: '2026-07-10T10:00:00.000Z',
   updatedAt: '2026-07-10T10:01:00.000Z',
 }
