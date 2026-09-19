@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common'
 import { CreateAppModule } from '#src/app/app-management/use-cases/create-app/create-app.module.js'
 import { DeleteAppModule } from '#src/app/app-management/use-cases/delete-app/delete-app.module.js'
-import { UpdateAppEnvModule } from '#src/app/app-management/use-cases/update-app-env/update-app-env.module.js'
+import { UpdateAppModule } from '#src/app/app-management/use-cases/update-app/update-app.module.js'
 import { ViewAppDetailModule } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.module.js'
 import { ViewAppHealthModule } from '#src/app/app-management/use-cases/view-app-health/view-app-health.module.js'
 import { ViewAppIndexModule } from '#src/app/app-management/use-cases/view-app-index/view-app-index.module.js'
@@ -14,7 +14,7 @@ import { ViewAppLogsModule } from '#src/app/app-management/use-cases/view-app-lo
     ViewAppDetailModule,
     ViewAppHealthModule,
     ViewAppLogsModule,
-    UpdateAppEnvModule,
+    UpdateAppModule,
     DeleteAppModule,
   ],
 })
