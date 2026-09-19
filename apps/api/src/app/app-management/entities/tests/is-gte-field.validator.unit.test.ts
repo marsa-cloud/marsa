@@ -1,11 +1,11 @@
 import { describe, it } from 'node:test'
 import { validateSync } from 'class-validator'
 import { expect } from 'expect'
-import { DeployAppCommandBuilder } from '#src/app/release/use-cases/deploy-app/deploy-app.command.builder.js'
+import { CreateAppCommandBuilder } from '#src/app/app-management/use-cases/create-app/create-app.command.builder.js'
 
-// Routed through DeployAppCommand: type-stripped test files cannot declare a decorated class.
+// Routed through CreateAppCommand: type-stripped test files cannot declare a decorated class.
 function validateRange(minReplicas: number | undefined, maxReplicas: number | undefined) {
-  const builder = new DeployAppCommandBuilder()
+  const builder = new CreateAppCommandBuilder()
   if (minReplicas !== undefined) {
     builder.withMinReplicas(minReplicas)
   }

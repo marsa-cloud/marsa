@@ -17,7 +17,7 @@ describe('renderManifests', () => {
       .withEnv({ LOG_LEVEL: 'info' })
       .build()
     const release = new ReleaseBuilder().withApp(app).withImageRef('nginx:1.27').build()
-    return renderManifests(app, release, 'demo.marsa.cc', credentials)
+    return renderManifests(app.slug, release, 'demo.marsa.cc', credentials)
   }
 
   it('renders a Deployment with the image, port, probes and env', () => {
@@ -38,7 +38,7 @@ describe('renderManifests', () => {
     const app = new AppBuilder().withSlug('my-app').withImage('nginx:1.27').build()
     const release = new ReleaseBuilder().withApp(app).withImageRef('nginx:1.27').build()
 
-    const { deployment } = renderManifests(app, release, 'demo.marsa.cc')
+    const { deployment } = renderManifests(app.slug, release, 'demo.marsa.cc')
 
     expect(deployment.spec?.template.metadata?.annotations).toEqual({
       [RELEASE_UUID_ANNOTATION]: release.uuid,
@@ -47,7 +47,7 @@ describe('renderManifests', () => {
     // Same app + image, different release => a different pod template, so k8s
     // replaces the pods instead of treating the apply as a no-op.
     const next = new ReleaseBuilder().withApp(app).withImageRef('nginx:1.27').build()
-    const { deployment: nextDeployment } = renderManifests(app, next, 'demo.marsa.cc')
+    const { deployment: nextDeployment } = renderManifests(app.slug, next, 'demo.marsa.cc')
     expect(nextDeployment.spec?.template.metadata?.annotations).not.toEqual(
       deployment.spec?.template.metadata?.annotations,
     )
@@ -133,5 +133,23 @@ describe('renderManifests', () => {
     expect(auth.password).toBe('pw-test')
     // The load-bearing field: base64("<username>:<password>").
     expect(auth.auth).toBe(Buffer.from('my-org:pw-test').toString('base64'))
+  })
+  it('renders workload config from the release, not the app', () => {
+    const app = new AppBuilder()
+      .withSlug('my-app')
+      .withImage('nginx:1.27')
+      .withContainerPort(8080)
+      .withEnv({ OLD: '1' })
+      .build()
+    const release = new ReleaseBuilder().withApp(app).build()
+    const edited = { ...app, image: 'nginx:1.28', containerPort: 9090, env: { NEW: '1' } }
+
+    const { deployment, service } = renderManifests(edited.slug, release, 'demo.marsa.cc')
+
+    const container = deployment.spec?.template.spec?.containers[0]
+    expect(container?.image).toBe('nginx:1.27')
+    expect(container?.ports?.[0].containerPort).toBe(8080)
+    expect(container?.env).toEqual([{ name: 'OLD', value: '1' }])
+    expect(service.spec?.ports?.[0].port).toBe(8080)
   })
 })
