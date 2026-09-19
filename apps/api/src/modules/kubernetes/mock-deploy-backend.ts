@@ -22,6 +22,11 @@ export class MockDeployBackend extends DeployBackend {
   // Remembers what was applied so the release-list reconcile guard sees what a cluster would.
   private readonly liveReleases = new Map<string, string>()
 
+  // Test hook: arrange what the cluster runs without applying a rendered bundle.
+  setLiveRelease(appName: string, releaseUuid: string): void {
+    this.liveReleases.set(appName, releaseUuid)
+  }
+
   apply(_namespace: string, manifests: RenderedManifests): Promise<void> {
     const name = manifests.deployment.metadata?.name
     const releaseUuid =

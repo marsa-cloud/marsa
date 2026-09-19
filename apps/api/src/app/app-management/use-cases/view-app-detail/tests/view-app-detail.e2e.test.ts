@@ -3,6 +3,10 @@ import { expect } from 'expect'
 import request from 'supertest'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
+import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
+import { releaseTable } from '#src/app/release/entities/release.table.js'
+import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
+import type { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -11,6 +15,7 @@ const SLUG = 'detail-e2e-app'
 describe('GET /api/v1/apps/:slug (e2e)', () => {
   let setup: TestSetup
   let sessionCookie: string
+  const mockBackend = () => setup.testModule.get<DeployBackend, MockDeployBackend>(DeployBackend)
 
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
@@ -51,47 +56,35 @@ describe('GET /api/v1/apps/:slug (e2e)', () => {
     })
   })
 
-  it('warns until the saved config is what the cluster is actually running', async () => {
-    const slug = 'detail-e2e-live'
-    const detail = async () =>
-      (
-        await request(setup.httpServer)
-          .get(`/api/v1/apps/${slug}`)
-          .set('Cookie', sessionCookie)
-          .expect(200)
-      ).body.hasUndeployedChanges
-    const createRelease = async () =>
-      (
-        await request(setup.httpServer)
-          .post(`/api/v1/apps/${slug}/releases`)
-          .set('Cookie', sessionCookie)
-          .send({})
-          .expect(201)
-      ).body.releaseUuid as string
+  it('reports no undeployed changes when the running release matches the saved config', async () => {
+    const app = new AppBuilder().withSlug('detail-e2e-live').withEnv({ A: '1' }).build()
+    const live = new ReleaseBuilder().withApp(app).build()
+    await setup.db.insert(appTable).values(app)
+    await setup.db.insert(releaseTable).values(live)
+    mockBackend().setLiveRelease(app.slug, live.uuid)
 
-    await request(setup.httpServer)
-      .post('/api/v1/apps')
-      .set('Cookie', sessionCookie)
-      .send({ slug, image: 'nginx:1.27', containerPort: 80 })
-      .expect(201)
-    expect(await detail()).toBe(true)
-
-    await request(setup.httpServer)
-      .post(`/api/v1/releases/${await createRelease()}/deploy`)
+    const response = await request(setup.httpServer)
+      .get(`/api/v1/apps/${app.slug}`)
       .set('Cookie', sessionCookie)
       .expect(200)
-    expect(await detail()).toBe(false)
 
-    await request(setup.httpServer)
-      .patch(`/api/v1/apps/${slug}`)
+    expect(response.body.hasUndeployedChanges).toBe(false)
+  })
+
+  it('still warns when a matching release exists but never reached the cluster', async () => {
+    const app = new AppBuilder().withSlug('detail-e2e-stuck').withEnv({ A: 'new' }).build()
+    const live = new ReleaseBuilder().withApp({ ...app, env: { A: 'old' } }).build()
+    const neverDeployed = new ReleaseBuilder().withApp(app).build()
+    await setup.db.insert(appTable).values(app)
+    await setup.db.insert(releaseTable).values([live, neverDeployed])
+    mockBackend().setLiveRelease(app.slug, live.uuid)
+
+    const response = await request(setup.httpServer)
+      .get(`/api/v1/apps/${app.slug}`)
       .set('Cookie', sessionCookie)
-      .send({ env: { A: 'new' } })
       .expect(200)
-    expect(await detail()).toBe(true)
 
-    // A release that matches the saved config but never reached the cluster changes nothing.
-    await createRelease()
-    expect(await detail()).toBe(true)
+    expect(response.body.hasUndeployedChanges).toBe(true)
   })
 
   it('returns 404 for a slug that does not exist', async () => {

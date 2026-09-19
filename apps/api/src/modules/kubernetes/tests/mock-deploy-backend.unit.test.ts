@@ -33,4 +33,12 @@ describe('MockDeployBackend.readLiveReleaseUuid', () => {
 
     expect(await backend.readLiveReleaseUuid('ns', 'my-app')).toBeNull()
   })
+
+  it('lets a test declare what the cluster is running without applying anything', async () => {
+    const backend = new MockDeployBackend()
+
+    backend.setLiveRelease('my-app', 'r-9')
+
+    expect(await backend.readLiveReleaseUuid('ns', 'my-app')).toBe('r-9')
+  })
 })

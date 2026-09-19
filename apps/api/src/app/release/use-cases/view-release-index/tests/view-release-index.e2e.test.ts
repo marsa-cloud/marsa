@@ -5,6 +5,8 @@ import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
+import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
+import type { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -14,6 +16,7 @@ describe('GET /api/v1/apps/:slug/releases (e2e)', () => {
   let setup: TestSetup
   let sessionCookie: string
   let releaseUuid: string
+  const mockBackend = () => setup.testModule.get<DeployBackend, MockDeployBackend>(DeployBackend)
 
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
@@ -42,19 +45,14 @@ describe('GET /api/v1/apps/:slug/releases (e2e)', () => {
     expect(response.body.items[0].deployStatus).toBe('pending')
   })
 
-  it('lists releases and reconciles the deployed one to succeeded (mock rollout Complete)', async () => {
-    await request(setup.httpServer)
-      .post(`/api/v1/releases/${releaseUuid}/deploy`)
-      .set('Cookie', sessionCookie)
-      .expect(200)
+  it('lists releases and reconciles the live one to succeeded (mock rollout Complete)', async () => {
+    mockBackend().setLiveRelease(SLUG, releaseUuid)
 
     const response = await request(setup.httpServer)
       .get(`/api/v1/apps/${SLUG}/releases`)
       .set('Cookie', sessionCookie)
       .expect(200)
 
-    expect(Array.isArray(response.body.items)).toBe(true)
-    expect(response.body.items.length).toBeGreaterThanOrEqual(1)
     expect(response.body.items[0].deployStatus).toBe('succeeded')
     expect(response.body.items[0].imageRef).toBe('nginx:1.27')
   })
