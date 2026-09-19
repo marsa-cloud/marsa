@@ -1,12 +1,11 @@
 import type { ImagePullCredentials } from '#src/app/app-management/entities/image-pull-credentials.js'
-import { DeployAppCommand } from '#src/app/release/use-cases/deploy-app/deploy-app.command.js'
+import { CreateAppCommand } from '#src/app/app-management/use-cases/create-app/create-app.command.js'
 
-/** Test-side builder for {@link DeployAppCommand}; on the request path Nest deserialises the DTO. */
-export class DeployAppCommandBuilder {
-  private readonly command: DeployAppCommand
+export class CreateAppCommandBuilder {
+  private readonly command: CreateAppCommand
 
   constructor() {
-    this.command = new DeployAppCommand()
+    this.command = new CreateAppCommand()
     this.command.slug = 'my-app'
     this.command.image = 'nginx:1.27'
     this.command.containerPort = 80
@@ -14,16 +13,6 @@ export class DeployAppCommandBuilder {
 
   withSlug(slug: string): this {
     this.command.slug = slug
-    return this
-  }
-
-  withImage(image: string): this {
-    this.command.image = image
-    return this
-  }
-
-  withContainerPort(containerPort: number): this {
-    this.command.containerPort = containerPort
     return this
   }
 
@@ -47,7 +36,7 @@ export class DeployAppCommandBuilder {
     return this
   }
 
-  build(): DeployAppCommand {
+  build(): CreateAppCommand {
     return this.command
   }
 }

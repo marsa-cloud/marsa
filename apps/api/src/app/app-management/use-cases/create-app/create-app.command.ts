@@ -23,7 +23,7 @@ import { IsAppEnvRecord } from '#src/app/app-management/entities/app-env.js'
 import { ImagePullCredentials } from '#src/app/app-management/entities/image-pull-credentials.js'
 import { IsGteField } from '#src/app/app-management/entities/is-gte-field.validator.js'
 
-export class DeployAppCommand {
+export class CreateAppCommand {
   @ApiProperty({
     type: String,
     example: 'my-app',
@@ -37,11 +37,7 @@ export class DeployAppCommand {
   @Matches(SLUG_PATTERN, { message: 'slug must be a valid DNS-1123 label' })
   slug!: string
 
-  @ApiProperty({
-    type: String,
-    example: 'nginx:1.27',
-    description: 'Fully-qualified public image ref.',
-  })
+  @ApiProperty({ type: String, example: 'nginx:1.27', description: 'Fully-qualified image ref.' })
   @IsString()
   @IsNotEmpty()
   image!: string
@@ -97,8 +93,7 @@ export class DeployAppCommand {
 
   @ApiPropertyOptional({
     type: ImagePullCredentials,
-    description:
-      'Registry credentials for a private image; encrypted at rest, omitted for public images.',
+    description: 'Registry credentials for a private image; encrypted at rest.',
   })
   @IsOptional()
   @ValidateNested()

@@ -1,8 +1,8 @@
 import { after, before, describe, it } from 'node:test'
 import { expect } from 'expect'
 import request from 'supertest'
+import { MAX_REPLICAS } from '#src/app/app-management/entities/app-config.constants.js'
 import { DeployAppCommandBuilder } from '#src/app/release/use-cases/deploy-app/deploy-app.command.builder.js'
-import { MAX_REPLICAS } from '#src/app/release/use-cases/deploy-app/deploy-app.constants.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
