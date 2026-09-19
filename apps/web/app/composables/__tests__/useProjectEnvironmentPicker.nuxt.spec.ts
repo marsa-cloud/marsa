@@ -109,4 +109,23 @@ describe('useProjectEnvironmentPicker', () => {
 
     await expect(picker.deleteProject('demo')).rejects.toBeDefined()
   })
+
+  it('ignores a slow environment list for a project the user switched away from', async () => {
+    let resolveSlow: (value: unknown) => void = () => {}
+    const other = { ...dev, uuid: 'e2', slug: 'prod', namespace: 'other-prod' }
+    listEnvironments.mockImplementation((slug: string) =>
+      slug === 'demo' ? new Promise(resolve => (resolveSlow = resolve)) : Promise.resolve([other]),
+    )
+    const picker = useProjectEnvironmentPicker(ref())
+
+    picker.projectSlug.value = 'demo'
+    await nextTick()
+    picker.projectSlug.value = 'other'
+    await nextTick()
+    await flush()
+    resolveSlow([dev])
+    await flush()
+
+    expect(picker.environments.value).toEqual([other])
+  })
 })

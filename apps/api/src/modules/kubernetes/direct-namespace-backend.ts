@@ -2,6 +2,7 @@ import {
   CoreV1Api,
   KubeConfig,
   RbacAuthorizationV1Api,
+  type V1Namespace,
   type V1RoleBinding,
 } from '@kubernetes/client-node'
 import { Injectable } from '@nestjs/common'
@@ -18,7 +19,7 @@ import {
   NamespaceBackend,
   NamespaceConflictError,
 } from '#src/modules/kubernetes/namespace-backend.js'
-import { ignoreNotFound } from '#src/modules/kubernetes/not-found.js'
+import { ignoreNotFound, isNotFound } from '#src/modules/kubernetes/not-found.js'
 
 @Injectable()
 export class DirectNamespaceBackend extends NamespaceBackend {
@@ -40,7 +41,20 @@ export class DirectNamespaceBackend extends NamespaceBackend {
     )
   }
 
-  async destroy(namespace: string): Promise<void> {
+  // Slugs may contain '-', so two environments can derive one name; never delete the other's.
+  async destroy(namespace: string, environmentUuid: string): Promise<void> {
+    let existing: V1Namespace
+    try {
+      existing = await this.core.readNamespace({ name: namespace })
+    } catch (error) {
+      if (isNotFound(error)) {
+        return
+      }
+      throw error
+    }
+    if (existing.metadata?.labels?.[ENVIRONMENT_UUID_LABEL] !== environmentUuid) {
+      return
+    }
     await ignoreNotFound(() => this.core.deleteNamespace({ name: namespace }))
   }
 

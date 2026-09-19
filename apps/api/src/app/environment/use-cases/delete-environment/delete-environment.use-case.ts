@@ -25,7 +25,7 @@ export class DeleteEnvironmentUseCase {
     const namespace = namespaceOf(found.project, found.environment)
 
     const outcome = await this.repository.deleteThen(found.environment.uuid, () =>
-      this.destroy(namespace),
+      this.destroy(namespace, found.environment.uuid),
     )
     if (outcome === 'in-use') {
       throw new ConflictException(
@@ -34,9 +34,9 @@ export class DeleteEnvironmentUseCase {
     }
   }
 
-  private async destroy(namespace: string): Promise<void> {
+  private async destroy(namespace: string, environmentUuid: string): Promise<void> {
     try {
-      await this.namespaces.destroy(namespace)
+      await this.namespaces.destroy(namespace, environmentUuid)
     } catch (error) {
       throw new BadGatewayException(
         `Could not delete namespace '${namespace}' from the cluster. Please try again.`,

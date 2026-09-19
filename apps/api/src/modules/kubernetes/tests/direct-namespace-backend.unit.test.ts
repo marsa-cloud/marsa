@@ -104,11 +104,27 @@ describe('DirectNamespaceBackend', () => {
     await expect(backend.provision(NS, ENV_UUID)).rejects.toThrow(ApiException)
   })
 
-  it('deletes the namespace, treating an already-missing one as done', async () => {
-    await backend.destroy(NS)
-    expect(core.deleteNamespace.calledOnceWith({ name: NS })).toBe(true)
+  it('deletes a namespace labelled for this environment', async () => {
+    core.readNamespace.resolves(namespace({ 'marsa.cloud/environment-uuid': ENV_UUID }))
 
-    core.deleteNamespace.rejects(notFound())
-    await backend.destroy(NS)
+    await backend.destroy(NS, ENV_UUID)
+
+    expect(core.deleteNamespace.calledOnceWith({ name: NS })).toBe(true)
+  })
+
+  it('treats an already-missing namespace as done', async () => {
+    core.readNamespace.rejects(notFound())
+
+    await backend.destroy(NS, ENV_UUID)
+
+    expect(core.deleteNamespace.called).toBe(false)
+  })
+
+  it('never deletes a namespace another environment owns', async () => {
+    core.readNamespace.resolves(namespace({ 'marsa.cloud/environment-uuid': 'someone-else' }))
+
+    await backend.destroy(NS, ENV_UUID)
+
+    expect(core.deleteNamespace.called).toBe(false)
   })
 })

@@ -11,8 +11,7 @@ import { TestBench } from '#src/test/setup/test-bench.js'
 
 function build() {
   const repository = createStubInstance(CreateAppRepository)
-  repository.insert.resolves(true)
-  repository.environmentExists.resolves(true)
+  repository.insert.resolves('inserted')
   const config = createStubInstance(ConfigService)
   config.getOrThrow.returns('demo.marsa.cc')
   const cipher = createStubInstance(ImagePullCredentialsCipher)
@@ -65,20 +64,19 @@ describe('CreateAppUseCase', () => {
 
   it('rejects a taken slug with 409', async () => {
     const { usecase, repository } = build()
-    repository.insert.resolves(false)
+    repository.insert.resolves('slug-taken')
 
     await expect(usecase.execute(new CreateAppCommandBuilder().build())).rejects.toThrow(
       ConflictException,
     )
   })
 
-  it('rejects an unknown environment with 404 and inserts nothing', async () => {
+  it('rejects an unknown environment with 404', async () => {
     const { usecase, repository } = build()
-    repository.environmentExists.resolves(false)
+    repository.insert.resolves('environment-missing')
 
     await expect(usecase.execute(new CreateAppCommandBuilder().build())).rejects.toThrow(
       NotFoundException,
     )
-    expect(repository.insert.called).toBe(false)
   })
 })

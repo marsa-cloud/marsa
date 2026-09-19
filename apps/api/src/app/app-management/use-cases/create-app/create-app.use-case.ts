@@ -15,10 +15,6 @@ export class CreateAppUseCase {
   ) {}
 
   async execute(command: CreateAppCommand): Promise<CreateAppResponse> {
-    if (!(await this.repository.environmentExists(command.environmentUuid))) {
-      throw new NotFoundException(`Environment '${command.environmentUuid}' was not found.`)
-    }
-
     const minReplicas = command.minReplicas ?? 1
     const credentials = command.imagePullCredentials
 
@@ -34,7 +30,11 @@ export class CreateAppUseCase {
       .withImagePullCredentialsEnc(credentials ? this.credentialsCipher.seal(credentials) : null)
       .build()
 
-    if (!(await this.repository.insert(app))) {
+    const outcome = await this.repository.insert(app)
+    if (outcome === 'environment-missing') {
+      throw new NotFoundException(`Environment '${command.environmentUuid}' was not found.`)
+    }
+    if (outcome === 'slug-taken') {
       throw new ConflictException(`An app with slug '${command.slug}' already exists.`)
     }
 

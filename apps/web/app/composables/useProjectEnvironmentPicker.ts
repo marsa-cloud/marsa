@@ -19,7 +19,10 @@ export function useProjectEnvironmentPicker(environmentUuid: Ref<string | undefi
   }
 
   async function loadEnvironments(): Promise<void> {
-    environments.value = projectSlug.value ? await listEnvironments(projectSlug.value) : []
+    const slug = projectSlug.value
+    const loaded = slug ? await listEnvironments(slug) : []
+    // A slower response for a project the user already switched away from must not win.
+    if (projectSlug.value === slug) environments.value = loaded
   }
 
   watch(projectSlug, async () => {

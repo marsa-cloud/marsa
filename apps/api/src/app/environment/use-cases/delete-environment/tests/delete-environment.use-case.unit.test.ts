@@ -33,7 +33,7 @@ describe('DeleteEnvironmentUseCase', () => {
     await usecase.execute('demo', 'dev')
 
     expect(repository.deleteThen.firstCall.args[0]).toBe(environment.uuid)
-    expect(namespaces.destroy.calledOnceWithExactly('demo-dev')).toBe(true)
+    expect(namespaces.destroy.calledOnceWithExactly('demo-dev', environment.uuid)).toBe(true)
   })
 
   it('throws 404 for an unknown environment', async () => {

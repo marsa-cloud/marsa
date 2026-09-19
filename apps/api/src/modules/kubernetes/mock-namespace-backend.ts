@@ -10,7 +10,7 @@ export class MockNamespaceBackend extends NamespaceBackend {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  destroy(_namespace: string): Promise<void> {
+  destroy(_namespace: string, _environmentUuid: string): Promise<void> {
     return Promise.resolve()
   }
 }
