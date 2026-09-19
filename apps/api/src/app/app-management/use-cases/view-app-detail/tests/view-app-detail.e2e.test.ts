@@ -52,6 +52,8 @@ describe('GET /api/v1/apps/:slug (e2e)', () => {
 
     expect(response.body).toMatchObject({
       slug: SLUG,
+      project: { slug: 'my-project', name: 'My Project' },
+      environment: { uuid: environment.uuid, slug: 'production', name: 'Production' },
       image: 'nginx:1.27',
       containerPort: 8080,
       minReplicas: 2,

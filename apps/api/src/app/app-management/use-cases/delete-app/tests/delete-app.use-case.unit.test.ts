@@ -3,6 +3,7 @@ import { BadGatewayException, NotFoundException } from '@nestjs/common'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
+import { AppPlacementBuilder } from '#src/app/app-management/entities/app-placement.builder.js'
 import { DeleteAppRepository } from '#src/app/app-management/use-cases/delete-app/delete-app.repository.js'
 import { DeleteAppUseCase } from '#src/app/app-management/use-cases/delete-app/delete-app.use-case.js'
 import { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
@@ -19,14 +20,16 @@ describe('DeleteAppUseCase', () => {
   before(() => TestBench.setupUnitTest())
 
   it('tears down the cluster resources before deleting the rows', async () => {
-    const app = new AppBuilder().withSlug('my-app').build()
+    const placement = new AppPlacementBuilder()
+      .withApp(new AppBuilder().withSlug('my-app').build())
+      .build()
     const { repository, deployBackend, usecase } = build()
-    repository.findBySlug.resolves(app)
+    repository.findBySlug.resolves(placement)
 
     await usecase.execute('my-app')
 
-    expect(deployBackend.destroy.calledOnceWith('marsa-apps', 'my-app')).toBe(true)
-    expect(repository.deleteWithReleases.calledOnceWith(app.uuid)).toBe(true)
+    expect(deployBackend.destroy.calledOnceWith('my-project-production', 'my-app')).toBe(true)
+    expect(repository.deleteWithReleases.calledOnceWith(placement.app.uuid)).toBe(true)
     expect(
       deployBackend.destroy.getCall(0).calledBefore(repository.deleteWithReleases.getCall(0)),
     ).toBe(true)
@@ -44,7 +47,9 @@ describe('DeleteAppUseCase', () => {
 
   it('throws 502 and keeps the rows when teardown fails, so the delete can be retried', async () => {
     const { repository, deployBackend, usecase } = build()
-    repository.findBySlug.resolves(new AppBuilder().withSlug('my-app').build())
+    repository.findBySlug.resolves(
+      new AppPlacementBuilder().withApp(new AppBuilder().withSlug('my-app').build()).build(),
+    )
     deployBackend.destroy.rejects(new Error('connection refused'))
 
     await expect(usecase.execute('my-app')).rejects.toThrow(BadGatewayException)

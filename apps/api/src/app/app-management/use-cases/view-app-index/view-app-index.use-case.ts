@@ -14,10 +14,10 @@ export class ViewAppIndexUseCase {
 
   async execute(query: ViewAppIndexQuery): Promise<ViewAppIndexResponse> {
     const baseDomain = this.config.getOrThrow<string>('MARSA_BASE_DOMAIN')
-    const apps = await this.repository.listApps(
+    const placements = await this.repository.listApps(
       keysetLimit(query.pagination),
       query.pagination?.key?.uuid,
     )
-    return new ViewAppIndexResponse(apps, baseDomain)
+    return new ViewAppIndexResponse(placements, baseDomain)
   }
 }

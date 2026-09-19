@@ -2,6 +2,7 @@ import { Controller, Get, Param } from '@nestjs/common'
 import {
   ApiCookieAuth,
   ApiForbiddenResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -22,6 +23,7 @@ export class ViewAppHealthController {
   @ApiCookieAuth(SESSION_COOKIE_SECURITY_SCHEME)
   @ApiOkResponse({ type: ViewAppHealthResponse })
   @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
+  @ApiNotFoundResponse({ description: 'No app with that slug.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   handle(@Param('slug') slug: string): Promise<ViewAppHealthResponse> {
     return this.usecase.execute(slug)

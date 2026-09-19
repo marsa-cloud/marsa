@@ -1,11 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import type { App } from '#src/app/app-management/entities/app.table.js'
+import type { AppPlacement } from '#src/app/app-management/entities/app-placement.js'
 import { ViewAppDetailRepository } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.repository.js'
 import { ViewAppDetailResponse } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.response.js'
+import { namespaceOf } from '#src/app/environment/entities/namespace.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import { isSnapshotOf } from '#src/app/release/entities/release-snapshot.js'
-import { OPERATOR_APPS_NAMESPACE } from '#src/modules/kubernetes/deploy-backend.constants.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
 
 @Injectable()
@@ -17,23 +17,30 @@ export class ViewAppDetailUseCase {
   ) {}
 
   async execute(slug: string): Promise<ViewAppDetailResponse> {
-    const app = await this.repository.findBySlug(slug)
-    if (!app) {
+    const placement = await this.repository.findBySlug(slug)
+    if (!placement) {
       throw new NotFoundException(`App '${slug}' was not found.`)
     }
 
     return new ViewAppDetailResponse(
-      app,
+      placement,
       this.config.getOrThrow<string>('MARSA_BASE_DOMAIN'),
-      await this.hasUndeployedChanges(app),
+      await this.hasUndeployedChanges(placement),
     )
   }
 
   // Compared against what the cluster runs, not the newest row: a release can exist yet never ship.
-  private async hasUndeployedChanges(app: App): Promise<boolean> {
+  private async hasUndeployedChanges({
+    app,
+    project,
+    environment,
+  }: AppPlacement): Promise<boolean> {
     let liveUuid: string | null
     try {
-      liveUuid = await this.deployBackend.readLiveReleaseUuid(OPERATOR_APPS_NAMESPACE, app.slug)
+      liveUuid = await this.deployBackend.readLiveReleaseUuid(
+        namespaceOf(project, environment),
+        app.slug,
+      )
     } catch {
       // Unknown is not "changed"; the health card is where an unreachable cluster shows up.
       return false

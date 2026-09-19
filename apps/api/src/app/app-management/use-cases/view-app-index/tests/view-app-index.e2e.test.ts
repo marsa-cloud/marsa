@@ -57,6 +57,8 @@ describe('GET /api/v1/apps (e2e)', () => {
     const appA = response.body.items.find((app: { slug: string }) => app.slug === SLUG_A)
     expect(appA.image).toBe('nginx:1.27')
     expect(appA.url).toBe(`https://${SLUG_A}.demo.marsa.cc`)
+    expect(appA.project.slug).toBe('my-project')
+    expect(appA.environment.slug).toBe('production')
     expect(typeof appA.createdAt).toBe('string')
   })
 

@@ -3,6 +3,7 @@ import {
   ApiBadRequestResponse,
   ApiCookieAuth,
   ApiForbiddenResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -25,6 +26,7 @@ export class ViewAppLogsController {
   @ApiOkResponse({ type: ViewAppLogsResponse })
   @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiBadRequestResponse({ description: 'tailLines out of range (1–1000) or not an integer.' })
+  @ApiNotFoundResponse({ description: 'No app with that slug.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   handle(
     @Param('slug') slug: string,

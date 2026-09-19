@@ -1,5 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger'
-import type { App } from '#src/app/app-management/entities/app.table.js'
+import type { AppPlacement } from '#src/app/app-management/entities/app-placement.js'
+import {
+  AppEnvironmentRef,
+  AppProjectRef,
+} from '#src/app/app-management/entities/app-placement.response.js'
 
 export class ViewAppDetailResponse {
   @ApiProperty({ type: String, example: 'my-app' })
@@ -10,6 +14,12 @@ export class ViewAppDetailResponse {
 
   @ApiProperty({ type: String, example: 'https://my-app.demo.marsa.cc' })
   readonly url: string
+
+  @ApiProperty({ type: AppProjectRef })
+  readonly project: AppProjectRef
+
+  @ApiProperty({ type: AppEnvironmentRef })
+  readonly environment: AppEnvironmentRef
 
   @ApiProperty({ type: 'integer', example: 80 })
   readonly containerPort: number
@@ -41,10 +51,16 @@ export class ViewAppDetailResponse {
   @ApiProperty({ type: String, format: 'date-time' })
   readonly updatedAt: string
 
-  constructor(app: App, baseDomain: string, hasUndeployedChanges: boolean) {
+  constructor(
+    { app, project, environment }: AppPlacement,
+    baseDomain: string,
+    hasUndeployedChanges: boolean,
+  ) {
     this.slug = app.slug
     this.image = app.image
     this.url = `https://${app.slug}.${baseDomain}`
+    this.project = new AppProjectRef(project)
+    this.environment = new AppEnvironmentRef(environment)
     this.containerPort = app.containerPort
     this.minReplicas = app.minReplicas
     this.maxReplicas = app.maxReplicas

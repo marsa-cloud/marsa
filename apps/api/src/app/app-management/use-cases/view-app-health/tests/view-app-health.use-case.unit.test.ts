@@ -1,7 +1,9 @@
 import { before, describe, it } from 'node:test'
+import { NotFoundException } from '@nestjs/common'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
+import { AppPlacementBuilder } from '#src/app/app-management/entities/app-placement.builder.js'
 import { ViewAppHealthRepository } from '#src/app/app-management/use-cases/view-app-health/view-app-health.repository.js'
 import { AppHealthStatus } from '#src/app/app-management/use-cases/view-app-health/view-app-health.response.js'
 import { ViewAppHealthUseCase } from '#src/app/app-management/use-cases/view-app-health/view-app-health.use-case.js'
@@ -9,13 +11,26 @@ import type { AppHealth } from '#src/modules/kubernetes/deploy-backend.types.js'
 import { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
-function build(health: AppHealth, minReplicas = 1) {
+const HEALTHY: AppHealth = {
+  found: true,
+  desiredReplicas: 1,
+  availableReplicas: 1,
+  updatedReplicas: 1,
+}
+
+function stubs(health: AppHealth, minReplicas = 1) {
   const deployBackend = createStubInstance(MockDeployBackend)
   deployBackend.readAppHealth.resolves(health)
   const repository = createStubInstance(ViewAppHealthRepository)
-  repository.findBySlug.resolves(new AppBuilder().withMinReplicas(minReplicas).build())
-  return new ViewAppHealthUseCase(repository, deployBackend)
+  repository.findBySlug.resolves(
+    new AppPlacementBuilder()
+      .withApp(new AppBuilder().withMinReplicas(minReplicas).build())
+      .build(),
+  )
+  return { usecase: new ViewAppHealthUseCase(repository, deployBackend), repository, deployBackend }
 }
+
+const build = (health: AppHealth, minReplicas = 1) => stubs(health, minReplicas).usecase
 
 describe('ViewAppHealthUseCase', () => {
   before(() => TestBench.setupUnitTest())
@@ -105,5 +120,20 @@ describe('ViewAppHealthUseCase', () => {
     const result = await usecase.execute('my-app')
 
     expect(result.status).toBe(AppHealthStatus.NotFound)
+  })
+
+  it('reads health from the app namespace', async () => {
+    const { usecase, deployBackend } = stubs(HEALTHY)
+
+    await usecase.execute('my-app')
+
+    expect(deployBackend.readAppHealth.firstCall.args[0]).toBe('my-project-production')
+  })
+
+  it('throws 404 for an unknown app', async () => {
+    const { usecase, repository } = stubs(HEALTHY)
+    repository.findBySlug.resolves(undefined)
+
+    await expect(usecase.execute('ghost')).rejects.toThrow(NotFoundException)
   })
 })

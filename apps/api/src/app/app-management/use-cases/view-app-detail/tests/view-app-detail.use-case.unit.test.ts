@@ -4,17 +4,21 @@ import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
+import { AppPlacementBuilder } from '#src/app/app-management/entities/app-placement.builder.js'
 import { ViewAppDetailRepository } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.repository.js'
 import { ViewAppDetailUseCase } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.use-case.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
-const app = new AppBuilder().withSlug('my-app').withEnv({ A: '1' }).build()
+const placement = new AppPlacementBuilder()
+  .withApp(new AppBuilder().withSlug('my-app').withEnv({ A: '1' }).build())
+  .build()
+const app = placement.app
 
 function build() {
   const repository = createStubInstance(ViewAppDetailRepository)
-  repository.findBySlug.resolves(app)
+  repository.findBySlug.resolves(placement)
   repository.findRelease.resolves(undefined)
   const deployBackend = createStubInstance(MockDeployBackend)
   deployBackend.readLiveReleaseUuid.resolves(null)
@@ -34,6 +38,18 @@ describe('ViewAppDetailUseCase', () => {
 
     expect(response.url).toBe('https://my-app.demo.marsa.cc')
     expect(response.env).toEqual({ A: '1' })
+  })
+
+  it('reads the live release from the app namespace and names its placement', async () => {
+    const { deployBackend, usecase } = build()
+
+    const response = await usecase.execute('my-app')
+
+    expect(
+      deployBackend.readLiveReleaseUuid.calledOnceWith('my-project-production', 'my-app'),
+    ).toBe(true)
+    expect(response.project).toEqual({ slug: 'my-project', name: 'My Project' })
+    expect(response.environment).toMatchObject({ slug: 'production', name: 'Production' })
   })
 
   it('reports undeployed changes when nothing is running', async () => {

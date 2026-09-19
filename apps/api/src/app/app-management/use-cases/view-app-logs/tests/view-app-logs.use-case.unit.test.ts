@@ -1,9 +1,11 @@
 import { before, describe, it } from 'node:test'
+import { NotFoundException } from '@nestjs/common'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
+import { AppPlacementBuilder } from '#src/app/app-management/entities/app-placement.builder.js'
 import { DEFAULT_TAIL_LINES } from '#src/app/app-management/use-cases/view-app-logs/view-app-logs.constants.js'
+import { ViewAppLogsRepository } from '#src/app/app-management/use-cases/view-app-logs/view-app-logs.repository.js'
 import { ViewAppLogsUseCase } from '#src/app/app-management/use-cases/view-app-logs/view-app-logs.use-case.js'
-import { OPERATOR_APPS_NAMESPACE } from '#src/modules/kubernetes/deploy-backend.constants.js'
 import type { RunLogs } from '#src/modules/kubernetes/deploy-backend.types.js'
 import { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
@@ -11,7 +13,9 @@ import { TestBench } from '#src/test/setup/test-bench.js'
 function build(result: RunLogs | null) {
   const deployBackend = createStubInstance(MockDeployBackend)
   deployBackend.readRunLogs.resolves(result)
-  return { usecase: new ViewAppLogsUseCase(deployBackend), deployBackend }
+  const repository = createStubInstance(ViewAppLogsRepository)
+  repository.findBySlug.resolves(new AppPlacementBuilder().build())
+  return { usecase: new ViewAppLogsUseCase(repository, deployBackend), deployBackend, repository }
 }
 
 describe('ViewAppLogsUseCase', () => {
@@ -33,7 +37,7 @@ describe('ViewAppLogsUseCase', () => {
 
     expect(deployBackend.readRunLogs.calledOnce).toBe(true)
     expect(deployBackend.readRunLogs.firstCall.args).toEqual([
-      OPERATOR_APPS_NAMESPACE,
+      'my-project-production',
       'my-app',
       { tailLines: 50 },
     ])
@@ -54,5 +58,12 @@ describe('ViewAppLogsUseCase', () => {
 
     expect(result.podName).toBeNull()
     expect(result.logs).toBe('')
+  })
+
+  it('throws 404 for an unknown app', async () => {
+    const { usecase, repository } = build(null)
+    repository.findBySlug.resolves(undefined)
+
+    await expect(usecase.execute('ghost')).rejects.toThrow(NotFoundException)
   })
 })
