@@ -2,6 +2,7 @@ import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import type { App } from '#src/app/app-management/entities/app.table.js'
 import type { Release } from '#src/app/release/entities/release.table.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
+import { type ReleaseSnapshot, snapshotOf } from '#src/app/release/entities/release-snapshot.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/release/enums/release-trigger.enum.js'
 import { generateUuid } from '#src/utils/uuid.js'
@@ -12,10 +13,12 @@ export class ReleaseBuilder {
 
   constructor() {
     const now = new Date()
+    const app = new AppBuilder().build()
     this.release = {
       uuid: generateUuid<ReleaseUuid>(),
-      appUuid: new AppBuilder().build().uuid,
-      imageRef: 'nginx:1.27',
+      appUuid: app.uuid,
+      ...snapshotOf(app),
+      sourceReleaseUuid: null,
       triggeredBy: ReleaseTrigger.Manual,
       deployStatus: DeployStatus.Pending,
       createdAt: now,
@@ -25,11 +28,26 @@ export class ReleaseBuilder {
 
   withApp(app: App): this {
     this.release.appUuid = app.uuid
+    return this.withSnapshot(snapshotOf(app))
+  }
+
+  withSnapshot(snapshot: ReleaseSnapshot): this {
+    this.release.imageRef = snapshot.imageRef
+    this.release.env = snapshot.env
+    this.release.containerPort = snapshot.containerPort
+    this.release.minReplicas = snapshot.minReplicas
+    this.release.maxReplicas = snapshot.maxReplicas
+    this.release.imagePullCredentialsEnc = snapshot.imagePullCredentialsEnc
     return this
   }
 
   withImageRef(imageRef: string): this {
     this.release.imageRef = imageRef
+    return this
+  }
+
+  withSourceReleaseUuid(sourceReleaseUuid: ReleaseUuid | null): this {
+    this.release.sourceReleaseUuid = sourceReleaseUuid
     return this
   }
 
