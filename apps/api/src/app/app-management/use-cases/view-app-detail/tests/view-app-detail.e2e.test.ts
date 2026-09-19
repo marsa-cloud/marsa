@@ -3,6 +3,9 @@ import { expect } from 'expect'
 import request from 'supertest'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
+import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
+import { releaseTable } from '#src/app/release/entities/release.table.js'
+import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -49,6 +52,24 @@ describe('GET /api/v1/apps/:slug (e2e)', () => {
       env: { LOG_LEVEL: 'debug' },
       hasUndeployedChanges: true,
     })
+  })
+
+  it('ignores a failed release when deciding whether saved config is running', async () => {
+    const app = new AppBuilder().withSlug('detail-e2e-failed').withEnv({ A: 'new' }).build()
+    const running = new ReleaseBuilder()
+      .withApp({ ...app, env: { A: 'old' } })
+      .withDeployStatus(DeployStatus.Succeeded)
+      .build()
+    const failed = new ReleaseBuilder().withApp(app).withDeployStatus(DeployStatus.Failed).build()
+    await setup.db.insert(appTable).values(app)
+    await setup.db.insert(releaseTable).values([running, failed])
+
+    const response = await request(setup.httpServer)
+      .get('/api/v1/apps/detail-e2e-failed')
+      .set('Cookie', sessionCookie)
+      .expect(200)
+
+    expect(response.body.hasUndeployedChanges).toBe(true)
   })
 
   it('returns 404 for a slug that does not exist', async () => {

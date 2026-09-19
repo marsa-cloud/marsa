@@ -1692,7 +1692,7 @@
           },
           "hasUndeployedChanges": {
             "type": "boolean",
-            "description": "True when the saved config has never been released or differs from the newest release."
+            "description": "True when the saved config differs from the newest release that has not failed, or nothing has been released."
           },
           "createdAt": {
             "type": "string",

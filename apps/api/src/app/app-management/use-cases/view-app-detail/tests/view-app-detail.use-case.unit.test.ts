@@ -7,11 +7,12 @@ import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { ViewAppDetailRepository } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.repository.js'
 import { ViewAppDetailUseCase } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.use-case.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
+import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 function build() {
   const repository = createStubInstance(ViewAppDetailRepository)
-  repository.findNewestRelease.resolves(undefined)
+  repository.findNewestNonFailedRelease.resolves(undefined)
   const config = createStubInstance(ConfigService)
   config.getOrThrow.returns('demo.marsa.cc')
   const usecase = new ViewAppDetailUseCase(repository, config)
@@ -46,12 +47,25 @@ describe('ViewAppDetailUseCase', () => {
 
     expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(true)
 
-    repository.findNewestRelease.resolves(new ReleaseBuilder().withApp(app).build())
+    repository.findNewestNonFailedRelease.resolves(new ReleaseBuilder().withApp(app).build())
     expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(false)
 
-    repository.findNewestRelease.resolves(
+    repository.findNewestNonFailedRelease.resolves(
       new ReleaseBuilder().withApp({ ...app, env: { A: 'old' } }).build(),
     )
+    expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(true)
+  })
+  it('keeps warning when the release that matches the saved config failed to deploy', async () => {
+    const { repository, usecase } = build()
+    const app = new AppBuilder().withSlug('my-app').withEnv({ A: 'new' }).build()
+    repository.findBySlug.resolves(app)
+    repository.findNewestNonFailedRelease.resolves(
+      new ReleaseBuilder()
+        .withApp({ ...app, env: { A: 'old' } })
+        .withDeployStatus(DeployStatus.Succeeded)
+        .build(),
+    )
+
     expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(true)
   })
 })

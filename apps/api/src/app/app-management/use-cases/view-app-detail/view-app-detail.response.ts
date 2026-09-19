@@ -33,7 +33,7 @@ export class ViewAppDetailResponse {
   @ApiProperty({
     type: Boolean,
     description:
-      'True when the saved config has never been released or differs from the newest release.',
+      'True when the saved config differs from the newest release that has not failed, or nothing has been released.',
   })
   readonly hasUndeployedChanges: boolean
 
@@ -43,7 +43,7 @@ export class ViewAppDetailResponse {
   @ApiProperty({ type: String, format: 'date-time' })
   readonly updatedAt: string
 
-  constructor(app: App, baseDomain: string, newest?: Release) {
+  constructor(app: App, baseDomain: string, running?: Release) {
     this.slug = app.slug
     this.image = app.image
     this.url = `https://${app.slug}.${baseDomain}`
@@ -51,7 +51,7 @@ export class ViewAppDetailResponse {
     this.minReplicas = app.minReplicas
     this.maxReplicas = app.maxReplicas
     this.env = app.env
-    this.hasUndeployedChanges = !newest || !isSnapshotOf(newest, app)
+    this.hasUndeployedChanges = !running || !isSnapshotOf(running, app)
     this.createdAt = app.createdAt.toISOString()
     this.updatedAt = app.updatedAt.toISOString()
   }

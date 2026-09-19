@@ -321,7 +321,7 @@ export type ViewAppDetailResponse = {
     [key: string]: string
   }
   /**
-   * True when the saved config has never been released or differs from the newest release.
+   * True when the saved config differs from the newest release that has not failed, or nothing has been released.
    */
   hasUndeployedChanges: boolean
   createdAt: string
