@@ -3037,14 +3037,12 @@ const CREATED = { slug: 'my-app', url: 'https://my-app.marsa.cc' }
 
 beforeEach(() => {
   create.mockReset().mockResolvedValue(CREATED)
-  ship
-    .mockReset()
-    .mockResolvedValue({
-      releaseUuid: 'r1',
-      appSlug: 'my-app',
-      url: CREATED.url,
-      deployStatus: 'pending',
-    })
+  ship.mockReset().mockResolvedValue({
+    releaseUuid: 'r1',
+    appSlug: 'my-app',
+    url: CREATED.url,
+    deployStatus: 'pending',
+  })
   nav.mockReset()
   toastAdd.mockReset()
 })
