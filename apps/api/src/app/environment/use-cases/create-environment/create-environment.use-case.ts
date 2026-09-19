@@ -56,6 +56,8 @@ export class CreateEnvironmentUseCase {
       if (error instanceof NamespaceConflictError) {
         throw new ConflictException(error.message)
       }
+      // The row rolls back, so a half-provisioned namespace labelled with this uuid would block retries.
+      await this.namespaces.destroy(namespace, environmentUuid).catch(() => undefined)
       throw new BadGatewayException(
         `Could not create namespace '${namespace}' on the cluster. Please try again.`,
         { cause: error },

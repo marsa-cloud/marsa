@@ -63,10 +63,30 @@ describe('CreateEnvironmentUseCase', () => {
     await expect(usecase.execute('demo', command())).rejects.toThrow(ConflictException)
   })
 
-  it('maps any other cluster failure to 502', async () => {
-    const { usecase, namespaces } = build()
+  it('maps any other cluster failure to 502 and cleans up what it provisioned', async () => {
+    const { usecase, repository, namespaces } = build()
     namespaces.provision.rejects(new Error('connection refused'))
+    namespaces.destroy.resolves()
 
     await expect(usecase.execute('demo', command())).rejects.toThrow(BadGatewayException)
+
+    const [environment] = repository.insertThen.firstCall.args
+    expect(namespaces.destroy.calledOnceWithExactly('demo-dev', environment.uuid)).toBe(true)
+  })
+
+  it('still reports 502 when the cleanup itself fails', async () => {
+    const { usecase, namespaces } = build()
+    namespaces.provision.rejects(new Error('connection refused'))
+    namespaces.destroy.rejects(new Error('still down'))
+
+    await expect(usecase.execute('demo', command())).rejects.toThrow(BadGatewayException)
+  })
+
+  it('does not clean up a namespace it never owned', async () => {
+    const { usecase, namespaces } = build()
+    namespaces.provision.rejects(new NamespaceConflictError('taken'))
+
+    await expect(usecase.execute('demo', command())).rejects.toThrow(ConflictException)
+    expect(namespaces.destroy.called).toBe(false)
   })
 })

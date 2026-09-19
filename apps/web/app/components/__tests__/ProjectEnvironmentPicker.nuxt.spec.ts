@@ -14,6 +14,7 @@ function stubPicker(projectSlug?: string) {
   const state = {
     projects: ref([{ uuid: 'p1', name: 'Demo', slug: 'demo', createdAt: '' }]),
     environments: ref([]),
+    environmentsError: ref<unknown>(null),
     projectSlug: ref(projectSlug),
     loadProjects: vi.fn().mockResolvedValue(undefined),
     createProject: vi.fn().mockResolvedValue(undefined),
@@ -152,6 +153,18 @@ describe('ProjectEnvironmentPicker', () => {
         description: 'Project \'demo\' still has environments.',
         color: 'error',
       }),
+    )
+  })
+
+  it('toasts a failed environment load', async () => {
+    const state = stubPicker('demo')
+    await mount()
+
+    state.environmentsError.value = { data: { message: 'network down' } }
+    await flushPromises()
+
+    expect(toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Couldn\'t load environments', description: 'network down' }),
     )
   })
 })

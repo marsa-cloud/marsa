@@ -13,6 +13,7 @@ export function useProjectEnvironmentPicker(environmentUuid: Ref<string | undefi
   const projects = ref<ProjectSummary[]>([])
   const environments = ref<EnvironmentSummary[]>([])
   const projectSlug = ref<string | undefined>()
+  const environmentsError = ref<unknown>(null)
 
   async function loadProjects(): Promise<void> {
     projects.value = await listProjects()
@@ -25,9 +26,16 @@ export function useProjectEnvironmentPicker(environmentUuid: Ref<string | undefi
     if (projectSlug.value === slug) environments.value = loaded
   }
 
+  // Cleared first so a failed load can never leave the previous project's environments selectable.
   watch(projectSlug, async () => {
     environmentUuid.value = undefined
-    await loadEnvironments()
+    environments.value = []
+    environmentsError.value = null
+    try {
+      await loadEnvironments()
+    } catch (err) {
+      environmentsError.value = err
+    }
   })
 
   async function createProject(name: string, slug: string): Promise<void> {
@@ -60,6 +68,7 @@ export function useProjectEnvironmentPicker(environmentUuid: Ref<string | undefi
   return {
     projects,
     environments,
+    environmentsError,
     projectSlug,
     loadProjects,
     createProject,

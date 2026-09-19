@@ -128,4 +128,20 @@ describe('useProjectEnvironmentPicker', () => {
 
     expect(picker.environments.value).toEqual([other])
   })
+
+  it('offers no stale environments when loading the new project fails', async () => {
+    const picker = useProjectEnvironmentPicker(ref())
+    picker.projectSlug.value = 'demo'
+    await nextTick()
+    await flush()
+    expect(picker.environments.value).toEqual([dev])
+
+    listEnvironments.mockRejectedValue(new Error('network down'))
+    picker.projectSlug.value = 'other'
+    await nextTick()
+    await flush()
+
+    expect(picker.environments.value).toEqual([])
+    expect(picker.environmentsError.value).toBeInstanceOf(Error)
+  })
 })

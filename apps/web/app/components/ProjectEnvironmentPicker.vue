@@ -7,6 +7,7 @@ const environmentUuid = defineModel<string | undefined>({ required: true })
 const {
   projects,
   environments,
+  environmentsError,
   projectSlug,
   loadProjects,
   createProject,
@@ -28,6 +29,9 @@ function fail(title: string, err: unknown) {
 }
 
 onMounted(() => loadProjects().catch(err => fail('Couldn\'t load projects', err)))
+watch(environmentsError, (err) => {
+  if (err) fail('Couldn\'t load environments', err)
+})
 
 const creating = ref<Kind | null>(null)
 const draft = reactive({ name: '', slug: '' })
