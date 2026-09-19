@@ -15,6 +15,8 @@ const config = {
   maxReplicas: 2,
   env: { LOG_LEVEL: 'info' },
   hasUndeployedChanges: false,
+  project: { slug: 'demo', name: 'Demo' },
+  environment: { uuid: '0190c3c0-0000-7000-8000-000000000002', slug: 'dev', name: 'Dev' },
   createdAt: '2026-09-18T00:00:00.000Z',
   updatedAt: '2026-09-18T00:00:00.000Z',
 }

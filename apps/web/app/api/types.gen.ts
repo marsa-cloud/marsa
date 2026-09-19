@@ -156,6 +156,99 @@ export type UpdateUserRoleResponse = {
   role: UserRole
 }
 
+export type CreateProjectCommand = {
+  name: string
+  /**
+   * First half of every environment namespace name.
+   */
+  slug: string
+}
+
+export type CreateProjectResponse = {
+  uuid: string
+  name: string
+  slug: string
+}
+
+export type ViewProjectIndexQueryKey = {
+  uuid: string
+}
+
+export type ViewProjectIndexPaginationQuery = {
+  limit?: number
+  key?: ViewProjectIndexQueryKey | null
+}
+
+export type ProjectSummary = {
+  uuid: string
+  name: string
+  slug: string
+  createdAt: string
+}
+
+export type ViewProjectIndexResponseMeta = {
+  /**
+   * Key for the next page, or null on the last page. Opaque — send it back as-is.
+   */
+  next: ViewProjectIndexQueryKey | null
+}
+
+export type ViewProjectIndexResponse = {
+  /**
+   * The items for the current page
+   */
+  items: Array<ProjectSummary>
+  meta: ViewProjectIndexResponseMeta
+}
+
+export type CreateEnvironmentCommand = {
+  name: string
+  /**
+   * Unique within the project; second half of the namespace name.
+   */
+  slug: string
+}
+
+export type CreateEnvironmentResponse = {
+  uuid: string
+  name: string
+  slug: string
+  namespace: string
+  projectSlug: string
+}
+
+export type ViewEnvironmentIndexQueryKey = {
+  uuid: string
+}
+
+export type ViewEnvironmentIndexPaginationQuery = {
+  limit?: number
+  key?: ViewEnvironmentIndexQueryKey | null
+}
+
+export type EnvironmentSummary = {
+  uuid: string
+  name: string
+  slug: string
+  namespace: string
+  createdAt: string
+}
+
+export type ViewEnvironmentIndexResponseMeta = {
+  /**
+   * Key for the next page, or null on the last page. Opaque — send it back as-is.
+   */
+  next: ViewEnvironmentIndexQueryKey | null
+}
+
+export type ViewEnvironmentIndexResponse = {
+  /**
+   * The items for the current page
+   */
+  items: Array<EnvironmentSummary>
+  meta: ViewEnvironmentIndexResponseMeta
+}
+
 export type CreateReleaseCommand = {
   /**
    * Roll back: copy this release’s config instead of the app’s current config.
@@ -236,6 +329,10 @@ export type ImagePullCredentials = {
 
 export type CreateAppCommand = {
   /**
+   * Environment the app lives in.
+   */
+  environmentUuid: string
+  /**
    * Public subdomain label + K8s object name.
    */
   slug: string
@@ -281,10 +378,23 @@ export type ViewAppIndexPaginationQuery = {
   key?: ViewAppIndexQueryKey | null
 }
 
+export type AppProjectRef = {
+  slug: string
+  name: string
+}
+
+export type AppEnvironmentRef = {
+  uuid: string
+  slug: string
+  name: string
+}
+
 export type AppSummary = {
   slug: string
   image: string
   url: string
+  project: AppProjectRef
+  environment: AppEnvironmentRef
   createdAt: string
   updatedAt: string
 }
@@ -308,6 +418,8 @@ export type ViewAppDetailResponse = {
   slug: string
   image: string
   url: string
+  project: AppProjectRef
+  environment: AppEnvironmentRef
   containerPort: number
   /**
    * 0 means the app sleeps when idle.
@@ -388,6 +500,10 @@ export type ImagePullCredentialsWritable = {
 }
 
 export type CreateAppCommandWritable = {
+  /**
+   * Environment the app lives in.
+   */
+  environmentUuid: string
   /**
    * Public subdomain label + K8s object name.
    */
@@ -628,6 +744,221 @@ export type UpdateUserRoleV1Responses = {
 
 export type UpdateUserRoleV1Response = UpdateUserRoleV1Responses[keyof UpdateUserRoleV1Responses]
 
+export type ViewProjectIndexV1Data = {
+  body?: never
+  path?: never
+  query?: {
+    pagination?: ViewProjectIndexPaginationQuery
+  }
+  url: '/api/v1/projects'
+}
+
+export type ViewProjectIndexV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+}
+
+export type ViewProjectIndexV1Responses = {
+  200: ViewProjectIndexResponse
+}
+
+export type ViewProjectIndexV1Response =
+  ViewProjectIndexV1Responses[keyof ViewProjectIndexV1Responses]
+
+export type CreateProjectV1Data = {
+  body: CreateProjectCommand
+  path?: never
+  query?: never
+  url: '/api/v1/projects'
+}
+
+export type CreateProjectV1Errors = {
+  /**
+   * Malformed body, or an invalid name / slug.
+   */
+  400: unknown
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
+   * A project with that slug already exists.
+   */
+  409: unknown
+}
+
+export type CreateProjectV1Responses = {
+  201: CreateProjectResponse
+}
+
+export type CreateProjectV1Response = CreateProjectV1Responses[keyof CreateProjectV1Responses]
+
+export type DeleteProjectV1Data = {
+  body?: never
+  path: {
+    slug: string
+  }
+  query?: never
+  url: '/api/v1/projects/{slug}'
+}
+
+export type DeleteProjectV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
+   * No project with that slug.
+   */
+  404: unknown
+  /**
+   * The project still has environments.
+   */
+  409: unknown
+}
+
+export type DeleteProjectV1Responses = {
+  /**
+   * The project was deleted.
+   */
+  204: void
+}
+
+export type DeleteProjectV1Response = DeleteProjectV1Responses[keyof DeleteProjectV1Responses]
+
+export type ViewEnvironmentIndexV1Data = {
+  body?: never
+  path: {
+    projectSlug: string
+  }
+  query?: {
+    pagination?: ViewEnvironmentIndexPaginationQuery
+  }
+  url: '/api/v1/projects/{projectSlug}/environments'
+}
+
+export type ViewEnvironmentIndexV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
+   * No project with that slug.
+   */
+  404: unknown
+}
+
+export type ViewEnvironmentIndexV1Responses = {
+  200: ViewEnvironmentIndexResponse
+}
+
+export type ViewEnvironmentIndexV1Response =
+  ViewEnvironmentIndexV1Responses[keyof ViewEnvironmentIndexV1Responses]
+
+export type CreateEnvironmentV1Data = {
+  body: CreateEnvironmentCommand
+  path: {
+    projectSlug: string
+  }
+  query?: never
+  url: '/api/v1/projects/{projectSlug}/environments'
+}
+
+export type CreateEnvironmentV1Errors = {
+  /**
+   * Malformed body, or an invalid name / slug.
+   */
+  400: unknown
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
+   * No project with that slug.
+   */
+  404: unknown
+  /**
+   * The slug is taken in this project, or its namespace is taken or still deleting.
+   */
+  409: unknown
+  /**
+   * The namespace could not be created on the cluster.
+   */
+  502: unknown
+}
+
+export type CreateEnvironmentV1Responses = {
+  201: CreateEnvironmentResponse
+}
+
+export type CreateEnvironmentV1Response =
+  CreateEnvironmentV1Responses[keyof CreateEnvironmentV1Responses]
+
+export type DeleteEnvironmentV1Data = {
+  body?: never
+  path: {
+    projectSlug: string
+    environmentSlug: string
+  }
+  query?: never
+  url: '/api/v1/projects/{projectSlug}/environments/{environmentSlug}'
+}
+
+export type DeleteEnvironmentV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
+   * No environment with that slug in the project.
+   */
+  404: unknown
+  /**
+   * The environment still has apps.
+   */
+  409: unknown
+  /**
+   * The namespace could not be deleted; nothing changed.
+   */
+  502: unknown
+}
+
+export type DeleteEnvironmentV1Responses = {
+  /**
+   * The environment and its namespace were deleted.
+   */
+  204: void
+}
+
+export type DeleteEnvironmentV1Response =
+  DeleteEnvironmentV1Responses[keyof DeleteEnvironmentV1Responses]
+
 export type ViewReleaseIndexV1Data = {
   body?: never
   path: {
@@ -776,6 +1107,10 @@ export type CreateAppV1Errors = {
    */
   403: unknown
   /**
+   * No environment with that uuid.
+   */
+  404: unknown
+  /**
    * An app with that slug already exists.
    */
   409: unknown
@@ -906,6 +1241,10 @@ export type ViewAppHealthV1Errors = {
    * Your account is not approved for this action.
    */
   403: unknown
+  /**
+   * No app with that slug.
+   */
+  404: unknown
 }
 
 export type ViewAppHealthV1Responses = {
@@ -941,6 +1280,10 @@ export type ViewAppLogsV1Errors = {
    * Your account is not approved for this action.
    */
   403: unknown
+  /**
+   * No app with that slug.
+   */
+  404: unknown
 }
 
 export type ViewAppLogsV1Responses = {

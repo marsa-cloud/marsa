@@ -40,7 +40,7 @@ Every `operationId` is derived by a global `operationIdFactory` (`src/modules/sw
 
 ## Source layout
 
-- `src/app/` — **features** (vertical slices), one folder per domain aggregate root: `app-management/`, `release/`, `auth/`, `user/`, `github-app/`.
+- `src/app/` — **features** (vertical slices), one folder per domain aggregate root: `app-management/`, `release/`, `project/`, `environment/`, `auth/`, `user/`, `github-app/`.
 - `src/modules/` — **support modules**: cross-cutting infrastructure features depend on, plus the production composition module (`api/api.module.ts`). Not feature code.
 
 Also: `src/entrypoints/` (process bootstraps), `src/test/` (harness + global setup), `src/utils/`, `src/sql/`.
@@ -61,6 +61,8 @@ One feature module per **domain aggregate root** — not per business capability
 - **A use-case lives with the aggregate it primarily reads or writes**, not the URL noun it is addressed by. `view-release-index` sits under `/apps/:slug/releases` but targets `Release`, so it lives in `release/`. Conversely `view-app-health` and `view-app-logs` are app-keyed live reads of Kubernetes state touching no `Release`, so they live in `app-management/`. Ask "whose lifecycle is this about?", never "which word is in the route?" — following the route noun is the trap this rule exists to avoid.
 - **Split out when a cluster of use-cases centres on a different aggregate.** One module holding two aggregates is the smell.
 - **Shared building blocks are the only cross-feature seam.** Never reach into another feature's repository, use-case, command, or response. Importing another feature's `entities/` / `errors/` / `enums/` / `events/` is sanctioned — that's how `release/` depends on `App`. The dependency must stay **one-directional**; preserving acyclicity is the property the split protects.
+
+- **Placement**: `project/ ← environment/ ← app-management/ ← release/`. An app's Kubernetes namespace is derived by `namespaceOf(project, environment)` (never stored); app-keyed repositories load it through `selectAppPlacement` in `app-management/entities/app-placement.ts`. `NamespaceBackend` (`src/modules/kubernetes/`) creates an environment's namespace on create and on every deploy, and deletes it with the environment.
 
 Driver + options: `docs/agdr/AgDR-0040-feature-module-boundary-aggregate-ownership.md` (marsa#131).
 

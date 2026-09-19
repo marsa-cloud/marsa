@@ -299,6 +299,297 @@
         ]
       }
     },
+    "/api/v1/projects": {
+      "post": {
+        "operationId": "createProjectV1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateProjectResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body, or an invalid name / slug."
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
+          "409": {
+            "description": "A project with that slug already exists."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "projects"
+        ]
+      },
+      "get": {
+        "operationId": "viewProjectIndexV1",
+        "parameters": [
+          {
+            "name": "pagination",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ViewProjectIndexPaginationQuery"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewProjectIndexResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{slug}": {
+      "delete": {
+        "operationId": "deleteProjectV1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The project was deleted."
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
+          "404": {
+            "description": "No project with that slug."
+          },
+          "409": {
+            "description": "The project still has environments."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{projectSlug}/environments": {
+      "post": {
+        "operationId": "createEnvironmentV1",
+        "parameters": [
+          {
+            "name": "projectSlug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEnvironmentCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateEnvironmentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body, or an invalid name / slug."
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
+          "404": {
+            "description": "No project with that slug."
+          },
+          "409": {
+            "description": "The slug is taken in this project, or its namespace is taken or still deleting."
+          },
+          "502": {
+            "description": "The namespace could not be created on the cluster."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "environments"
+        ]
+      },
+      "get": {
+        "operationId": "viewEnvironmentIndexV1",
+        "parameters": [
+          {
+            "name": "projectSlug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagination",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ViewEnvironmentIndexPaginationQuery"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewEnvironmentIndexResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
+          "404": {
+            "description": "No project with that slug."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "environments"
+        ]
+      }
+    },
+    "/api/v1/projects/{projectSlug}/environments/{environmentSlug}": {
+      "delete": {
+        "operationId": "deleteEnvironmentV1",
+        "parameters": [
+          {
+            "name": "projectSlug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "environmentSlug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The environment and its namespace were deleted."
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
+          "404": {
+            "description": "No environment with that slug in the project."
+          },
+          "409": {
+            "description": "The environment still has apps."
+          },
+          "502": {
+            "description": "The namespace could not be deleted; nothing changed."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "environments"
+        ]
+      }
+    },
     "/api/v1/apps/{slug}/releases": {
       "post": {
         "operationId": "createReleaseV1",
@@ -486,6 +777,9 @@
           },
           "403": {
             "description": "Your account is not approved for this action."
+          },
+          "404": {
+            "description": "No environment with that uuid."
           },
           "409": {
             "description": "An app with that slug already exists."
@@ -706,6 +1000,9 @@
           },
           "403": {
             "description": "Your account is not approved for this action."
+          },
+          "404": {
+            "description": "No app with that slug."
           }
         },
         "security": [
@@ -762,6 +1059,9 @@
           },
           "403": {
             "description": "Your account is not approved for this action."
+          },
+          "404": {
+            "description": "No app with that slug."
           }
         },
         "security": [
@@ -1225,6 +1525,297 @@
           "role"
         ]
       },
+      "CreateProjectCommand": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Demo",
+            "maxLength": 255
+          },
+          "slug": {
+            "type": "string",
+            "example": "demo",
+            "description": "First half of every environment namespace name.",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "maxLength": 30
+          }
+        },
+        "required": [
+          "name",
+          "slug"
+        ]
+      },
+      "CreateProjectResponse": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Demo"
+          },
+          "slug": {
+            "type": "string",
+            "example": "demo"
+          }
+        },
+        "required": [
+          "uuid",
+          "name",
+          "slug"
+        ]
+      },
+      "ViewProjectIndexQueryKey": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "uuid"
+        ]
+      },
+      "ViewProjectIndexPaginationQuery": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "key": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ViewProjectIndexQueryKey"
+              }
+            ]
+          }
+        }
+      },
+      "ProjectSummary": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Demo"
+          },
+          "slug": {
+            "type": "string",
+            "example": "demo"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "uuid",
+          "name",
+          "slug",
+          "createdAt"
+        ]
+      },
+      "ViewProjectIndexResponseMeta": {
+        "type": "object",
+        "properties": {
+          "next": {
+            "nullable": true,
+            "description": "Key for the next page, or null on the last page. Opaque — send it back as-is.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ViewProjectIndexQueryKey"
+              }
+            ]
+          }
+        },
+        "required": [
+          "next"
+        ]
+      },
+      "ViewProjectIndexResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "The items for the current page",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectSummary"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ViewProjectIndexResponseMeta"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
+      "CreateEnvironmentCommand": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Development",
+            "maxLength": 255
+          },
+          "slug": {
+            "type": "string",
+            "example": "dev",
+            "description": "Unique within the project; second half of the namespace name.",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "maxLength": 32
+          }
+        },
+        "required": [
+          "name",
+          "slug"
+        ]
+      },
+      "CreateEnvironmentResponse": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Development"
+          },
+          "slug": {
+            "type": "string",
+            "example": "dev"
+          },
+          "namespace": {
+            "type": "string",
+            "example": "demo-dev"
+          },
+          "projectSlug": {
+            "type": "string",
+            "example": "demo"
+          }
+        },
+        "required": [
+          "uuid",
+          "name",
+          "slug",
+          "namespace",
+          "projectSlug"
+        ]
+      },
+      "ViewEnvironmentIndexQueryKey": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "uuid"
+        ]
+      },
+      "ViewEnvironmentIndexPaginationQuery": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "key": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ViewEnvironmentIndexQueryKey"
+              }
+            ]
+          }
+        }
+      },
+      "EnvironmentSummary": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Development"
+          },
+          "slug": {
+            "type": "string",
+            "example": "dev"
+          },
+          "namespace": {
+            "type": "string",
+            "example": "demo-dev"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "uuid",
+          "name",
+          "slug",
+          "namespace",
+          "createdAt"
+        ]
+      },
+      "ViewEnvironmentIndexResponseMeta": {
+        "type": "object",
+        "properties": {
+          "next": {
+            "nullable": true,
+            "description": "Key for the next page, or null on the last page. Opaque — send it back as-is.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ViewEnvironmentIndexQueryKey"
+              }
+            ]
+          }
+        },
+        "required": [
+          "next"
+        ]
+      },
+      "ViewEnvironmentIndexResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "The items for the current page",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EnvironmentSummary"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ViewEnvironmentIndexResponseMeta"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
       "CreateReleaseCommand": {
         "type": "object",
         "properties": {
@@ -1477,6 +2068,11 @@
       "CreateAppCommand": {
         "type": "object",
         "properties": {
+          "environmentUuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Environment the app lives in."
+          },
           "slug": {
             "type": "string",
             "example": "my-app",
@@ -1530,6 +2126,7 @@
           }
         },
         "required": [
+          "environmentUuid",
           "slug",
           "image",
           "containerPort"
@@ -1583,6 +2180,45 @@
           }
         }
       },
+      "AppProjectRef": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "example": "demo"
+          },
+          "name": {
+            "type": "string",
+            "example": "Demo"
+          }
+        },
+        "required": [
+          "slug",
+          "name"
+        ]
+      },
+      "AppEnvironmentRef": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string",
+            "example": "dev"
+          },
+          "name": {
+            "type": "string",
+            "example": "Development"
+          }
+        },
+        "required": [
+          "uuid",
+          "slug",
+          "name"
+        ]
+      },
       "AppSummary": {
         "type": "object",
         "properties": {
@@ -1598,6 +2234,12 @@
             "type": "string",
             "example": "https://my-app.demo.marsa.cc"
           },
+          "project": {
+            "$ref": "#/components/schemas/AppProjectRef"
+          },
+          "environment": {
+            "$ref": "#/components/schemas/AppEnvironmentRef"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -1611,6 +2253,8 @@
           "slug",
           "image",
           "url",
+          "project",
+          "environment",
           "createdAt",
           "updatedAt"
         ]
@@ -1667,6 +2311,12 @@
             "type": "string",
             "example": "https://my-app.demo.marsa.cc"
           },
+          "project": {
+            "$ref": "#/components/schemas/AppProjectRef"
+          },
+          "environment": {
+            "$ref": "#/components/schemas/AppEnvironmentRef"
+          },
           "containerPort": {
             "type": "integer",
             "example": 80
@@ -1707,6 +2357,8 @@
           "slug",
           "image",
           "url",
+          "project",
+          "environment",
           "containerPort",
           "minReplicas",
           "maxReplicas",

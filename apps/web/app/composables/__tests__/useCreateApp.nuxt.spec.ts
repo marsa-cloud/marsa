@@ -11,7 +11,12 @@ registerEndpoint('/api/v1/apps', {
 describe('useCreateApp.create', () => {
   it('POSTs the app and returns the contract-validated response', async () => {
     const { create } = useCreateApp()
-    expect(await create({ slug: 'my-app', image: 'nginx:1.27', containerPort: 80 })).toEqual({
+    expect(await create({
+      environmentUuid: '0190c3c0-0000-7000-8000-000000000002',
+      slug: 'my-app',
+      image: 'nginx:1.27',
+      containerPort: 80,
+    })).toEqual({
       slug: 'my-app',
       url: 'https://my-app.marsa.cc',
     })
