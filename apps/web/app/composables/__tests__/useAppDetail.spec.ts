@@ -68,6 +68,8 @@ describe('app-detail response contracts', () => {
       slug: 'my-app',
       image: 'nginx:1.27',
       url: 'https://my-app.marsa.cc',
+      project: { slug: 'demo', name: 'Demo' },
+      environment: { uuid: '0190c3c0-0000-7000-8000-000000000002', slug: 'dev', name: 'Dev' },
       containerPort: 80,
       minReplicas: 1,
       maxReplicas: 1,

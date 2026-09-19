@@ -10,6 +10,8 @@ describe('app-list response contract', () => {
           slug: 'my-app',
           image: 'nginx:1.27',
           url: 'https://my-app.marsa.app',
+          project: { slug: 'demo', name: 'Demo' },
+          environment: { uuid: '0190c3c0-0000-7000-8000-000000000002', slug: 'dev', name: 'Dev' },
           createdAt: '2026-07-10T10:00:00.000Z',
           updatedAt: '2026-07-10T10:01:00.000Z',
         },
