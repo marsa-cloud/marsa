@@ -4767,7 +4767,7 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: marsa-api
-    namespace: { { .Release.Namespace } }
+    namespace: {{ .Release.Namespace }}
 ```
 
 - [ ] **Step 3: `admission-policy.yml`**
@@ -4915,10 +4915,11 @@ kubectl -n "$APPS_NS" get rolebinding marsa-deployer >/dev/null \
   || fail namespace "RoleBinding marsa-deployer missing in ${APPS_NS}"
 
 echo "== stage: admission fence holds =="
-# Server-side dry run runs admission, so this proves the policy — not just RBAC — refuses it.
-if kubectl --as="system:serviceaccount:${NS}:marsa-api" delete ns kube-public --dry-run=server 2>/dev/null; then
-  fail fence "marsa-api was allowed to delete kube-public"
-fi
+# Server-side dry run runs admission. Target the release namespace: kube-public is refused by
+# Kubernetes itself, which would pass without the policy.
+fence_out="$(kubectl --as="system:serviceaccount:${NS}:marsa-api" delete ns "$NS" --dry-run=server 2>&1 || true)"
+printf '%s' "$fence_out" | grep -q 'marsa-api-namespace-fence' \
+  || fail fence "deleting ${NS} as marsa-api was not refused by the fence: ${fence_out}"
 
 echo "== stage: deploy app via API =="
 create_status=""
