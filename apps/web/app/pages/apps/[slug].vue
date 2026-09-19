@@ -144,6 +144,12 @@ async function confirmDelete() {
         </template>
 
         <template #right>
+          <UBadge
+            v-if="config"
+            variant="subtle"
+            color="neutral"
+            :label="`${config.project.slug} / ${config.environment.slug}`"
+          />
           <UButton
             icon="i-lucide-rotate-cw"
             color="neutral"

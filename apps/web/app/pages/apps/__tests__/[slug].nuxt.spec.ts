@@ -83,6 +83,8 @@ beforeEach(() => {
       minReplicas: 1,
       maxReplicas: 1,
       hasUndeployedChanges: false,
+      project: { slug: 'demo', name: 'Demo' },
+      environment: { uuid: '0190c3c0-0000-7000-8000-000000000002', slug: 'dev', name: 'Dev' },
     },
     status: 'success',
     error: null,
@@ -131,6 +133,11 @@ describe('apps/[slug] detail page', () => {
     expect(wrapper.text()).toContain('Run logs')
   })
 
+  it('names the app\'s project and environment in the header', async () => {
+    const wrapper = await mountSuspended(Detail)
+    expect(wrapper.text()).toContain('demo / dev')
+  })
+
   it('shows health status + replica count', async () => {
     s.health.data = { status: 'healthy', availableReplicas: 2, desiredReplicas: 3 }
     const wrapper = await mountSuspended(Detail)
@@ -151,7 +158,7 @@ describe('apps/[slug] detail page', () => {
   })
 
   it('spells out that a zero floor means the app sleeps', async () => {
-    s.config.data = { slug: 'my-app', env: {}, minReplicas: 0, maxReplicas: 3 }
+    s.config.data = { ...(s.config.data as object), minReplicas: 0, maxReplicas: 3 }
     const wrapper = await mountSuspended(Detail)
     expect(wrapper.text()).toContain('Scaling: 0–3 replicas, sleeps when idle')
   })
