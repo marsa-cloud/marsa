@@ -1,4 +1,4 @@
-import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
+import { mockComponent, mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import New from '../new.vue'
@@ -8,6 +8,20 @@ const ship = vi.hoisted(() => vi.fn())
 const nav = vi.hoisted(() => vi.fn())
 const toastAdd = vi.hoisted(() => vi.fn())
 
+// The picker has its own spec; here it just reports a chosen environment (or none).
+const picked = vi.hoisted(() => ({ uuid: 'e1' as string | undefined }))
+mockComponent('ProjectEnvironmentPicker', async () => {
+  const { defineComponent, h } = await import('vue')
+  return defineComponent({
+    props: { modelValue: { type: String, default: undefined } },
+    emits: ['update:modelValue'],
+    setup(_, { emit }) {
+      if (picked.uuid) emit('update:modelValue', picked.uuid)
+      return () => h('div')
+    },
+  })
+})
+
 mockNuxtImport('useCreateApp', () => () => ({ create }))
 mockNuxtImport('useShipRelease', () => () => ({ ship }))
 mockNuxtImport('navigateTo', () => nav)
@@ -16,6 +30,7 @@ mockNuxtImport('useToast', () => () => ({ add: toastAdd }))
 const CREATED = { slug: 'my-app', url: 'https://my-app.marsa.cc' }
 
 beforeEach(() => {
+  picked.uuid = 'e1'
   create.mockReset().mockResolvedValue(CREATED)
   ship.mockReset().mockResolvedValue({
     releaseUuid: 'r1',
@@ -57,7 +72,12 @@ describe('apps/new deploy form', () => {
     await fillValidForm(wrapper)
     await submit(wrapper)
 
-    expect(create).toHaveBeenCalledWith({ slug: 'my-app', image: 'nginx:1.27', containerPort: 80 })
+    expect(create).toHaveBeenCalledWith({
+      environmentUuid: 'e1',
+      slug: 'my-app',
+      image: 'nginx:1.27',
+      containerPort: 80,
+    })
     expect(ship).toHaveBeenCalledWith('my-app')
     expect(nav).toHaveBeenCalledWith('/apps/my-app')
     expect(toastAdd).toHaveBeenCalledWith(
@@ -100,6 +120,7 @@ describe('apps/new deploy form', () => {
     await submit(wrapper)
 
     expect(create).toHaveBeenCalledWith({
+      environmentUuid: 'e1',
       slug: 'my-app',
       image: 'nginx:1.27',
       containerPort: 80,
@@ -145,6 +166,15 @@ describe('apps/new deploy form', () => {
   it('blocks submit and does not call the API on invalid input', async () => {
     const wrapper = await mountSuspended(New)
     await wrapper.find('input#image').setValue('nginx:1.27')
+    await submit(wrapper)
+
+    expect(create).not.toHaveBeenCalled()
+  })
+
+  it('does not call the API until an environment is picked', async () => {
+    picked.uuid = undefined
+    const wrapper = await mountSuspended(New)
+    await fillValidForm(wrapper)
     await submit(wrapper)
 
     expect(create).not.toHaveBeenCalled()

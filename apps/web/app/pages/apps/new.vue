@@ -16,6 +16,7 @@ const toast = useToast()
 
 const schema = z
   .object({
+    environmentUuid: z.string({ error: 'Pick an environment' }).min(1, 'Pick an environment'),
     slug: z
       .string()
       .min(1, 'Required')
@@ -27,12 +28,14 @@ const schema = z
 type Schema = z.output<typeof schema>
 
 const state = reactive<{
+  environmentUuid: string | undefined
   slug: string
   image: string
   containerPort: number | undefined
   minReplicas: number | undefined
   maxReplicas: number | undefined
 }>({
+  environmentUuid: undefined,
   slug: '',
   image: '',
   containerPort: undefined,
@@ -63,6 +66,7 @@ const error = ref<string | null>(null)
 function toCommand(data: Schema): CreateAppCommand {
   const env = buildEnvRecord(envRows.value)
   return {
+    environmentUuid: data.environmentUuid,
     slug: data.slug,
     image: data.image,
     containerPort: data.containerPort,
@@ -145,6 +149,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           class="space-y-4"
           @submit="onSubmit"
         >
+          <ProjectEnvironmentPicker v-model="state.environmentUuid" />
+
           <UFormField
             label="Slug"
             name="slug"
