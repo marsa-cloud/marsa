@@ -23,6 +23,9 @@ export class ReleaseSummary {
   @DeployStatusApiProperty({ example: DeployStatus.Succeeded })
   readonly deployStatus: DeployStatus
 
+  @ApiProperty({ type: String, format: 'uuid', nullable: true, description: 'Set on a rollback.' })
+  readonly sourceReleaseUuid: string | null
+
   @ApiProperty({ type: String, format: 'date-time' })
   readonly createdAt: string
 
@@ -51,6 +54,7 @@ export class ReleaseSummary {
     this.imageRef = release.imageRef
     this.triggeredBy = release.triggeredBy
     this.deployStatus = release.deployStatus
+    this.sourceReleaseUuid = release.sourceReleaseUuid
     this.createdAt = release.createdAt.toISOString()
     this.updatedAt = release.updatedAt.toISOString()
     if (failure) {

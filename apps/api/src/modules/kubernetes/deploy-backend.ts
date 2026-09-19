@@ -33,6 +33,9 @@ export abstract class DeployBackend {
    */
   abstract readRolloutStatus(namespace: string, deploymentName: string): Promise<RolloutStatus>
 
+  // The release-uuid annotation on the live pod template; null when absent or not deployed.
+  abstract readLiveReleaseUuid(namespace: string, deploymentName: string): Promise<string | null>
+
   /** Live runtime-health snapshot of a Deployment (#100) — never stored. */
   abstract readAppHealth(namespace: string, deploymentName: string): Promise<AppHealth>
 

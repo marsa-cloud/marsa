@@ -17,6 +17,7 @@ import {
 import {
   OPERATOR_APPS_NAMESPACE,
   REGISTRY_SECRET_SUFFIX,
+  RELEASE_UUID_ANNOTATION,
 } from '#src/modules/kubernetes/deploy-backend.constants.js'
 import type { RenderedManifests } from '#src/modules/kubernetes/deploy-backend.types.js'
 import { DirectApplyDeployBackend } from '#src/modules/kubernetes/direct-apply-deploy-backend.js'
@@ -122,5 +123,53 @@ describe('DirectApplyDeployBackend.apply', () => {
 
     expect(core.patchNamespacedSecret.calledOnce).toBe(true)
     expect(core.deleteNamespacedSecret.called).toBe(false)
+  })
+})
+
+describe('DirectApplyDeployBackend.readLiveReleaseUuid', () => {
+  let apps: SinonStubbedInstance<AppsV1Api>
+  let core: SinonStubbedInstance<CoreV1Api>
+  let custom: SinonStubbedInstance<CustomObjectsApi>
+  let sandbox: SinonSandbox
+  let backend: DirectApplyDeployBackend
+
+  beforeEach(() => {
+    apps = createStubInstance(AppsV1Api)
+    core = createStubInstance(CoreV1Api)
+    custom = createStubInstance(CustomObjectsApi)
+
+    sandbox = createSandbox()
+    sandbox.stub(KubeConfig.prototype, 'loadFromDefault')
+    sandbox
+      .stub(KubeConfig.prototype, 'makeApiClient')
+      .withArgs(AppsV1Api)
+      .returns(apps)
+      .withArgs(CoreV1Api)
+      .returns(core)
+      .withArgs(CustomObjectsApi)
+      .returns(custom)
+
+    backend = new DirectApplyDeployBackend()
+  })
+
+  afterEach(() => {
+    sandbox.restore()
+  })
+
+  it('returns the release uuid stamped on the live pod template', async () => {
+    apps.readNamespacedDeployment.resolves({
+      spec: {
+        selector: {},
+        template: { metadata: { annotations: { [RELEASE_UUID_ANNOTATION]: 'r-1' } } },
+      },
+    })
+
+    expect(await backend.readLiveReleaseUuid(OPERATOR_APPS_NAMESPACE, SLUG)).toBe('r-1')
+  })
+
+  it('returns null when the Deployment does not exist', async () => {
+    apps.readNamespacedDeployment.rejects(new ApiException(404, 'Not Found', {}, {}))
+
+    expect(await backend.readLiveReleaseUuid(OPERATOR_APPS_NAMESPACE, SLUG)).toBeNull()
   })
 })

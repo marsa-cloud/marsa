@@ -34,6 +34,11 @@ export class MockDeployBackend extends DeployBackend {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  readLiveReleaseUuid(_namespace: string, _deploymentName: string): Promise<string | null> {
+    return Promise.resolve(null)
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   readAppHealth(_namespace: string, _deploymentName: string): Promise<AppHealth> {
     return Promise.resolve({
       found: true,

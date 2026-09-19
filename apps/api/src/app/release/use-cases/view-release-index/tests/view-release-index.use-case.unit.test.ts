@@ -163,4 +163,38 @@ describe('ViewReleaseIndexUseCase', () => {
     expect(repository.setReleaseDeployStatus.called).toBe(false)
     expect(releases[1].deployStatus).toBe(DeployStatus.Pending)
   })
+  it('leaves an undeployed head pending while another release is live', async () => {
+    const { usecase, repository, deployBackend } = build()
+    deployBackend.readLiveReleaseUuid.resolves('some-other-release')
+    deployBackend.readRolloutStatus.resolves(RolloutStatus.Complete)
+
+    const result = await usecase.execute(SLUG, firstPage())
+
+    expect(result.items[0].deployStatus).toBe(DeployStatus.Pending)
+    expect(repository.setReleaseDeployStatus.called).toBe(false)
+  })
+
+  it('reconciles when the live pods belong to the head', async () => {
+    const { usecase, repository, deployBackend, releases } = build()
+    deployBackend.readLiveReleaseUuid.resolves(releases[0].uuid)
+    deployBackend.readRolloutStatus.resolves(RolloutStatus.Complete)
+
+    await usecase.execute(SLUG, firstPage())
+
+    expect(
+      repository.setReleaseDeployStatus.calledOnceWith(releases[0].uuid, DeployStatus.Succeeded),
+    ).toBe(true)
+  })
+
+  it('exposes the rollback source on each summary', async () => {
+    const rollback = new ReleaseBuilder()
+      .withSourceReleaseUuid(release(DeployStatus.Succeeded).uuid)
+      .withDeployStatus(DeployStatus.Succeeded)
+      .build()
+    const { usecase } = build([rollback])
+
+    const result = await usecase.execute(SLUG, firstPage())
+
+    expect(result.items[0].sourceReleaseUuid).toBe(rollback.sourceReleaseUuid)
+  })
 })
