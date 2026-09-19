@@ -84,4 +84,40 @@ describe('AppConfigForm', () => {
     expect(wrapper.text()).toContain('image should not be empty')
     expect(wrapper.emitted('saved')).toBeUndefined()
   })
+  it('keeps unsaved edits when the saved config is refetched', async () => {
+    const wrapper = await mount()
+    await wrapper.find('input#config-image').setValue('nginx:draft')
+
+    await wrapper.setProps({ config: { ...config, hasUndeployedChanges: true } })
+
+    expect((wrapper.find('input#config-image').element as HTMLInputElement).value).toBe(
+      'nginx:draft',
+    )
+  })
+
+  it('reseeds from a refetch when there are no unsaved edits', async () => {
+    const wrapper = await mount()
+
+    await wrapper.setProps({ config: { ...config, image: 'nginx:rolled-back', env: { A: '1' } } })
+
+    expect((wrapper.find('input#config-image').element as HTMLInputElement).value).toBe(
+      'nginx:rolled-back',
+    )
+    expect(
+      (wrapper.find('input[aria-label="env key 1"]').element as HTMLInputElement).value,
+    ).toBe('A')
+  })
+
+  it('accepts the next refetch after a successful save', async () => {
+    const wrapper = await mount()
+    await wrapper.find('input#config-image').setValue('nginx:1.28')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flush()
+
+    await wrapper.setProps({ config: { ...config, image: 'nginx:1.28-normalised' } })
+
+    expect((wrapper.find('input#config-image').element as HTMLInputElement).value).toBe(
+      'nginx:1.28-normalised',
+    )
+  })
 })

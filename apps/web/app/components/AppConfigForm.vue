@@ -27,6 +27,10 @@ function makeEnvRow(key = '', value = '') {
 }
 const envRows = ref<{ id: number, key: string, value: string }[]>([])
 
+const formSnapshot = () =>
+  JSON.stringify([state, envRows.value.map(({ key, value }) => [key, value])])
+let seededSnapshot = ''
+
 function seed(config: ViewAppDetailResponse) {
   state.image = config.image
   state.containerPort = config.containerPort
@@ -34,8 +38,17 @@ function seed(config: ViewAppDetailResponse) {
   state.maxReplicas = config.maxReplicas
   const rows = Object.entries(config.env).map(([key, value]) => makeEnvRow(key, value))
   envRows.value = rows.length ? rows : [makeEnvRow()]
+  seededSnapshot = formSnapshot()
 }
-watch(() => props.config, seed, { immediate: true })
+
+// The page refetches after every deploy; reseeding over unsaved edits would silently discard them.
+watch(
+  () => props.config,
+  (config) => {
+    if (!seededSnapshot || formSnapshot() === seededSnapshot) seed(config)
+  },
+  { immediate: true },
+)
 
 function addEnvRow() {
   envRows.value.push(makeEnvRow())
@@ -79,6 +92,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   } finally {
     saving.value = false
   }
+  seededSnapshot = formSnapshot()
   emit('saved')
 }
 </script>
