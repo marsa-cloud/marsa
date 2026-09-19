@@ -26,17 +26,22 @@ export class DeployReleaseUseCase {
       )
     }
 
-    await this.repository.setDeployStatus(release.uuid, DeployStatus.Pending)
+    // Re-applying a release that already rolled out is a no-op on the cluster; a failed retry
+    // must not mark the release that is still serving traffic as failed.
+    const alreadyRunning = release.deployStatus === DeployStatus.Succeeded
+    const deployStatus = alreadyRunning ? DeployStatus.Succeeded : DeployStatus.Pending
+
+    if (!alreadyRunning) await this.repository.setDeployStatus(release.uuid, DeployStatus.Pending)
     try {
       await this.applyRelease.apply(app.slug, release)
     } catch (error) {
-      await this.repository.setDeployStatus(release.uuid, DeployStatus.Failed)
+      if (!alreadyRunning) await this.repository.setDeployStatus(release.uuid, DeployStatus.Failed)
       throw error
     }
 
     return new DeployReleaseResponse(
       app.slug,
-      { ...release, deployStatus: DeployStatus.Pending },
+      { ...release, deployStatus },
       this.applyRelease.baseDomain,
     )
   }

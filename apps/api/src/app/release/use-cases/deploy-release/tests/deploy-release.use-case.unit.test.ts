@@ -107,4 +107,28 @@ describe('DeployReleaseUseCase', () => {
 
     await expect(usecase.execute(release.uuid)).rejects.toThrow(NotFoundException)
   })
+  it('does not demote a running release when re-applying it fails', async () => {
+    const release = new ReleaseBuilder()
+      .withApp(app)
+      .withDeployStatus(DeployStatus.Succeeded)
+      .build()
+    const { usecase, repository, deployBackend } = build(release)
+    deployBackend.apply.rejects(new Error('transient apiserver error'))
+
+    await expect(usecase.execute(release.uuid)).rejects.toThrow('transient apiserver error')
+    expect(repository.setDeployStatus.called).toBe(false)
+  })
+
+  it('leaves a running release succeeded when re-applied', async () => {
+    const release = new ReleaseBuilder()
+      .withApp(app)
+      .withDeployStatus(DeployStatus.Succeeded)
+      .build()
+    const { usecase, repository } = build(release)
+
+    const result = await usecase.execute(release.uuid)
+
+    expect(repository.setDeployStatus.called).toBe(false)
+    expect(result.deployStatus).toBe(DeployStatus.Succeeded)
+  })
 })
