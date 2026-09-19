@@ -1,6 +1,3 @@
-import type { DeployAppCommand, DeployAppResponse } from '~/api/types.gen'
-import { zDeployAppResponse } from '~/api/zod.gen'
-
 const GENERIC_ERROR = 'Something went wrong. Please try again.'
 
 /**
@@ -41,23 +38,4 @@ export function buildEnvRecord(rows: EnvRow[]): Record<string, string> {
     if (trimmed) env[trimmed] = value
   }
   return env
-}
-
-/**
- * Client for the deploy endpoint (#98). Imperative mutation: deploying is a
- * user-triggered write, so we call `$api` directly (not `useAsyncData`) and
- * validate the response against the generated Zod schema at the boundary.
- */
-export function useDeployApp() {
-  const { $api } = useNuxtApp()
-
-  async function deploy(command: DeployAppCommand): Promise<DeployAppResponse> {
-    const raw = await $api('/v1/deploy', {
-      method: 'POST',
-      body: command,
-    })
-    return zDeployAppResponse.parse(raw)
-  }
-
-  return { deploy }
 }

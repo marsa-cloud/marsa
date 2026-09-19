@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { zDeployAppResponse } from '~/api/zod.gen'
-
-import { buildEnvRecord, extractApiError } from '../useDeployApp'
+import { buildEnvRecord, extractApiError } from '../apiHelpers'
 
 const FALLBACK = 'Something went wrong. Please try again.'
 
@@ -54,28 +52,5 @@ describe('buildEnvRecord', () => {
 
   it('returns an empty record for no usable rows', () => {
     expect(buildEnvRecord([{ key: '', value: '' }])).toEqual({})
-  })
-})
-
-describe('deploy response contract', () => {
-  it('accepts a valid deploy response', () => {
-    const valid = {
-      appSlug: 'my-app',
-      url: 'https://my-app.marsa.cc',
-      releaseUuid: '11111111-1111-1111-1111-111111111111',
-      deployStatus: 'pending',
-    }
-    expect(zDeployAppResponse.parse(valid)).toEqual(valid)
-  })
-
-  it('rejects a response with an unknown deployStatus', () => {
-    expect(() =>
-      zDeployAppResponse.parse({
-        appSlug: 'my-app',
-        url: 'https://my-app.marsa.cc',
-        releaseUuid: 'x',
-        deployStatus: 'exploded',
-      }),
-    ).toThrow()
   })
 })
