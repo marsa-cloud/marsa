@@ -4716,6 +4716,7 @@ Run: `helm unittest charts/marsa` → FAIL.
 
 - [ ] **Step 2: `rbac.yml`**
 
+<!-- prettier-ignore-start -->
 ```yaml
 # marsa-api creates one namespace per environment (#142) and binds marsa-deployer into each,
 # so its write access is exactly the namespaces it manages. marsa-deployer is never bound
@@ -4769,6 +4770,7 @@ subjects:
     name: marsa-api
     namespace: {{ .Release.Namespace }}
 ```
+<!-- prettier-ignore-end -->
 
 - [ ] **Step 3: `admission-policy.yml`**
 
