@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common'
 import { and, desc, eq, lt } from 'drizzle-orm'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
+import {
+  type AppPlacement,
+  selectAppPlacement,
+} from '#src/app/app-management/entities/app-placement.js'
 import { type Release, releaseTable } from '#src/app/release/entities/release.table.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import type { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
@@ -20,6 +24,11 @@ export class ViewReleaseIndexRepository {
       .orderBy(desc(releaseTable.uuid))
       .limit(limit)
     return rows.map((row) => row.release)
+  }
+
+  async findPlacement(slug: string): Promise<AppPlacement | undefined> {
+    const [placement] = await selectAppPlacement(this.db).where(eq(appTable.slug, slug)).limit(1)
+    return placement
   }
 
   async setReleaseDeployStatus(uuid: ReleaseUuid, deployStatus: DeployStatus): Promise<void> {

@@ -15,7 +15,6 @@ import {
   type SinonStubbedInstance,
 } from 'sinon'
 import {
-  OPERATOR_APPS_NAMESPACE,
   REGISTRY_SECRET_SUFFIX,
   RELEASE_UUID_ANNOTATION,
 } from '#src/modules/kubernetes/deploy-backend.constants.js'
@@ -23,6 +22,7 @@ import type { RenderedManifests } from '#src/modules/kubernetes/deploy-backend.t
 import { DirectApplyDeployBackend } from '#src/modules/kubernetes/direct-apply-deploy-backend.js'
 
 const SLUG = 'billing-api'
+const NAMESPACE = 'demo-dev'
 
 function manifests(overrides: Partial<RenderedManifests> = {}): RenderedManifests {
   return {
@@ -79,13 +79,13 @@ describe('DirectApplyDeployBackend.apply', () => {
   })
 
   it('deletes the orphaned pull Secret when the bundle renders none', async () => {
-    await backend.apply(OPERATOR_APPS_NAMESPACE, manifests())
+    await backend.apply(NAMESPACE, manifests())
 
     expect(core.patchNamespacedSecret.called).toBe(false)
     expect(core.deleteNamespacedSecret.calledOnce).toBe(true)
     expect(core.deleteNamespacedSecret.firstCall.args[0]).toEqual({
       name: `${SLUG}${REGISTRY_SECRET_SUFFIX}`,
-      namespace: OPERATOR_APPS_NAMESPACE,
+      namespace: NAMESPACE,
     })
   })
 
@@ -96,7 +96,7 @@ describe('DirectApplyDeployBackend.apply', () => {
       return Promise.resolve({} as V1Status)
     })
 
-    await backend.apply(OPERATOR_APPS_NAMESPACE, manifests())
+    await backend.apply(NAMESPACE, manifests())
 
     expect(deploymentPatchedFirst).toBe(true)
   })
@@ -104,7 +104,7 @@ describe('DirectApplyDeployBackend.apply', () => {
   it('tolerates a 404 when no Secret was ever materialized', async () => {
     core.deleteNamespacedSecret.rejects(new ApiException(404, 'Not Found', {}, {}))
 
-    await backend.apply(OPERATOR_APPS_NAMESPACE, manifests())
+    await backend.apply(NAMESPACE, manifests())
 
     // HTTPScaledObject then IngressRoute — apply got past the tolerated 404.
     expect(custom.patchNamespacedCustomObject.calledTwice).toBe(true)
@@ -113,13 +113,13 @@ describe('DirectApplyDeployBackend.apply', () => {
   it('propagates a non-404 failure from the delete', async () => {
     core.deleteNamespacedSecret.rejects(new ApiException(403, 'Forbidden', {}, {}))
 
-    await expect(backend.apply(OPERATOR_APPS_NAMESPACE, manifests())).rejects.toThrow(ApiException)
+    await expect(backend.apply(NAMESPACE, manifests())).rejects.toThrow(ApiException)
   })
 
   it('applies the pull Secret and deletes nothing when the image stays private', async () => {
     const imagePullSecret = { metadata: { name: `${SLUG}${REGISTRY_SECRET_SUFFIX}` } }
 
-    await backend.apply(OPERATOR_APPS_NAMESPACE, manifests({ imagePullSecret }))
+    await backend.apply(NAMESPACE, manifests({ imagePullSecret }))
 
     expect(core.patchNamespacedSecret.calledOnce).toBe(true)
     expect(core.deleteNamespacedSecret.called).toBe(false)
@@ -164,12 +164,12 @@ describe('DirectApplyDeployBackend.readLiveReleaseUuid', () => {
       },
     })
 
-    expect(await backend.readLiveReleaseUuid(OPERATOR_APPS_NAMESPACE, SLUG)).toBe('r-1')
+    expect(await backend.readLiveReleaseUuid(NAMESPACE, SLUG)).toBe('r-1')
   })
 
   it('returns null when the Deployment does not exist', async () => {
     apps.readNamespacedDeployment.rejects(new ApiException(404, 'Not Found', {}, {}))
 
-    expect(await backend.readLiveReleaseUuid(OPERATOR_APPS_NAMESPACE, SLUG)).toBeNull()
+    expect(await backend.readLiveReleaseUuid(NAMESPACE, SLUG)).toBeNull()
   })
 })

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common'
+import { namespaceOf } from '#src/app/environment/entities/namespace.js'
 import type { Release } from '#src/app/release/entities/release.table.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { ViewReleaseIndexQuery } from '#src/app/release/use-cases/view-release-index/query/view-release-index.query.js'
@@ -7,7 +8,6 @@ import {
   type ReleaseHead,
   ViewReleaseIndexResponse,
 } from '#src/app/release/use-cases/view-release-index/view-release-index.response.js'
-import { OPERATOR_APPS_NAMESPACE } from '#src/modules/kubernetes/deploy-backend.constants.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
 import { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
 import { keysetLimit } from '#src/utils/pagination/pagination-mapper.js'
@@ -53,27 +53,34 @@ export class ViewReleaseIndexUseCase {
   private async refreshHead(releases: Release[], slug: string): Promise<ReleaseHead | null> {
     const head = releases.at(0)
     if (!head) return null
+    const placement = await this.repository.findPlacement(slug)
+    if (!placement) return null
+    const namespace = namespaceOf(placement.project, placement.environment)
 
     const deployStatus = TERMINAL_STATUSES.has(head.deployStatus)
       ? head.deployStatus
-      : await this.reconcile(head, slug)
+      : await this.reconcile(head, namespace, slug)
 
     // A failure reason is read live from the pods (never stored, #115), and only the head
     // maps to the live Deployment — no older release's failure can be described this way.
     const failure =
       deployStatus === DeployStatus.Failed
-        ? await this.deployBackend.readDeployFailure(OPERATOR_APPS_NAMESPACE, slug)
+        ? await this.deployBackend.readDeployFailure(namespace, slug)
         : null
 
     return { uuid: head.uuid, deployStatus, failure }
   }
 
-  private async reconcile(release: Release, slug: string): Promise<DeployStatus> {
+  private async reconcile(
+    release: Release,
+    namespace: string,
+    slug: string,
+  ): Promise<DeployStatus> {
     // A release that was created but never deployed must not inherit the live rollout.
-    const live = await this.deployBackend.readLiveReleaseUuid(OPERATOR_APPS_NAMESPACE, slug)
+    const live = await this.deployBackend.readLiveReleaseUuid(namespace, slug)
     if (live !== release.uuid) return release.deployStatus
 
-    const rollout = await this.deployBackend.readRolloutStatus(OPERATOR_APPS_NAMESPACE, slug)
+    const rollout = await this.deployBackend.readRolloutStatus(namespace, slug)
     const observed = toDeployStatus(rollout)
 
     // `null` (NotFound) is absence of observation, never a state — persisting one there

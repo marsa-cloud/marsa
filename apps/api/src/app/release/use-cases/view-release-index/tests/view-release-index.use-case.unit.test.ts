@@ -2,6 +2,7 @@ import { before, describe, it } from 'node:test'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
+import { AppPlacementBuilder } from '#src/app/app-management/entities/app-placement.builder.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import type { Release } from '#src/app/release/entities/release.table.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
@@ -29,6 +30,9 @@ function build(releases = [release(DeployStatus.Pending)]) {
   const repository = createStubInstance(ViewReleaseIndexRepository)
   repository.findByAppSlug.resolves(releases)
   repository.setReleaseDeployStatus.resolves()
+  repository.findPlacement.resolves(
+    new AppPlacementBuilder().withApp(new AppBuilder().withSlug(SLUG).build()).build(),
+  )
 
   const deployBackend = createStubInstance(MockDeployBackend)
   deployBackend.readLiveReleaseUuid.resolves(releases[0]?.uuid ?? null)
@@ -207,5 +211,15 @@ describe('ViewReleaseIndexUseCase', () => {
 
     expect(result.items[0].deployStatus).toBe(DeployStatus.Pending)
     expect(repository.setReleaseDeployStatus.called).toBe(false)
+  })
+
+  it('reconciles against the app namespace', async () => {
+    const { usecase, deployBackend } = build()
+    deployBackend.readRolloutStatus.resolves(RolloutStatus.Complete)
+
+    await usecase.execute(SLUG, firstPage())
+
+    expect(deployBackend.readLiveReleaseUuid.firstCall.args[0]).toBe('my-project-production')
+    expect(deployBackend.readRolloutStatus.firstCall.args[0]).toBe('my-project-production')
   })
 })

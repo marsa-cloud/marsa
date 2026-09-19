@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common'
 import { desc, eq } from 'drizzle-orm'
-import { type App, appTable } from '#src/app/app-management/entities/app.table.js'
+import { appTable } from '#src/app/app-management/entities/app.table.js'
+import {
+  type AppPlacement,
+  selectAppPlacement,
+} from '#src/app/app-management/entities/app-placement.js'
 import { type Release, releaseTable } from '#src/app/release/entities/release.table.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import type { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
@@ -14,15 +18,18 @@ export class DeployReleaseRepository {
   // uuidv7 sorts by creation time, which is the order the release list uses too.
   async findAppWithNewestRelease(
     slug: string,
-  ): Promise<{ app: App; release: Release | null } | undefined> {
-    const [row] = await this.db
-      .select({ app: appTable, release: releaseTable })
-      .from(appTable)
-      .leftJoin(releaseTable, eq(releaseTable.appUuid, appTable.uuid))
-      .where(eq(appTable.slug, slug))
+  ): Promise<{ placement: AppPlacement; release: Release | null } | undefined> {
+    const [placement] = await selectAppPlacement(this.db).where(eq(appTable.slug, slug)).limit(1)
+    if (!placement) {
+      return undefined
+    }
+    const [release] = await this.db
+      .select()
+      .from(releaseTable)
+      .where(eq(releaseTable.appUuid, placement.app.uuid))
       .orderBy(desc(releaseTable.uuid))
       .limit(1)
-    return row
+    return { placement, release: release ?? null }
   }
 
   async setDeployStatus(uuid: ReleaseUuid, deployStatus: DeployStatus): Promise<void> {

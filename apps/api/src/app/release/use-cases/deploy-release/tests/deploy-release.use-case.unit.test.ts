@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
+import { AppPlacementBuilder } from '#src/app/app-management/entities/app-placement.builder.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { ApplyReleaseService } from '#src/app/release/services/apply-release/apply-release.service.js'
@@ -11,27 +12,35 @@ import { DeployReleaseRepository } from '#src/app/release/use-cases/deploy-relea
 import { DeployReleaseUseCase } from '#src/app/release/use-cases/deploy-release/deploy-release.use-case.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
+import { MockNamespaceBackend } from '#src/modules/kubernetes/mock-namespace-backend.js'
+import { NamespaceConflictError } from '#src/modules/kubernetes/namespace-backend.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
-const app = new AppBuilder().withSlug('my-app').build()
+const placement = new AppPlacementBuilder()
+  .withApp(new AppBuilder().withSlug('my-app').build())
+  .build()
+const app = placement.app
 
 function build(release = new ReleaseBuilder().withApp(app).withImageRef('nginx:1.27').build()) {
   const repository = createStubInstance(DeployReleaseRepository)
-  repository.findAppWithNewestRelease.resolves({ app, release })
+  repository.findAppWithNewestRelease.resolves({ placement, release })
   repository.setDeployStatus.resolves()
 
   const deployBackend = createStubInstance(MockDeployBackend)
   deployBackend.apply.resolves()
+  const namespaces = createStubInstance(MockNamespaceBackend)
+  namespaces.provision.resolves()
   const config = createStubInstance(ConfigService)
   config.getOrThrow.returns('demo.marsa.cc')
   const cipher = createStubInstance(ImagePullCredentialsCipher)
   cipher.open.returns({ registry: 'ghcr.io', username: 'org', password: 'pw' })
 
-  const applyRelease = new ApplyReleaseService(deployBackend, cipher, config)
+  const applyRelease = new ApplyReleaseService(deployBackend, namespaces, cipher, config)
   return {
     usecase: new DeployReleaseUseCase(repository, applyRelease),
     repository,
     deployBackend,
+    namespaces,
     cipher,
     release,
   }
@@ -114,7 +123,7 @@ describe('DeployReleaseUseCase', () => {
 
   it('refuses an app with no release with 409', async () => {
     const { usecase, repository, deployBackend } = build()
-    repository.findAppWithNewestRelease.resolves({ app, release: null })
+    repository.findAppWithNewestRelease.resolves({ placement, release: null })
 
     await expect(usecase.execute('my-app')).rejects.toThrow(ConflictException)
     expect(deployBackend.apply.called).toBe(false)
@@ -125,5 +134,28 @@ describe('DeployReleaseUseCase', () => {
     repository.findAppWithNewestRelease.resolves(undefined)
 
     await expect(usecase.execute('ghost')).rejects.toThrow(NotFoundException)
+  })
+
+  it('provisions the environment namespace, then applies into it', async () => {
+    const { usecase, deployBackend, namespaces } = build()
+
+    await usecase.execute('my-app')
+
+    expect(
+      namespaces.provision.calledOnceWithExactly(
+        'my-project-production',
+        placement.environment.uuid,
+      ),
+    ).toBe(true)
+    expect(deployBackend.apply.firstCall.args[0]).toBe('my-project-production')
+    expect(namespaces.provision.firstCall.calledBefore(deployBackend.apply.firstCall)).toBe(true)
+  })
+
+  it('reports a namespace taken by something else as 409 and marks the release failed', async () => {
+    const { usecase, namespaces, repository, release } = build()
+    namespaces.provision.rejects(new NamespaceConflictError('taken'))
+
+    await expect(usecase.execute('my-app')).rejects.toThrow(ConflictException)
+    expect(repository.setDeployStatus.calledWith(release.uuid, DeployStatus.Failed)).toBe(true)
   })
 })
