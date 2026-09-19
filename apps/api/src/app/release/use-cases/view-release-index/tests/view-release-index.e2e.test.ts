@@ -13,6 +13,7 @@ const SLUG = 'releases-e2e-app'
 describe('GET /api/v1/apps/:slug/releases (e2e)', () => {
   let setup: TestSetup
   let sessionCookie: string
+  let releaseUuid: string
 
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
@@ -25,13 +26,28 @@ describe('GET /api/v1/apps/:slug/releases (e2e)', () => {
     const release = new ReleaseBuilder().withApp(app).withImageRef('nginx:1.27').build()
     await setup.db.insert(appTable).values(app)
     await setup.db.insert(releaseTable).values(release)
+    releaseUuid = release.uuid
   })
 
   after(async () => {
     await setup.teardown()
   })
 
-  it('lists releases and reconciles the pending one to succeeded (mock rollout Complete)', async () => {
+  it('keeps a release that was never deployed pending', async () => {
+    const response = await request(setup.httpServer)
+      .get(`/api/v1/apps/${SLUG}/releases`)
+      .set('Cookie', sessionCookie)
+      .expect(200)
+
+    expect(response.body.items[0].deployStatus).toBe('pending')
+  })
+
+  it('lists releases and reconciles the deployed one to succeeded (mock rollout Complete)', async () => {
+    await request(setup.httpServer)
+      .post(`/api/v1/releases/${releaseUuid}/deploy`)
+      .set('Cookie', sessionCookie)
+      .expect(200)
+
     const response = await request(setup.httpServer)
       .get(`/api/v1/apps/${SLUG}/releases`)
       .set('Cookie', sessionCookie)

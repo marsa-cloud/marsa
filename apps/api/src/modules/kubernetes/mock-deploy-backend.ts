@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common'
+import { RELEASE_UUID_ANNOTATION } from '#src/modules/kubernetes/deploy-backend.constants.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
 import type {
   AppHealth,
@@ -18,13 +19,19 @@ import { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
  */
 @Injectable()
 export class MockDeployBackend extends DeployBackend {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  apply(_namespace: string, _manifests: RenderedManifests): Promise<void> {
+  // Remembers what was applied so the release-list reconcile guard sees what a cluster would.
+  private readonly liveReleases = new Map<string, string>()
+
+  apply(_namespace: string, manifests: RenderedManifests): Promise<void> {
+    const name = manifests.deployment.metadata?.name
+    const releaseUuid =
+      manifests.deployment.spec?.template.metadata?.annotations?.[RELEASE_UUID_ANNOTATION]
+    if (name && releaseUuid) this.liveReleases.set(name, releaseUuid)
     return Promise.resolve()
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  destroy(_namespace: string, _appName: string): Promise<void> {
+  destroy(_namespace: string, appName: string): Promise<void> {
+    this.liveReleases.delete(appName)
     return Promise.resolve()
   }
 
@@ -33,9 +40,8 @@ export class MockDeployBackend extends DeployBackend {
     return Promise.resolve(RolloutStatus.Complete)
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  readLiveReleaseUuid(_namespace: string, _deploymentName: string): Promise<string | null> {
-    return Promise.resolve(null)
+  readLiveReleaseUuid(_namespace: string, deploymentName: string): Promise<string | null> {
+    return Promise.resolve(this.liveReleases.get(deploymentName) ?? null)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

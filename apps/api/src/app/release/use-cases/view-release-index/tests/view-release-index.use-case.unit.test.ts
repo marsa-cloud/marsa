@@ -31,6 +31,7 @@ function build(releases = [release(DeployStatus.Pending)]) {
   repository.setReleaseDeployStatus.resolves()
 
   const deployBackend = createStubInstance(MockDeployBackend)
+  deployBackend.readLiveReleaseUuid.resolves(releases[0]?.uuid ?? null)
 
   const usecase = new ViewReleaseIndexUseCase(repository, deployBackend)
   return { usecase, repository, deployBackend, releases }
@@ -196,5 +197,15 @@ describe('ViewReleaseIndexUseCase', () => {
     const result = await usecase.execute(SLUG, firstPage())
 
     expect(result.items[0].sourceReleaseUuid).toBe(rollback.sourceReleaseUuid)
+  })
+  it('does not reconcile when the live pods carry no release uuid at all', async () => {
+    const { usecase, repository, deployBackend } = build()
+    deployBackend.readLiveReleaseUuid.resolves(null)
+    deployBackend.readRolloutStatus.resolves(RolloutStatus.Complete)
+
+    const result = await usecase.execute(SLUG, firstPage())
+
+    expect(result.items[0].deployStatus).toBe(DeployStatus.Pending)
+    expect(repository.setReleaseDeployStatus.called).toBe(false)
   })
 })
