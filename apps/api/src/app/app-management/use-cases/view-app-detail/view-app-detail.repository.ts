@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common'
-import { and, desc, eq, ne } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { type App, appTable } from '#src/app/app-management/entities/app.table.js'
 import type { AppUuid } from '#src/app/app-management/entities/app.uuid.js'
 import { type Release, releaseTable } from '#src/app/release/entities/release.table.js'
-import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
+import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import type { Database } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 
@@ -16,15 +16,11 @@ export class ViewAppDetailRepository {
     return app
   }
 
-  // A failed release never ran, so it can't be what's live — compare against the one before it.
-  async findNewestNonFailedRelease(appUuid: AppUuid): Promise<Release | undefined> {
+  async findRelease(uuid: ReleaseUuid, appUuid: AppUuid): Promise<Release | undefined> {
     const [release] = await this.db
       .select()
       .from(releaseTable)
-      .where(
-        and(eq(releaseTable.appUuid, appUuid), ne(releaseTable.deployStatus, DeployStatus.Failed)),
-      )
-      .orderBy(desc(releaseTable.uuid))
+      .where(and(eq(releaseTable.uuid, uuid), eq(releaseTable.appUuid, appUuid)))
       .limit(1)
     return release
   }

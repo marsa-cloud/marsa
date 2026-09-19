@@ -1,7 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
 import type { App } from '#src/app/app-management/entities/app.table.js'
-import type { Release } from '#src/app/release/entities/release.table.js'
-import { isSnapshotOf } from '#src/app/release/entities/release-snapshot.js'
 
 export class ViewAppDetailResponse {
   @ApiProperty({ type: String, example: 'my-app' })
@@ -33,7 +31,7 @@ export class ViewAppDetailResponse {
   @ApiProperty({
     type: Boolean,
     description:
-      'True when the saved config differs from the newest release that has not failed, or nothing has been released.',
+      'True when the saved config differs from the release the cluster is running, or nothing is running.',
   })
   readonly hasUndeployedChanges: boolean
 
@@ -43,7 +41,7 @@ export class ViewAppDetailResponse {
   @ApiProperty({ type: String, format: 'date-time' })
   readonly updatedAt: string
 
-  constructor(app: App, baseDomain: string, running?: Release) {
+  constructor(app: App, baseDomain: string, hasUndeployedChanges: boolean) {
     this.slug = app.slug
     this.image = app.image
     this.url = `https://${app.slug}.${baseDomain}`
@@ -51,7 +49,7 @@ export class ViewAppDetailResponse {
     this.minReplicas = app.minReplicas
     this.maxReplicas = app.maxReplicas
     this.env = app.env
-    this.hasUndeployedChanges = !running || !isSnapshotOf(running, app)
+    this.hasUndeployedChanges = hasUndeployedChanges
     this.createdAt = app.createdAt.toISOString()
     this.updatedAt = app.updatedAt.toISOString()
   }

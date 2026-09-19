@@ -321,7 +321,7 @@ export type ViewAppDetailResponse = {
     [key: string]: string
   }
   /**
-   * True when the saved config differs from the newest release that has not failed, or nothing has been released.
+   * True when the saved config differs from the release the cluster is running, or nothing is running.
    */
   hasUndeployedChanges: boolean
   createdAt: string

@@ -3,9 +3,6 @@ import { expect } from 'expect'
 import request from 'supertest'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
-import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
-import { releaseTable } from '#src/app/release/entities/release.table.js'
-import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -54,22 +51,47 @@ describe('GET /api/v1/apps/:slug (e2e)', () => {
     })
   })
 
-  it('ignores a failed release when deciding whether saved config is running', async () => {
-    const app = new AppBuilder().withSlug('detail-e2e-failed').withEnv({ A: 'new' }).build()
-    const running = new ReleaseBuilder()
-      .withApp({ ...app, env: { A: 'old' } })
-      .withDeployStatus(DeployStatus.Succeeded)
-      .build()
-    const failed = new ReleaseBuilder().withApp(app).withDeployStatus(DeployStatus.Failed).build()
-    await setup.db.insert(appTable).values(app)
-    await setup.db.insert(releaseTable).values([running, failed])
+  it('warns until the saved config is what the cluster is actually running', async () => {
+    const slug = 'detail-e2e-live'
+    const detail = async () =>
+      (
+        await request(setup.httpServer)
+          .get(`/api/v1/apps/${slug}`)
+          .set('Cookie', sessionCookie)
+          .expect(200)
+      ).body.hasUndeployedChanges
+    const createRelease = async () =>
+      (
+        await request(setup.httpServer)
+          .post(`/api/v1/apps/${slug}/releases`)
+          .set('Cookie', sessionCookie)
+          .send({})
+          .expect(201)
+      ).body.releaseUuid as string
 
-    const response = await request(setup.httpServer)
-      .get('/api/v1/apps/detail-e2e-failed')
+    await request(setup.httpServer)
+      .post('/api/v1/apps')
+      .set('Cookie', sessionCookie)
+      .send({ slug, image: 'nginx:1.27', containerPort: 80 })
+      .expect(201)
+    expect(await detail()).toBe(true)
+
+    await request(setup.httpServer)
+      .post(`/api/v1/releases/${await createRelease()}/deploy`)
       .set('Cookie', sessionCookie)
       .expect(200)
+    expect(await detail()).toBe(false)
 
-    expect(response.body.hasUndeployedChanges).toBe(true)
+    await request(setup.httpServer)
+      .patch(`/api/v1/apps/${slug}`)
+      .set('Cookie', sessionCookie)
+      .send({ env: { A: 'new' } })
+      .expect(200)
+    expect(await detail()).toBe(true)
+
+    // A release that matches the saved config but never reached the cluster changes nothing.
+    await createRelease()
+    expect(await detail()).toBe(true)
   })
 
   it('returns 404 for a slug that does not exist', async () => {

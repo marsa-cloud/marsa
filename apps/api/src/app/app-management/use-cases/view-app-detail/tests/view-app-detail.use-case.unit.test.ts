@@ -7,31 +7,65 @@ import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { ViewAppDetailRepository } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.repository.js'
 import { ViewAppDetailUseCase } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.use-case.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
-import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
+import { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
+
+const app = new AppBuilder().withSlug('my-app').withEnv({ A: '1' }).build()
 
 function build() {
   const repository = createStubInstance(ViewAppDetailRepository)
-  repository.findNewestNonFailedRelease.resolves(undefined)
+  repository.findBySlug.resolves(app)
+  repository.findRelease.resolves(undefined)
+  const deployBackend = createStubInstance(MockDeployBackend)
+  deployBackend.readLiveReleaseUuid.resolves(null)
   const config = createStubInstance(ConfigService)
   config.getOrThrow.returns('demo.marsa.cc')
-  const usecase = new ViewAppDetailUseCase(repository, config)
-  return { repository, usecase }
+  const usecase = new ViewAppDetailUseCase(repository, deployBackend, config)
+  return { repository, deployBackend, usecase }
 }
 
 describe('ViewAppDetailUseCase', () => {
   before(() => TestBench.setupUnitTest())
 
   it('builds the public URL from the slug and the configured base domain', async () => {
-    const { repository, usecase } = build()
-    repository.findBySlug.resolves(
-      new AppBuilder().withSlug('my-app').withEnv({ LOG_LEVEL: 'info' }).build(),
-    )
+    const { usecase } = build()
 
     const response = await usecase.execute('my-app')
 
     expect(response.url).toBe('https://my-app.demo.marsa.cc')
-    expect(response.env).toEqual({ LOG_LEVEL: 'info' })
+    expect(response.env).toEqual({ A: '1' })
+  })
+
+  it('reports undeployed changes when nothing is running', async () => {
+    const { usecase } = build()
+
+    expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(true)
+  })
+
+  it('reports no changes when the running release matches the saved config', async () => {
+    const { repository, deployBackend, usecase } = build()
+    const running = new ReleaseBuilder().withApp(app).build()
+    deployBackend.readLiveReleaseUuid.resolves(running.uuid)
+    repository.findRelease.resolves(running)
+
+    expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(false)
+    expect(repository.findRelease.calledOnceWith(running.uuid, app.uuid)).toBe(true)
+  })
+
+  it('reports changes when the running release predates the saved config', async () => {
+    const { repository, deployBackend, usecase } = build()
+    const running = new ReleaseBuilder().withApp({ ...app, env: { A: 'old' } }).build()
+    deployBackend.readLiveReleaseUuid.resolves(running.uuid)
+    repository.findRelease.resolves(running)
+
+    expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(true)
+  })
+
+  it('does not warn when the cluster cannot be read', async () => {
+    const { deployBackend, usecase } = build()
+    deployBackend.readLiveReleaseUuid.rejects(new Error('cluster unreachable'))
+
+    expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(false)
   })
 
   it('throws 404 for an unknown slug', async () => {
@@ -39,33 +73,5 @@ describe('ViewAppDetailUseCase', () => {
     repository.findBySlug.resolves(undefined)
 
     await expect(usecase.execute('ghost')).rejects.toThrow(NotFoundException)
-  })
-  it('reports undeployed changes until the saved config matches the newest release', async () => {
-    const { repository, usecase } = build()
-    const app = new AppBuilder().withSlug('my-app').withEnv({ A: '1' }).build()
-    repository.findBySlug.resolves(app)
-
-    expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(true)
-
-    repository.findNewestNonFailedRelease.resolves(new ReleaseBuilder().withApp(app).build())
-    expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(false)
-
-    repository.findNewestNonFailedRelease.resolves(
-      new ReleaseBuilder().withApp({ ...app, env: { A: 'old' } }).build(),
-    )
-    expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(true)
-  })
-  it('keeps warning when the release that matches the saved config failed to deploy', async () => {
-    const { repository, usecase } = build()
-    const app = new AppBuilder().withSlug('my-app').withEnv({ A: 'new' }).build()
-    repository.findBySlug.resolves(app)
-    repository.findNewestNonFailedRelease.resolves(
-      new ReleaseBuilder()
-        .withApp({ ...app, env: { A: 'old' } })
-        .withDeployStatus(DeployStatus.Succeeded)
-        .build(),
-    )
-
-    expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(true)
   })
 })

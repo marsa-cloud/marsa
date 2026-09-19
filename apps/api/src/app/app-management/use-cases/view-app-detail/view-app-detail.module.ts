@@ -2,8 +2,10 @@ import { Module } from '@nestjs/common'
 import { ViewAppDetailController } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.controller.js'
 import { ViewAppDetailRepository } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.repository.js'
 import { ViewAppDetailUseCase } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.use-case.js'
+import { KubernetesModule } from '#src/modules/kubernetes/kubernetes.module.js'
 
 @Module({
+  imports: [KubernetesModule],
   controllers: [ViewAppDetailController],
   providers: [ViewAppDetailUseCase, ViewAppDetailRepository],
 })
