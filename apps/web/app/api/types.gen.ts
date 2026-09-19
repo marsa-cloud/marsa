@@ -694,10 +694,10 @@ export type CreateReleaseV1Response = CreateReleaseV1Responses[keyof CreateRelea
 export type DeployReleaseV1Data = {
   body?: never
   path: {
-    uuid: string
+    slug: string
   }
   query?: never
-  url: '/api/v1/releases/{uuid}/deploy'
+  url: '/api/v1/apps/{slug}/deploy'
 }
 
 export type DeployReleaseV1Errors = {
@@ -710,11 +710,11 @@ export type DeployReleaseV1Errors = {
    */
   403: unknown
   /**
-   * No release with that uuid.
+   * No app with that slug.
    */
   404: unknown
   /**
-   * The release is not the app’s newest release.
+   * The app has no release to deploy.
    */
   409: unknown
   /**

@@ -1,7 +1,7 @@
 import type { DeployReleaseResponse } from '~/api/types.gen'
 import { zCreateReleaseResponse, zDeployReleaseResponse } from '~/api/zod.gen'
 
-// Deploy, redeploy and rollback are all "mint a release, then deploy that exact release".
+// Deploy, redeploy and rollback all mint a release, then deploy the app (its newest release).
 export function useShipRelease() {
   const { $api } = useNuxtApp()
 
@@ -9,12 +9,9 @@ export function useShipRelease() {
     slug: string,
     options: { fromReleaseUuid?: string } = {},
   ): Promise<DeployReleaseResponse> {
-    const created = zCreateReleaseResponse.parse(
-      await $api(`/v1/apps/${encodeURIComponent(slug)}/releases`, { method: 'POST', body: options }),
-    )
-    const deployed = await $api(`/v1/releases/${encodeURIComponent(created.releaseUuid)}/deploy`, {
-      method: 'POST',
-    })
+    const path = `/v1/apps/${encodeURIComponent(slug)}`
+    zCreateReleaseResponse.parse(await $api(`${path}/releases`, { method: 'POST', body: options }))
+    const deployed = await $api(`${path}/deploy`, { method: 'POST' })
     return zDeployReleaseResponse.parse(deployed)
   }
 

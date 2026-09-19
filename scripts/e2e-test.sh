@@ -104,13 +104,10 @@ case "$HTTP_STATUS" in
   2??) : ;;
   *) fail deploy "POST /apps/${APP_SLUG}/releases -> ${HTTP_STATUS}; body: ${HTTP_BODY}" ;;
 esac
-release_uuid="$(printf '%s' "$HTTP_BODY" | sed -n 's/.*"releaseUuid":"\([^"]*\)".*/\1/p')"
-[ -n "$release_uuid" ] || fail deploy "no releaseUuid in: ${HTTP_BODY}"
-
-http -X POST "${api}/releases/${release_uuid}/deploy" -H "Cookie: ${cookie}" || true
+http -X POST "${api}/apps/${APP_SLUG}/deploy" -H "Cookie: ${cookie}" || true
 case "$HTTP_STATUS" in
   2??) : ;;
-  *) fail deploy "POST /releases/${release_uuid}/deploy -> ${HTTP_STATUS}; body: ${HTTP_BODY}" ;;
+  *) fail deploy "POST /apps/${APP_SLUG}/deploy -> ${HTTP_STATUS}; body: ${HTTP_BODY}" ;;
 esac
 
 echo "== stage: k8s resources created =="

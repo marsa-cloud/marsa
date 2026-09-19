@@ -15,7 +15,7 @@ registerEndpoint('/api/v1/apps/my-app/releases', {
     return { releaseUuid: RELEASE, appSlug: 'my-app', triggeredBy: 'manual', sourceReleaseUuid: null }
   },
 })
-registerEndpoint(`/api/v1/releases/${RELEASE}/deploy`, {
+registerEndpoint('/api/v1/apps/my-app/deploy', {
   method: 'POST',
   handler: () => ({
     releaseUuid: RELEASE,
@@ -26,7 +26,7 @@ registerEndpoint(`/api/v1/releases/${RELEASE}/deploy`, {
 })
 
 describe('useShipRelease.ship', () => {
-  it('creates a release then deploys exactly that release', async () => {
+  it('creates a release then deploys the app', async () => {
     const { ship } = useShipRelease()
 
     const result = await ship('my-app')

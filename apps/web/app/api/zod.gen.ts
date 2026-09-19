@@ -334,7 +334,7 @@ export const zCreateReleaseV1Path = z.object({
 export const zCreateReleaseV1Response = zCreateReleaseResponse
 
 export const zDeployReleaseV1Path = z.object({
-  uuid: z.string(),
+  slug: z.string(),
 })
 
 export const zDeployReleaseV1Response = zDeployReleaseResponse

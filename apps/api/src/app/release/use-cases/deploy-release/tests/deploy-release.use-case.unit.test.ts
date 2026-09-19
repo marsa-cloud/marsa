@@ -17,9 +17,7 @@ const app = new AppBuilder().withSlug('my-app').build()
 
 function build(release = new ReleaseBuilder().withApp(app).withImageRef('nginx:1.27').build()) {
   const repository = createStubInstance(DeployReleaseRepository)
-  repository.findRelease.resolves(release)
-  repository.findApp.resolves(app)
-  repository.findNewestReleaseUuid.resolves(release.uuid)
+  repository.findAppWithNewestRelease.resolves({ app, release })
   repository.setDeployStatus.resolves()
 
   const deployBackend = createStubInstance(MockDeployBackend)
@@ -39,14 +37,18 @@ function build(release = new ReleaseBuilder().withApp(app).withImageRef('nginx:1
   }
 }
 
+const running = () =>
+  new ReleaseBuilder().withApp(app).withDeployStatus(DeployStatus.Succeeded).build()
+
 describe('DeployReleaseUseCase', () => {
   before(() => TestBench.setupUnitTest())
 
-  it('resets the release to pending and applies its snapshot', async () => {
+  it('rolls out the newest release: pending, then applies its snapshot', async () => {
     const { usecase, repository, deployBackend, release } = build()
 
-    const result = await usecase.execute(release.uuid)
+    const result = await usecase.execute('my-app')
 
+    expect(repository.findAppWithNewestRelease.calledOnceWithExactly('my-app')).toBe(true)
     expect(
       repository.setDeployStatus.calledOnceWithExactly(release.uuid, DeployStatus.Pending),
     ).toBe(true)
@@ -66,7 +68,7 @@ describe('DeployReleaseUseCase', () => {
       .build()
     const { usecase, deployBackend, cipher } = build(release)
 
-    await usecase.execute(release.uuid)
+    await usecase.execute('my-app')
 
     expect(cipher.open.calledOnceWithExactly('sealed')).toBe(true)
     expect(deployBackend.apply.firstCall.args[1].imagePullSecret?.metadata?.name).toBe(
@@ -74,61 +76,54 @@ describe('DeployReleaseUseCase', () => {
     )
   })
 
-  it('refuses a release that is not the newest with 409', async () => {
-    const { usecase, repository, deployBackend, release } = build()
-    repository.findNewestReleaseUuid.resolves(new ReleaseBuilder().build().uuid)
-
-    await expect(usecase.execute(release.uuid)).rejects.toThrow(ConflictException)
-    expect(deployBackend.apply.called).toBe(false)
-    expect(repository.setDeployStatus.called).toBe(false)
-  })
-
-  it('marks the release failed and rethrows when the apply fails', async () => {
+  it('marks the rollout failed and rethrows when the apply fails', async () => {
     const { usecase, repository, deployBackend, release } = build()
     const error = new Error('cluster unreachable')
     deployBackend.apply.rejects(error)
 
-    await expect(usecase.execute(release.uuid)).rejects.toThrow(error)
+    await expect(usecase.execute('my-app')).rejects.toThrow(error)
     expect(repository.setDeployStatus.lastCall.args).toEqual([release.uuid, DeployStatus.Failed])
   })
 
-  it('marks the release failed when the credentials cannot be decrypted', async () => {
+  it('marks the rollout failed when the credentials cannot be decrypted', async () => {
     const release = new ReleaseBuilder().withApp({ ...app, imagePullCredentialsEnc: 'bad' }).build()
     const { usecase, repository, cipher } = build(release)
     cipher.open.throws(new Error('bad tag'))
 
-    await expect(usecase.execute(release.uuid)).rejects.toThrow(/could not be decrypted/)
+    await expect(usecase.execute('my-app')).rejects.toThrow(/could not be decrypted/)
     expect(repository.setDeployStatus.lastCall.args).toEqual([release.uuid, DeployStatus.Failed])
   })
 
-  it('throws NotFound for an unknown release', async () => {
-    const { usecase, repository, release } = build()
-    repository.findRelease.resolves(undefined)
+  it('re-applies a release that is already running without touching its status', async () => {
+    const { usecase, repository, deployBackend } = build(running())
 
-    await expect(usecase.execute(release.uuid)).rejects.toThrow(NotFoundException)
-  })
-  it('does not demote a running release when re-applying it fails', async () => {
-    const release = new ReleaseBuilder()
-      .withApp(app)
-      .withDeployStatus(DeployStatus.Succeeded)
-      .build()
-    const { usecase, repository, deployBackend } = build(release)
-    deployBackend.apply.rejects(new Error('transient apiserver error'))
+    const result = await usecase.execute('my-app')
 
-    await expect(usecase.execute(release.uuid)).rejects.toThrow('transient apiserver error')
-    expect(repository.setDeployStatus.called).toBe(false)
-  })
-
-  it('leaves a running release succeeded when re-applied', async () => {
-    const release = new ReleaseBuilder()
-      .withApp(app)
-      .withDeployStatus(DeployStatus.Succeeded)
-      .build()
-    const { usecase, repository } = build(release)
-
-    const result = await usecase.execute(release.uuid)
-
+    expect(deployBackend.apply.calledOnce).toBe(true)
     expect(repository.setDeployStatus.called).toBe(false)
     expect(result.deployStatus).toBe(DeployStatus.Succeeded)
+  })
+
+  it('keeps a running release succeeded when re-applying it fails', async () => {
+    const { usecase, repository, deployBackend } = build(running())
+    deployBackend.apply.rejects(new Error('transient apiserver error'))
+
+    await expect(usecase.execute('my-app')).rejects.toThrow('transient apiserver error')
+    expect(repository.setDeployStatus.called).toBe(false)
+  })
+
+  it('refuses an app with no release with 409', async () => {
+    const { usecase, repository, deployBackend } = build()
+    repository.findAppWithNewestRelease.resolves({ app, release: null })
+
+    await expect(usecase.execute('my-app')).rejects.toThrow(ConflictException)
+    expect(deployBackend.apply.called).toBe(false)
+  })
+
+  it('throws NotFound for an unknown app', async () => {
+    const { usecase, repository } = build()
+    repository.findAppWithNewestRelease.resolves(undefined)
+
+    await expect(usecase.execute('ghost')).rejects.toThrow(NotFoundException)
   })
 })
