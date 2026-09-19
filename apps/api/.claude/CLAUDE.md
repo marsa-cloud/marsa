@@ -64,6 +64,18 @@ One feature module per **domain aggregate root** — not per business capability
 
 Driver + options: `docs/agdr/AgDR-0040-feature-module-boundary-aggregate-ownership.md` (marsa#131).
 
+## App / Release / Deploy lifecycle
+
+Three writes, each its own use-case, sequenced by the caller — never by a server-side orchestrator (#179):
+
+| Use-case                    | Module           | Route                                   | Touches                                                                                                                                  |
+| --------------------------- | ---------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `create-app` / `update-app` | `app-management` | `POST /v1/apps`, `PATCH /v1/apps/:slug` | `App` only — saved config, never the cluster                                                                                             |
+| `create-release`            | `release`        | `POST /v1/apps/:slug/releases`          | a new `Release` = immutable snapshot of the app's config (`fromReleaseUuid` = rollback: copies that snapshot and restores it onto `App`) |
+| `deploy-release`            | `release`        | `POST /v1/releases/:uuid/deploy`        | the cluster only; 409 unless the release is the app's newest                                                                             |
+
+Manifests render workload config from the `Release` (`renderManifests(slug, release, …)`); only `slug`/`domain` come from `App`. Releases are append-only and the newest one is what runs — the release list reconciles only that one. Spec: `docs/superpowers/specs/2026-09-18-app-release-deploy-lifecycle-design.md`.
+
 ## Use-case naming (CRUD verbs + action exceptions)
 
 The folder name sets the `<Action>` class prefix, the `operationId`, and the route:
@@ -79,7 +91,7 @@ The folder name sets the `<Action>` class prefix, the `operationId`, and the rou
 Two deliberate exceptions:
 
 - **Singleton / self reads drop the suffix** — `view-me`, settings-style singletons.
-- **Domain-verb actions keep their ubiquitous-language verb** — `deploy-app` writes a `Release`, but the domain says "deploy", not "create release". A write scoped to one facet takes a qualifier: `update-<entity>-<facet>`.
+- **Domain-verb actions keep their ubiquitous-language verb** — `deploy-release` applies a Release to the cluster; the domain says "deploy", not "update". A write scoped to one facet takes a qualifier: `update-<entity>-<facet>`.
 
 ## Feature shape (vertical slice)
 

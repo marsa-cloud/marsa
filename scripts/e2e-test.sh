@@ -79,22 +79,38 @@ if [ "$seed_rc" -ne 0 ]; then
 fi
 
 echo "== stage: deploy app via API =="
-deploy_status=""
+api="https://api.${BASE_DOMAIN}${PORT_SUFFIX}/api/v1"
+create_status=""
 for attempt in $(seq 1 20); do
-  http -X POST "https://api.${BASE_DOMAIN}${PORT_SUFFIX}/api/v1/deploy" \
+  http -X POST "${api}/apps" \
     -H 'Content-Type: application/json' \
     -H "Cookie: ${cookie}" \
     -d "{\"slug\":\"${APP_SLUG}\",\"image\":\"${APP_IMAGE}\",\"containerPort\":80}" || true
-  deploy_status="$HTTP_STATUS"
-  echo "  attempt ${attempt}: POST /deploy -> ${deploy_status}"
-  case "$deploy_status" in
-    2??) break ;;
+  create_status="$HTTP_STATUS"
+  echo "  attempt ${attempt}: POST /apps -> ${create_status}"
+  case "$create_status" in
+    2??|409) break ;;
   esac
   sleep 3
 done
-case "$deploy_status" in
+case "$create_status" in
+  2??|409) : ;;
+  *) fail deploy "POST /apps -> ${create_status}; body: ${HTTP_BODY}" ;;
+esac
+
+http -X POST "${api}/apps/${APP_SLUG}/releases" \
+  -H 'Content-Type: application/json' -H "Cookie: ${cookie}" -d '{}' || true
+case "$HTTP_STATUS" in
   2??) : ;;
-  *) fail deploy "POST /deploy -> ${deploy_status}; body: ${HTTP_BODY}" ;;
+  *) fail deploy "POST /apps/${APP_SLUG}/releases -> ${HTTP_STATUS}; body: ${HTTP_BODY}" ;;
+esac
+release_uuid="$(printf '%s' "$HTTP_BODY" | sed -n 's/.*"releaseUuid":"\([^"]*\)".*/\1/p')"
+[ -n "$release_uuid" ] || fail deploy "no releaseUuid in: ${HTTP_BODY}"
+
+http -X POST "${api}/releases/${release_uuid}/deploy" -H "Cookie: ${cookie}" || true
+case "$HTTP_STATUS" in
+  2??) : ;;
+  *) fail deploy "POST /releases/${release_uuid}/deploy -> ${HTTP_STATUS}; body: ${HTTP_BODY}" ;;
 esac
 
 echo "== stage: k8s resources created =="
