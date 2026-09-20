@@ -178,6 +178,35 @@ A shared `NodePin` class used by both commands:
 
 Coverage floors unchanged: api 80/75/75, web 88/85/60.
 
+## What pinning does and does not buy
+
+`nodeAffinity` answers "may this pod go here?". It never answers "should these pods be apart?" or
+"will they end up on different nodes?". Worked against a four-server example — dev+staging on
+node-1, prod DB on node-2, prod API across node-3 and node-4:
+
+| Expectation                                  | After this ticket                                                                                                                                                                         |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Each workload confined to its pinned nodes   | Yes                                                                                                                                                                                       |
+| Traffic balanced across an app's pods        | Yes — ClusterIP selects on label; pod location is irrelevant                                                                                                                              |
+| A multi-node app's pods land on _both_ nodes | **Usually, not guaranteed.** Default topology spread is `maxSkew: 3` / `ScheduleAnyway`, so two pods may share one node. #221                                                             |
+| App never scheduled beside a database        | **No.** Disjoint pin sets achieve it by construction, not by rule. An unpinned app may land anywhere, including a database node. Needs inter-pod anti-affinity or node taints — not filed |
+| Survives a node drain without a blip         | **No** — no PodDisruptionBudget. #221                                                                                                                                                     |
+| Rollback restores the previous pin           | **No**, deliberately — see "Why the pin is not on the release"                                                                                                                            |
+
+The operator-facing docs must say this plainly. A hard pin plus `replicas > 1` co-locates every
+replica: throughput headroom, never node-failure resilience.
+
+## Seam for #205
+
+#205 renders a StatefulSet rather than a Deployment for volume-backed apps, and those are the
+workloads that most need a pin — a `local-path` PVC binds to whichever node the pod first lands on,
+and after binding the volume pins the pod. The _first_ placement is what an operator needs to
+control, because moving it later means destroying the volume.
+
+So the affinity block must be built by a shared helper (`buildNodeAffinity(nodePin)`) that both the
+Deployment path and #205's StatefulSet path call, rather than being inlined into the Deployment
+literal. Otherwise #205 re-implements it and the two drift.
+
 ## Out of scope
 
 | Deferred                                    | Where                                                        |
