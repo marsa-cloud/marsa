@@ -25,9 +25,10 @@ export class UpdateAppUseCase {
   ) {}
 
   async execute(slug: string, command: UpdateAppCommand): Promise<UpdateAppResponse> {
-    // Read before the write, so the stored pin is still the pre-update one to compare against.
-    const before =
-      command.nodePin === undefined ? undefined : await this.repository.findPlacementBySlug(slug)
+    // Cluster first, database second. If the apply fails nothing is stored, so an identical retry
+    // still sees a changed pin and applies again. Storing first made the retry a no-op — the row
+    // already matched — leaving the cluster on the old affinity with nothing to surface the drift.
+    const pinned = command.nodePin === undefined ? undefined : await this.applyPin(slug, command)
 
     const updated = await this.repository.updateBySlug(slug, {
       image: command.image,
@@ -41,12 +42,28 @@ export class UpdateAppUseCase {
     if (!updated) {
       throw new NotFoundException(`App '${slug}' was not found.`)
     }
-
-    if (before && !nodePinEquals(before.app.nodePin, updated.nodePin)) {
-      await this.reapply({ ...before, app: updated })
+    if (pinned === 'missing') {
+      throw new NotFoundException(`App '${slug}' was not found.`)
     }
 
     return new UpdateAppResponse(updated)
+  }
+
+  private async applyPin(
+    slug: string,
+    command: UpdateAppCommand,
+  ): Promise<'applied' | 'unchanged' | 'missing'> {
+    const placement = await this.repository.findPlacementBySlug(slug)
+    if (!placement) {
+      return 'missing'
+    }
+    const nodePin = command.nodePin ?? null
+    if (nodePinEquals(placement.app.nodePin, nodePin)) {
+      return 'unchanged'
+    }
+
+    await this.reapply({ ...placement, app: { ...placement.app, nodePin } })
+    return 'applied'
   }
 
   private async reapply(placement: AppPlacement): Promise<void> {
@@ -64,7 +81,7 @@ export class UpdateAppUseCase {
       // Nothing to re-render against; the pin is stored and the next deploy will carry it.
       this.logger.warn(
         `App '${app.slug}' runs release ${liveUuid}, which is not a release of this app. ` +
-          'The new node pin is saved but was not applied; deploy to apply it.',
+          'The new node pin will be saved but not applied; deploy to apply it.',
       )
       return
     }

@@ -61,6 +61,9 @@ Two consequences:
 
 - Pods are rescheduled when you save, so expect a brief restart.
 - If nothing is deployed yet, the pin is stored and used by the next deploy.
+- If the cluster can't be reached, the save fails and the pin is **not** recorded. That is
+  deliberate — a pin that was saved but never reached the cluster would leave the two disagreeing
+  with nothing to tell you. Try again once the cluster is back.
 
 ## Pinning to something other than a node
 

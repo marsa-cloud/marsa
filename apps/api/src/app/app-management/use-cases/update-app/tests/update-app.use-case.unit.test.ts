@@ -124,7 +124,7 @@ describe('UpdateAppUseCase', () => {
 
     await usecase.execute('my-app', new UpdateAppCommandBuilder().withNodePin(PIN).build())
 
-    // Applied with the post-update app, so the manifests carry the new pin rather than the old one.
+    // Applied with the incoming pin, not the stored one, so the manifests carry the new affinity.
     expect(
       applyRelease.apply.calledOnceWithExactly({ ...placement, app: pinnedApp }, liveRelease),
     ).toBe(true)
@@ -185,12 +185,33 @@ describe('UpdateAppUseCase', () => {
     expect(applyRelease.apply.called).toBe(false)
   })
 
-  it('keeps the stored pin when the apply fails', async () => {
-    const { usecase, applyRelease } = buildPinned()
+  it('stores nothing when the apply fails, so an identical retry applies again', async () => {
+    const { usecase, repository, applyRelease } = buildPinned()
     applyRelease.apply.rejects(new Error('cluster unreachable'))
 
     await expect(
       usecase.execute('my-app', new UpdateAppCommandBuilder().withNodePin(PIN).build()),
     ).rejects.toThrow('cluster unreachable')
+
+    // Storing the pin first would make the retry a no-op: the row would already match, so the
+    // cluster would keep the old affinity with nothing able to surface the drift.
+    expect(repository.updateBySlug.called).toBe(false)
+  })
+
+  it('applies before it writes', async () => {
+    const { usecase, repository, applyRelease } = buildPinned()
+    const order: string[] = []
+    applyRelease.apply.callsFake(() => {
+      order.push('apply')
+      return Promise.resolve()
+    })
+    repository.updateBySlug.callsFake(() => {
+      order.push('write')
+      return Promise.resolve(pinnedApp)
+    })
+
+    await usecase.execute('my-app', new UpdateAppCommandBuilder().withNodePin(PIN).build())
+
+    expect(order).toEqual(['apply', 'write'])
   })
 })

@@ -11,7 +11,11 @@ const pin = defineModel<NodePin | null>({ required: true })
 const { list } = useNodeList()
 const toast = useToast()
 
-const nodes = ref<{ name: string, ready: boolean }[]>([])
+// hostname is the label VALUE the pin matches on. Kubernetes does not guarantee it equals the
+// node's object name — cloud providers name nodes by instance id, --hostname-override diverges
+// them, and a >63-char name cannot be a label value at all. Pinning on the name would then match
+// no node, and a required pin applies immediately, so the app would go down.
+const nodes = ref<{ name: string, hostname: string, ready: boolean }[]>([])
 const selected = ref<string[]>([])
 const strategy = ref<NodePin['strategy']>('preferred')
 
@@ -30,7 +34,11 @@ watch(pin, (value) => {
 
 onMounted(async () => {
   try {
-    nodes.value = await list()
+    nodes.value = (await list()).map(node => ({
+      name: node.name,
+      hostname: node.labels[HOSTNAME_LABEL_KEY] ?? node.name,
+      ready: node.ready,
+    }))
   } catch (err) {
     toast.add({
       title: 'Couldn\'t load cluster nodes',
@@ -52,8 +60,13 @@ const coLocates = computed(
   () => strategy.value === 'required' && selected.value.length === 1 && (props.maxReplicas ?? 1) > 1,
 )
 
-function remove(name: string) {
-  selected.value = selected.value.filter(value => value !== name)
+// Chips hold hostnames; operators know nodes by name, so show the name where the two differ.
+function displayName(hostname: string): string {
+  return nodes.value.find(node => node.hostname === hostname)?.name ?? hostname
+}
+
+function remove(hostname: string) {
+  selected.value = selected.value.filter(value => value !== hostname)
 }
 </script>
 
@@ -78,7 +91,7 @@ function remove(name: string) {
         v-model="selected"
         multiple
         :items="nodes"
-        value-key="name"
+        value-key="hostname"
         label-key="name"
         placeholder="Any node"
         class="w-full"
@@ -100,19 +113,19 @@ function remove(name: string) {
       class="flex flex-wrap gap-2"
     >
       <UBadge
-        v-for="name in selected"
-        :key="name"
+        v-for="hostname in selected"
+        :key="hostname"
         color="neutral"
         variant="subtle"
       >
-        {{ name }}
+        {{ displayName(hostname) }}
         <UButton
           icon="i-lucide-x"
           variant="ghost"
           color="neutral"
           size="xs"
-          :aria-label="`Remove ${name}`"
-          @click="remove(name)"
+          :aria-label="`Remove ${displayName(hostname)}`"
+          @click="remove(hostname)"
         />
       </UBadge>
     </div>

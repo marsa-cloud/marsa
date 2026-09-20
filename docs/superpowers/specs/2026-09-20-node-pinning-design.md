@@ -92,13 +92,18 @@ relabelling a node never evicts a running pod. The pin binds each pod at birth.
 until the operator deploys a new release."_ The pin is the first deliberate exception, because
 placement is an operation (like scaling a dyno) rather than config awaiting a deploy.
 
-1. Write the app row.
-2. If `nodePin` was present in the command **and** differs from the stored value: resolve the
+1. If `nodePin` is present in the command and differs from the stored value: resolve the
    namespace, read the live release uuid, re-render that release with the new pin, apply.
-3. No live release → store only; the next deploy picks it up.
-4. Apply fails → the write already succeeded, so return 200 with the pin stored and surface the
-   apply failure. Failing the whole `PATCH` would leave an operator unable to record intent while
-   the cluster is unreachable.
+2. Write the app row.
+3. No live release → write only; the next deploy picks the pin up.
+4. Apply fails → nothing is written, and the `PATCH` fails. An identical retry therefore still
+   sees a changed pin and applies again.
+
+The ordering is load-bearing and was reversed during review. Writing first meant a failed apply
+left the row already matching the request, so the retry short-circuited as "unchanged" and the
+cluster kept the old affinity indefinitely — invisible, because `hasUndeployedChanges` cannot see
+a pin. Cluster-first costs the ability to record a pin while the cluster is down, which is correct
+for an operation rather than a config edit.
 
 `UpdateAppUseCase` gains `DeployBackend` and a placement read (it currently fetches neither). Per
 #214, the cluster call stays outside any DB transaction.

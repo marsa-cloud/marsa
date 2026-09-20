@@ -60,8 +60,13 @@ which is what #198 and #213 exist to remove.
 
 - A rollback restores the old image and env, **not** the old pin. Stated in the spec, the operator
   docs, and the ticket's acceptance criteria.
-- `UpdateAppUseCase` gains a cluster call — its first. It sits outside any DB transaction (#214),
-  and the app row is already committed when it runs, so an apply failure leaves the pin stored.
+- `UpdateAppUseCase` gains a cluster call — its first. It sits outside any DB transaction (#214)
+  and runs **before** the row is written: if the apply fails nothing is stored, so an identical
+  retry still sees a changed pin and applies again. Writing first was tried and reverted in review
+  — it made the retry a no-op, because the row already matched, leaving the cluster on the old
+  affinity with nothing able to surface the drift (`hasUndeployedChanges` cannot see a pin).
+  The cost is that a pin cannot be recorded while the cluster is unreachable, which is the right
+  trade for an operation rather than a config edit.
 - `app-management` must reach `ApplyReleaseService` in `release/services/`. Today those features
   cross only at `entities/`, the seam sanctioned by `apps/api/.claude/CLAUDE.md`. If review objects,
   the service promotes to `src/modules/deploy/` with no logic change.

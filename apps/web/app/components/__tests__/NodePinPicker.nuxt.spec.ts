@@ -90,4 +90,40 @@ describe('NodePinPicker', () => {
 
     expect(wrapper.text()).toContain('node-b')
   })
+
+  it('pins on the hostname label value, not the node object name', async () => {
+    // A cloud provider names nodes by instance id; the hostname label is what a pin must match.
+    list.mockResolvedValue([
+      {
+        name: 'i-0abc123',
+        labels: { 'kubernetes.io/hostname': 'worker-1.internal' },
+        ready: true,
+      },
+    ])
+    const wrapper = await mount({
+      modelValue: {
+        key: 'kubernetes.io/hostname',
+        values: ['worker-1.internal'],
+        strategy: 'preferred',
+      },
+    })
+    await flush()
+
+    // Operators know the node by its name, so that is what the chip shows.
+    expect(wrapper.text()).toContain('i-0abc123')
+    await wrapper.find('button[aria-label="Remove i-0abc123"]').trigger('click')
+    await flush()
+
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([null])
+  })
+
+  it('falls back to the node name when it carries no hostname label', async () => {
+    list.mockResolvedValue([{ name: 'bare-node', labels: {}, ready: true }])
+    const wrapper = await mount({
+      modelValue: { key: 'kubernetes.io/hostname', values: ['bare-node'], strategy: 'preferred' },
+    })
+    await flush()
+
+    expect(wrapper.text()).toContain('bare-node')
+  })
 })
