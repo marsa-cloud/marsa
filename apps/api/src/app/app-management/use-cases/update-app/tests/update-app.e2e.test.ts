@@ -52,6 +52,7 @@ describe('PATCH /api/v1/apps/:slug (e2e)', () => {
       minReplicas: 0,
       maxReplicas: 2,
       env: { B: '2' },
+      nodePin: null,
     })
     const [app] = await setup.db.select().from(appTable).where(eq(appTable.slug, SLUG))
     expect(app.imagePullCredentialsEnc).toBe('x')
@@ -93,5 +94,29 @@ describe('PATCH /api/v1/apps/:slug (e2e)', () => {
       .send({})
       .expect(404)
     await request(setup.httpServer).patch(`/api/v1/apps/${SLUG}`).send({}).expect(401)
+  })
+
+  it('sets and then clears the node pin', async () => {
+    const set = await request(setup.httpServer)
+      .patch(`/api/v1/apps/${SLUG}`)
+      .set('Cookie', cookie)
+      .send({
+        nodePin: { key: 'kubernetes.io/hostname', values: ['node-a'], strategy: 'required' },
+      })
+      .expect(200)
+
+    expect(set.body.nodePin).toEqual({
+      key: 'kubernetes.io/hostname',
+      values: ['node-a'],
+      strategy: 'required',
+    })
+
+    const cleared = await request(setup.httpServer)
+      .patch(`/api/v1/apps/${SLUG}`)
+      .set('Cookie', cookie)
+      .send({ nodePin: null })
+      .expect(200)
+
+    expect(cleared.body.nodePin).toBeNull()
   })
 })
