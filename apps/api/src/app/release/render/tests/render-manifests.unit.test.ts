@@ -1,6 +1,8 @@
 import { describe, it } from 'node:test'
 import { expect } from 'expect'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
+import type { NodePin } from '#src/app/app-management/entities/node-pin.js'
+import { PinStrategy } from '#src/app/app-management/enums/pin-strategy.enum.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { renderManifests } from '#src/app/release/render/render-manifests.js'
 import { RELEASE_UUID_ANNOTATION } from '#src/modules/kubernetes/deploy-backend.constants.js'
@@ -17,7 +19,13 @@ describe('renderManifests', () => {
       .withEnv({ LOG_LEVEL: 'info' })
       .build()
     const release = new ReleaseBuilder().withApp(app).withImageRef('nginx:1.27').build()
-    return renderManifests(app.slug, release, 'demo.marsa.cc', credentials)
+    return renderManifests({
+      slug: app.slug,
+      release,
+      baseDomain: 'demo.marsa.cc',
+      credentials,
+      nodePin: app.nodePin,
+    })
   }
 
   it('renders a Deployment with the image, port, probes and env', () => {
@@ -38,7 +46,12 @@ describe('renderManifests', () => {
     const app = new AppBuilder().withSlug('my-app').withImage('nginx:1.27').build()
     const release = new ReleaseBuilder().withApp(app).withImageRef('nginx:1.27').build()
 
-    const { deployment } = renderManifests(app.slug, release, 'demo.marsa.cc')
+    const { deployment } = renderManifests({
+      slug: app.slug,
+      release,
+      baseDomain: 'demo.marsa.cc',
+      nodePin: null,
+    })
 
     expect(deployment.spec?.template.metadata?.annotations).toEqual({
       [RELEASE_UUID_ANNOTATION]: release.uuid,
@@ -47,7 +60,12 @@ describe('renderManifests', () => {
     // Same app + image, different release => a different pod template, so k8s
     // replaces the pods instead of treating the apply as a no-op.
     const next = new ReleaseBuilder().withApp(app).withImageRef('nginx:1.27').build()
-    const { deployment: nextDeployment } = renderManifests(app.slug, next, 'demo.marsa.cc')
+    const { deployment: nextDeployment } = renderManifests({
+      slug: app.slug,
+      release: next,
+      baseDomain: 'demo.marsa.cc',
+      nodePin: null,
+    })
     expect(nextDeployment.spec?.template.metadata?.annotations).not.toEqual(
       deployment.spec?.template.metadata?.annotations,
     )
@@ -144,12 +162,49 @@ describe('renderManifests', () => {
     const release = new ReleaseBuilder().withApp(app).build()
     const edited = { ...app, image: 'nginx:1.28', containerPort: 9090, env: { NEW: '1' } }
 
-    const { deployment, service } = renderManifests(edited.slug, release, 'demo.marsa.cc')
+    const { deployment, service } = renderManifests({
+      slug: edited.slug,
+      release,
+      baseDomain: 'demo.marsa.cc',
+      nodePin: null,
+    })
 
     const container = deployment.spec?.template.spec?.containers[0]
     expect(container?.image).toBe('nginx:1.27')
     expect(container?.ports?.[0].containerPort).toBe(8080)
     expect(container?.env).toEqual([{ name: 'OLD', value: '1' }])
     expect(service.spec?.ports?.[0].port).toBe(8080)
+  })
+})
+
+describe('renderManifests node pinning', () => {
+  const render = (nodePin: NodePin | null) => {
+    const app = new AppBuilder().withSlug('my-app').withNodePin(nodePin).build()
+    const release = new ReleaseBuilder().withApp(app).build()
+    return renderManifests({
+      slug: app.slug,
+      release,
+      baseDomain: 'demo.marsa.cc',
+      nodePin: app.nodePin,
+    })
+  }
+
+  it('omits affinity entirely when unpinned', () => {
+    const { deployment } = render(null)
+
+    expect(deployment.spec?.template.spec).not.toHaveProperty('affinity')
+  })
+
+  it('emits nodeAffinity when pinned', () => {
+    const { deployment } = render({
+      key: 'kubernetes.io/hostname',
+      values: ['node-a'],
+      strategy: PinStrategy.Required,
+    })
+
+    expect(
+      deployment.spec?.template.spec?.affinity?.nodeAffinity
+        ?.requiredDuringSchedulingIgnoredDuringExecution?.nodeSelectorTerms[0]?.matchExpressions,
+    ).toEqual([{ key: 'kubernetes.io/hostname', operator: 'In', values: ['node-a'] }])
   })
 })

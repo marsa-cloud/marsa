@@ -27,7 +27,13 @@ export class ApplyReleaseService {
 
   async apply({ app, project, environment }: AppPlacement, release: Release): Promise<void> {
     const credentials = this.openCredentials(app.slug, release)
-    const manifests = renderManifests(app.slug, release, this.baseDomain, credentials)
+    const manifests = renderManifests({
+      slug: app.slug,
+      release,
+      baseDomain: this.baseDomain,
+      credentials,
+      nodePin: app.nodePin,
+    })
     const namespace = namespaceOf(project, environment)
 
     // Also heals a namespace someone deleted by hand; a no-op when it already exists.
