@@ -2,7 +2,7 @@
 import type { FormSubmitEvent } from '@nuxt/ui'
 import * as z from 'zod'
 
-import type { ViewAppDetailResponse } from '~/api/types.gen'
+import type { NodePin, ViewAppDetailResponse } from '~/api/types.gen'
 import { appConfigFields, isReplicaRangeValid, REPLICA_RANGE_ERROR } from '~/utils/appConfigSchema'
 
 const props = defineProps<{ slug: string, config: ViewAppDetailResponse }>()
@@ -18,7 +18,14 @@ const state = reactive<{
   containerPort: number | undefined
   minReplicas: number | undefined
   maxReplicas: number | undefined
-}>({ image: '', containerPort: undefined, minReplicas: undefined, maxReplicas: undefined })
+  nodePin: NodePin | null
+}>({
+  image: '',
+  containerPort: undefined,
+  minReplicas: undefined,
+  maxReplicas: undefined,
+  nodePin: null,
+})
 
 // Stable per-row id so :key survives removals.
 let nextEnvId = 0
@@ -36,6 +43,7 @@ function seed(config: ViewAppDetailResponse) {
   state.containerPort = config.containerPort
   state.minReplicas = config.minReplicas
   state.maxReplicas = config.maxReplicas
+  state.nodePin = config.nodePin ?? null
   const rows = Object.entries(config.env).map(([key, value]) => makeEnvRow(key, value))
   envRows.value = rows.length ? rows : [makeEnvRow()]
   seededSnapshot = formSnapshot()
@@ -85,6 +93,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       ...(event.data.minReplicas !== undefined ? { minReplicas: event.data.minReplicas } : {}),
       ...(event.data.maxReplicas !== undefined ? { maxReplicas: event.data.maxReplicas } : {}),
       env: buildEnvRecord(envRows.value),
+      nodePin: state.nodePin,
     })
   } catch (err) {
     error.value = extractApiError(err, 'Could not save the configuration.')
@@ -163,6 +172,11 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         />
       </UFormField>
     </div>
+
+    <NodePinPicker
+      v-model="state.nodePin"
+      :max-replicas="state.maxReplicas"
+    />
 
     <UFormField label="Environment variables">
       <div class="space-y-2">

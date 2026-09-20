@@ -22,6 +22,20 @@ mockComponent('ProjectEnvironmentPicker', async () => {
   })
 })
 
+// Same treatment as the environment picker: its own spec covers it, here it just reports a pin.
+const pinned = vi.hoisted(() => ({ value: null as unknown }))
+mockComponent('NodePinPicker', async () => {
+  const { defineComponent, h } = await import('vue')
+  return defineComponent({
+    props: { modelValue: { type: Object, default: null } },
+    emits: ['update:modelValue'],
+    setup(_, { emit }) {
+      if (pinned.value) emit('update:modelValue', pinned.value)
+      return () => h('div')
+    },
+  })
+})
+
 mockNuxtImport('useCreateApp', () => () => ({ create }))
 mockNuxtImport('useShipRelease', () => () => ({ ship }))
 mockNuxtImport('navigateTo', () => nav)
@@ -31,6 +45,7 @@ const CREATED = { slug: 'my-app', url: 'https://my-app.marsa.cc' }
 
 beforeEach(() => {
   picked.uuid = 'e1'
+  pinned.value = null
   create.mockReset().mockResolvedValue(CREATED)
   ship.mockReset().mockResolvedValue({
     releaseUuid: 'r1',
@@ -178,5 +193,27 @@ describe('apps/new deploy form', () => {
     await submit(wrapper)
 
     expect(create).not.toHaveBeenCalled()
+  })
+
+  it('omits nodePin when no node is selected', async () => {
+    const wrapper = await mountSuspended(New)
+    await fillValidForm(wrapper)
+    await submit(wrapper)
+
+    expect(create).toHaveBeenCalled()
+    expect(create.mock.calls[0]?.[0]).not.toHaveProperty('nodePin')
+  })
+
+  it('sends the pin when one is selected', async () => {
+    pinned.value = { key: 'kubernetes.io/hostname', values: ['node-a'], strategy: 'required' }
+    const wrapper = await mountSuspended(New)
+    await fillValidForm(wrapper)
+    await submit(wrapper)
+
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nodePin: { key: 'kubernetes.io/hostname', values: ['node-a'], strategy: 'required' },
+      }),
+    )
   })
 })

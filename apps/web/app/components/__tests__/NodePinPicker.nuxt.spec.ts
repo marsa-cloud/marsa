@@ -1,6 +1,8 @@
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { NodePin } from '~/api/types.gen'
+
 import NodePinPicker from '../NodePinPicker.vue'
 
 const list = vi.hoisted(() => vi.fn())
@@ -8,13 +10,13 @@ mockNuxtImport('useNodeList', () => () => ({ list }))
 
 const flush = () => new Promise(resolve => setTimeout(resolve))
 
-const pinnedToNodeA = {
+const pinnedToNodeA: NodePin = {
   key: 'kubernetes.io/hostname',
   values: ['node-a'],
-  strategy: 'required' as const,
+  strategy: 'required',
 }
 
-const mount = (props: { modelValue: unknown, maxReplicas?: number }) =>
+const mount = (props: { modelValue: NodePin | null, maxReplicas?: number }) =>
   mountSuspended(NodePinPicker, { props })
 
 beforeEach(() => {

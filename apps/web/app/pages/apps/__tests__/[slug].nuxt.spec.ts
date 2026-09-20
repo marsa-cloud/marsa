@@ -70,6 +70,9 @@ mockNuxtImport('useDeleteApp', () => () => ({ remove: del.remove }))
 mockNuxtImport('navigateTo', () => nav)
 mockNuxtImport('useToast', () => () => ({ add: toastAdd }))
 
+const listNodes = vi.hoisted(() => vi.fn())
+mockNuxtImport('useNodeList', () => () => ({ list: listNodes }))
+
 beforeEach(() => {
   s.health = { data: null, status: 'success', error: null }
   s.releases = { items: [], pending: false, error: null }
@@ -82,6 +85,7 @@ beforeEach(() => {
       env: {},
       minReplicas: 1,
       maxReplicas: 1,
+      nodePin: null,
       hasUndeployedChanges: false,
       project: { slug: 'demo', name: 'Demo' },
       environment: { uuid: '0190c3c0-0000-7000-8000-000000000002', slug: 'dev', name: 'Dev' },
@@ -103,6 +107,7 @@ beforeEach(() => {
   del.remove.mockResolvedValue(undefined)
   nav.mockReset()
   toastAdd.mockReset()
+  listNodes.mockReset().mockResolvedValue([])
 })
 
 const clickRedeploy = async (wrapper: { findAll: (s: string) => { text: () => string, trigger: (e: string) => Promise<void> }[] }) => {
