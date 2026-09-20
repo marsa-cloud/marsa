@@ -327,6 +327,26 @@ export type ImagePullCredentials = {
   username: string
 }
 
+/**
+ * required keeps the pod Pending when no node matches; preferred places it anyway.
+ */
+export type PinStrategy = 'required' | 'preferred'
+
+export type NodePin = {
+  /**
+   * Node label key the pin matches on.
+   */
+  key: string
+  /**
+   * Accepted label values; the pod may run on any node matching one of them.
+   */
+  values: Array<string>
+  /**
+   * required keeps the pod Pending when no node matches; preferred places it anyway.
+   */
+  strategy: PinStrategy
+}
+
 export type CreateAppCommand = {
   /**
    * Environment the app lives in.
@@ -362,6 +382,10 @@ export type CreateAppCommand = {
    * Registry credentials for a private image; encrypted at rest.
    */
   imagePullCredentials?: ImagePullCredentials
+  /**
+   * Restrict scheduling to nodes matching this label. Omit to schedule anywhere.
+   */
+  nodePin?: NodePin
 }
 
 export type CreateAppResponse = {
@@ -433,6 +457,10 @@ export type ViewAppDetailResponse = {
     [key: string]: string
   }
   /**
+   * Nodes this app is restricted to; null schedules anywhere.
+   */
+  nodePin: NodePin | null
+  /**
    * True when the saved config differs from the release the cluster is running, or nothing is running.
    */
   hasUndeployedChanges: boolean
@@ -471,6 +499,10 @@ export type UpdateAppCommand = {
    * Omit to keep the stored credentials, null to clear them, an object to replace.
    */
   imagePullCredentials?: ImagePullCredentials | null
+  /**
+   * Omit to keep the stored pin, null to clear it, an object to replace it.
+   */
+  nodePin?: NodePin | null
 }
 
 export type UpdateAppResponse = {
@@ -482,6 +514,22 @@ export type UpdateAppResponse = {
   env: {
     [key: string]: string
   }
+  nodePin: NodePin | null
+}
+
+export type NodeSummary = {
+  name: string
+  /**
+   * Every label on the node; pin against any of these keys.
+   */
+  labels: {
+    [key: string]: string
+  }
+  ready: boolean
+}
+
+export type ViewNodeIndexResponse = {
+  items: Array<NodeSummary>
 }
 
 export type ImagePullCredentialsWritable = {
@@ -534,6 +582,10 @@ export type CreateAppCommandWritable = {
    * Registry credentials for a private image; encrypted at rest.
    */
   imagePullCredentials?: ImagePullCredentialsWritable
+  /**
+   * Restrict scheduling to nodes matching this label. Omit to schedule anywhere.
+   */
+  nodePin?: NodePin
 }
 
 export type UpdateAppCommandWritable = {
@@ -551,6 +603,10 @@ export type UpdateAppCommandWritable = {
    * Omit to keep the stored credentials, null to clear them, an object to replace.
    */
   imagePullCredentials?: ImagePullCredentialsWritable | null
+  /**
+   * Omit to keep the stored pin, null to clear it, an object to replace it.
+   */
+  nodePin?: NodePin | null
 }
 
 export type GetApiInfoV1Data = {
@@ -1291,3 +1347,27 @@ export type ViewAppLogsV1Responses = {
 }
 
 export type ViewAppLogsV1Response = ViewAppLogsV1Responses[keyof ViewAppLogsV1Responses]
+
+export type ViewNodeIndexV1Data = {
+  body?: never
+  path?: never
+  query?: never
+  url: '/api/v1/nodes'
+}
+
+export type ViewNodeIndexV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+}
+
+export type ViewNodeIndexV1Responses = {
+  200: ViewNodeIndexResponse
+}
+
+export type ViewNodeIndexV1Response = ViewNodeIndexV1Responses[keyof ViewNodeIndexV1Responses]

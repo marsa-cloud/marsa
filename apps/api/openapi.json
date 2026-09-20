@@ -1073,6 +1073,38 @@
           "apps"
         ]
       }
+    },
+    "/api/v1/nodes": {
+      "get": {
+        "operationId": "viewNodeIndexV1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewNodeIndexResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "cluster"
+        ]
+      }
     }
   },
   "info": {
@@ -2065,6 +2097,49 @@
           "password"
         ]
       },
+      "PinStrategy": {
+        "type": "string",
+        "enum": [
+          "required",
+          "preferred"
+        ],
+        "description": "required keeps the pod Pending when no node matches; preferred places it anyway."
+      },
+      "NodePin": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "example": "kubernetes.io/hostname",
+            "description": "Node label key the pin matches on."
+          },
+          "values": {
+            "example": [
+              "node-a",
+              "node-b"
+            ],
+            "description": "Accepted label values; the pod may run on any node matching one of them.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "strategy": {
+            "example": "required",
+            "description": "required keeps the pod Pending when no node matches; preferred places it anyway.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PinStrategy"
+              }
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "values",
+          "strategy"
+        ]
+      },
       "CreateAppCommand": {
         "type": "object",
         "properties": {
@@ -2121,6 +2196,14 @@
             "allOf": [
               {
                 "$ref": "#/components/schemas/ImagePullCredentials"
+              }
+            ]
+          },
+          "nodePin": {
+            "description": "Restrict scheduling to nodes matching this label. Omit to schedule anywhere.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NodePin"
               }
             ]
           }
@@ -2340,6 +2423,16 @@
             },
             "description": "Saved environment variables."
           },
+          "nodePin": {
+            "nullable": true,
+            "description": "Nodes this app is restricted to; null schedules anywhere.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NodePin"
+              }
+            ]
+          },
           "hasUndeployedChanges": {
             "type": "boolean",
             "description": "True when the saved config differs from the release the cluster is running, or nothing is running."
@@ -2363,6 +2456,7 @@
           "minReplicas",
           "maxReplicas",
           "env",
+          "nodePin",
           "hasUndeployedChanges",
           "createdAt",
           "updatedAt"
@@ -2467,6 +2561,16 @@
                 "$ref": "#/components/schemas/ImagePullCredentials"
               }
             ]
+          },
+          "nodePin": {
+            "nullable": true,
+            "description": "Omit to keep the stored pin, null to clear it, an object to replace it.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NodePin"
+              }
+            ]
           }
         }
       },
@@ -2501,6 +2605,15 @@
             "example": {
               "A": "1"
             }
+          },
+          "nodePin": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NodePin"
+              }
+            ]
           }
         },
         "required": [
@@ -2509,7 +2622,50 @@
           "containerPort",
           "minReplicas",
           "maxReplicas",
-          "env"
+          "env",
+          "nodePin"
+        ]
+      },
+      "NodeSummary": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "node-a"
+          },
+          "labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "example": {
+              "kubernetes.io/hostname": "node-a"
+            },
+            "description": "Every label on the node; pin against any of these keys."
+          },
+          "ready": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "name",
+          "labels",
+          "ready"
+        ]
+      },
+      "ViewNodeIndexResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NodeSummary"
+            }
+          }
+        },
+        "required": [
+          "items"
         ]
       }
     }
