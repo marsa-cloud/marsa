@@ -10,6 +10,7 @@ const saved = {
   minReplicas: 1,
   maxReplicas: 1,
   env: { A: '1' },
+  nodePin: null,
 }
 registerEndpoint('/api/v1/apps/my-app', { method: 'PATCH', handler: () => saved })
 
