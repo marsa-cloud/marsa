@@ -148,6 +148,55 @@ kubectl -n "$APPS_NS" get service "$APP_SLUG" || fail resources "service ${APP_S
 kubectl -n "$APPS_NS" get ingressroutes.traefik.io "$APP_SLUG" || fail resources "ingressroute ${APP_SLUG} missing in ${APPS_NS}"
 kubectl -n "$APPS_NS" get httpscaledobjects.http.keda.sh "$APP_SLUG" || fail resources "httpscaledobject ${APP_SLUG} missing in ${APPS_NS}"
 
+echo "== stage: node pinning =="
+# The cluster is the source of truth for node names, so take the expected one from
+# kubectl and assert the API reports the same node rather than trusting either alone.
+node_name="$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}')"
+[ -n "$node_name" ] || fail node-pin "kubectl reported no nodes"
+
+http "${api}/nodes" -H "Cookie: ${cookie}" || true
+[ "$HTTP_STATUS" = 200 ] || fail node-pin "GET /nodes -> ${HTTP_STATUS}; body: ${HTTP_BODY}"
+printf '%s' "$HTTP_BODY" | grep -q "\"name\":\"${node_name}\"" \
+  || fail node-pin "GET /nodes omitted ${node_name}; body: ${HTTP_BODY}"
+echo "  GET /nodes lists ${node_name}"
+
+# A pin is not part of a Release, so PATCH alone must reach the cluster — no new
+# release, no deploy call. That is the whole apply-immediately contract.
+http -X PATCH "${api}/apps/${APP_SLUG}" -H 'Content-Type: application/json' -H "Cookie: ${cookie}" \
+  -d "{\"nodePin\":{\"key\":\"kubernetes.io/hostname\",\"values\":[\"${node_name}\"],\"strategy\":\"required\"}}" || true
+[ "$HTTP_STATUS" = 200 ] || fail node-pin "PATCH nodePin -> ${HTTP_STATUS}; body: ${HTTP_BODY}"
+
+affinity_path='{.spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[0].matchExpressions[0]}'
+pinned=""
+for _ in $(seq 1 30); do
+  if kubectl -n "$APPS_NS" get deploy "$APP_SLUG" -o jsonpath="$affinity_path" 2>/dev/null \
+    | grep -q "\"${node_name}\""; then
+    pinned=1
+    break
+  fi
+  sleep 2
+done
+[ -n "$pinned" ] || fail node-pin "deployment ${APP_SLUG} never gained a nodeAffinity for ${node_name}"
+kubectl -n "$APPS_NS" rollout status "deploy/${APP_SLUG}" --timeout=120s \
+  || fail node-pin "pinned ${APP_SLUG} did not roll out onto ${node_name}"
+echo "  ${APP_SLUG} pinned to ${node_name} and rolled out"
+
+# Clearing must strip the block entirely: an empty affinity object would churn the
+# server-side-apply field manager on every later deploy.
+http -X PATCH "${api}/apps/${APP_SLUG}" -H 'Content-Type: application/json' -H "Cookie: ${cookie}" \
+  -d '{"nodePin":null}' || true
+[ "$HTTP_STATUS" = 200 ] || fail node-pin "PATCH nodePin:null -> ${HTTP_STATUS}; body: ${HTTP_BODY}"
+cleared=""
+for _ in $(seq 1 30); do
+  if [ -z "$(kubectl -n "$APPS_NS" get deploy "$APP_SLUG" -o jsonpath='{.spec.template.spec.affinity}' 2>/dev/null)" ]; then
+    cleared=1
+    break
+  fi
+  sleep 2
+done
+[ -n "$cleared" ] || fail node-pin "affinity survived a cleared pin on ${APP_SLUG}"
+echo "  cleared pin removed the affinity block"
+
 # The reachability stage below cannot distinguish "app broken" from "scaling
 # never wired up" — both are a timeout on the same URL. Assert the three pieces
 # the request path depends on first, so a failure names the piece that is missing.
