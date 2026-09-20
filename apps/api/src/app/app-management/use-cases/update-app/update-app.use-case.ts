@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
-import type { App } from '#src/app/app-management/entities/app.table.js'
+import { Injectable, Logger, NotFoundException } from '@nestjs/common'
+import type { AppPlacement } from '#src/app/app-management/entities/app-placement.js'
+import { nodePinEquals } from '#src/app/app-management/entities/node-pin.js'
 import { UpdateAppCommand } from '#src/app/app-management/use-cases/update-app/update-app.command.js'
 import { UpdateAppRepository } from '#src/app/app-management/use-cases/update-app/update-app.repository.js'
 import { UpdateAppResponse } from '#src/app/app-management/use-cases/update-app/update-app.response.js'
@@ -8,11 +9,14 @@ import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import { ApplyReleaseService } from '#src/app/release/services/apply-release/apply-release.service.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
+import { isUuid } from '#src/utils/uuid.js'
 
-// Writes App, then re-applies when placement changed: a pin is location rather than config, so it
-// never reaches a Release and hasUndeployedChanges structurally cannot see it.
+// Writes App, then re-applies only when the pin actually changed: a pin is location rather than
+// config, so it never reaches a Release and hasUndeployedChanges structurally cannot see it.
 @Injectable()
 export class UpdateAppUseCase {
+  private readonly logger = new Logger(UpdateAppUseCase.name)
+
   constructor(
     private readonly repository: UpdateAppRepository,
     private readonly credentialsCipher: ImagePullCredentialsCipher,
@@ -21,6 +25,10 @@ export class UpdateAppUseCase {
   ) {}
 
   async execute(slug: string, command: UpdateAppCommand): Promise<UpdateAppResponse> {
+    // Read before the write, so the stored pin is still the pre-update one to compare against.
+    const before =
+      command.nodePin === undefined ? undefined : await this.repository.findPlacementBySlug(slug)
+
     const updated = await this.repository.updateBySlug(slug, {
       image: command.image,
       containerPort: command.containerPort,
@@ -34,31 +42,34 @@ export class UpdateAppUseCase {
       throw new NotFoundException(`App '${slug}' was not found.`)
     }
 
-    if (command.nodePin !== undefined) {
-      await this.reapply(updated)
+    if (before && !nodePinEquals(before.app.nodePin, updated.nodePin)) {
+      await this.reapply({ ...before, app: updated })
     }
 
     return new UpdateAppResponse(updated)
   }
 
-  private async reapply(app: App): Promise<void> {
-    const placement = await this.repository.findPlacementBySlug(app.slug)
-    if (!placement) {
-      return
-    }
-
+  private async reapply(placement: AppPlacement): Promise<void> {
+    const { app, project, environment } = placement
     const liveUuid = await this.deployBackend.readLiveReleaseUuid(
-      namespaceOf(placement.project, placement.environment),
+      namespaceOf(project, environment),
       app.slug,
     )
-    if (!liveUuid) {
+    if (!isUuid<ReleaseUuid>(liveUuid)) {
       return
     }
 
-    const release = await this.repository.findRelease(liveUuid as ReleaseUuid, app.uuid)
-    if (release) {
-      await this.applyRelease.apply(placement, release)
+    const release = await this.repository.findRelease(liveUuid, app.uuid)
+    if (!release) {
+      // Nothing to re-render against; the pin is stored and the next deploy will carry it.
+      this.logger.warn(
+        `App '${app.slug}' runs release ${liveUuid}, which is not a release of this app. ` +
+          'The new node pin is saved but was not applied; deploy to apply it.',
+      )
+      return
     }
+
+    await this.applyRelease.apply(placement, release)
   }
 
   private credentialsEnc(command: UpdateAppCommand): string | null | undefined {

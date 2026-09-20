@@ -64,4 +64,30 @@ describe('NodePinPicker', () => {
 
     expect(wrapper.text()).not.toContain('All replicas will run on that one node')
   })
+
+  it('refuses to edit a pin targeting a label it does not understand', async () => {
+    const wrapper = await mount({
+      modelValue: { key: 'marsa.cc/pool', values: ['gpu'], strategy: 'required' },
+    })
+    await flush()
+
+    expect(wrapper.text()).toContain('Pinned by label')
+    expect(wrapper.text()).toContain('marsa.cc/pool=gpu')
+    // Rewriting the key would pin to nodes matching nothing, and pins apply immediately.
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+    expect(wrapper.find('button[aria-label="Remove gpu"]').exists()).toBe(false)
+  })
+
+  it('resyncs when the pin changes underneath it', async () => {
+    const wrapper = await mount({ modelValue: null })
+    await flush()
+    expect(wrapper.text()).not.toContain('node-b')
+
+    await wrapper.setProps({
+      modelValue: { key: 'kubernetes.io/hostname', values: ['node-b'], strategy: 'preferred' },
+    })
+    await flush()
+
+    expect(wrapper.text()).toContain('node-b')
+  })
 })

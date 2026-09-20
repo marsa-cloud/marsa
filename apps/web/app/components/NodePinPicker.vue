@@ -12,8 +12,21 @@ const { list } = useNodeList()
 const toast = useToast()
 
 const nodes = ref<{ name: string, ready: boolean }[]>([])
-const selected = ref<string[]>(pin.value?.values ?? [])
-const strategy = ref<NodePin['strategy']>(pin.value?.strategy ?? 'preferred')
+const selected = ref<string[]>([])
+const strategy = ref<NodePin['strategy']>('preferred')
+
+// A pin set through the API can target any node label. This picker only knows hostnames, so it
+// refuses to edit one rather than rewriting its key and silently pinning to nodes that match
+// nothing — which, since a pin applies immediately, would take the app down.
+const customKey = computed(() => !!pin.value && pin.value.key !== HOSTNAME_LABEL_KEY)
+
+// The page refetches after every deploy, so re-derive rather than seeding once in setup.
+watch(pin, (value) => {
+  if (customKey.value) return
+  const next = value?.values ?? []
+  if (next.join('\u0000') !== selected.value.join('\u0000')) selected.value = [...next]
+  strategy.value = value?.strategy ?? 'preferred'
+}, { immediate: true })
 
 onMounted(async () => {
   try {
@@ -29,6 +42,7 @@ onMounted(async () => {
 })
 
 watch([selected, strategy], () => {
+  if (customKey.value) return
   pin.value = selected.value.length
     ? { key: HOSTNAME_LABEL_KEY, values: [...selected.value], strategy: strategy.value }
     : null
@@ -45,7 +59,17 @@ function remove(name: string) {
 
 <template>
   <div class="space-y-3">
+    <UAlert
+      v-if="customKey"
+      color="neutral"
+      variant="subtle"
+      icon="i-lucide-lock"
+      title="Pinned by label"
+      :description="`This app is pinned to ${pin?.key}=${pin?.values.join(', ')}. Editing that here isn't supported yet — change it through the API.`"
+    />
+
     <UFormField
+      v-if="!customKey"
       label="Run on specific nodes"
       name="nodePin"
       description="Leave empty to let the scheduler choose"

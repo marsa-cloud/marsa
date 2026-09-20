@@ -7,6 +7,7 @@ import { namespaceOf } from '#src/app/environment/entities/namespace.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import { isSnapshotOf } from '#src/app/release/entities/release-snapshot.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
+import { isUuid } from '#src/utils/uuid.js'
 
 @Injectable()
 export class ViewAppDetailUseCase {
@@ -45,7 +46,8 @@ export class ViewAppDetailUseCase {
       // Unknown is not "changed"; the health card is where an unreachable cluster shows up.
       return false
     }
-    const live = liveUuid && (await this.repository.findRelease(liveUuid as ReleaseUuid, app.uuid))
+    const live =
+      isUuid<ReleaseUuid>(liveUuid) && (await this.repository.findRelease(liveUuid, app.uuid))
     return !live || !isSnapshotOf(live, app)
   }
 }

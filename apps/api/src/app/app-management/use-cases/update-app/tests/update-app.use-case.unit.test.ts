@@ -23,10 +23,9 @@ const PIN: NodePin = {
   strategy: PinStrategy.Required,
 }
 
-const placement = new AppPlacementBuilder()
-  .withApp(new AppBuilder().withNodePin(PIN).build())
-  .build()
-const pinnedApp = placement.app
+// The placement is the pre-update state (unpinned); updateBySlug returns the post-update row.
+const placement = new AppPlacementBuilder().withApp(new AppBuilder().build()).build()
+const pinnedApp = { ...placement.app, nodePin: PIN }
 const liveRelease = new ReleaseBuilder().withApp(pinnedApp).build()
 
 function build() {
@@ -125,7 +124,10 @@ describe('UpdateAppUseCase', () => {
 
     await usecase.execute('my-app', new UpdateAppCommandBuilder().withNodePin(PIN).build())
 
-    expect(applyRelease.apply.calledOnceWithExactly(placement, liveRelease)).toBe(true)
+    // Applied with the post-update app, so the manifests carry the new pin rather than the old one.
+    expect(
+      applyRelease.apply.calledOnceWithExactly({ ...placement, app: pinnedApp }, liveRelease),
+    ).toBe(true)
   })
 
   it('makes no cluster call when the command carries no pin', async () => {
@@ -143,6 +145,43 @@ describe('UpdateAppUseCase', () => {
 
     await usecase.execute('my-app', new UpdateAppCommandBuilder().withNodePin(PIN).build())
 
+    expect(applyRelease.apply.called).toBe(false)
+  })
+
+  it('makes no cluster call when the pin is sent unchanged', async () => {
+    const { usecase, repository, deployBackend, applyRelease } = build()
+    const pinned = new AppPlacementBuilder().withApp(pinnedApp).build()
+    repository.findPlacementBySlug.resolves(pinned)
+    repository.updateBySlug.resolves(pinned.app)
+
+    await usecase.execute('my-app', new UpdateAppCommandBuilder().withNodePin(PIN).build())
+
+    expect(deployBackend.readLiveReleaseUuid.called).toBe(false)
+    expect(applyRelease.apply.called).toBe(false)
+  })
+
+  it('treats a reordered value list as unchanged', async () => {
+    const { usecase, repository, applyRelease } = build()
+    const multi = { ...PIN, values: ['node-a', 'node-b'] }
+    const pinned = new AppPlacementBuilder().withApp({ ...placement.app, nodePin: multi }).build()
+    repository.findPlacementBySlug.resolves(pinned)
+    repository.updateBySlug.resolves(pinned.app)
+
+    await usecase.execute(
+      'my-app',
+      new UpdateAppCommandBuilder().withNodePin({ ...multi, values: ['node-b', 'node-a'] }).build(),
+    )
+
+    expect(applyRelease.apply.called).toBe(false)
+  })
+
+  it('does not query for a release when the live annotation is not a uuid', async () => {
+    const { usecase, repository, deployBackend, applyRelease } = buildPinned()
+    deployBackend.readLiveReleaseUuid.resolves('not-a-uuid')
+
+    await usecase.execute('my-app', new UpdateAppCommandBuilder().withNodePin(PIN).build())
+
+    expect(repository.findRelease.called).toBe(false)
     expect(applyRelease.apply.called).toBe(false)
   })
 

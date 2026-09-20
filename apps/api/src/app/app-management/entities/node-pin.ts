@@ -50,3 +50,18 @@ export class NodePin {
   @IsEnum(PinStrategy)
   strategy!: PinStrategy
 }
+
+// Value order is irrelevant to K8s (`In` is a set), so a reordered list is not a change.
+export function nodePinEquals(a: NodePin | null, b: NodePin | null): boolean {
+  if (!a || !b) {
+    return a === b
+  }
+  const left = [...a.values].sort()
+  const right = [...b.values].sort()
+  return (
+    a.key === b.key &&
+    a.strategy === b.strategy &&
+    left.length === right.length &&
+    left.every((value, index) => value === right[index])
+  )
+}
