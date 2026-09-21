@@ -8,7 +8,6 @@ import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
 import type { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
-import { seedEnvironment } from '#src/test/fixtures/seed-environment.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -23,7 +22,7 @@ describe('GET /api/v1/apps/:slug (e2e)', () => {
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
     sessionCookie = await setup.authenticate()
-    environment = (await seedEnvironment(setup.db)).environment
+    environment = (await setup.seedEnvironment()).environment
   })
 
   after(async () => {
@@ -35,7 +34,7 @@ describe('GET /api/v1/apps/:slug (e2e)', () => {
       .insert(appTable)
       .values(
         new AppBuilder()
-          .withEnvironment(environment)
+          .withEnvironmentUuid(environment.uuid)
           .withSlug(SLUG)
           .withImage('nginx:1.27')
           .withContainerPort(8080)
@@ -65,7 +64,7 @@ describe('GET /api/v1/apps/:slug (e2e)', () => {
 
   it('reports no undeployed changes when the running release matches the saved config', async () => {
     const app = new AppBuilder()
-      .withEnvironment(environment)
+      .withEnvironmentUuid(environment.uuid)
       .withSlug('detail-e2e-live')
       .withEnv({ A: '1' })
       .build()
@@ -84,7 +83,7 @@ describe('GET /api/v1/apps/:slug (e2e)', () => {
 
   it('still warns when a matching release exists but never reached the cluster', async () => {
     const app = new AppBuilder()
-      .withEnvironment(environment)
+      .withEnvironmentUuid(environment.uuid)
       .withSlug('detail-e2e-stuck')
       .withEnv({ A: 'new' })
       .build()

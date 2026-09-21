@@ -7,6 +7,7 @@ import { DeleteEnvironmentRepository } from '#src/app/environment/use-cases/dele
 import { DeleteEnvironmentUseCase } from '#src/app/environment/use-cases/delete-environment/delete-environment.use-case.js'
 import { ProjectBuilder } from '#src/app/project/entities/project.builder.js'
 import { MockNamespaceBackend } from '#src/modules/kubernetes/mock-namespace-backend.js'
+import { stubDatabase } from '#src/test/setup/stub-database.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 const project = new ProjectBuilder().withSlug('demo').build()
@@ -15,13 +16,14 @@ const environment = new EnvironmentBuilder().withProject(project).withSlug('dev'
 function build() {
   const repository = createStubInstance(DeleteEnvironmentRepository)
   repository.findBySlugs.resolves({ project, environment })
-  repository.deleteThen.callsFake(async (_uuid, afterDelete) => {
-    await afterDelete()
-    return 'deleted'
-  })
+  repository.delete.resolves()
   const namespaces = createStubInstance(MockNamespaceBackend)
   namespaces.destroy.resolves()
-  return { usecase: new DeleteEnvironmentUseCase(repository, namespaces), repository, namespaces }
+  return {
+    usecase: new DeleteEnvironmentUseCase(stubDatabase(), repository, namespaces),
+    repository,
+    namespaces,
+  }
 }
 
 describe('DeleteEnvironmentUseCase', () => {
@@ -32,7 +34,7 @@ describe('DeleteEnvironmentUseCase', () => {
 
     await usecase.execute('demo', 'dev')
 
-    expect(repository.deleteThen.firstCall.args[0]).toBe(environment.uuid)
+    expect(repository.delete.firstCall.args[1]).toBe(environment.uuid)
     expect(namespaces.destroy.calledOnceWithExactly('demo-dev', environment.uuid)).toBe(true)
   })
 
@@ -45,7 +47,7 @@ describe('DeleteEnvironmentUseCase', () => {
 
   it('throws 409 while the environment still has apps and leaves the namespace alone', async () => {
     const { usecase, repository, namespaces } = build()
-    repository.deleteThen.resolves('in-use')
+    repository.delete.rejects(Object.assign(new Error('restrict'), { code: '23001' }))
 
     await expect(usecase.execute('demo', 'dev')).rejects.toThrow(ConflictException)
     expect(namespaces.destroy.called).toBe(false)

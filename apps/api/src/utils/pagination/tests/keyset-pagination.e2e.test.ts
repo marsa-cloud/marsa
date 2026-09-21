@@ -6,7 +6,6 @@ import { appTable } from '#src/app/app-management/entities/app.table.js'
 import { ViewAppIndexQueryBuilder } from '#src/app/app-management/use-cases/view-app-index/query/view-app-index.query.builder.js'
 import type { ViewAppIndexQueryKey } from '#src/app/app-management/use-cases/view-app-index/query/view-app-index.query.js'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
-import { seedEnvironment } from '#src/test/fixtures/seed-environment.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -22,13 +21,16 @@ describe('keyset pagination (e2e)', () => {
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
     sessionCookie = await setup.authenticate()
-    environment = (await seedEnvironment(setup.db)).environment
+    environment = (await setup.seedEnvironment()).environment
 
     await setup.db
       .insert(appTable)
       .values(
         Array.from({ length: SEEDED }, (_unused, index) =>
-          new AppBuilder().withEnvironment(environment).withSlug(`page-app-${index}`).build(),
+          new AppBuilder()
+            .withEnvironmentUuid(environment.uuid)
+            .withSlug(`page-app-${index}`)
+            .build(),
         ),
       )
   })

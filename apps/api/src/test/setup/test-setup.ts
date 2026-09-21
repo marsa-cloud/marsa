@@ -6,8 +6,15 @@ import { Server } from 'http'
 import request from 'supertest'
 import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { CompleteGithubLoginCommandBuilder } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.builder.js'
+import { EnvironmentBuilder } from '#src/app/environment/entities/environment.builder.js'
+import {
+  type Environment,
+  environmentTable,
+} from '#src/app/environment/entities/environment.table.js'
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
 import { githubAppTable } from '#src/app/github-app/entities/github-app.table.js'
+import { ProjectBuilder } from '#src/app/project/entities/project.builder.js'
+import { type Project, projectTable } from '#src/app/project/entities/project.table.js'
 import { userTable } from '#src/app/user/entities/user.table.js'
 import type { UserUuid } from '#src/app/user/entities/user.uuid.js'
 import type { UserRole } from '#src/app/user/enums/user-role.enum.js'
@@ -45,6 +52,14 @@ export class TestSetup {
 
   public get db(): Database {
     return this.testModule.get<Database>(DATABASE)
+  }
+
+  public async seedEnvironment(): Promise<{ project: Project; environment: Environment }> {
+    const project = new ProjectBuilder().build()
+    const environment = new EnvironmentBuilder().withProject(project).build()
+    await this.db.insert(projectTable).values(project)
+    await this.db.insert(environmentTable).values(environment)
+    return { project, environment }
   }
 
   /**

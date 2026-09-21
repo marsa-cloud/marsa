@@ -1,9 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger'
-import type { AppPlacement } from '#src/app/app-management/entities/app-placement.js'
+import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import {
   AppEnvironmentRef,
   AppProjectRef,
-} from '#src/app/app-management/entities/app-placement.response.js'
+} from '#src/app/app-management/responses/app-placement.response.js'
 import { ViewAppIndexQueryKey } from '#src/app/app-management/use-cases/view-app-index/query/view-app-index.query.js'
 import {
   PaginatedKeysetResponse,

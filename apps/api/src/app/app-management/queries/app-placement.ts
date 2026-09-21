@@ -13,9 +13,15 @@ export interface AppPlacement {
   project: Project
 }
 
+export const appPlacementFields = {
+  app: appTable,
+  environment: environmentTable,
+  project: projectTable,
+}
+
 export function selectAppPlacement(db: Executor) {
   return db
-    .select({ app: appTable, environment: environmentTable, project: projectTable })
+    .select(appPlacementFields)
     .from(appTable)
     .innerJoin(environmentTable, eq(appTable.environmentUuid, environmentTable.uuid))
     .innerJoin(projectTable, eq(environmentTable.projectUuid, projectTable.uuid))

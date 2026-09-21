@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common'
+import { Controller, Get } from '@nestjs/common'
 import {
   ApiCookieAuth,
   ApiForbiddenResponse,
@@ -7,7 +7,6 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger'
 import { Roles } from '#src/app/auth/decorators/roles.decorator.js'
-import { ViewProjectIndexQuery } from '#src/app/project/use-cases/view-project-index/query/view-project-index.query.js'
 import { ViewProjectIndexResponse } from '#src/app/project/use-cases/view-project-index/view-project-index.response.js'
 import { ViewProjectIndexUseCase } from '#src/app/project/use-cases/view-project-index/view-project-index.use-case.js'
 import { UserRole } from '#src/app/user/enums/user-role.enum.js'
@@ -24,7 +23,7 @@ export class ViewProjectIndexController {
   @ApiOkResponse({ type: ViewProjectIndexResponse })
   @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
-  handle(@Query() query: ViewProjectIndexQuery): Promise<ViewProjectIndexResponse> {
-    return this.usecase.execute(query)
+  handle(): Promise<ViewProjectIndexResponse> {
+    return this.usecase.execute()
   }
 }

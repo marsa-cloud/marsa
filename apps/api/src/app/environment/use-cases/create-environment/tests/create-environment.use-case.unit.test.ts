@@ -8,6 +8,7 @@ import { CreateEnvironmentUseCase } from '#src/app/environment/use-cases/create-
 import { ProjectBuilder } from '#src/app/project/entities/project.builder.js'
 import { MockNamespaceBackend } from '#src/modules/kubernetes/mock-namespace-backend.js'
 import { NamespaceConflictError } from '#src/modules/kubernetes/namespace-backend.js'
+import { stubDatabase } from '#src/test/setup/stub-database.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 const project = new ProjectBuilder().withSlug('demo').build()
@@ -15,14 +16,14 @@ const project = new ProjectBuilder().withSlug('demo').build()
 function build() {
   const repository = createStubInstance(CreateEnvironmentRepository)
   repository.findProjectBySlug.resolves(project)
-  // Runs the provision callback the way the real transaction does.
-  repository.insertThen.callsFake(async (_environment, afterInsert) => {
-    await afterInsert()
-    return true
-  })
+  repository.insert.resolves(true)
   const namespaces = createStubInstance(MockNamespaceBackend)
   namespaces.provision.resolves()
-  return { usecase: new CreateEnvironmentUseCase(repository, namespaces), repository, namespaces }
+  return {
+    usecase: new CreateEnvironmentUseCase(stubDatabase(), repository, namespaces),
+    repository,
+    namespaces,
+  }
 }
 
 const command = () => new CreateEnvironmentCommandBuilder().withName('Dev').withSlug('dev').build()
@@ -35,7 +36,7 @@ describe('CreateEnvironmentUseCase', () => {
 
     const result = await usecase.execute('demo', command())
 
-    const [environment] = repository.insertThen.firstCall.args
+    const [, environment] = repository.insert.firstCall.args
     expect(environment).toMatchObject({ projectUuid: project.uuid, name: 'Dev', slug: 'dev' })
     expect(namespaces.provision.calledOnceWithExactly('demo-dev', environment.uuid)).toBe(true)
     expect(result).toMatchObject({ slug: 'dev', namespace: 'demo-dev', projectSlug: 'demo' })
@@ -51,7 +52,7 @@ describe('CreateEnvironmentUseCase', () => {
 
   it('throws 409 when the slug is taken in this project', async () => {
     const { usecase, repository } = build()
-    repository.insertThen.resolves(false)
+    repository.insert.resolves(false)
 
     await expect(usecase.execute('demo', command())).rejects.toThrow(ConflictException)
   })
@@ -70,7 +71,7 @@ describe('CreateEnvironmentUseCase', () => {
 
     await expect(usecase.execute('demo', command())).rejects.toThrow(BadGatewayException)
 
-    const [environment] = repository.insertThen.firstCall.args
+    const [, environment] = repository.insert.firstCall.args
     expect(namespaces.destroy.calledOnceWithExactly('demo-dev', environment.uuid)).toBe(true)
   })
 

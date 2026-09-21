@@ -7,7 +7,6 @@ import { appTable } from '#src/app/app-management/entities/app.table.js'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
-import { seedEnvironment } from '#src/test/fixtures/seed-environment.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -21,7 +20,7 @@ describe('DELETE /api/v1/apps/:slug (e2e)', () => {
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
     sessionCookie = await setup.authenticate()
-    environment = (await seedEnvironment(setup.db)).environment
+    environment = (await setup.seedEnvironment()).environment
   })
 
   after(async () => {
@@ -29,7 +28,7 @@ describe('DELETE /api/v1/apps/:slug (e2e)', () => {
   })
 
   it('removes the app and its releases', async () => {
-    const app = new AppBuilder().withEnvironment(environment).withSlug(SLUG).build()
+    const app = new AppBuilder().withEnvironmentUuid(environment.uuid).withSlug(SLUG).build()
     await setup.db.insert(appTable).values(app)
     await setup.db.insert(releaseTable).values(new ReleaseBuilder().withApp(app).build())
 

@@ -5,7 +5,6 @@ import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
 import { ViewAppIndexQueryBuilder } from '#src/app/app-management/use-cases/view-app-index/query/view-app-index.query.builder.js'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
-import { seedEnvironment } from '#src/test/fixtures/seed-environment.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -20,18 +19,18 @@ describe('GET /api/v1/apps (e2e)', () => {
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
     sessionCookie = await setup.authenticate()
-    environment = (await seedEnvironment(setup.db)).environment
+    environment = (await setup.seedEnvironment()).environment
 
     // Seed straight through Drizzle — the only HTTP call under test is the GET
     // below, so the fixtures are built with the entity builder, not by driving
     // the deploy endpoint.
     const appA = new AppBuilder()
-      .withEnvironment(environment)
+      .withEnvironmentUuid(environment.uuid)
       .withSlug(SLUG_A)
       .withImage('nginx:1.27')
       .build()
     const appB = new AppBuilder()
-      .withEnvironment(environment)
+      .withEnvironmentUuid(environment.uuid)
       .withSlug(SLUG_B)
       .withImage('nginx:1.27')
       .build()

@@ -9,6 +9,8 @@ import { namespaceOf } from '#src/app/environment/entities/namespace.js'
 import { CreateEnvironmentCommand } from '#src/app/environment/use-cases/create-environment/create-environment.command.js'
 import { CreateEnvironmentRepository } from '#src/app/environment/use-cases/create-environment/create-environment.repository.js'
 import { CreateEnvironmentResponse } from '#src/app/environment/use-cases/create-environment/create-environment.response.js'
+import type { Database } from '#src/modules/database/drizzle.factory.js'
+import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 import {
   NamespaceBackend,
   NamespaceConflictError,
@@ -17,6 +19,7 @@ import {
 @Injectable()
 export class CreateEnvironmentUseCase {
   constructor(
+    @InjectDatabase() private readonly db: Database,
     private readonly repository: CreateEnvironmentRepository,
     private readonly namespaces: NamespaceBackend,
   ) {}
@@ -37,9 +40,14 @@ export class CreateEnvironmentUseCase {
       .build()
     const namespace = namespaceOf(project, environment)
 
-    const created = await this.repository.insertThen(environment, () =>
-      this.provision(namespace, environment.uuid),
-    )
+    // Provisioning runs inside the transaction so a cluster failure rolls the row back with it.
+    const created = await this.db.transaction(async (tx) => {
+      if (!(await this.repository.insert(tx, environment))) {
+        return false
+      }
+      await this.provision(namespace, environment.uuid)
+      return true
+    })
     if (!created) {
       throw new ConflictException(
         `Project '${projectSlug}' already has an environment '${command.slug}'.`,

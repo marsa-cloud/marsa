@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
-import type { AppPlacement } from '#src/app/app-management/entities/app-placement.js'
+import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import type { Release } from '#src/app/release/entities/release.table.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { ApplyReleaseService } from '#src/app/release/services/apply-release/apply-release.service.js'

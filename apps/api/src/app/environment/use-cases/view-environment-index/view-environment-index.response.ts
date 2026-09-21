@@ -1,12 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
 import { namespaceOf } from '#src/app/environment/entities/namespace.js'
-import { ViewEnvironmentIndexQueryKey } from '#src/app/environment/use-cases/view-environment-index/query/view-environment-index.query.js'
 import type { Project } from '#src/app/project/entities/project.table.js'
-import {
-  PaginatedKeysetResponse,
-  PaginatedKeysetResponseMeta,
-} from '#src/utils/pagination/keyset/paginated-keyset.response.js'
 
 export class EnvironmentSummary {
   @ApiProperty({ type: String, format: 'uuid' })
@@ -33,26 +28,11 @@ export class EnvironmentSummary {
   }
 }
 
-export class ViewEnvironmentIndexResponseMeta extends PaginatedKeysetResponseMeta {
-  @ApiProperty({ type: ViewEnvironmentIndexQueryKey, nullable: true })
-  declare readonly next: ViewEnvironmentIndexQueryKey | null
-
-  constructor(environments: Environment[]) {
-    super(ViewEnvironmentIndexQueryKey.nextKey(environments))
-  }
-}
-
-export class ViewEnvironmentIndexResponse extends PaginatedKeysetResponse<EnvironmentSummary> {
+export class ViewEnvironmentIndexResponse {
   @ApiProperty({ type: [EnvironmentSummary] })
-  declare readonly items: EnvironmentSummary[]
-
-  @ApiProperty({ type: ViewEnvironmentIndexResponseMeta })
-  declare readonly meta: ViewEnvironmentIndexResponseMeta
+  readonly items: EnvironmentSummary[]
 
   constructor(project: Project, environments: Environment[]) {
-    super(
-      environments.map((environment) => new EnvironmentSummary(project, environment)),
-      new ViewEnvironmentIndexResponseMeta(environments),
-    )
+    this.items = environments.map((environment) => new EnvironmentSummary(project, environment))
   }
 }

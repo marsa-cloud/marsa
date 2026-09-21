@@ -4,7 +4,7 @@ import { appTable } from '#src/app/app-management/entities/app.table.js'
 import {
   type AppPlacement,
   selectAppPlacement,
-} from '#src/app/app-management/entities/app-placement.js'
+} from '#src/app/app-management/queries/app-placement.js'
 import type { Database } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 

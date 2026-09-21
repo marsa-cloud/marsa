@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import type { AppPlacement } from '#src/app/app-management/entities/app-placement.js'
+import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import { ViewAppDetailRepository } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.repository.js'
 import { ViewAppDetailResponse } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.response.js'
 import { namespaceOf } from '#src/app/environment/entities/namespace.js'

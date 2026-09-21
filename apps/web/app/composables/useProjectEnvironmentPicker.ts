@@ -2,6 +2,12 @@ import type { Ref } from 'vue'
 
 import type { EnvironmentSummary, ProjectSummary } from '~/api/types.gen'
 
+/**
+ * State and actions behind `ProjectEnvironmentPicker.vue` (#142): two dependent lists, the
+ * selected project, and create/delete for both. Extracted from the component so the watcher's
+ * ordering guarantees — clear before loading, discard a response for a project the user already
+ * left — are unit-testable without mounting.
+ */
 export function useProjectEnvironmentPicker(environmentUuid: Ref<string | undefined>) {
   const { list: listProjects } = useProjectList()
   const { list: listEnvironments } = useEnvironmentList()

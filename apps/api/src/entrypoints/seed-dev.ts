@@ -113,7 +113,7 @@ async function rawDogFe(): Promise<void> {
             return
           }
           const app = new AppBuilder()
-            .withEnvironment(environment)
+            .withEnvironmentUuid(environment.uuid)
             .withSlug(slug)
             .withImage('nginx:1.27')
             .withContainerPort(80)

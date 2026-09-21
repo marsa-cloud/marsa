@@ -1,10 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
 import type { Project } from '#src/app/project/entities/project.table.js'
-import { ViewProjectIndexQueryKey } from '#src/app/project/use-cases/view-project-index/query/view-project-index.query.js'
-import {
-  PaginatedKeysetResponse,
-  PaginatedKeysetResponseMeta,
-} from '#src/utils/pagination/keyset/paginated-keyset.response.js'
 
 export class ProjectSummary {
   @ApiProperty({ type: String, format: 'uuid' })
@@ -27,26 +22,11 @@ export class ProjectSummary {
   }
 }
 
-export class ViewProjectIndexResponseMeta extends PaginatedKeysetResponseMeta {
-  @ApiProperty({ type: ViewProjectIndexQueryKey, nullable: true })
-  declare readonly next: ViewProjectIndexQueryKey | null
-
-  constructor(projects: Project[]) {
-    super(ViewProjectIndexQueryKey.nextKey(projects))
-  }
-}
-
-export class ViewProjectIndexResponse extends PaginatedKeysetResponse<ProjectSummary> {
+export class ViewProjectIndexResponse {
   @ApiProperty({ type: [ProjectSummary] })
-  declare readonly items: ProjectSummary[]
-
-  @ApiProperty({ type: ViewProjectIndexResponseMeta })
-  declare readonly meta: ViewProjectIndexResponseMeta
+  readonly items: ProjectSummary[]
 
   constructor(projects: Project[]) {
-    super(
-      projects.map((project) => new ProjectSummary(project)),
-      new ViewProjectIndexResponseMeta(projects),
-    )
+    this.items = projects.map((project) => new ProjectSummary(project))
   }
 }

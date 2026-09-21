@@ -4,7 +4,7 @@ import { appTable } from '#src/app/app-management/entities/app.table.js'
 import {
   type AppPlacement,
   selectAppPlacement,
-} from '#src/app/app-management/entities/app-placement.js'
+} from '#src/app/app-management/queries/app-placement.js'
 import { type Release, releaseTable } from '#src/app/release/entities/release.table.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import type { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'

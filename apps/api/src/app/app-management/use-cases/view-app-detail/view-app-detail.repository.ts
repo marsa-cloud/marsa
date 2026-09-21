@@ -5,7 +5,7 @@ import type { AppUuid } from '#src/app/app-management/entities/app.uuid.js'
 import {
   type AppPlacement,
   selectAppPlacement,
-} from '#src/app/app-management/entities/app-placement.js'
+} from '#src/app/app-management/queries/app-placement.js'
 import { type Release, releaseTable } from '#src/app/release/entities/release.table.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import type { Database } from '#src/modules/database/drizzle.factory.js'

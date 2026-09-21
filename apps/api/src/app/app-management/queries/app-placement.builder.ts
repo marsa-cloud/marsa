@@ -1,6 +1,6 @@
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import type { App } from '#src/app/app-management/entities/app.table.js'
-import type { AppPlacement } from '#src/app/app-management/entities/app-placement.js'
+import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import { EnvironmentBuilder } from '#src/app/environment/entities/environment.builder.js'
 import { ProjectBuilder } from '#src/app/project/entities/project.builder.js'
 
@@ -11,7 +11,7 @@ export class AppPlacementBuilder {
     const project = new ProjectBuilder().build()
     const environment = new EnvironmentBuilder().withProject(project).build()
     this.placement = {
-      app: new AppBuilder().withEnvironment(environment).build(),
+      app: new AppBuilder().withEnvironmentUuid(environment.uuid).build(),
       environment,
       project,
     }

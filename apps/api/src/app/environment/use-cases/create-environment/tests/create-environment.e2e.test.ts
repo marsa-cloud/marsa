@@ -1,11 +1,11 @@
-import { after, afterEach, before, describe, it } from 'node:test'
+import { after, before, describe, it } from 'node:test'
 import { eq } from 'drizzle-orm'
 import { expect } from 'expect'
-import { type SinonStub, stub } from 'sinon'
 import request from 'supertest'
 import { environmentTable } from '#src/app/environment/entities/environment.table.js'
 import { ProjectBuilder } from '#src/app/project/entities/project.builder.js'
 import { projectTable } from '#src/app/project/entities/project.table.js'
+import type { MockNamespaceBackend } from '#src/modules/kubernetes/mock-namespace-backend.js'
 import { NamespaceBackend } from '#src/modules/kubernetes/namespace-backend.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
@@ -13,15 +13,12 @@ import { TestSetup } from '#src/test/setup/test-setup.js'
 describe('POST /api/v1/projects/:projectSlug/environments (e2e)', () => {
   let setup: TestSetup
   let cookie: string
-  let provision: SinonStub | undefined
 
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
     cookie = await setup.authenticate()
     await setup.db.insert(projectTable).values(new ProjectBuilder().withSlug('demo').build())
   })
-
-  afterEach(() => provision?.restore())
 
   after(async () => {
     await setup.teardown()
@@ -44,8 +41,9 @@ describe('POST /api/v1/projects/:projectSlug/environments (e2e)', () => {
   })
 
   it('rolls the row back when the namespace cannot be created', async () => {
-    const namespaces = setup.app.get(NamespaceBackend)
-    provision = stub(namespaces, 'provision').rejects(new Error('cluster down'))
+    setup.testModule
+      .get<NamespaceBackend, MockNamespaceBackend>(NamespaceBackend)
+      .failNextProvision(new Error('cluster down'))
 
     await post('staging').expect(502)
 

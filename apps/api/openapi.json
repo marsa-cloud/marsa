@@ -348,16 +348,7 @@
       },
       "get": {
         "operationId": "viewProjectIndexV1",
-        "parameters": [
-          {
-            "name": "pagination",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "$ref": "#/components/schemas/ViewProjectIndexPaginationQuery"
-            }
-          }
-        ],
+        "parameters": [],
         "responses": {
           "200": {
             "description": "",
@@ -497,14 +488,6 @@
             "in": "path",
             "schema": {
               "type": "string"
-            }
-          },
-          {
-            "name": "pagination",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "$ref": "#/components/schemas/ViewEnvironmentIndexPaginationQuery"
             }
           }
         ],
@@ -1568,37 +1551,6 @@
           "slug"
         ]
       },
-      "ViewProjectIndexQueryKey": {
-        "type": "object",
-        "properties": {
-          "uuid": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "uuid"
-        ]
-      },
-      "ViewProjectIndexPaginationQuery": {
-        "type": "object",
-        "properties": {
-          "limit": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "key": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ViewProjectIndexQueryKey"
-              }
-            ]
-          }
-        }
-      },
       "ProjectSummary": {
         "type": "object",
         "properties": {
@@ -1626,41 +1578,18 @@
           "createdAt"
         ]
       },
-      "ViewProjectIndexResponseMeta": {
-        "type": "object",
-        "properties": {
-          "next": {
-            "nullable": true,
-            "description": "Key for the next page, or null on the last page. Opaque — send it back as-is.",
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ViewProjectIndexQueryKey"
-              }
-            ]
-          }
-        },
-        "required": [
-          "next"
-        ]
-      },
       "ViewProjectIndexResponse": {
         "type": "object",
         "properties": {
           "items": {
-            "description": "The items for the current page",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ProjectSummary"
             }
-          },
-          "meta": {
-            "$ref": "#/components/schemas/ViewProjectIndexResponseMeta"
           }
         },
         "required": [
-          "items",
-          "meta"
+          "items"
         ]
       },
       "CreateEnvironmentCommand": {
@@ -1716,37 +1645,6 @@
           "projectSlug"
         ]
       },
-      "ViewEnvironmentIndexQueryKey": {
-        "type": "object",
-        "properties": {
-          "uuid": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "uuid"
-        ]
-      },
-      "ViewEnvironmentIndexPaginationQuery": {
-        "type": "object",
-        "properties": {
-          "limit": {
-            "type": "number",
-            "minimum": 1,
-            "maximum": 100
-          },
-          "key": {
-            "nullable": true,
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ViewEnvironmentIndexQueryKey"
-              }
-            ]
-          }
-        }
-      },
       "EnvironmentSummary": {
         "type": "object",
         "properties": {
@@ -1779,41 +1677,18 @@
           "createdAt"
         ]
       },
-      "ViewEnvironmentIndexResponseMeta": {
-        "type": "object",
-        "properties": {
-          "next": {
-            "nullable": true,
-            "description": "Key for the next page, or null on the last page. Opaque — send it back as-is.",
-            "type": "object",
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ViewEnvironmentIndexQueryKey"
-              }
-            ]
-          }
-        },
-        "required": [
-          "next"
-        ]
-      },
       "ViewEnvironmentIndexResponse": {
         "type": "object",
         "properties": {
           "items": {
-            "description": "The items for the current page",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/EnvironmentSummary"
             }
-          },
-          "meta": {
-            "$ref": "#/components/schemas/ViewEnvironmentIndexResponseMeta"
           }
         },
         "required": [
-          "items",
-          "meta"
+          "items"
         ]
       },
       "CreateReleaseCommand": {

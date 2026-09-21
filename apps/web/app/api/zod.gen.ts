@@ -124,15 +124,6 @@ export const zCreateProjectResponse = z.object({
   slug: z.string(),
 })
 
-export const zViewProjectIndexQueryKey = z.object({
-  uuid: z.uuid(),
-})
-
-export const zViewProjectIndexPaginationQuery = z.object({
-  limit: z.number().gte(1).lte(100).optional(),
-  key: zViewProjectIndexQueryKey.nullish(),
-})
-
 export const zProjectSummary = z.object({
   uuid: z.uuid(),
   name: z.string(),
@@ -140,13 +131,8 @@ export const zProjectSummary = z.object({
   createdAt: z.iso.datetime(),
 })
 
-export const zViewProjectIndexResponseMeta = z.object({
-  next: zViewProjectIndexQueryKey.nullable(),
-})
-
 export const zViewProjectIndexResponse = z.object({
   items: z.array(zProjectSummary),
-  meta: zViewProjectIndexResponseMeta,
 })
 
 export const zCreateEnvironmentCommand = z.object({
@@ -165,15 +151,6 @@ export const zCreateEnvironmentResponse = z.object({
   projectSlug: z.string(),
 })
 
-export const zViewEnvironmentIndexQueryKey = z.object({
-  uuid: z.uuid(),
-})
-
-export const zViewEnvironmentIndexPaginationQuery = z.object({
-  limit: z.number().gte(1).lte(100).optional(),
-  key: zViewEnvironmentIndexQueryKey.nullish(),
-})
-
 export const zEnvironmentSummary = z.object({
   uuid: z.uuid(),
   name: z.string(),
@@ -182,13 +159,8 @@ export const zEnvironmentSummary = z.object({
   createdAt: z.iso.datetime(),
 })
 
-export const zViewEnvironmentIndexResponseMeta = z.object({
-  next: zViewEnvironmentIndexQueryKey.nullable(),
-})
-
 export const zViewEnvironmentIndexResponse = z.object({
   items: z.array(zEnvironmentSummary),
-  meta: zViewEnvironmentIndexResponseMeta,
 })
 
 export const zCreateReleaseCommand = z.object({
@@ -413,10 +385,6 @@ export const zUpdateUserRoleV1Path = z.object({
 
 export const zUpdateUserRoleV1Response = zUpdateUserRoleResponse
 
-export const zViewProjectIndexV1Query = z.object({
-  pagination: zViewProjectIndexPaginationQuery.optional(),
-})
-
 export const zViewProjectIndexV1Response = zViewProjectIndexResponse
 
 export const zCreateProjectV1Body = zCreateProjectCommand
@@ -434,10 +402,6 @@ export const zDeleteProjectV1Response = z.void()
 
 export const zViewEnvironmentIndexV1Path = z.object({
   projectSlug: z.string(),
-})
-
-export const zViewEnvironmentIndexV1Query = z.object({
-  pagination: zViewEnvironmentIndexPaginationQuery.optional(),
 })
 
 export const zViewEnvironmentIndexV1Response = zViewEnvironmentIndexResponse
