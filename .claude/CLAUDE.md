@@ -55,7 +55,7 @@ Per-package scripts: `pnpm --filter <api|web> <script>`.
 
 ## Running the FE locally without a cluster
 
-To click through the web UI locally **without** a k3d/k3s cluster and **without** real GitHub login, run the api in test mode (which wires the network-free `MockDeployBackend` + mock GitHub client, so it boots with no cluster) and use the `seed-dev` entrypoint to seed data + mint a login cookie:
+To click through the web UI locally **without** a k3d/k3s cluster and **without** real GitHub login, run the api in test mode (which wires the network-free mock runtime adapter + mock GitHub client, so it boots with no cluster) and use the `seed-dev` entrypoint to seed data + mint a login cookie:
 
 ```bash
 docker compose up -d                       # Postgres (marsa_test)

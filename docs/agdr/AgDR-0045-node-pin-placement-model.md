@@ -76,6 +76,8 @@ which is what #198 and #213 exist to remove.
   which is what #143's fourth acceptance criterion reserves.
 - Pinning restricts where pods _may_ run; it neither spreads them nor keeps them away from other
   workloads. Guaranteed spreading and drain safety are #221.
+- Superseded in part by AgDR-0046: `ApplyReleaseService` no longer exists; `update-app` calls
+  `AppRuntime.deploy` with `deploySpecOf`, and no feature imports another feature's service.
 
 ## Artifacts
 
