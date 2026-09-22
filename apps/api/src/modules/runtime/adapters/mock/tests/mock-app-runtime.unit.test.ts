@@ -52,3 +52,25 @@ describe('MockAppRuntime.readLiveReleaseUuid', () => {
     expect(await runtime.readLiveReleaseUuid(APP)).toBe(live)
   })
 })
+
+describe('MockAppRuntime.failNext', () => {
+  it('fails the armed operation exactly once and leaves state untouched', async () => {
+    const runtime = new MockAppRuntime()
+    const release = generateUuid<Uuid<'Release'>>()
+    runtime.failNext('deploy', new Error('cluster down'))
+
+    await expect(runtime.deploy(APP, spec(release))).rejects.toThrow('cluster down')
+    expect(await runtime.readLiveReleaseUuid(APP)).toBeNull()
+
+    await runtime.deploy(APP, spec(release))
+    expect(await runtime.readLiveReleaseUuid(APP)).toBe(release)
+  })
+
+  it('arms destroy independently of deploy', async () => {
+    const runtime = new MockAppRuntime()
+    runtime.failNext('destroy', new Error('cluster down'))
+
+    await runtime.deploy(APP, spec(generateUuid<Uuid<'Release'>>()))
+    await expect(runtime.destroy(APP)).rejects.toThrow('cluster down')
+  })
+})

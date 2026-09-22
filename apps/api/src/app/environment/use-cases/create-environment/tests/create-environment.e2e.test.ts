@@ -45,7 +45,7 @@ describe('POST /api/v1/projects/:projectSlug/environments (e2e)', () => {
   it('maps a runtime environment conflict to 409', async () => {
     setup.testModule
       .get<EnvironmentRuntime, MockEnvironmentRuntime>(EnvironmentRuntime)
-      .failNextProvision(new EnvironmentConflictError('Taken by another environment.'))
+      .failNext('provision', new EnvironmentConflictError('Taken by another environment.'))
 
     const response = await post('qa').expect(409)
 
@@ -55,7 +55,7 @@ describe('POST /api/v1/projects/:projectSlug/environments (e2e)', () => {
   it('rolls the row back when the environment cannot be provisioned', async () => {
     setup.testModule
       .get<EnvironmentRuntime, MockEnvironmentRuntime>(EnvironmentRuntime)
-      .failNextProvision(new Error('cluster down'))
+      .failNext('provision', new Error('cluster down'))
 
     await post('staging').expect(502)
 

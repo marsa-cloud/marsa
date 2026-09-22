@@ -20,21 +20,42 @@ export class ViewAppIndexUseCase {}
 Why: the folder is `use-cases/`. `…Service` is reserved for shared support code under
 `src/modules/`, so the suffix tells a reader which layer they are in.
 
-## Depend on the repository, never on the database
+## Depend on the repository; inject the database only to open a transaction
 
 ```ts
-// WRONG
-constructor(@InjectDatabase() private readonly db: Database) {}
+// WRONG — the use-case queries the database itself
+const [app] = await this.db.select().from(appTable).where(eq(appTable.slug, slug))
 
-// RIGHT
+// RIGHT — the database is only the transaction boundary; the repository does the work
 constructor(
-  private readonly repository: ViewAppIndexRepository,
-  private readonly config: ConfigService,
+  @InjectDatabase() private readonly db: Database,
+  private readonly repository: DeleteAppRepository,
+  private readonly appRuntime: AppRuntime,
 ) {}
 ```
 
-Why: a use-case holding a `Database` cannot be unit-tested without a live Postgres. With a
-repository, `createStubInstance(ViewAppIndexRepository)` is the whole setup.
+Why: a use-case whose only database call is `db.transaction` is still unit-testable —
+`stubDatabase()` runs the callback — while any query it ran itself would need Postgres. A
+read-only use-case needs no transaction and injects no `Database`.
+
+## A writing use-case is one transaction, runtime call last
+
+```ts
+await this.db.transaction(async (tx) => {
+  const placement = await this.repository.findBySlug(tx, slug) // deciding read, locked
+  await this.repository.deleteWithReleases(tx, placement.app.uuid) // DB writes
+  await this.appRuntime.destroy(placement) // runtime call, last
+})
+```
+
+Why: DB-first means constraint failures (a taken slug, a RESTRICT FK) surface before any side
+effect, and a runtime failure throws and rolls every write back, so an identical retry sees the
+same starting state. Runtime calls must be idempotent for that retry to converge. A write that
+must survive a failed runtime call — recording a failed rollout — stays in the transaction: put
+the runtime call in a savepoint (`tx.transaction`), write after rolling it back, commit, then
+rethrow. Writing after the transaction releases the locks first, letting a concurrent retry in.
+The one unhandled case, a commit failing after the runtime call succeeded, is accepted
+(AgDR-0047).
 
 ## Return a constructed response
 

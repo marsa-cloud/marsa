@@ -78,6 +78,25 @@ async createRelease(tx: Executor, release: Release): Promise<void> {
 Why: `Executor = Database | Transaction`. Taking it as the first parameter lets one unit of
 work span several repositories. Reads that stand alone keep using `this.db`.
 
+A read that decides a write takes the `tx` too and locks what it decides on:
+
+```ts
+async findBySlug(tx: Executor, slug: string): Promise<AppPlacement | undefined> {
+  const [placement] = await selectAppPlacement(tx)
+    .where(eq(appTable.slug, slug))
+    .limit(1)
+    .for('update', { of: appTable })
+  return placement
+}
+```
+
+Why: at READ COMMITTED a plain read inside a transaction locks nothing, so a concurrent edit
+can land between the read and the write. `of` keeps the lock on the row being decided on, not
+on every joined table.
+
+Each method does one job. Two reads that must agree are two methods called inside one
+transaction, not one method returning both.
+
 ## Repositories get no dedicated tests — unless they hold an invariant
 
 A repository that is a thin query wrapper is covered implicitly by the slice's e2e test.

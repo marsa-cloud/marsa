@@ -7,6 +7,8 @@ import { appTable } from '#src/app/app-management/entities/app.table.js'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
+import type { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
+import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -52,5 +54,28 @@ describe('DELETE /api/v1/apps/:slug (e2e)', () => {
 
   it('rejects an unauthenticated request with 401', async () => {
     await request(setup.httpServer).delete(`/api/v1/apps/${SLUG}`).expect(401)
+  })
+
+  it('keeps the app and its releases when the runtime cannot remove it', async () => {
+    const slug = 'delete-e2e-stuck'
+    const app = new AppBuilder().withEnvironmentUuid(environment.uuid).withSlug(slug).build()
+    await setup.db.insert(appTable).values(app)
+    await setup.db.insert(releaseTable).values(new ReleaseBuilder().withApp(app).build())
+    setup.testModule
+      .get<AppRuntime, MockAppRuntime>(AppRuntime)
+      .failNext('destroy', new Error('cluster down'))
+
+    await request(setup.httpServer)
+      .delete(`/api/v1/apps/${slug}`)
+      .set('Cookie', sessionCookie)
+      .expect(502)
+
+    const apps = await setup.db.select().from(appTable).where(eq(appTable.slug, slug))
+    expect(apps).toHaveLength(1)
+    const releases = await setup.db
+      .select()
+      .from(releaseTable)
+      .where(eq(releaseTable.appUuid, app.uuid))
+    expect(releases).toHaveLength(1)
   })
 })

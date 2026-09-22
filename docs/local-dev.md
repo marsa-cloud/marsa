@@ -77,3 +77,11 @@ The same harness runs in CI on `workflow_run` after `CD` completes
 (`.github/workflows/e2e.yml`), there against a **full real-K3s** `install.sh`
 using the CD-built `sha-<short>` image — so one job proves both that the
 installer works and that a real deploy reaches HTTPS. Design: `docs/superpowers/specs/2026-07-14-least-mocks-e2e-harness-design.md`.
+
+## Troubleshooting
+
+**Creating an environment keeps failing with 409 "already taken".** A previous attempt
+provisioned the namespace, then its database commit failed, so the namespace is labelled with an
+environment uuid no row has. Check that no environment row uses the uuid in the namespace's
+`marsa.cloud/environment-uuid` label, then `kubectl delete ns <project>-<environment>` and retry.
+This is the one gap the transaction rule accepts — see AgDR-0047.

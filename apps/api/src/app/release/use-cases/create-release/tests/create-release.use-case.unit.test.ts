@@ -1,13 +1,14 @@
 import { before, describe, it } from 'node:test'
 import { NotFoundException } from '@nestjs/common'
 import { expect } from 'expect'
-import { createStubInstance } from 'sinon'
+import { createStubInstance, match } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/release/enums/release-trigger.enum.js'
 import { CreateReleaseRepository } from '#src/app/release/use-cases/create-release/create-release.repository.js'
 import { CreateReleaseUseCase } from '#src/app/release/use-cases/create-release/create-release.use-case.js'
+import { stubDatabase } from '#src/test/setup/stub-database.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 const app = new AppBuilder()
@@ -26,8 +27,9 @@ function build() {
   const repository = createStubInstance(CreateReleaseRepository)
   repository.findAppBySlug.resolves(app)
   repository.findRelease.resolves(old)
-  repository.createRelease.resolves()
-  return { usecase: new CreateReleaseUseCase(repository), repository }
+  repository.insertRelease.resolves()
+  repository.restoreAppConfig.resolves()
+  return { usecase: new CreateReleaseUseCase(stubDatabase(), repository), repository }
 }
 
 describe('CreateReleaseUseCase', () => {
@@ -38,7 +40,8 @@ describe('CreateReleaseUseCase', () => {
 
     const result = await usecase.execute('my-app', {})
 
-    const [release, restored] = repository.createRelease.firstCall.args
+    const [, release] = repository.insertRelease.firstCall.args
+    expect(repository.findAppBySlug.calledOnceWithExactly(match.any, 'my-app')).toBe(true)
     expect(release).toMatchObject({
       appUuid: app.uuid,
       imageRef: 'nginx:1.28',
@@ -48,7 +51,7 @@ describe('CreateReleaseUseCase', () => {
       deployStatus: DeployStatus.Pending,
       sourceReleaseUuid: null,
     })
-    expect(restored).toBeNull()
+    expect(repository.restoreAppConfig.called).toBe(false)
     expect(result).toEqual({
       releaseUuid: release.uuid,
       appSlug: 'my-app',
@@ -62,7 +65,8 @@ describe('CreateReleaseUseCase', () => {
 
     const result = await usecase.execute('my-app', { fromReleaseUuid: old.uuid })
 
-    const [release, restored] = repository.createRelease.firstCall.args
+    const [, release] = repository.insertRelease.firstCall.args
+    const [, restoredUuid, restored] = repository.restoreAppConfig.firstCall.args
     expect(release).toMatchObject({
       imageRef: 'nginx:1.27',
       env: { OLD: '1' },
@@ -70,6 +74,7 @@ describe('CreateReleaseUseCase', () => {
       sourceReleaseUuid: old.uuid,
     })
     expect(release.uuid).not.toBe(old.uuid)
+    expect(restoredUuid).toBe(app.uuid)
     expect(restored).toMatchObject({ image: 'nginx:1.27', env: { OLD: '1' } })
     expect(result.sourceReleaseUuid).toBe(old.uuid)
   })
@@ -81,7 +86,7 @@ describe('CreateReleaseUseCase', () => {
     await expect(usecase.execute('my-app', { fromReleaseUuid: old.uuid })).rejects.toThrow(
       NotFoundException,
     )
-    expect(repository.createRelease.called).toBe(false)
+    expect(repository.insertRelease.called).toBe(false)
   })
 
   it('throws NotFound for an unknown app', async () => {

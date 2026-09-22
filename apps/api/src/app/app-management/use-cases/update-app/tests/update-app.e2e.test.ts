@@ -5,6 +5,10 @@ import request from 'supertest'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
+import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
+import { releaseTable } from '#src/app/release/entities/release.table.js'
+import type { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
+import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -117,5 +121,27 @@ describe('PATCH /api/v1/apps/:slug (e2e)', () => {
       .expect(200)
 
     expect(cleared.body.nodePin).toBeNull()
+  })
+
+  it('keeps the old pin when re-applying it to the runtime fails', async () => {
+    const slug = 'update-app-e2e-pin-fail'
+    const app = new AppBuilder().withEnvironmentUuid(environment.uuid).withSlug(slug).build()
+    const live = new ReleaseBuilder().withApp(app).build()
+    await setup.db.insert(appTable).values(app)
+    await setup.db.insert(releaseTable).values(live)
+    const runtime = setup.testModule.get<AppRuntime, MockAppRuntime>(AppRuntime)
+    runtime.setLiveRelease(slug, live.uuid)
+    runtime.failNext('deploy', new Error('cluster down'))
+
+    await request(setup.httpServer)
+      .patch(`/api/v1/apps/${slug}`)
+      .set('Cookie', cookie)
+      .send({
+        nodePin: { key: 'kubernetes.io/hostname', values: ['node-a'], strategy: 'required' },
+      })
+      .expect(500)
+
+    const [stored] = await setup.db.select().from(appTable).where(eq(appTable.slug, slug))
+    expect(stored?.nodePin).toBeNull()
   })
 })

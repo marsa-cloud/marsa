@@ -15,17 +15,30 @@ import type { Uuid } from '#src/utils/uuid.js'
 @Injectable()
 export class MockAppRuntime extends AppRuntime {
   private readonly liveReleases = new Map<string, Uuid<'Release'>>()
+  private readonly armedFailures = new Map<'deploy' | 'destroy', Error>()
+
+  failNext(operation: 'deploy' | 'destroy', error: Error): void {
+    this.armedFailures.set(operation, error)
+  }
 
   setLiveRelease(slug: string, releaseUuid: Uuid<'Release'>): void {
     this.liveReleases.set(slug, releaseUuid)
   }
 
   deploy(ref: AppRef, spec: AppDeploySpec): Promise<void> {
+    const failure = this.takeFailure('deploy')
+    if (failure) {
+      return Promise.reject(failure)
+    }
     this.liveReleases.set(ref.app.slug, spec.releaseUuid)
     return Promise.resolve()
   }
 
   destroy(ref: AppRef): Promise<void> {
+    const failure = this.takeFailure('destroy')
+    if (failure) {
+      return Promise.reject(failure)
+    }
     this.liveReleases.delete(ref.app.slug)
     return Promise.resolve()
   }
@@ -62,4 +75,10 @@ export class MockAppRuntime extends AppRuntime {
     })
   }
   /* eslint-enable @typescript-eslint/no-unused-vars */
+
+  private takeFailure(operation: 'deploy' | 'destroy'): Error | undefined {
+    const failure = this.armedFailures.get(operation)
+    this.armedFailures.delete(operation)
+    return failure
+  }
 }

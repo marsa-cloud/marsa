@@ -14,6 +14,7 @@ import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
 import { NodePinStrategy } from '#src/modules/runtime/runtime.types.js'
+import { stubDatabase } from '#src/test/setup/stub-database.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 const saved = new AppBuilder().withImage('nginx:1.28').withEnv({ A: '1' }).build()
@@ -31,6 +32,7 @@ const liveRelease = new ReleaseBuilder().withApp(pinnedApp).build()
 
 function build() {
   const repository = createStubInstance(UpdateAppRepository)
+  repository.findPlacementBySlug.resolves(placement)
   repository.updateBySlug.resolves(saved)
   const cipher = createStubInstance(ImagePullCredentialsCipher)
   cipher.seal.returns('new-sealed')
@@ -39,7 +41,7 @@ function build() {
   const config = createStubInstance(ConfigService)
   config.getOrThrow.returns('demo.marsa.cc')
   return {
-    usecase: new UpdateAppUseCase(repository, cipher, appRuntime, config),
+    usecase: new UpdateAppUseCase(stubDatabase(), repository, cipher, appRuntime, config),
     repository,
     cipher,
     appRuntime,
@@ -63,7 +65,7 @@ describe('UpdateAppUseCase', () => {
 
     await usecase.execute('my-app', new UpdateAppCommandBuilder().withImage('nginx:1.28').build())
 
-    const [slug, patch] = repository.updateBySlug.firstCall.args
+    const [, slug, patch] = repository.updateBySlug.firstCall.args
     expect(slug).toBe('my-app')
     expect(patch).toEqual({
       image: 'nginx:1.28',
@@ -82,7 +84,7 @@ describe('UpdateAppUseCase', () => {
       'my-app',
       new UpdateAppCommandBuilder().withImagePullCredentials(null).build(),
     )
-    expect(cleared.repository.updateBySlug.firstCall.args[1].imagePullCredentialsEnc).toBeNull()
+    expect(cleared.repository.updateBySlug.firstCall.args[2].imagePullCredentialsEnc).toBeNull()
 
     const replaced = build()
     const credentials = { registry: 'ghcr.io', username: 'org', password: 'pw' }
@@ -91,7 +93,7 @@ describe('UpdateAppUseCase', () => {
       new UpdateAppCommandBuilder().withImagePullCredentials(credentials).build(),
     )
     expect(replaced.cipher.seal.calledOnceWithExactly(credentials)).toBe(true)
-    expect(replaced.repository.updateBySlug.firstCall.args[1].imagePullCredentialsEnc).toBe(
+    expect(replaced.repository.updateBySlug.firstCall.args[2].imagePullCredentialsEnc).toBe(
       'new-sealed',
     )
   })
@@ -114,11 +116,12 @@ describe('UpdateAppUseCase', () => {
 
   it('throws NotFound when no app has the slug', async () => {
     const { usecase, repository } = build()
-    repository.updateBySlug.resolves(undefined)
+    repository.findPlacementBySlug.resolves(undefined)
 
     await expect(usecase.execute('ghost', new UpdateAppCommandBuilder().build())).rejects.toThrow(
       NotFoundException,
     )
+    expect(repository.updateBySlug.called).toBe(false)
   })
 
   it('re-applies the live release when the pin changes', async () => {
@@ -183,7 +186,7 @@ describe('UpdateAppUseCase', () => {
     expect(appRuntime.deploy.called).toBe(false)
   })
 
-  it('fails, and writes nothing, when the live release is not a release of this app', async () => {
+  it('fails when the live release is not a release of this app', async () => {
     const { usecase, repository, appRuntime } = buildPinned()
     repository.findRelease.resolves(undefined)
 
@@ -192,27 +195,22 @@ describe('UpdateAppUseCase', () => {
     ).rejects.toThrow(InternalServerErrorException)
 
     expect(appRuntime.deploy.called).toBe(false)
-    expect(repository.updateBySlug.called).toBe(false)
   })
 
-  it('stores nothing when the apply fails, so an identical retry applies again', async () => {
-    const { usecase, repository, appRuntime } = buildPinned()
+  it('propagates a failed deploy so the transaction rolls the write back', async () => {
+    const { usecase, appRuntime } = buildPinned()
     appRuntime.deploy.rejects(new Error('cluster unreachable'))
 
     await expect(
       usecase.execute('my-app', new UpdateAppCommandBuilder().withNodePin(PIN).build()),
     ).rejects.toThrow('cluster unreachable')
-
-    // Storing the pin first would make the retry a no-op: the row would already match, so the
-    // cluster would keep the old affinity with nothing able to surface the drift.
-    expect(repository.updateBySlug.called).toBe(false)
   })
 
-  it('applies before it writes', async () => {
+  it('writes before it deploys', async () => {
     const { usecase, repository, appRuntime } = buildPinned()
     const order: string[] = []
     appRuntime.deploy.callsFake(() => {
-      order.push('apply')
+      order.push('deploy')
       return Promise.resolve()
     })
     repository.updateBySlug.callsFake(() => {
@@ -222,6 +220,6 @@ describe('UpdateAppUseCase', () => {
 
     await usecase.execute('my-app', new UpdateAppCommandBuilder().withNodePin(PIN).build())
 
-    expect(order).toEqual(['apply', 'write'])
+    expect(order).toEqual(['write', 'deploy'])
   })
 })

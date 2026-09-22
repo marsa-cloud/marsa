@@ -5,21 +5,25 @@ import type { EnvironmentRef } from '#src/modules/runtime/runtime.types.js'
 // Otherwise stateless: booted apps are cached across e2e suites, and truncation can't reset them.
 @Injectable()
 export class MockEnvironmentRuntime extends EnvironmentRuntime {
-  private nextProvisionError?: Error
+  private readonly armedFailures = new Map<'provision' | 'destroy', Error>()
 
-  failNextProvision(error: Error): void {
-    this.nextProvisionError = error
+  failNext(operation: 'provision' | 'destroy', error: Error): void {
+    this.armedFailures.set(operation, error)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   provision(_environment: EnvironmentRef): Promise<void> {
-    const error = this.nextProvisionError
-    this.nextProvisionError = undefined
-    return error ? Promise.reject(error) : Promise.resolve()
+    return this.settle('provision')
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   destroy(_environment: EnvironmentRef): Promise<void> {
-    return Promise.resolve()
+    return this.settle('destroy')
+  }
+
+  private settle(operation: 'provision' | 'destroy'): Promise<void> {
+    const failure = this.armedFailures.get(operation)
+    this.armedFailures.delete(operation)
+    return failure ? Promise.reject(failure) : Promise.resolve()
   }
 }
