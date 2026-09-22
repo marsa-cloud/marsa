@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, InternalServerErrorException } from '@nestjs/common'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
-import type { RegistryCredentials } from '#src/modules/kubernetes/deploy-backend.types.js'
+import type { RegistryCredentials } from '#src/modules/runtime/runtime.types.js'
 
 /**
  * The JSON-over-{@link SecretCipherService} encoding of `App.imagePullCredentialsEnc`.
@@ -19,5 +19,17 @@ export class ImagePullCredentialsCipher {
 
   open(token: string): RegistryCredentials {
     return JSON.parse(this.cipher.decrypt(token)) as RegistryCredentials
+  }
+
+  openForApp(slug: string, token: string): RegistryCredentials {
+    try {
+      return this.open(token)
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Stored image pull credentials for '${slug}' could not be decrypted. ` +
+          'Re-enter the registry credentials and deploy again.',
+        { cause: error },
+      )
+    }
   }
 }
