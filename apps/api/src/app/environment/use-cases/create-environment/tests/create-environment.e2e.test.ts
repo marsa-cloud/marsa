@@ -45,7 +45,7 @@ describe('POST /api/v1/projects/:projectSlug/environments (e2e)', () => {
   it('maps a runtime environment conflict to 409', async () => {
     setup.testModule
       .get<EnvironmentRuntime, MockEnvironmentRuntime>(EnvironmentRuntime)
-      .failNextProvision(new EnvironmentConflictError('Taken by another environment.'))
+      .failNext('provision', new EnvironmentConflictError('Taken by another environment.'))
 
     const response = await post('qa').expect(409)
 

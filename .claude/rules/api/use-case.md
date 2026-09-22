@@ -44,7 +44,7 @@ read-only use-case needs no transaction and injects no `Database`.
 await this.db.transaction(async (tx) => {
   const placement = await this.repository.findBySlug(tx, slug) // deciding read, locked
   await this.repository.deleteWithReleases(tx, placement.app.uuid) // DB writes
-  await this.appRuntime.destroy(appRefOf(placement)) // runtime call, last
+  await this.appRuntime.destroy(placement) // runtime call, last
 })
 ```
 
