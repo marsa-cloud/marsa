@@ -5,9 +5,8 @@ import type { EnvironmentRef } from '#src/modules/runtime/runtime.types.js'
 import { generateUuid, type Uuid } from '#src/utils/uuid.js'
 
 const ENVIRONMENT: EnvironmentRef = {
-  uuid: generateUuid<Uuid<'Environment'>>(),
-  projectSlug: 'demo',
-  environmentSlug: 'dev',
+  project: { slug: 'demo' },
+  environment: { uuid: generateUuid<Uuid<'Environment'>>(), slug: 'dev' },
 }
 
 describe('MockEnvironmentRuntime.provision', () => {

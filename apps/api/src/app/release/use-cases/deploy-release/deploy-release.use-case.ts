@@ -8,7 +8,6 @@ import { DeployReleaseRepository } from '#src/app/release/use-cases/deploy-relea
 import { DeployReleaseResponse } from '#src/app/release/use-cases/deploy-release/deploy-release.response.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
-import { EnvironmentConflictError } from '#src/modules/runtime/runtime.errors.js'
 
 // Deploys the app's newest release: releases are append-only, so the newest is what should run.
 @Injectable()
@@ -64,19 +63,8 @@ export class DeployReleaseUseCase {
   }
 
   private async deploy(placement: AppPlacement, release: Release): Promise<void> {
-    const sealed = release.imagePullCredentialsEnc
-    const credentials = sealed ? this.cipher.openForApp(placement.app.slug, sealed) : undefined
-    const { app, spec } = deploySpecOf(placement, release, {
-      baseDomain: this.baseDomain,
-      credentials,
-    })
-    try {
-      await this.appRuntime.deploy(app, spec)
-    } catch (error) {
-      if (error instanceof EnvironmentConflictError) {
-        throw new ConflictException(error.message)
-      }
-      throw error
-    }
+    const credentials = this.cipher.openForApp(placement.app.slug, release.imagePullCredentialsEnc)
+    const spec = deploySpecOf(placement, release, { baseDomain: this.baseDomain, credentials })
+    await this.appRuntime.deploy(placement, spec)
   }
 }

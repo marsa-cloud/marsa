@@ -13,6 +13,7 @@ import { UpdateAppUseCase } from '#src/app/app-management/use-cases/update-app/u
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
+import { NodePinStrategy } from '#src/modules/runtime/runtime.types.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 const saved = new AppBuilder().withImage('nginx:1.28').withEnv({ A: '1' }).build()
@@ -127,13 +128,13 @@ describe('UpdateAppUseCase', () => {
 
     // Deployed with the incoming pin, not the stored one, so the runtime gets the new placement.
     expect(appRuntime.deploy.calledOnce).toBe(true)
-    const [appRef, spec] = appRuntime.deploy.firstCall.args
-    expect(appRef.slug).toBe(placement.app.slug)
+    const [ref, spec] = appRuntime.deploy.firstCall.args
+    expect(ref.app.slug).toBe(placement.app.slug)
     expect(spec.releaseUuid).toBe(liveRelease.uuid)
     expect(spec.nodePin).toEqual({
       key: 'kubernetes.io/hostname',
       values: ['node-a'],
-      strategy: 'required',
+      strategy: NodePinStrategy.Required,
     })
   })
 

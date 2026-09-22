@@ -2,10 +2,11 @@ import { describe, it } from 'node:test'
 import { expect } from 'expect'
 import { RELEASE_UUID_ANNOTATION } from '#src/modules/runtime/adapters/kubernetes/app/app.constants.js'
 import { renderManifests } from '#src/modules/runtime/adapters/kubernetes/app/render/render-manifests.js'
-import type {
-  AppDeploySpec,
-  NodePinSpec,
-  RegistryCredentials,
+import {
+  type AppDeploySpec,
+  type NodePinSpec,
+  NodePinStrategy,
+  type RegistryCredentials,
 } from '#src/modules/runtime/runtime.types.js'
 import { generateUuid, type Uuid } from '#src/utils/uuid.js'
 
@@ -152,7 +153,7 @@ describe('renderManifests node pinning', () => {
     const { deployment } = render({
       key: 'kubernetes.io/hostname',
       values: ['node-a'],
-      strategy: 'required',
+      strategy: NodePinStrategy.Required,
     })
 
     expect(

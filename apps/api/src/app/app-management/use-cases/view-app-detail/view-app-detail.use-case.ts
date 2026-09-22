@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { type AppPlacement, appRefOf } from '#src/app/app-management/queries/app-placement.js'
+import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import { ViewAppDetailRepository } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.repository.js'
 import { ViewAppDetailResponse } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.response.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
@@ -34,7 +34,7 @@ export class ViewAppDetailUseCase {
   private async hasUndeployedChanges(placement: AppPlacement): Promise<boolean> {
     let liveUuid: ReleaseUuid | null
     try {
-      liveUuid = await this.appRuntime.readLiveReleaseUuid(appRefOf(placement))
+      liveUuid = await this.appRuntime.readLiveReleaseUuid(placement)
     } catch (error) {
       // A malformed annotation is a Marsa bug, not an unreachable cluster, so it must not be hidden.
       if (error instanceof InvalidReleaseAnnotationError) throw error

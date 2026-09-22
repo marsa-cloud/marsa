@@ -52,8 +52,11 @@ Chosen: **ports and adapters**.
 
 ## Consequences
 
-- Lint enforces the boundary: only `adapters/kubernetes/**` imports `@kubernetes/client-node`,
-  and `src/app/**` never imports `#src/modules/runtime/adapters/**` (tests excepted).
+- The boundary is a convention (`.claude/rules/api/runtime.md`), not lint: only
+  `adapters/kubernetes/**` imports `@kubernetes/client-node`, and `src/app/**` never imports
+  `#src/modules/runtime/adapters/**` (tests excepted).
+- `AppRef` / `EnvironmentRef` are structural, so a feature's `AppPlacement` fits the port with no
+  mapper; `RuntimeErrorFilter` maps `EnvironmentConflictError` to 409 once for every use-case.
 - The environment API responses lose their `namespace` field; the web no longer shows it.
 - `DEPLOY_BACKEND=direct|mock` became `MARSA_RUNTIME=kubernetes|mock`.
 - An adapter lacking a capability throws; the port is not shrunk to the weakest adapter.

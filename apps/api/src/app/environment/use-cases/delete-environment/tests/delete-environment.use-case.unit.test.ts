@@ -35,10 +35,9 @@ describe('DeleteEnvironmentUseCase', () => {
     await usecase.execute('demo', 'dev')
 
     expect(repository.delete.firstCall.args[1]).toBe(environment.uuid)
-    expect(environments.destroy.firstCall.args[0]).toEqual({
-      uuid: environment.uuid,
-      projectSlug: 'demo',
-      environmentSlug: 'dev',
+    expect(environments.destroy.firstCall.args[0]).toMatchObject({
+      project: { slug: 'demo' },
+      environment: { uuid: environment.uuid, slug: 'dev' },
     })
   })
 

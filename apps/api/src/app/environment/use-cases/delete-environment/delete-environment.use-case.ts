@@ -4,7 +4,6 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
-import { environmentRefOf } from '#src/app/environment/entities/environment-ref.js'
 import { DeleteEnvironmentRepository } from '#src/app/environment/use-cases/delete-environment/delete-environment.repository.js'
 import type { Database } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
@@ -27,13 +26,11 @@ export class DeleteEnvironmentUseCase {
         `Environment '${environmentSlug}' was not found in project '${projectSlug}'.`,
       )
     }
-    const ref = environmentRefOf(found.project, found.environment)
-
     try {
       // The environment is removed inside the transaction so a cluster failure keeps the row.
       await this.db.transaction(async (tx) => {
         await this.repository.delete(tx, found.environment.uuid)
-        await this.destroy(ref)
+        await this.destroy(found)
       })
     } catch (error) {
       // The app FK is RESTRICT, so the DELETE itself fails while apps remain — no check-then-act race.
@@ -51,7 +48,7 @@ export class DeleteEnvironmentUseCase {
       await this.environments.destroy(ref)
     } catch (error) {
       throw new BadGatewayException(
-        `Could not remove environment '${ref.projectSlug}/${ref.environmentSlug}'. Please try again.`,
+        `Could not remove environment '${ref.project.slug}/${ref.environment.slug}'. Please try again.`,
         { cause: error },
       )
     }

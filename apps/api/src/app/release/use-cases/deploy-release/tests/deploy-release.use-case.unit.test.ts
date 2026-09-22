@@ -55,8 +55,8 @@ describe('DeployReleaseUseCase', () => {
     expect(
       repository.setDeployStatus.calledOnceWithExactly(release.uuid, DeployStatus.Pending),
     ).toBe(true)
-    const [appRef, spec] = appRuntime.deploy.firstCall.args
-    expect(appRef.slug).toBe('my-app')
+    const [ref, spec] = appRuntime.deploy.firstCall.args
+    expect(ref).toBe(placement)
     expect(spec).toMatchObject({ releaseUuid: release.uuid, image: 'nginx:1.27' })
     expect(result).toEqual({
       releaseUuid: release.uuid,
@@ -129,11 +129,11 @@ describe('DeployReleaseUseCase', () => {
     await expect(usecase.execute('ghost')).rejects.toThrow(NotFoundException)
   })
 
-  it('reports an environment taken by something else as 409 and marks the release failed', async () => {
+  it('passes an environment conflict through and marks the release failed', async () => {
     const { usecase, appRuntime, repository, release } = build()
     appRuntime.deploy.rejects(new EnvironmentConflictError('taken'))
 
-    await expect(usecase.execute('my-app')).rejects.toThrow(ConflictException)
+    await expect(usecase.execute('my-app')).rejects.toThrow(EnvironmentConflictError)
     expect(repository.setDeployStatus.calledWith(release.uuid, DeployStatus.Failed)).toBe(true)
   })
 })

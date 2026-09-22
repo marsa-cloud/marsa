@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import { appRefOf } from '#src/app/app-management/queries/app-placement.js'
 import { DEFAULT_TAIL_LINES } from '#src/app/app-management/use-cases/view-app-logs/view-app-logs.constants.js'
 import { ViewAppLogsRepository } from '#src/app/app-management/use-cases/view-app-logs/view-app-logs.repository.js'
 import { ViewAppLogsResponse } from '#src/app/app-management/use-cases/view-app-logs/view-app-logs.response.js'
@@ -17,7 +16,7 @@ export class ViewAppLogsUseCase {
     if (!placement) {
       throw new NotFoundException(`App '${slug}' was not found.`)
     }
-    const logs = await this.appRuntime.readRunLogs(appRefOf(placement), {
+    const logs = await this.appRuntime.readRunLogs(placement, {
       tailLines: tailLines ?? DEFAULT_TAIL_LINES,
     })
     return new ViewAppLogsResponse(logs)

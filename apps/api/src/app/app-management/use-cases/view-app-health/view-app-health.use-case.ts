@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import { appRefOf } from '#src/app/app-management/queries/app-placement.js'
 import { ViewAppHealthRepository } from '#src/app/app-management/use-cases/view-app-health/view-app-health.repository.js'
 import {
   AppHealthStatus,
@@ -40,7 +39,7 @@ export class ViewAppHealthUseCase {
     if (!placement) {
       throw new NotFoundException(`App '${slug}' was not found.`)
     }
-    const health = await this.appRuntime.readHealth(appRefOf(placement))
+    const health = await this.appRuntime.readHealth(placement)
     return new ViewAppHealthResponse(verdict(health, placement.app.minReplicas), health)
   }
 }

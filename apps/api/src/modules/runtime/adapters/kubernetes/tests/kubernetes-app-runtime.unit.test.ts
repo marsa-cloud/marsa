@@ -28,12 +28,9 @@ const SLUG = 'billing-api'
 const NAMESPACE = 'demo-dev'
 
 const APP: AppRef = {
-  environment: {
-    uuid: generateUuid<Uuid<'Environment'>>(),
-    projectSlug: 'demo',
-    environmentSlug: 'dev',
-  },
-  slug: SLUG,
+  project: { slug: 'demo' },
+  environment: { uuid: generateUuid<Uuid<'Environment'>>(), slug: 'dev' },
+  app: { slug: SLUG },
 }
 
 const spec = (overrides: Partial<AppDeploySpec> = {}): AppDeploySpec => ({
@@ -131,7 +128,7 @@ describe('KubernetesAppRuntime.deploy', () => {
   it('provisions the environment before applying anything into it', async () => {
     await runtime.deploy(APP, spec())
 
-    expect(environments.provision.calledOnceWithExactly(APP.environment)).toBe(true)
+    expect(environments.provision.calledOnceWithExactly(APP)).toBe(true)
     expect(
       environments.provision.firstCall.calledBefore(apps.patchNamespacedDeployment.firstCall),
     ).toBe(true)

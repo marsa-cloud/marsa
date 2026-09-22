@@ -48,8 +48,9 @@ describe('ViewAppDetailUseCase', () => {
 
     expect(appRuntime.readLiveReleaseUuid.calledOnce).toBe(true)
     expect(appRuntime.readLiveReleaseUuid.firstCall.args[0]).toMatchObject({
-      slug: 'my-app',
-      environment: { projectSlug: 'my-project', environmentSlug: 'production' },
+      app: { slug: 'my-app' },
+      project: { slug: 'my-project' },
+      environment: { slug: 'production' },
     })
     expect(response.project).toEqual({ slug: 'my-project', name: 'My Project' })
     expect(response.environment).toMatchObject({ slug: 'production', name: 'Production' })

@@ -40,17 +40,17 @@ export class KubernetesEnvironmentRuntime extends EnvironmentRuntime {
     this.rbac = kc.makeApiClient(RbacAuthorizationV1Api)
   }
 
-  async provision(environment: EnvironmentRef): Promise<void> {
-    const namespace = namespaceOf(environment)
-    await this.ensureNamespace(namespace, environment.uuid)
+  async provision(ref: EnvironmentRef): Promise<void> {
+    const namespace = namespaceOf(ref)
+    await this.ensureNamespace(namespace, ref.environment.uuid)
     await ignoreConflict(() =>
       this.rbac.createNamespacedRoleBinding({ namespace, body: this.deployerBinding(namespace) }),
     )
   }
 
   // Slugs may contain '-', so two environments can derive one name; never delete the other's.
-  async destroy(environment: EnvironmentRef): Promise<void> {
-    const namespace = namespaceOf(environment)
+  async destroy(ref: EnvironmentRef): Promise<void> {
+    const namespace = namespaceOf(ref)
     let existing: V1Namespace
     try {
       existing = await this.core.readNamespace({ name: namespace })
@@ -60,7 +60,7 @@ export class KubernetesEnvironmentRuntime extends EnvironmentRuntime {
       }
       throw error
     }
-    if (existing.metadata?.labels?.[ENVIRONMENT_UUID_LABEL] !== environment.uuid) {
+    if (existing.metadata?.labels?.[ENVIRONMENT_UUID_LABEL] !== ref.environment.uuid) {
       return
     }
     await ignoreNotFound(() => this.core.deleteNamespace({ name: namespace }))

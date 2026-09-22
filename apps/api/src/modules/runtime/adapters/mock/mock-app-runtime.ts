@@ -20,13 +20,13 @@ export class MockAppRuntime extends AppRuntime {
     this.liveReleases.set(slug, releaseUuid)
   }
 
-  deploy(app: AppRef, spec: AppDeploySpec): Promise<void> {
-    this.liveReleases.set(app.slug, spec.releaseUuid)
+  deploy(ref: AppRef, spec: AppDeploySpec): Promise<void> {
+    this.liveReleases.set(ref.app.slug, spec.releaseUuid)
     return Promise.resolve()
   }
 
-  destroy(app: AppRef): Promise<void> {
-    this.liveReleases.delete(app.slug)
+  destroy(ref: AppRef): Promise<void> {
+    this.liveReleases.delete(ref.app.slug)
     return Promise.resolve()
   }
 
@@ -35,8 +35,8 @@ export class MockAppRuntime extends AppRuntime {
     return Promise.resolve(RolloutStatus.Complete)
   }
 
-  readLiveReleaseUuid(app: AppRef): Promise<Uuid<'Release'> | null> {
-    return Promise.resolve(this.liveReleases.get(app.slug) ?? null)
+  readLiveReleaseUuid(ref: AppRef): Promise<Uuid<'Release'> | null> {
+    return Promise.resolve(this.liveReleases.get(ref.app.slug) ?? null)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

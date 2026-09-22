@@ -1,22 +1,23 @@
 import type { Uuid } from '#src/utils/uuid.js'
 
 export interface EnvironmentRef {
-  uuid: Uuid<'Environment'>
-  projectSlug: string
-  environmentSlug: string
+  project: { slug: string }
+  environment: { uuid: Uuid<'Environment'>; slug: string }
 }
 
-export interface AppRef {
-  environment: EnvironmentRef
-  slug: string
+export interface AppRef extends EnvironmentRef {
+  app: { slug: string }
 }
 
-export type PinStrategySpec = 'required' | 'preferred'
+export enum NodePinStrategy {
+  Required = 'required',
+  Preferred = 'preferred',
+}
 
 export interface NodePinSpec {
   key: string
   values: string[]
-  strategy: PinStrategySpec
+  strategy: NodePinStrategy
 }
 
 // Decrypted, held in memory only for the length of a deploy (AgDR-0036).

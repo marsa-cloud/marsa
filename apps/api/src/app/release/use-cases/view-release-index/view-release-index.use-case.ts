@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common'
-import { appRefOf } from '#src/app/app-management/queries/app-placement.js'
 import type { Release } from '#src/app/release/entities/release.table.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { ViewReleaseIndexQuery } from '#src/app/release/use-cases/view-release-index/query/view-release-index.query.js'
@@ -55,16 +54,17 @@ export class ViewReleaseIndexUseCase {
     if (!head) return null
     const placement = await this.repository.findPlacement(slug)
     if (!placement) return null
-    const app = appRefOf(placement)
 
     const deployStatus = TERMINAL_STATUSES.has(head.deployStatus)
       ? head.deployStatus
-      : await this.reconcile(head, app)
+      : await this.reconcile(head, placement)
 
     // A failure reason is read live from the pods (never stored, #115), and only the head
     // maps to the live Deployment — no older release's failure can be described this way.
     const failure =
-      deployStatus === DeployStatus.Failed ? await this.appRuntime.readDeployFailure(app) : null
+      deployStatus === DeployStatus.Failed
+        ? await this.appRuntime.readDeployFailure(placement)
+        : null
 
     return { uuid: head.uuid, deployStatus, failure }
   }

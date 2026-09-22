@@ -20,7 +20,10 @@ import type { Uuid } from '#src/utils/uuid.js'
 
 const NS = 'demo-dev'
 const ENV_UUID = '0190c3c0-0000-7000-8000-000000000001' as Uuid<'Environment'>
-const ENVIRONMENT: EnvironmentRef = { uuid: ENV_UUID, projectSlug: 'demo', environmentSlug: 'dev' }
+const ENVIRONMENT: EnvironmentRef = {
+  project: { slug: 'demo' },
+  environment: { uuid: ENV_UUID, slug: 'dev' },
+}
 
 const conflict = () => new ApiException(409, 'Conflict', {}, {})
 const notFound = () => new ApiException(404, 'Not Found', {}, {})

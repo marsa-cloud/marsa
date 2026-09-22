@@ -1,19 +1,13 @@
-import {
-  ConflictException,
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common'
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { nodePinEquals } from '#src/app/app-management/entities/node-pin.js'
-import { type AppPlacement, appRefOf } from '#src/app/app-management/queries/app-placement.js'
+import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import { UpdateAppCommand } from '#src/app/app-management/use-cases/update-app/update-app.command.js'
 import { UpdateAppRepository } from '#src/app/app-management/use-cases/update-app/update-app.repository.js'
 import { UpdateAppResponse } from '#src/app/app-management/use-cases/update-app/update-app.response.js'
 import { deploySpecOf } from '#src/app/release/entities/release-deploy-spec.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
-import { EnvironmentConflictError } from '#src/modules/runtime/runtime.errors.js'
 
 // Writes App, then re-applies only when the pin actually changed: a pin is location rather than
 // config, so it never reaches a Release and hasUndeployedChanges structurally cannot see it.
@@ -73,7 +67,7 @@ export class UpdateAppUseCase {
   }
 
   private async reapply(placement: AppPlacement): Promise<void> {
-    const liveUuid = await this.appRuntime.readLiveReleaseUuid(appRefOf(placement))
+    const liveUuid = await this.appRuntime.readLiveReleaseUuid(placement)
     if (!liveUuid) {
       return
     }
@@ -86,22 +80,12 @@ export class UpdateAppUseCase {
       )
     }
 
-    const sealed = release.imagePullCredentialsEnc
-    const credentials = sealed
-      ? this.credentialsCipher.openForApp(placement.app.slug, sealed)
-      : undefined
-    const { app, spec } = deploySpecOf(placement, release, {
-      baseDomain: this.baseDomain,
-      credentials,
-    })
-    try {
-      await this.appRuntime.deploy(app, spec)
-    } catch (error) {
-      if (error instanceof EnvironmentConflictError) {
-        throw new ConflictException(error.message)
-      }
-      throw error
-    }
+    const credentials = this.credentialsCipher.openForApp(
+      placement.app.slug,
+      release.imagePullCredentialsEnc,
+    )
+    const spec = deploySpecOf(placement, release, { baseDomain: this.baseDomain, credentials })
+    await this.appRuntime.deploy(placement, spec)
   }
 
   private credentialsEnc(command: UpdateAppCommand): string | null | undefined {

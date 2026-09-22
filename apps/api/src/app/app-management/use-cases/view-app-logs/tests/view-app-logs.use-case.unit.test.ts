@@ -38,8 +38,9 @@ describe('ViewAppLogsUseCase', () => {
     expect(appRuntime.readRunLogs.calledOnce).toBe(true)
     const [appRef, options] = appRuntime.readRunLogs.firstCall.args
     expect(appRef).toMatchObject({
-      slug: 'my-app',
-      environment: { projectSlug: 'my-project', environmentSlug: 'production' },
+      app: { slug: 'my-app' },
+      project: { slug: 'my-project' },
+      environment: { slug: 'production' },
     })
     expect(options).toEqual({ tailLines: 50 })
   })

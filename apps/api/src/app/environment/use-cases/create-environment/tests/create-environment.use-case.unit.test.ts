@@ -38,10 +38,9 @@ describe('CreateEnvironmentUseCase', () => {
 
     const [, environment] = repository.insert.firstCall.args
     expect(environment).toMatchObject({ projectUuid: project.uuid, name: 'Dev', slug: 'dev' })
-    expect(environments.provision.firstCall.args[0]).toEqual({
-      uuid: environment.uuid,
-      projectSlug: 'demo',
-      environmentSlug: 'dev',
+    expect(environments.provision.firstCall.args[0]).toMatchObject({
+      project: { slug: 'demo' },
+      environment: { uuid: environment.uuid, slug: 'dev' },
     })
     expect(result).toMatchObject({ slug: 'dev', projectSlug: 'demo' })
   })
@@ -61,11 +60,11 @@ describe('CreateEnvironmentUseCase', () => {
     await expect(usecase.execute('demo', command())).rejects.toThrow(ConflictException)
   })
 
-  it('maps an environment conflict to 409', async () => {
+  it('passes an environment conflict through for the runtime filter to map', async () => {
     const { usecase, environments } = build()
     environments.provision.rejects(new EnvironmentConflictError('taken'))
 
-    await expect(usecase.execute('demo', command())).rejects.toThrow(ConflictException)
+    await expect(usecase.execute('demo', command())).rejects.toThrow(EnvironmentConflictError)
   })
 
   it('maps any other cluster failure to 502 and cleans up what it provisioned', async () => {
@@ -76,10 +75,9 @@ describe('CreateEnvironmentUseCase', () => {
     await expect(usecase.execute('demo', command())).rejects.toThrow(BadGatewayException)
 
     const [, environment] = repository.insert.firstCall.args
-    expect(environments.destroy.firstCall.args[0]).toEqual({
-      uuid: environment.uuid,
-      projectSlug: 'demo',
-      environmentSlug: 'dev',
+    expect(environments.destroy.firstCall.args[0]).toMatchObject({
+      project: { slug: 'demo' },
+      environment: { uuid: environment.uuid, slug: 'dev' },
     })
   })
 
@@ -95,7 +93,7 @@ describe('CreateEnvironmentUseCase', () => {
     const { usecase, environments } = build()
     environments.provision.rejects(new EnvironmentConflictError('taken'))
 
-    await expect(usecase.execute('demo', command())).rejects.toThrow(ConflictException)
+    await expect(usecase.execute('demo', command())).rejects.toThrow(EnvironmentConflictError)
     expect(environments.destroy.called).toBe(false)
   })
 })

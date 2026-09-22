@@ -21,7 +21,10 @@ export class ImagePullCredentialsCipher {
     return JSON.parse(this.cipher.decrypt(token)) as RegistryCredentials
   }
 
-  openForApp(slug: string, token: string): RegistryCredentials {
+  openForApp(slug: string, token: string | null): RegistryCredentials | undefined {
+    if (!token) {
+      return undefined
+    }
     try {
       return this.open(token)
     } catch (error) {

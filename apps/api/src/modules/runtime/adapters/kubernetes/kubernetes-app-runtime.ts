@@ -67,9 +67,9 @@ export class KubernetesAppRuntime extends AppRuntime {
     this.custom = kc.makeApiClient(CustomObjectsApi)
   }
 
-  async deploy(app: AppRef, spec: AppDeploySpec): Promise<void> {
-    await this.environments.provision(app.environment)
-    await this.apply(namespaceOf(app.environment), renderManifests(app.slug, spec))
+  async deploy(ref: AppRef, spec: AppDeploySpec): Promise<void> {
+    await this.environments.provision(ref)
+    await this.apply(namespaceOf(ref), renderManifests(ref.app.slug, spec))
   }
 
   private async apply(namespace: string, manifests: RenderedManifests): Promise<void> {
@@ -158,9 +158,9 @@ export class KubernetesAppRuntime extends AppRuntime {
     )
   }
 
-  async destroy(app: AppRef): Promise<void> {
-    const namespace = namespaceOf(app.environment)
-    const appName = app.slug
+  async destroy(ref: AppRef): Promise<void> {
+    const namespace = namespaceOf(ref)
+    const appName = ref.app.slug
 
     // IngressRoute first so routing stops before the pods it points at go away.
     await ignoreNotFound(() =>
@@ -199,19 +199,19 @@ export class KubernetesAppRuntime extends AppRuntime {
     )
   }
 
-  async readRolloutStatus(app: AppRef): Promise<RolloutStatus> {
-    const deployment = await this.readDeployment(namespaceOf(app.environment), app.slug)
+  async readRolloutStatus(ref: AppRef): Promise<RolloutStatus> {
+    const deployment = await this.readDeployment(namespaceOf(ref), ref.app.slug)
     return mapRolloutStatus(deployment)
   }
 
-  async readLiveReleaseUuid(app: AppRef): Promise<Uuid<'Release'> | null> {
-    const deployment = await this.readDeployment(namespaceOf(app.environment), app.slug)
+  async readLiveReleaseUuid(ref: AppRef): Promise<Uuid<'Release'> | null> {
+    const deployment = await this.readDeployment(namespaceOf(ref), ref.app.slug)
     const annotation = deployment?.spec?.template.metadata?.annotations?.[RELEASE_UUID_ANNOTATION]
-    return parseReleaseAnnotation(annotation, app.slug)
+    return parseReleaseAnnotation(annotation, ref.app.slug)
   }
 
-  async readHealth(app: AppRef): Promise<AppHealth> {
-    const deployment = await this.readDeployment(namespaceOf(app.environment), app.slug)
+  async readHealth(ref: AppRef): Promise<AppHealth> {
+    const deployment = await this.readDeployment(namespaceOf(ref), ref.app.slug)
     if (deployment === null) {
       return { found: false, desiredReplicas: 0, availableReplicas: 0, updatedReplicas: 0 }
     }
@@ -224,14 +224,14 @@ export class KubernetesAppRuntime extends AppRuntime {
     }
   }
 
-  async readDeployFailure(app: AppRef): Promise<DeployFailure | null> {
-    const pods = await this.listAppPods(namespaceOf(app.environment), app.slug)
+  async readDeployFailure(ref: AppRef): Promise<DeployFailure | null> {
+    const pods = await this.listAppPods(namespaceOf(ref), ref.app.slug)
     return extractDeployFailure(pods)
   }
 
-  async readRunLogs(app: AppRef, options: RunLogsOptions): Promise<RunLogs | null> {
-    const namespace = namespaceOf(app.environment)
-    const pods = await this.listAppPods(namespace, app.slug)
+  async readRunLogs(ref: AppRef, options: RunLogsOptions): Promise<RunLogs | null> {
+    const namespace = namespaceOf(ref)
+    const pods = await this.listAppPods(namespace, ref.app.slug)
     // Newest pod reflects the current rollout; aggregating across replicas is
     // out of scope for V0.1 (#114).
     const pod = newestPod(pods)

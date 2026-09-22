@@ -5,12 +5,9 @@ import type { AppDeploySpec, AppRef } from '#src/modules/runtime/runtime.types.j
 import { generateUuid, type Uuid } from '#src/utils/uuid.js'
 
 const APP: AppRef = {
-  environment: {
-    uuid: generateUuid<Uuid<'Environment'>>(),
-    projectSlug: 'demo',
-    environmentSlug: 'dev',
-  },
-  slug: 'my-app',
+  project: { slug: 'demo' },
+  environment: { uuid: generateUuid<Uuid<'Environment'>>(), slug: 'dev' },
+  app: { slug: 'my-app' },
 }
 
 const spec = (releaseUuid: Uuid<'Release'>): AppDeploySpec => ({

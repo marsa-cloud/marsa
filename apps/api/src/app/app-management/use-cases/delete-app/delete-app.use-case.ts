@@ -1,5 +1,4 @@
 import { BadGatewayException, Injectable, NotFoundException } from '@nestjs/common'
-import { appRefOf } from '#src/app/app-management/queries/app-placement.js'
 import { DeleteAppRepository } from '#src/app/app-management/use-cases/delete-app/delete-app.repository.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
 
@@ -17,7 +16,7 @@ export class DeleteAppUseCase {
     }
 
     try {
-      await this.appRuntime.destroy(appRefOf(placement))
+      await this.appRuntime.destroy(placement)
     } catch (error) {
       // Rows stay put so the app remains listed and the delete can be retried.
       throw new BadGatewayException(

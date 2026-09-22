@@ -128,7 +128,8 @@ describe('ViewAppHealthUseCase', () => {
     await usecase.execute('my-app')
 
     expect(appRuntime.readHealth.firstCall.args[0]).toMatchObject({
-      environment: { projectSlug: 'my-project', environmentSlug: 'production' },
+      project: { slug: 'my-project' },
+      environment: { slug: 'production' },
     })
   })
 

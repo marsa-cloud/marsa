@@ -7,6 +7,7 @@ import { ProjectBuilder } from '#src/app/project/entities/project.builder.js'
 import { projectTable } from '#src/app/project/entities/project.table.js'
 import type { MockEnvironmentRuntime } from '#src/modules/runtime/adapters/mock/mock-environment-runtime.js'
 import { EnvironmentRuntime } from '#src/modules/runtime/environment-runtime.js'
+import { EnvironmentConflictError } from '#src/modules/runtime/runtime.errors.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -39,6 +40,16 @@ describe('POST /api/v1/projects/:projectSlug/environments (e2e)', () => {
 
   it('rejects a duplicate slug in the same project with 409', async () => {
     await post('dev').expect(409)
+  })
+
+  it('maps a runtime environment conflict to 409', async () => {
+    setup.testModule
+      .get<EnvironmentRuntime, MockEnvironmentRuntime>(EnvironmentRuntime)
+      .failNextProvision(new EnvironmentConflictError('Taken by another environment.'))
+
+    const response = await post('qa').expect(409)
+
+    expect(response.body).toMatchObject({ message: 'Taken by another environment.' })
   })
 
   it('rolls the row back when the environment cannot be provisioned', async () => {

@@ -5,7 +5,6 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import { EnvironmentBuilder } from '#src/app/environment/entities/environment.builder.js'
-import { environmentRefOf } from '#src/app/environment/entities/environment-ref.js'
 import { CreateEnvironmentCommand } from '#src/app/environment/use-cases/create-environment/create-environment.command.js'
 import { CreateEnvironmentRepository } from '#src/app/environment/use-cases/create-environment/create-environment.repository.js'
 import { CreateEnvironmentResponse } from '#src/app/environment/use-cases/create-environment/create-environment.response.js'
@@ -37,7 +36,6 @@ export class CreateEnvironmentUseCase {
       .withName(command.name)
       .withSlug(command.slug)
       .build()
-    const ref = environmentRefOf(project, environment)
 
     // Provisioning runs inside the transaction so a runtime failure rolls the row back with it.
     const created = await this.db.transaction(async (tx) => {
@@ -45,7 +43,7 @@ export class CreateEnvironmentUseCase {
       if (!inserted) {
         return false
       }
-      await this.provision(ref)
+      await this.provision({ project, environment })
       return true
     })
     if (!created) {
@@ -62,12 +60,12 @@ export class CreateEnvironmentUseCase {
       await this.environments.provision(ref)
     } catch (error) {
       if (error instanceof EnvironmentConflictError) {
-        throw new ConflictException(error.message)
+        throw error
       }
       // The row rolls back, so a half-provisioned environment labelled with this uuid would block retries.
       await this.environments.destroy(ref).catch(() => undefined)
       throw new BadGatewayException(
-        `Could not provision environment '${ref.projectSlug}/${ref.environmentSlug}'. Please try again.`,
+        `Could not provision environment '${ref.project.slug}/${ref.environment.slug}'. Please try again.`,
         { cause: error },
       )
     }

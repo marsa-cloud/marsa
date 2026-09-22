@@ -23,13 +23,30 @@ Why: a port shaped like one technology can only ever have that technology behind
 
 ## Only an adapter imports its client library
 
-`@kubernetes/client-node` is imported under `adapters/kubernetes/**` and nowhere else; lint
-enforces it. Rendering, namespace naming and rollout parsing live in the adapter.
+`@kubernetes/client-node` is imported under `adapters/kubernetes/**` and nowhere else.
+Rendering, namespace naming and rollout parsing live in the adapter.
 
 ## Features never import an adapter
 
-`src/app/**` imports `#src/modules/runtime/*` only. Lint enforces it; tests may import the mock
-adapter to stub it.
+`src/app/**` imports `#src/modules/runtime/*` only; tests may import the mock adapter to stub it.
+
+## Refs are shapes, not mapped copies
+
+`AppRef` / `EnvironmentRef` describe the nested `{ project, environment, app }` fields the runtime
+reads, so a feature passes its `AppPlacement` (or `{ project, environment }`) as-is.
+
+```ts
+// WRONG — a mapper per feature row
+await this.appRuntime.readHealth(appRefOf(placement))
+
+// RIGHT — the row already fits the port
+await this.appRuntime.readHealth(placement)
+```
+
+## Runtime errors become HTTP in one place
+
+`RuntimeErrorFilter` (registered by `RuntimeModule`) maps `EnvironmentConflictError` to 409.
+Use-cases let it propagate instead of wrapping each runtime call in a try/catch.
 
 ## Adding an adapter
 

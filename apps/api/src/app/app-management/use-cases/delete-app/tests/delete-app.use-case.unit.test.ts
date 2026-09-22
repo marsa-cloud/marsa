@@ -30,8 +30,9 @@ describe('DeleteAppUseCase', () => {
 
     expect(appRuntime.destroy.calledOnce).toBe(true)
     expect(appRuntime.destroy.firstCall.args[0]).toMatchObject({
-      slug: 'my-app',
-      environment: { projectSlug: 'my-project', environmentSlug: 'production' },
+      app: { slug: 'my-app' },
+      project: { slug: 'my-project' },
+      environment: { slug: 'production' },
     })
     expect(repository.deleteWithReleases.calledOnceWith(placement.app.uuid)).toBe(true)
     expect(

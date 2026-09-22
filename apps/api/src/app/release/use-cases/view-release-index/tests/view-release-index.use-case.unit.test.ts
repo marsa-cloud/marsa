@@ -222,10 +222,12 @@ describe('ViewReleaseIndexUseCase', () => {
     await usecase.execute(SLUG, firstPage())
 
     expect(appRuntime.readLiveReleaseUuid.firstCall.args[0]).toMatchObject({
-      environment: { projectSlug: 'my-project', environmentSlug: 'production' },
+      project: { slug: 'my-project' },
+      environment: { slug: 'production' },
     })
     expect(appRuntime.readRolloutStatus.firstCall.args[0]).toMatchObject({
-      environment: { projectSlug: 'my-project', environmentSlug: 'production' },
+      project: { slug: 'my-project' },
+      environment: { slug: 'production' },
     })
   })
 })
