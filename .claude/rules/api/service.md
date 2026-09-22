@@ -61,6 +61,13 @@ Unlike a use-case, a service injects `Database` directly — there is no
 `<Action>Repository` for it to delegate to, and inventing one per service buys nothing.
 Test it with a `.db.test.ts` (see `.claude/rules/api/tests.md`).
 
+## A service never crosses features
+
+Another feature may import your `entities/`, `queries/`, `enums/`, `errors/` and `events/` —
+never your `services/`. If two features need the same behaviour, it is either a pure function
+in a building-block folder (e.g. `release/entities/release-deploy-spec.ts`) or support code in
+`src/modules/`.
+
 ## Known deviations
 
 `OAuthStateService`, `ManifestStateService`, and `GetApiInfoService` predate this rule and

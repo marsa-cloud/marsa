@@ -16,7 +16,7 @@ export class CreateProjectCommand {
   @ApiProperty({
     type: String,
     example: 'demo',
-    description: 'First half of every environment namespace name.',
+    description: 'Unique across Marsa.',
     pattern: DNS_LABEL_PATTERN.source,
     maxLength: PROJECT_SLUG_MAX_LENGTH,
   })

@@ -4,19 +4,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
-import { namespaceOf } from '#src/app/environment/entities/namespace.js'
 import { DeleteEnvironmentRepository } from '#src/app/environment/use-cases/delete-environment/delete-environment.repository.js'
 import type { Database } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 import { isForeignKeyViolation } from '#src/modules/database/postgres-errors.js'
-import { NamespaceBackend } from '#src/modules/kubernetes/namespace-backend.js'
+import { EnvironmentRuntime } from '#src/modules/runtime/environment-runtime.js'
+import type { EnvironmentRef } from '#src/modules/runtime/runtime.types.js'
 
 @Injectable()
 export class DeleteEnvironmentUseCase {
   constructor(
     @InjectDatabase() private readonly db: Database,
     private readonly repository: DeleteEnvironmentRepository,
-    private readonly namespaces: NamespaceBackend,
+    private readonly environments: EnvironmentRuntime,
   ) {}
 
   async execute(projectSlug: string, environmentSlug: string): Promise<void> {
@@ -26,13 +26,11 @@ export class DeleteEnvironmentUseCase {
         `Environment '${environmentSlug}' was not found in project '${projectSlug}'.`,
       )
     }
-    const namespace = namespaceOf(found.project, found.environment)
-
     try {
-      // The namespace is deleted inside the transaction so a cluster failure keeps the row.
+      // The environment is removed inside the transaction so a cluster failure keeps the row.
       await this.db.transaction(async (tx) => {
         await this.repository.delete(tx, found.environment.uuid)
-        await this.destroy(namespace, found.environment.uuid)
+        await this.destroy(found)
       })
     } catch (error) {
       // The app FK is RESTRICT, so the DELETE itself fails while apps remain — no check-then-act race.
@@ -45,12 +43,12 @@ export class DeleteEnvironmentUseCase {
     }
   }
 
-  private async destroy(namespace: string, environmentUuid: string): Promise<void> {
+  private async destroy(ref: EnvironmentRef): Promise<void> {
     try {
-      await this.namespaces.destroy(namespace, environmentUuid)
+      await this.environments.destroy(ref)
     } catch (error) {
       throw new BadGatewayException(
-        `Could not delete namespace '${namespace}' from the cluster. Please try again.`,
+        `Could not remove environment '${ref.project.slug}/${ref.environment.slug}'. Please try again.`,
         { cause: error },
       )
     }

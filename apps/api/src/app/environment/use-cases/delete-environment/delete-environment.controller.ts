@@ -23,10 +23,13 @@ export class DeleteEnvironmentController {
   @Roles(UserRole.Operator, UserRole.Member)
   @ApiCookieAuth(SESSION_COOKIE_SECURITY_SCHEME)
   @HttpCode(204)
-  @ApiNoContentResponse({ description: 'The environment and its namespace were deleted.' })
+  @ApiNoContentResponse({ description: 'The environment was deleted.' })
   @ApiNotFoundResponse({ description: 'No environment with that slug in the project.' })
   @ApiConflictResponse({ description: 'The environment still has apps.' })
-  @ApiResponse({ status: 502, description: 'The namespace could not be deleted; nothing changed.' })
+  @ApiResponse({
+    status: 502,
+    description: 'The environment could not be removed; nothing changed.',
+  })
   @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   handle(

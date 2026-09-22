@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
-import type { RunLogs } from '#src/modules/kubernetes/deploy-backend.types.js'
+import type { RunLogs } from '#src/modules/runtime/runtime.types.js'
 
 /**
  * Run-log snapshot for an app (#114). `podName` is `null` — and `logs` empty —

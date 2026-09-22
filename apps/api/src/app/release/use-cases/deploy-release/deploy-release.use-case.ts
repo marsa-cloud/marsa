@@ -1,18 +1,27 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import type { Release } from '#src/app/release/entities/release.table.js'
+import { deploySpecOf } from '#src/app/release/entities/release-deploy-spec.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
-import { ApplyReleaseService } from '#src/app/release/services/apply-release/apply-release.service.js'
 import { DeployReleaseRepository } from '#src/app/release/use-cases/deploy-release/deploy-release.repository.js'
 import { DeployReleaseResponse } from '#src/app/release/use-cases/deploy-release/deploy-release.response.js'
+import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
+import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
 
 // Deploys the app's newest release: releases are append-only, so the newest is what should run.
 @Injectable()
 export class DeployReleaseUseCase {
+  private readonly baseDomain: string
+
   constructor(
     private readonly repository: DeployReleaseRepository,
-    private readonly applyRelease: ApplyReleaseService,
-  ) {}
+    private readonly appRuntime: AppRuntime,
+    private readonly cipher: ImagePullCredentialsCipher,
+    config: ConfigService,
+  ) {
+    this.baseDomain = config.getOrThrow<string>('MARSA_BASE_DOMAIN')
+  }
 
   async execute(slug: string): Promise<DeployReleaseResponse> {
     const found = await this.repository.findAppWithNewestRelease(slug)
@@ -32,24 +41,30 @@ export class DeployReleaseUseCase {
     return new DeployReleaseResponse(
       placement.app.slug,
       { ...release, deployStatus },
-      this.applyRelease.baseDomain,
+      this.baseDomain,
     )
   }
 
-  // Already live, so the apply is a cluster no-op; a failed retry must not mark it failed.
+  // Already live, so the deploy is a runtime no-op; a failed retry must not mark it failed.
   private async reapplyRunning(placement: AppPlacement, release: Release): Promise<DeployStatus> {
-    await this.applyRelease.apply(placement, release)
+    await this.deploy(placement, release)
     return release.deployStatus
   }
 
   private async rollOut(placement: AppPlacement, release: Release): Promise<DeployStatus> {
     await this.repository.setDeployStatus(release.uuid, DeployStatus.Pending)
     try {
-      await this.applyRelease.apply(placement, release)
+      await this.deploy(placement, release)
     } catch (error) {
       await this.repository.setDeployStatus(release.uuid, DeployStatus.Failed)
       throw error
     }
     return DeployStatus.Pending
+  }
+
+  private async deploy(placement: AppPlacement, release: Release): Promise<void> {
+    const credentials = this.cipher.openForApp(placement.app.slug, release.imagePullCredentialsEnc)
+    const spec = deploySpecOf(placement, release, { baseDomain: this.baseDomain, credentials })
+    await this.appRuntime.deploy(placement, spec)
   }
 }

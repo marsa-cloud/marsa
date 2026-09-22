@@ -7,7 +7,6 @@ const environment = {
   uuid: '0190c3c0-0000-7000-8000-000000000002',
   name: 'Dev',
   slug: 'dev',
-  namespace: 'demo-dev',
   createdAt: '2026-09-19T00:00:00.000Z',
 }
 

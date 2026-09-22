@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
-import { namespaceOf } from '#src/app/environment/entities/namespace.js'
 import type { Project } from '#src/app/project/entities/project.table.js'
 
 export class EnvironmentSummary {
@@ -13,9 +12,6 @@ export class EnvironmentSummary {
   @ApiProperty({ type: String, example: 'dev' })
   readonly slug: string
 
-  @ApiProperty({ type: String, example: 'demo-dev' })
-  readonly namespace: string
-
   @ApiProperty({ type: String, format: 'date-time' })
   readonly createdAt: string
 
@@ -23,7 +19,6 @@ export class EnvironmentSummary {
     this.uuid = environment.uuid
     this.name = environment.name
     this.slug = environment.slug
-    this.namespace = namespaceOf(project, environment)
     this.createdAt = environment.createdAt.toISOString()
   }
 }

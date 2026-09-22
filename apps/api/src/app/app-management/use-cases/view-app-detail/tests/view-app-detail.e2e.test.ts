@@ -7,8 +7,8 @@ import { PinStrategy } from '#src/app/app-management/enums/pin-strategy.enum.js'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
-import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
-import type { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
+import type { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
+import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -18,7 +18,7 @@ describe('GET /api/v1/apps/:slug (e2e)', () => {
   let setup: TestSetup
   let environment: Environment
   let sessionCookie: string
-  const mockBackend = () => setup.testModule.get<DeployBackend, MockDeployBackend>(DeployBackend)
+  const mockRuntime = () => setup.testModule.get<AppRuntime, MockAppRuntime>(AppRuntime)
 
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
@@ -72,7 +72,7 @@ describe('GET /api/v1/apps/:slug (e2e)', () => {
     const live = new ReleaseBuilder().withApp(app).build()
     await setup.db.insert(appTable).values(app)
     await setup.db.insert(releaseTable).values(live)
-    mockBackend().setLiveRelease(app.slug, live.uuid)
+    mockRuntime().setLiveRelease(app.slug, live.uuid)
 
     const response = await request(setup.httpServer)
       .get(`/api/v1/apps/${app.slug}`)
@@ -92,7 +92,7 @@ describe('GET /api/v1/apps/:slug (e2e)', () => {
     const neverDeployed = new ReleaseBuilder().withApp(app).build()
     await setup.db.insert(appTable).values(app)
     await setup.db.insert(releaseTable).values([live, neverDeployed])
-    mockBackend().setLiveRelease(app.slug, live.uuid)
+    mockRuntime().setLiveRelease(app.slug, live.uuid)
 
     const response = await request(setup.httpServer)
       .get(`/api/v1/apps/${app.slug}`)

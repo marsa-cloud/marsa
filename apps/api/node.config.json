@@ -14,7 +14,7 @@
       "**/*.test.ts",
       "src/sql/migrations/**",
       "src/modules/github-client/mock-github-client.ts",
-      "src/modules/kubernetes/mock-deploy-backend.ts"
+      "src/modules/runtime/adapters/mock/**"
     ]
   }
 }

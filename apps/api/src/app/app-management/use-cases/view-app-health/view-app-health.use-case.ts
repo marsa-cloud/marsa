@@ -4,9 +4,8 @@ import {
   AppHealthStatus,
   ViewAppHealthResponse,
 } from '#src/app/app-management/use-cases/view-app-health/view-app-health.response.js'
-import { namespaceOf } from '#src/app/environment/entities/namespace.js'
-import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
-import type { AppHealth } from '#src/modules/kubernetes/deploy-backend.types.js'
+import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
+import type { AppHealth } from '#src/modules/runtime/runtime.types.js'
 
 function verdict(health: AppHealth, minReplicas: number): AppHealthStatus {
   if (!health.found) {
@@ -32,7 +31,7 @@ function verdict(health: AppHealth, minReplicas: number): AppHealthStatus {
 export class ViewAppHealthUseCase {
   constructor(
     private readonly repository: ViewAppHealthRepository,
-    private readonly deployBackend: DeployBackend,
+    private readonly appRuntime: AppRuntime,
   ) {}
 
   async execute(slug: string): Promise<ViewAppHealthResponse> {
@@ -40,8 +39,7 @@ export class ViewAppHealthUseCase {
     if (!placement) {
       throw new NotFoundException(`App '${slug}' was not found.`)
     }
-    const namespace = namespaceOf(placement.project, placement.environment)
-    const health = await this.deployBackend.readAppHealth(namespace, slug)
+    const health = await this.appRuntime.readHealth(placement)
     return new ViewAppHealthResponse(verdict(health, placement.app.minReplicas), health)
   }
 }

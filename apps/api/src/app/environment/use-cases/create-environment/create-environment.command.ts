@@ -16,7 +16,7 @@ export class CreateEnvironmentCommand {
   @ApiProperty({
     type: String,
     example: 'dev',
-    description: 'Unique within the project; second half of the namespace name.',
+    description: 'Unique within the project.',
     pattern: DNS_LABEL_PATTERN.source,
     maxLength: ENVIRONMENT_SLUG_MAX_LENGTH,
   })

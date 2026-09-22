@@ -29,9 +29,10 @@ export class CreateEnvironmentController {
   @ApiBadRequestResponse({ description: 'Malformed body, or an invalid name / slug.' })
   @ApiNotFoundResponse({ description: 'No project with that slug.' })
   @ApiConflictResponse({
-    description: 'The slug is taken in this project, or its namespace is taken or still deleting.',
+    description:
+      'The slug is taken in this project, or the environment is taken or still being removed.',
   })
-  @ApiResponse({ status: 502, description: 'The namespace could not be created on the cluster.' })
+  @ApiResponse({ status: 502, description: 'The environment could not be provisioned.' })
   @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   handle(

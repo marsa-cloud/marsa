@@ -5,12 +5,12 @@ Two tiers, depending on whether you need a real Kubernetes cluster.
 ## Fast inner loop — no cluster
 
 Click through the web UI without k3d/k3s and without real GitHub login. The api
-runs in test mode, which wires the network-free `MockDeployBackend` + mock
+runs in test mode, which wires the network-free mock runtime adapter + mock
 GitHub client, and `seed-dev` mints a login cookie.
 
 ```bash
 docker compose up -d                       # Postgres (marsa_test)
-cp apps/api/.env.test apps/api/.env        # NODE_ENV=test → mock backends, DEPLOY_BACKEND=mock
+cp apps/api/.env.test apps/api/.env        # NODE_ENV=test → mock backends, MARSA_RUNTIME=mock
 pnpm --filter api build
 pnpm seed                                  # seed an operator + sample apps, print a session cookie
 pnpm dev                                   # api + web together
@@ -18,7 +18,7 @@ pnpm dev                                   # api + web together
 
 Paste the printed `marsa_session=…` cookie into the browser (DevTools →
 Application → Cookies) for the web origin and reload. Deploys on this tier are
-**faked** — the mock backend applies nothing to a cluster. To exercise a real
+**faked** — the mock runtime adapter applies nothing to a cluster. To exercise a real
 deploy over a real domain, use the E2E tier below.
 
 ## With-cluster E2E — real deploy over HTTPS

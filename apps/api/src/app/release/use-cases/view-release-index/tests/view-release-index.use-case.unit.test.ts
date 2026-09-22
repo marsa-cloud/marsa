@@ -10,8 +10,8 @@ import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { ViewReleaseIndexQueryBuilder } from '#src/app/release/use-cases/view-release-index/query/view-release-index.query.builder.js'
 import { ViewReleaseIndexRepository } from '#src/app/release/use-cases/view-release-index/view-release-index.repository.js'
 import { ViewReleaseIndexUseCase } from '#src/app/release/use-cases/view-release-index/view-release-index.use-case.js'
-import { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
-import { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
+import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
+import { RolloutStatus } from '#src/modules/runtime/runtime.types.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { generateUuid } from '#src/utils/uuid.js'
 
@@ -36,19 +36,19 @@ function build(releases = [release(DeployStatus.Pending)]) {
     new AppPlacementBuilder().withApp(new AppBuilder().withSlug(SLUG).build()).build(),
   )
 
-  const deployBackend = createStubInstance(MockDeployBackend)
-  deployBackend.readLiveReleaseUuid.resolves(releases[0]?.uuid ?? null)
+  const appRuntime = createStubInstance(MockAppRuntime)
+  appRuntime.readLiveReleaseUuid.resolves(releases[0]?.uuid ?? null)
 
-  const usecase = new ViewReleaseIndexUseCase(repository, deployBackend)
-  return { usecase, repository, deployBackend, releases }
+  const usecase = new ViewReleaseIndexUseCase(repository, appRuntime)
+  return { usecase, repository, appRuntime, releases }
 }
 
 describe('ViewReleaseIndexUseCase', () => {
   before(() => TestBench.setupUnitTest())
 
   it('persists Succeeded and reflects it when the rollout is Complete', async () => {
-    const { usecase, repository, deployBackend, releases } = build()
-    deployBackend.readRolloutStatus.resolves(RolloutStatus.Complete)
+    const { usecase, repository, appRuntime, releases } = build()
+    appRuntime.readRolloutStatus.resolves(RolloutStatus.Complete)
 
     const result = await usecase.execute(SLUG, firstPage())
 
@@ -59,9 +59,9 @@ describe('ViewReleaseIndexUseCase', () => {
   })
 
   it('persists Failed when the rollout has Failed', async () => {
-    const { usecase, repository, deployBackend } = build()
-    deployBackend.readRolloutStatus.resolves(RolloutStatus.Failed)
-    deployBackend.readDeployFailure.resolves(null)
+    const { usecase, repository, appRuntime } = build()
+    appRuntime.readRolloutStatus.resolves(RolloutStatus.Failed)
+    appRuntime.readDeployFailure.resolves(null)
 
     await usecase.execute(SLUG, firstPage())
 
@@ -70,9 +70,9 @@ describe('ViewReleaseIndexUseCase', () => {
   })
 
   it('attaches the live failure reason to the head release when the deploy has failed', async () => {
-    const { usecase, deployBackend } = build()
-    deployBackend.readRolloutStatus.resolves(RolloutStatus.Failed)
-    deployBackend.readDeployFailure.resolves({
+    const { usecase, appRuntime } = build()
+    appRuntime.readRolloutStatus.resolves(RolloutStatus.Failed)
+    appRuntime.readDeployFailure.resolves({
       reason: 'ImagePullBackOff',
       message: 'Back-off pulling image "nginx:doesnotexist"',
     })
@@ -84,18 +84,18 @@ describe('ViewReleaseIndexUseCase', () => {
   })
 
   it('does not read a failure reason when the rollout has not failed', async () => {
-    const { usecase, deployBackend } = build()
-    deployBackend.readRolloutStatus.resolves(RolloutStatus.Complete)
+    const { usecase, appRuntime } = build()
+    appRuntime.readRolloutStatus.resolves(RolloutStatus.Complete)
 
     const result = await usecase.execute(SLUG, firstPage())
 
-    expect(deployBackend.readDeployFailure.called).toBe(false)
+    expect(appRuntime.readDeployFailure.called).toBe(false)
     expect(result.items[0].failureReason).toBeUndefined()
   })
 
   it('advances Pending to InProgress while the rollout is Progressing', async () => {
-    const { usecase, repository, deployBackend } = build()
-    deployBackend.readRolloutStatus.resolves(RolloutStatus.Progressing)
+    const { usecase, repository, appRuntime } = build()
+    appRuntime.readRolloutStatus.resolves(RolloutStatus.Progressing)
 
     await usecase.execute(SLUG, firstPage())
 
@@ -104,8 +104,8 @@ describe('ViewReleaseIndexUseCase', () => {
   })
 
   it('does not write when the observed status equals the stored one (write-on-change)', async () => {
-    const { usecase, repository, deployBackend } = build([release(DeployStatus.InProgress)])
-    deployBackend.readRolloutStatus.resolves(RolloutStatus.Progressing)
+    const { usecase, repository, appRuntime } = build([release(DeployStatus.InProgress)])
+    appRuntime.readRolloutStatus.resolves(RolloutStatus.Progressing)
 
     await usecase.execute(SLUG, firstPage())
 
@@ -113,8 +113,8 @@ describe('ViewReleaseIndexUseCase', () => {
   })
 
   it('never persists on NotFound (absence of observation is not a state)', async () => {
-    const { usecase, repository, deployBackend } = build()
-    deployBackend.readRolloutStatus.resolves(RolloutStatus.NotFound)
+    const { usecase, repository, appRuntime } = build()
+    appRuntime.readRolloutStatus.resolves(RolloutStatus.NotFound)
 
     await usecase.execute(SLUG, firstPage())
 
@@ -122,21 +122,21 @@ describe('ViewReleaseIndexUseCase', () => {
   })
 
   it('skips the cluster read entirely when the only release is already terminal', async () => {
-    const { usecase, deployBackend } = build([release(DeployStatus.Succeeded)])
+    const { usecase, appRuntime } = build([release(DeployStatus.Succeeded)])
 
     await usecase.execute(SLUG, firstPage())
 
-    expect(deployBackend.readRolloutStatus.called).toBe(false)
+    expect(appRuntime.readRolloutStatus.called).toBe(false)
   })
 
   it('reconciles only the latest non-terminal release', async () => {
     const releases = [release(DeployStatus.Pending), release(DeployStatus.Pending)]
-    const { usecase, repository, deployBackend } = build(releases)
-    deployBackend.readRolloutStatus.resolves(RolloutStatus.Complete)
+    const { usecase, repository, appRuntime } = build(releases)
+    appRuntime.readRolloutStatus.resolves(RolloutStatus.Complete)
 
     await usecase.execute(SLUG, firstPage())
 
-    expect(deployBackend.readRolloutStatus.calledOnce).toBe(true)
+    expect(appRuntime.readRolloutStatus.calledOnce).toBe(true)
     expect(repository.setReleaseDeployStatus.calledOnce).toBe(true)
     const [uuid] = repository.setReleaseDeployStatus.firstCall.args
     expect(uuid).toBe(releases[0].uuid)
@@ -147,14 +147,14 @@ describe('ViewReleaseIndexUseCase', () => {
     // current rollout's outcome onto a superseded release — the #98-class false
     // negative the first-page guard exists to prevent.
     const releases = [release(DeployStatus.Pending), release(DeployStatus.Pending)]
-    const { usecase, repository, deployBackend } = build(releases)
-    deployBackend.readRolloutStatus.resolves(RolloutStatus.Complete)
+    const { usecase, repository, appRuntime } = build(releases)
+    appRuntime.readRolloutStatus.resolves(RolloutStatus.Complete)
 
     const result = await usecase.execute(SLUG, pageAfter(releases[0]))
 
-    expect(deployBackend.readRolloutStatus.called).toBe(false)
+    expect(appRuntime.readRolloutStatus.called).toBe(false)
     expect(repository.setReleaseDeployStatus.called).toBe(false)
-    expect(deployBackend.readDeployFailure.called).toBe(false)
+    expect(appRuntime.readDeployFailure.called).toBe(false)
     expect(result.items[0].deployStatus).toBe(DeployStatus.Pending)
   })
 
@@ -162,18 +162,18 @@ describe('ViewReleaseIndexUseCase', () => {
     // A superseded Pending release (older) must not be stamped with the current
     // Deployment's outcome — only the head (Succeeded, terminal) maps to it.
     const releases = [release(DeployStatus.Succeeded), release(DeployStatus.Pending)]
-    const { usecase, repository, deployBackend } = build(releases)
+    const { usecase, repository, appRuntime } = build(releases)
 
     await usecase.execute(SLUG, firstPage())
 
-    expect(deployBackend.readRolloutStatus.called).toBe(false)
+    expect(appRuntime.readRolloutStatus.called).toBe(false)
     expect(repository.setReleaseDeployStatus.called).toBe(false)
     expect(releases[1].deployStatus).toBe(DeployStatus.Pending)
   })
   it('leaves an undeployed head pending while another release is live', async () => {
-    const { usecase, repository, deployBackend } = build()
-    deployBackend.readLiveReleaseUuid.resolves(generateUuid<ReleaseUuid>())
-    deployBackend.readRolloutStatus.resolves(RolloutStatus.Complete)
+    const { usecase, repository, appRuntime } = build()
+    appRuntime.readLiveReleaseUuid.resolves(generateUuid<ReleaseUuid>())
+    appRuntime.readRolloutStatus.resolves(RolloutStatus.Complete)
 
     const result = await usecase.execute(SLUG, firstPage())
 
@@ -182,9 +182,9 @@ describe('ViewReleaseIndexUseCase', () => {
   })
 
   it('reconciles when the live pods belong to the head', async () => {
-    const { usecase, repository, deployBackend, releases } = build()
-    deployBackend.readLiveReleaseUuid.resolves(releases[0].uuid)
-    deployBackend.readRolloutStatus.resolves(RolloutStatus.Complete)
+    const { usecase, repository, appRuntime, releases } = build()
+    appRuntime.readLiveReleaseUuid.resolves(releases[0].uuid)
+    appRuntime.readRolloutStatus.resolves(RolloutStatus.Complete)
 
     await usecase.execute(SLUG, firstPage())
 
@@ -205,9 +205,9 @@ describe('ViewReleaseIndexUseCase', () => {
     expect(result.items[0].sourceReleaseUuid).toBe(rollback.sourceReleaseUuid)
   })
   it('does not reconcile when the live pods carry no release uuid at all', async () => {
-    const { usecase, repository, deployBackend } = build()
-    deployBackend.readLiveReleaseUuid.resolves(null)
-    deployBackend.readRolloutStatus.resolves(RolloutStatus.Complete)
+    const { usecase, repository, appRuntime } = build()
+    appRuntime.readLiveReleaseUuid.resolves(null)
+    appRuntime.readRolloutStatus.resolves(RolloutStatus.Complete)
 
     const result = await usecase.execute(SLUG, firstPage())
 
@@ -216,12 +216,18 @@ describe('ViewReleaseIndexUseCase', () => {
   })
 
   it('reconciles against the app namespace', async () => {
-    const { usecase, deployBackend } = build()
-    deployBackend.readRolloutStatus.resolves(RolloutStatus.Complete)
+    const { usecase, appRuntime } = build()
+    appRuntime.readRolloutStatus.resolves(RolloutStatus.Complete)
 
     await usecase.execute(SLUG, firstPage())
 
-    expect(deployBackend.readLiveReleaseUuid.firstCall.args[0]).toBe('my-project-production')
-    expect(deployBackend.readRolloutStatus.firstCall.args[0]).toBe('my-project-production')
+    expect(appRuntime.readLiveReleaseUuid.firstCall.args[0]).toMatchObject({
+      project: { slug: 'my-project' },
+      environment: { slug: 'production' },
+    })
+    expect(appRuntime.readRolloutStatus.firstCall.args[0]).toMatchObject({
+      project: { slug: 'my-project' },
+      environment: { slug: 'production' },
+    })
   })
 })

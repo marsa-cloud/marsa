@@ -159,7 +159,7 @@ export type UpdateUserRoleResponse = {
 export type CreateProjectCommand = {
   name: string
   /**
-   * First half of every environment namespace name.
+   * Unique across Marsa.
    */
   slug: string
 }
@@ -184,7 +184,7 @@ export type ViewProjectIndexResponse = {
 export type CreateEnvironmentCommand = {
   name: string
   /**
-   * Unique within the project; second half of the namespace name.
+   * Unique within the project.
    */
   slug: string
 }
@@ -193,7 +193,6 @@ export type CreateEnvironmentResponse = {
   uuid: string
   name: string
   slug: string
-  namespace: string
   projectSlug: string
 }
 
@@ -201,7 +200,6 @@ export type EnvironmentSummary = {
   uuid: string
   name: string
   slug: string
-  namespace: string
   createdAt: string
 }
 
@@ -912,11 +910,11 @@ export type CreateEnvironmentV1Errors = {
    */
   404: unknown
   /**
-   * The slug is taken in this project, or its namespace is taken or still deleting.
+   * The slug is taken in this project, or the environment is taken or still being removed.
    */
   409: unknown
   /**
-   * The namespace could not be created on the cluster.
+   * The environment could not be provisioned.
    */
   502: unknown
 }
@@ -956,14 +954,14 @@ export type DeleteEnvironmentV1Errors = {
    */
   409: unknown
   /**
-   * The namespace could not be deleted; nothing changed.
+   * The environment could not be removed; nothing changed.
    */
   502: unknown
 }
 
 export type DeleteEnvironmentV1Responses = {
   /**
-   * The environment and its namespace were deleted.
+   * The environment was deleted.
    */
   204: void
 }

@@ -23,7 +23,6 @@ const dev = {
   uuid: 'e1',
   name: 'Dev',
   slug: 'dev',
-  namespace: 'demo-dev',
   createdAt: '2026-09-19T00:00:00.000Z',
 }
 const flush = () => new Promise(resolve => setTimeout(resolve))
@@ -112,7 +111,7 @@ describe('useProjectEnvironmentPicker', () => {
 
   it('ignores a slow environment list for a project the user switched away from', async () => {
     let resolveSlow: (value: unknown) => void = () => {}
-    const other = { ...dev, uuid: 'e2', slug: 'prod', namespace: 'other-prod' }
+    const other = { ...dev, uuid: 'e2', slug: 'prod' }
     listEnvironments.mockImplementation((slug: string) =>
       slug === 'demo' ? new Promise(resolve => (resolveSlow = resolve)) : Promise.resolve([other]),
     )

@@ -1,24 +1,28 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { nodePinEquals } from '#src/app/app-management/entities/node-pin.js'
 import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import { UpdateAppCommand } from '#src/app/app-management/use-cases/update-app/update-app.command.js'
 import { UpdateAppRepository } from '#src/app/app-management/use-cases/update-app/update-app.repository.js'
 import { UpdateAppResponse } from '#src/app/app-management/use-cases/update-app/update-app.response.js'
-import { namespaceOf } from '#src/app/environment/entities/namespace.js'
-import { ApplyReleaseService } from '#src/app/release/services/apply-release/apply-release.service.js'
+import { deploySpecOf } from '#src/app/release/entities/release-deploy-spec.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
-import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
+import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
 
 // Writes App, then re-applies only when the pin actually changed: a pin is location rather than
 // config, so it never reaches a Release and hasUndeployedChanges structurally cannot see it.
 @Injectable()
 export class UpdateAppUseCase {
+  private readonly baseDomain: string
+
   constructor(
     private readonly repository: UpdateAppRepository,
     private readonly credentialsCipher: ImagePullCredentialsCipher,
-    private readonly deployBackend: DeployBackend,
-    private readonly applyRelease: ApplyReleaseService,
-  ) {}
+    private readonly appRuntime: AppRuntime,
+    config: ConfigService,
+  ) {
+    this.baseDomain = config.getOrThrow<string>('MARSA_BASE_DOMAIN')
+  }
 
   async execute(slug: string, command: UpdateAppCommand): Promise<UpdateAppResponse> {
     // Cluster first, database second. If the apply fails nothing is stored, so an identical retry
@@ -63,24 +67,25 @@ export class UpdateAppUseCase {
   }
 
   private async reapply(placement: AppPlacement): Promise<void> {
-    const { app, project, environment } = placement
-    const liveUuid = await this.deployBackend.readLiveReleaseUuid(
-      namespaceOf(project, environment),
-      app.slug,
-    )
+    const liveUuid = await this.appRuntime.readLiveReleaseUuid(placement)
     if (!liveUuid) {
       return
     }
 
-    const release = await this.repository.findRelease(liveUuid, app.uuid)
+    const release = await this.repository.findRelease(liveUuid, placement.app.uuid)
     if (!release) {
-      // The cluster runs a release Marsa has no record of for this app: state is already wrong.
+      // The runtime runs a release Marsa has no record of for this app: state is already wrong.
       throw new InternalServerErrorException(
-        `App '${app.slug}' is running release ${liveUuid}, which is not a release of this app.`,
+        `App '${placement.app.slug}' is running release ${liveUuid}, which is not a release of this app.`,
       )
     }
 
-    await this.applyRelease.apply(placement, release)
+    const credentials = this.credentialsCipher.openForApp(
+      placement.app.slug,
+      release.imagePullCredentialsEnc,
+    )
+    const spec = deploySpecOf(placement, release, { baseDomain: this.baseDomain, credentials })
+    await this.appRuntime.deploy(placement, spec)
   }
 
   private credentialsEnc(command: UpdateAppCommand): string | null | undefined {

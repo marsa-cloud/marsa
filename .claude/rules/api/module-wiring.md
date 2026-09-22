@@ -45,31 +45,23 @@ and belongs in both directly; feature modules are passed in by the caller.
 
 ```ts
 // WRONG — the provider re-listed in every use-case module that needs it
-@Module({ providers: [ViewAppHealthUseCase, DeployBackend] })
+@Module({ providers: [ViewAppHealthUseCase, AppRuntime] })
 
-// RIGHT — src/modules/kubernetes/kubernetes.module.ts owns and exports it
+// RIGHT — one @Global adapter module binds the port; RuntimeModule picks it on MARSA_RUNTIME
+@Global()
 @Module({
-  providers: [
-    {
-      provide: DeployBackend,
-      useFactory: (config: ConfigService) =>
-        config.get<string>('DEPLOY_BACKEND', 'direct') === 'mock'
-          ? new MockDeployBackend()
-          : new DirectApplyDeployBackend(),
-      inject: [ConfigService],
-    },
-  ],
-  exports: [DeployBackend],
+  providers: [{ provide: AppRuntime, useClass: MockAppRuntime }],
+  exports: [AppRuntime],
 })
-export class KubernetesModule {}
+export class MockRuntimeModule {}
 
-// then, in the use-case module
-@Module({ imports: [KubernetesModule], controllers: [/* … */] })
+// then, in the use-case module: nothing to import — inject AppRuntime
+@Module({ controllers: [/* … */], providers: [ViewAppHealthUseCase] })
 ```
 
 Why: re-listing a provider creates one instance per module. Any service holding state, a
-connection, or a factory decision (here: real backend vs `MockDeployBackend` under
-`NODE_ENV=test`) then behaves differently depending on who injected it.
+connection, or a factory decision (here: the Kubernetes adapter vs the mock adapter under
+`MARSA_RUNTIME=mock`) then behaves differently depending on who injected it.
 
 An external service gets **one** seam — an abstract class bound by a module factory — not a
 new `*Service` per feature.
