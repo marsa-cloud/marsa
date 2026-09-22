@@ -30,6 +30,12 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
+          paths: [
+            {
+              name: '@kubernetes/client-node',
+              message: 'Only the Kubernetes runtime adapter may talk to Kubernetes.',
+            },
+          ],
           patterns: [
             {
               group: ['./*', '../*'],
@@ -51,6 +57,48 @@ export default tseslint.config(
     },
   },
   {
+    files: ['src/modules/runtime/adapters/kubernetes/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['./*', '../*'],
+              message: 'Use absolute path imports (#src/* or #test/*) instead of relative paths.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/app/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@kubernetes/client-node',
+              message: 'Only the Kubernetes runtime adapter may talk to Kubernetes.',
+            },
+          ],
+          patterns: [
+            {
+              group: ['./*', '../*'],
+              message: 'Use absolute path imports (#src/* or #test/*) instead of relative paths.',
+            },
+            {
+              regex: '^#src/modules/runtime/adapters/',
+              message: 'Features depend on runtime ports, never on an adapter.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.spec.ts', '**/*.e2e-spec.ts', '**/*.test.ts', 'test/**/*.ts'],
     rules: {
       '@typescript-eslint/no-unsafe-call': 'off',
@@ -59,6 +107,18 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/no-floating-promises': 'off',
+      // Tests stub ports with the mock adapter; the kubernetes adapter's own tests use the client.
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['./*', '../*'],
+              message: 'Use absolute path imports (#src/* or #test/*) instead of relative paths.',
+            },
+          ],
+        },
+      ],
     },
   },
   {

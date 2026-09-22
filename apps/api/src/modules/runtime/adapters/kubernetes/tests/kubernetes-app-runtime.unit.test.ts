@@ -55,7 +55,7 @@ describe('KubernetesAppRuntime.deploy', () => {
   let core: SinonStubbedInstance<CoreV1Api>
   let custom: SinonStubbedInstance<CustomObjectsApi>
   let sandbox: SinonSandbox
-  let backend: KubernetesAppRuntime
+  let runtime: KubernetesAppRuntime
   let environments: SinonStubbedInstance<MockEnvironmentRuntime>
 
   beforeEach(() => {
@@ -76,7 +76,7 @@ describe('KubernetesAppRuntime.deploy', () => {
 
     environments = createStubInstance(MockEnvironmentRuntime)
     environments.provision.resolves()
-    backend = new KubernetesAppRuntime(environments)
+    runtime = new KubernetesAppRuntime(environments)
   })
 
   afterEach(() => {
@@ -84,7 +84,7 @@ describe('KubernetesAppRuntime.deploy', () => {
   })
 
   it('deletes the orphaned pull Secret when the bundle renders none', async () => {
-    await backend.deploy(APP, spec())
+    await runtime.deploy(APP, spec())
 
     expect(core.patchNamespacedSecret.called).toBe(false)
     expect(core.deleteNamespacedSecret.calledOnce).toBe(true)
@@ -101,7 +101,7 @@ describe('KubernetesAppRuntime.deploy', () => {
       return Promise.resolve({} as V1Status)
     })
 
-    await backend.deploy(APP, spec())
+    await runtime.deploy(APP, spec())
 
     expect(deploymentPatchedFirst).toBe(true)
   })
@@ -109,7 +109,7 @@ describe('KubernetesAppRuntime.deploy', () => {
   it('tolerates a 404 when no Secret was ever materialized', async () => {
     core.deleteNamespacedSecret.rejects(new ApiException(404, 'Not Found', {}, {}))
 
-    await backend.deploy(APP, spec())
+    await runtime.deploy(APP, spec())
 
     // HTTPScaledObject then IngressRoute — apply got past the tolerated 404.
     expect(custom.patchNamespacedCustomObject.calledTwice).toBe(true)
@@ -118,18 +118,18 @@ describe('KubernetesAppRuntime.deploy', () => {
   it('propagates a non-404 failure from the delete', async () => {
     core.deleteNamespacedSecret.rejects(new ApiException(403, 'Forbidden', {}, {}))
 
-    await expect(backend.deploy(APP, spec())).rejects.toThrow(ApiException)
+    await expect(runtime.deploy(APP, spec())).rejects.toThrow(ApiException)
   })
 
   it('applies the pull Secret and deletes nothing when the image stays private', async () => {
-    await backend.deploy(APP, spec({ credentials: CREDENTIALS }))
+    await runtime.deploy(APP, spec({ credentials: CREDENTIALS }))
 
     expect(core.patchNamespacedSecret.calledOnce).toBe(true)
     expect(core.deleteNamespacedSecret.called).toBe(false)
   })
 
   it('provisions the environment before applying anything into it', async () => {
-    await backend.deploy(APP, spec())
+    await runtime.deploy(APP, spec())
 
     expect(environments.provision.calledOnceWithExactly(APP.environment)).toBe(true)
     expect(
@@ -143,7 +143,7 @@ describe('KubernetesAppRuntime.readLiveReleaseUuid', () => {
   let core: SinonStubbedInstance<CoreV1Api>
   let custom: SinonStubbedInstance<CustomObjectsApi>
   let sandbox: SinonSandbox
-  let backend: KubernetesAppRuntime
+  let runtime: KubernetesAppRuntime
   let environments: SinonStubbedInstance<MockEnvironmentRuntime>
 
   beforeEach(() => {
@@ -164,7 +164,7 @@ describe('KubernetesAppRuntime.readLiveReleaseUuid', () => {
 
     environments = createStubInstance(MockEnvironmentRuntime)
     environments.provision.resolves()
-    backend = new KubernetesAppRuntime(environments)
+    runtime = new KubernetesAppRuntime(environments)
   })
 
   afterEach(() => {
@@ -180,7 +180,7 @@ describe('KubernetesAppRuntime.readLiveReleaseUuid', () => {
       },
     })
 
-    expect(await backend.readLiveReleaseUuid(APP)).toBe(releaseUuid)
+    expect(await runtime.readLiveReleaseUuid(APP)).toBe(releaseUuid)
   })
 
   it('rejects a malformed annotation rather than returning it', async () => {
@@ -191,12 +191,12 @@ describe('KubernetesAppRuntime.readLiveReleaseUuid', () => {
       },
     })
 
-    await expect(backend.readLiveReleaseUuid(APP)).rejects.toThrow(InvalidReleaseAnnotationError)
+    await expect(runtime.readLiveReleaseUuid(APP)).rejects.toThrow(InvalidReleaseAnnotationError)
   })
 
   it('returns null when the Deployment does not exist', async () => {
     apps.readNamespacedDeployment.rejects(new ApiException(404, 'Not Found', {}, {}))
 
-    expect(await backend.readLiveReleaseUuid(APP)).toBeNull()
+    expect(await runtime.readLiveReleaseUuid(APP)).toBeNull()
   })
 })

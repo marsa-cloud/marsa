@@ -42,7 +42,7 @@ function containerFailure(status: V1ContainerStatus): DeployFailure | null {
  * The first failing container state across an app's pods (#115) — init
  * containers first, since an init failure blocks the app from ever starting.
  * Pure and total; the cluster-I/O that lists the pods lives in
- * {@link DirectApplyDeployBackend}. Returns `null` when nothing is failing.
+ * {@link KubernetesAppRuntime}. Returns `null` when nothing is failing.
  */
 export function extractDeployFailure(pods: V1Pod[]): DeployFailure | null {
   for (const pod of pods) {

@@ -39,7 +39,7 @@ describe('KubernetesEnvironmentRuntime', () => {
   let core: SinonStubbedInstance<CoreV1Api>
   let rbac: SinonStubbedInstance<RbacAuthorizationV1Api>
   let sandbox: SinonSandbox
-  let backend: KubernetesEnvironmentRuntime
+  let runtime: KubernetesEnvironmentRuntime
 
   beforeEach(() => {
     core = createStubInstance(CoreV1Api)
@@ -52,7 +52,7 @@ describe('KubernetesEnvironmentRuntime', () => {
       .returns(core)
       .withArgs(RbacAuthorizationV1Api)
       .returns(rbac)
-    backend = new KubernetesEnvironmentRuntime('marsa')
+    runtime = new KubernetesEnvironmentRuntime('marsa')
   })
 
   afterEach(() => {
@@ -60,7 +60,7 @@ describe('KubernetesEnvironmentRuntime', () => {
   })
 
   it('creates a labelled namespace and binds the deployer ClusterRole to marsa-api', async () => {
-    await backend.provision(ENVIRONMENT)
+    await runtime.provision(ENVIRONMENT)
 
     expect(core.createNamespace.firstCall.args[0].body.metadata).toEqual({
       name: NS,
@@ -83,14 +83,14 @@ describe('KubernetesEnvironmentRuntime', () => {
     core.readNamespace.resolves(namespace({ 'marsa.cloud/environment-uuid': ENV_UUID }))
     rbac.createNamespacedRoleBinding.rejects(conflict())
 
-    await backend.provision(ENVIRONMENT)
+    await runtime.provision(ENVIRONMENT)
   })
 
   it('refuses a namespace owned by anything else', async () => {
     core.createNamespace.rejects(conflict())
     core.readNamespace.resolves(namespace({}))
 
-    await expect(backend.provision(ENVIRONMENT)).rejects.toThrow(EnvironmentConflictError)
+    await expect(runtime.provision(ENVIRONMENT)).rejects.toThrow(EnvironmentConflictError)
     expect(rbac.createNamespacedRoleBinding.called).toBe(false)
   })
 
@@ -98,19 +98,19 @@ describe('KubernetesEnvironmentRuntime', () => {
     core.createNamespace.rejects(conflict())
     core.readNamespace.resolves(namespace({ 'marsa.cloud/environment-uuid': ENV_UUID }, true))
 
-    await expect(backend.provision(ENVIRONMENT)).rejects.toThrow(/still being deleted/)
+    await expect(runtime.provision(ENVIRONMENT)).rejects.toThrow(/still being deleted/)
   })
 
   it('rethrows any other create failure', async () => {
     core.createNamespace.rejects(new ApiException(403, 'Forbidden', {}, {}))
 
-    await expect(backend.provision(ENVIRONMENT)).rejects.toThrow(ApiException)
+    await expect(runtime.provision(ENVIRONMENT)).rejects.toThrow(ApiException)
   })
 
   it('deletes a namespace labelled for this environment', async () => {
     core.readNamespace.resolves(namespace({ 'marsa.cloud/environment-uuid': ENV_UUID }))
 
-    await backend.destroy(ENVIRONMENT)
+    await runtime.destroy(ENVIRONMENT)
 
     expect(core.deleteNamespace.calledOnceWith({ name: NS })).toBe(true)
   })
@@ -118,7 +118,7 @@ describe('KubernetesEnvironmentRuntime', () => {
   it('treats an already-missing namespace as done', async () => {
     core.readNamespace.rejects(notFound())
 
-    await backend.destroy(ENVIRONMENT)
+    await runtime.destroy(ENVIRONMENT)
 
     expect(core.deleteNamespace.called).toBe(false)
   })
@@ -126,7 +126,7 @@ describe('KubernetesEnvironmentRuntime', () => {
   it('never deletes a namespace another environment owns', async () => {
     core.readNamespace.resolves(namespace({ 'marsa.cloud/environment-uuid': 'someone-else' }))
 
-    await backend.destroy(ENVIRONMENT)
+    await runtime.destroy(ENVIRONMENT)
 
     expect(core.deleteNamespace.called).toBe(false)
   })

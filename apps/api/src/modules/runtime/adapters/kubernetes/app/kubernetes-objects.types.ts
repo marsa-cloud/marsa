@@ -48,7 +48,7 @@ export type HttpScaledObject = KubernetesObject & { spec: HttpScaledObjectSpec }
 
 /**
  * The manifest bundle for one operator-app deploy (AgDR-0029). Rendered purely
- * from the `App`/`Release` model, then applied as a unit by a `DeployBackend`.
+ * from an `AppDeploySpec`, then applied as a unit by `KubernetesAppRuntime`.
  * The Deployment + Service + IngressRoute + HTTPScaledObject are always written
  * together; the `imagePullSecret` is present only for private images (#99,
  * AgDR-0036).
