@@ -9,7 +9,6 @@ import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
-import { seedEnvironment } from '#src/test/fixtures/seed-environment.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -25,13 +24,16 @@ describe('POST /api/v1/apps/:slug/deploy (e2e)', () => {
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
     cookie = await setup.authenticate()
-    environment = (await seedEnvironment(setup.db)).environment
-    const app = new AppBuilder().withEnvironment(environment).withSlug(SLUG).build()
+    environment = (await setup.seedEnvironment()).environment
+    const app = new AppBuilder().withEnvironmentUuid(environment.uuid).withSlug(SLUG).build()
     const older = new ReleaseBuilder().withApp(app).withDeployStatus(DeployStatus.Succeeded).build()
     const newest = new ReleaseBuilder().withApp(app).build()
     await setup.db
       .insert(appTable)
-      .values([app, new AppBuilder().withEnvironment(environment).withSlug(BARE_SLUG).build()])
+      .values([
+        app,
+        new AppBuilder().withEnvironmentUuid(environment.uuid).withSlug(BARE_SLUG).build(),
+      ])
     await setup.db.insert(releaseTable).values([older, newest])
     newestUuid = newest.uuid
   })

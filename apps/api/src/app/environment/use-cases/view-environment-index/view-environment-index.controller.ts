@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from '@nestjs/common'
+import { Controller, Get, Param } from '@nestjs/common'
 import {
   ApiCookieAuth,
   ApiForbiddenResponse,
@@ -8,7 +8,6 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger'
 import { Roles } from '#src/app/auth/decorators/roles.decorator.js'
-import { ViewEnvironmentIndexQuery } from '#src/app/environment/use-cases/view-environment-index/query/view-environment-index.query.js'
 import { ViewEnvironmentIndexResponse } from '#src/app/environment/use-cases/view-environment-index/view-environment-index.response.js'
 import { ViewEnvironmentIndexUseCase } from '#src/app/environment/use-cases/view-environment-index/view-environment-index.use-case.js'
 import { UserRole } from '#src/app/user/enums/user-role.enum.js'
@@ -26,10 +25,7 @@ export class ViewEnvironmentIndexController {
   @ApiNotFoundResponse({ description: 'No project with that slug.' })
   @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
-  handle(
-    @Param('projectSlug') projectSlug: string,
-    @Query() query: ViewEnvironmentIndexQuery,
-  ): Promise<ViewEnvironmentIndexResponse> {
-    return this.usecase.execute(projectSlug, query)
+  handle(@Param('projectSlug') projectSlug: string): Promise<ViewEnvironmentIndexResponse> {
+    return this.usecase.execute(projectSlug)
   }
 }

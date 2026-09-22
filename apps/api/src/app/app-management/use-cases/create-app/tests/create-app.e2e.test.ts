@@ -6,7 +6,6 @@ import { appTable } from '#src/app/app-management/entities/app.table.js'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
 import type { EnvironmentUuid } from '#src/app/environment/entities/environment.uuid.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
-import { seedEnvironment } from '#src/test/fixtures/seed-environment.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 import { generateUuid } from '#src/utils/uuid.js'
@@ -21,7 +20,7 @@ describe('POST /api/v1/apps (e2e)', () => {
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
     cookie = await setup.authenticate()
-    environment = (await seedEnvironment(setup.db)).environment
+    environment = (await setup.seedEnvironment()).environment
   })
 
   after(async () => {

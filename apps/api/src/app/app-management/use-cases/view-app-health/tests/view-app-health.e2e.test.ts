@@ -3,7 +3,6 @@ import { expect } from 'expect'
 import request from 'supertest'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
-import { seedEnvironment } from '#src/test/fixtures/seed-environment.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -16,10 +15,10 @@ describe('GET /api/v1/apps/:slug/health (e2e)', () => {
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
     sessionCookie = await setup.authenticate()
-    const { environment } = await seedEnvironment(setup.db)
+    const { environment } = await setup.seedEnvironment()
     await setup.db
       .insert(appTable)
-      .values(new AppBuilder().withSlug(SLUG).withEnvironment(environment).build())
+      .values(new AppBuilder().withSlug(SLUG).withEnvironmentUuid(environment.uuid).build())
   })
 
   after(async () => {

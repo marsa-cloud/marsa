@@ -1,10 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger'
-import type { AppPlacement } from '#src/app/app-management/entities/app-placement.js'
+import { NodePin } from '#src/app/app-management/entities/node-pin.js'
+import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import {
   AppEnvironmentRef,
   AppProjectRef,
-} from '#src/app/app-management/entities/app-placement.response.js'
-import { NodePin } from '#src/app/app-management/entities/node-pin.js'
+} from '#src/app/app-management/responses/app-placement.response.js'
 
 export class ViewAppDetailResponse {
   @ApiProperty({ type: String, example: 'my-app' })

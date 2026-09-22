@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import type { AppPlacement } from '#src/app/app-management/entities/app-placement.js'
+import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import { namespaceOf } from '#src/app/environment/entities/namespace.js'
 import type { Release } from '#src/app/release/entities/release.table.js'
 import { renderManifests } from '#src/app/release/render/render-manifests.js'

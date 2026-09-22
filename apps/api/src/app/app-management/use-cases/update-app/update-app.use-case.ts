@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common'
-import type { AppPlacement } from '#src/app/app-management/entities/app-placement.js'
 import { nodePinEquals } from '#src/app/app-management/entities/node-pin.js'
+import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import { UpdateAppCommand } from '#src/app/app-management/use-cases/update-app/update-app.command.js'
 import { UpdateAppRepository } from '#src/app/app-management/use-cases/update-app/update-app.repository.js'
 import { UpdateAppResponse } from '#src/app/app-management/use-cases/update-app/update-app.response.js'

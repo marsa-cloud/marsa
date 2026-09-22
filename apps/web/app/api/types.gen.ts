@@ -170,15 +170,6 @@ export type CreateProjectResponse = {
   slug: string
 }
 
-export type ViewProjectIndexQueryKey = {
-  uuid: string
-}
-
-export type ViewProjectIndexPaginationQuery = {
-  limit?: number
-  key?: ViewProjectIndexQueryKey | null
-}
-
 export type ProjectSummary = {
   uuid: string
   name: string
@@ -186,19 +177,8 @@ export type ProjectSummary = {
   createdAt: string
 }
 
-export type ViewProjectIndexResponseMeta = {
-  /**
-   * Key for the next page, or null on the last page. Opaque — send it back as-is.
-   */
-  next: ViewProjectIndexQueryKey | null
-}
-
 export type ViewProjectIndexResponse = {
-  /**
-   * The items for the current page
-   */
   items: Array<ProjectSummary>
-  meta: ViewProjectIndexResponseMeta
 }
 
 export type CreateEnvironmentCommand = {
@@ -217,15 +197,6 @@ export type CreateEnvironmentResponse = {
   projectSlug: string
 }
 
-export type ViewEnvironmentIndexQueryKey = {
-  uuid: string
-}
-
-export type ViewEnvironmentIndexPaginationQuery = {
-  limit?: number
-  key?: ViewEnvironmentIndexQueryKey | null
-}
-
 export type EnvironmentSummary = {
   uuid: string
   name: string
@@ -234,19 +205,8 @@ export type EnvironmentSummary = {
   createdAt: string
 }
 
-export type ViewEnvironmentIndexResponseMeta = {
-  /**
-   * Key for the next page, or null on the last page. Opaque — send it back as-is.
-   */
-  next: ViewEnvironmentIndexQueryKey | null
-}
-
 export type ViewEnvironmentIndexResponse = {
-  /**
-   * The items for the current page
-   */
   items: Array<EnvironmentSummary>
-  meta: ViewEnvironmentIndexResponseMeta
 }
 
 export type CreateReleaseCommand = {
@@ -803,9 +763,7 @@ export type UpdateUserRoleV1Response = UpdateUserRoleV1Responses[keyof UpdateUse
 export type ViewProjectIndexV1Data = {
   body?: never
   path?: never
-  query?: {
-    pagination?: ViewProjectIndexPaginationQuery
-  }
+  query?: never
   url: '/api/v1/projects'
 }
 
@@ -901,9 +859,7 @@ export type ViewEnvironmentIndexV1Data = {
   path: {
     projectSlug: string
   }
-  query?: {
-    pagination?: ViewEnvironmentIndexPaginationQuery
-  }
+  query?: never
   url: '/api/v1/projects/{projectSlug}/environments'
 }
 

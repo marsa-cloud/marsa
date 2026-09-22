@@ -4,7 +4,6 @@ import { expect } from 'expect'
 import request from 'supertest'
 import { ProjectBuilder } from '#src/app/project/entities/project.builder.js'
 import { projectTable } from '#src/app/project/entities/project.table.js'
-import { seedEnvironment } from '#src/test/fixtures/seed-environment.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -35,7 +34,7 @@ describe('DELETE /api/v1/projects/:slug (e2e)', () => {
   })
 
   it('refuses a project that still has an environment with 409', async () => {
-    const { project } = await seedEnvironment(setup.db)
+    const { project } = await setup.seedEnvironment()
 
     await request(setup.httpServer)
       .delete(`/api/v1/projects/${project.slug}`)

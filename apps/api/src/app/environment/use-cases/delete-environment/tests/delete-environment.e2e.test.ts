@@ -5,7 +5,6 @@ import request from 'supertest'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
 import { environmentTable } from '#src/app/environment/entities/environment.table.js'
-import { seedEnvironment } from '#src/test/fixtures/seed-environment.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -23,8 +22,11 @@ describe('DELETE /api/v1/projects/:projectSlug/environments/:environmentSlug (e2
   })
 
   it('refuses while an app lives there, then deletes once it is empty', async () => {
-    const { project, environment } = await seedEnvironment(setup.db)
-    const app = new AppBuilder().withSlug('env-delete-e2e').withEnvironment(environment).build()
+    const { project, environment } = await setup.seedEnvironment()
+    const app = new AppBuilder()
+      .withSlug('env-delete-e2e')
+      .withEnvironmentUuid(environment.uuid)
+      .build()
     await setup.db.insert(appTable).values(app)
     const url = `/api/v1/projects/${project.slug}/environments/${environment.slug}`
 

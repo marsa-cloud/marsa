@@ -5,7 +5,6 @@ import request from 'supertest'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
-import { seedEnvironment } from '#src/test/fixtures/seed-environment.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -19,12 +18,12 @@ describe('PATCH /api/v1/apps/:slug (e2e)', () => {
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
     cookie = await setup.authenticate()
-    environment = (await seedEnvironment(setup.db)).environment
+    environment = (await setup.seedEnvironment()).environment
     await setup.db
       .insert(appTable)
       .values(
         new AppBuilder()
-          .withEnvironment(environment)
+          .withEnvironmentUuid(environment.uuid)
           .withSlug(SLUG)
           .withMinReplicas(0)
           .withMaxReplicas(2)

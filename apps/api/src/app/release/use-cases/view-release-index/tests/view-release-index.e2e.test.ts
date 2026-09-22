@@ -8,7 +8,6 @@ import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
 import type { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
-import { seedEnvironment } from '#src/test/fixtures/seed-environment.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -24,13 +23,13 @@ describe('GET /api/v1/apps/:slug/releases (e2e)', () => {
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
     sessionCookie = await setup.authenticate()
-    environment = (await seedEnvironment(setup.db)).environment
+    environment = (await setup.seedEnvironment()).environment
 
     // Seed straight through Drizzle — the only endpoint under test is the GET
     // below. The release starts `pending` so the assertion below exercises the
     // refresh-on-read reconciliation (AgDR-0034).
     const app = new AppBuilder()
-      .withEnvironment(environment)
+      .withEnvironmentUuid(environment.uuid)
       .withSlug(SLUG)
       .withImage('nginx:1.27')
       .build()
