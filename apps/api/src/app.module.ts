@@ -4,6 +4,7 @@ import { AccessControlModule } from '#src/app/auth/access-control.module.js'
 import { envValidationSchema } from '#src/config/env.config.js'
 import { CryptoModule } from '#src/modules/crypto/crypto.module.js'
 import { DatabaseModule } from '#src/modules/database/database.module.js'
+import { RuntimeModule } from '#src/modules/runtime/runtime.module.js'
 
 @Module({})
 export class AppModule {
@@ -18,6 +19,7 @@ export class AppModule {
         }),
         DatabaseModule,
         CryptoModule,
+        RuntimeModule,
         AccessControlModule,
         ...modules,
       ],

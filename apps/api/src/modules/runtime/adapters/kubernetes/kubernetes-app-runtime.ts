@@ -1,0 +1,292 @@
+import {
+  AppsV1Api,
+  CoreV1Api,
+  CustomObjectsApi,
+  KubeConfig,
+  PatchStrategy,
+  setHeaderOptions,
+  type V1Deployment,
+  type V1Pod,
+} from '@kubernetes/client-node'
+import { Injectable } from '@nestjs/common'
+import {
+  DEPLOY_FIELD_MANAGER,
+  HTTP_SCALED_OBJECT_PLURAL,
+  INGRESS_ROUTE_PLURAL,
+  KEDA_HTTP_GROUP,
+  KEDA_HTTP_VERSION,
+  REGISTRY_SECRET_SUFFIX,
+  RELEASE_UUID_ANNOTATION,
+  TRAEFIK_GROUP,
+  TRAEFIK_VERSION,
+} from '#src/modules/runtime/adapters/kubernetes/app/app.constants.js'
+import type { RenderedManifests } from '#src/modules/runtime/adapters/kubernetes/app/kubernetes-objects.types.js'
+import { parseReleaseAnnotation } from '#src/modules/runtime/adapters/kubernetes/app/release-annotation.js'
+import { renderManifests } from '#src/modules/runtime/adapters/kubernetes/app/render/render-manifests.js'
+import { extractDeployFailure } from '#src/modules/runtime/adapters/kubernetes/app/rollout/extract-deploy-failure.js'
+import { mapRolloutStatus } from '#src/modules/runtime/adapters/kubernetes/app/rollout/map-rollout-status.js'
+import { newestPod } from '#src/modules/runtime/adapters/kubernetes/app/rollout/newest-pod.js'
+import { namespaceOf } from '#src/modules/runtime/adapters/kubernetes/environment/namespace-name.js'
+import {
+  ignoreNotFound,
+  isNotFound,
+} from '#src/modules/runtime/adapters/kubernetes/shared/not-found.js'
+import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
+import { EnvironmentRuntime } from '#src/modules/runtime/environment-runtime.js'
+import {
+  type AppDeploySpec,
+  type AppHealth,
+  type AppRef,
+  type DeployFailure,
+  RolloutStatus,
+  type RunLogs,
+  type RunLogsOptions,
+} from '#src/modules/runtime/runtime.types.js'
+import type { Uuid } from '#src/utils/uuid.js'
+
+function requireName(object: { metadata?: { name?: string } }, kind: string): string {
+  const name = object.metadata?.name
+  if (!name) {
+    throw new Error(`rendered ${kind} manifest is missing metadata.name`)
+  }
+  return name
+}
+
+@Injectable()
+export class KubernetesAppRuntime extends AppRuntime {
+  private readonly apps: AppsV1Api
+  private readonly core: CoreV1Api
+  private readonly custom: CustomObjectsApi
+
+  constructor(private readonly environments: EnvironmentRuntime) {
+    super()
+    const kc = new KubeConfig()
+    kc.loadFromDefault()
+    this.apps = kc.makeApiClient(AppsV1Api)
+    this.core = kc.makeApiClient(CoreV1Api)
+    this.custom = kc.makeApiClient(CustomObjectsApi)
+  }
+
+  async deploy(app: AppRef, spec: AppDeploySpec): Promise<void> {
+    await this.environments.provision(app.environment)
+    await this.apply(namespaceOf(app.environment), renderManifests(app.slug, spec))
+  }
+
+  private async apply(namespace: string, manifests: RenderedManifests): Promise<void> {
+    const { deployment, service, ingressRoute, httpScaledObject, imagePullSecret } = manifests
+    const ssa = setHeaderOptions('Content-Type', PatchStrategy.ServerSideApply)
+
+    // The pull Secret must exist before the Deployment's pods schedule, or the
+    // first pull races ahead of its credentials (#99).
+    if (imagePullSecret) {
+      await this.core.patchNamespacedSecret(
+        {
+          name: requireName(imagePullSecret, 'Secret'),
+          namespace,
+          body: imagePullSecret,
+          fieldManager: DEPLOY_FIELD_MANAGER,
+          force: true,
+        },
+        ssa,
+      )
+    }
+
+    const deploymentName = requireName(deployment, 'Deployment')
+
+    await this.apps.patchNamespacedDeployment(
+      {
+        name: deploymentName,
+        namespace,
+        body: deployment,
+        fieldManager: DEPLOY_FIELD_MANAGER,
+        force: true,
+      },
+      ssa,
+    )
+
+    // After the Deployment patch, so the live pod spec never references a Secret
+    // that is already gone (#124).
+    if (!imagePullSecret) {
+      await ignoreNotFound(() =>
+        this.core.deleteNamespacedSecret({
+          name: `${deploymentName}${REGISTRY_SECRET_SUFFIX}`,
+          namespace,
+        }),
+      )
+    }
+
+    await this.core.patchNamespacedService(
+      {
+        name: requireName(service, 'Service'),
+        namespace,
+        body: service,
+        fieldManager: DEPLOY_FIELD_MANAGER,
+        force: true,
+      },
+      ssa,
+    )
+
+    // Before the IngressRoute: the interceptor routes by Host from a table built
+    // out of HSOs, so an IngressRoute that lands first sends traffic to an
+    // interceptor that has never heard of the host, and it 404s.
+    await this.custom.patchNamespacedCustomObject(
+      {
+        group: KEDA_HTTP_GROUP,
+        version: KEDA_HTTP_VERSION,
+        namespace,
+        plural: HTTP_SCALED_OBJECT_PLURAL,
+        name: requireName(httpScaledObject, 'HTTPScaledObject'),
+        body: httpScaledObject,
+        fieldManager: DEPLOY_FIELD_MANAGER,
+        force: true,
+      },
+      ssa,
+    )
+
+    await this.custom.patchNamespacedCustomObject(
+      {
+        group: TRAEFIK_GROUP,
+        version: TRAEFIK_VERSION,
+        namespace,
+        plural: INGRESS_ROUTE_PLURAL,
+        name: requireName(ingressRoute, 'IngressRoute'),
+        body: ingressRoute,
+        fieldManager: DEPLOY_FIELD_MANAGER,
+        force: true,
+      },
+      ssa,
+    )
+  }
+
+  async destroy(app: AppRef): Promise<void> {
+    const namespace = namespaceOf(app.environment)
+    const appName = app.slug
+
+    // IngressRoute first so routing stops before the pods it points at go away.
+    await ignoreNotFound(() =>
+      this.custom.deleteNamespacedCustomObject({
+        group: TRAEFIK_GROUP,
+        version: TRAEFIK_VERSION,
+        namespace,
+        plural: INGRESS_ROUTE_PLURAL,
+        name: appName,
+      }),
+    )
+
+    // After routing stops, before the Deployment: KEDA must not be actively
+    // managing a Deployment that is being deleted underneath it.
+    await ignoreNotFound(() =>
+      this.custom.deleteNamespacedCustomObject({
+        group: KEDA_HTTP_GROUP,
+        version: KEDA_HTTP_VERSION,
+        namespace,
+        plural: HTTP_SCALED_OBJECT_PLURAL,
+        name: appName,
+      }),
+    )
+
+    await ignoreNotFound(() => this.apps.deleteNamespacedDeployment({ name: appName, namespace }))
+
+    await ignoreNotFound(() => this.core.deleteNamespacedService({ name: appName, namespace }))
+
+    // Attempted unconditionally — the app row does not record whether a pull
+    // secret was rendered, so a 404 here is the normal case.
+    await ignoreNotFound(() =>
+      this.core.deleteNamespacedSecret({
+        name: `${appName}${REGISTRY_SECRET_SUFFIX}`,
+        namespace,
+      }),
+    )
+  }
+
+  async readRolloutStatus(app: AppRef): Promise<RolloutStatus> {
+    const deployment = await this.readDeployment(namespaceOf(app.environment), app.slug)
+    return mapRolloutStatus(deployment)
+  }
+
+  async readLiveReleaseUuid(app: AppRef): Promise<Uuid<'Release'> | null> {
+    const deployment = await this.readDeployment(namespaceOf(app.environment), app.slug)
+    const annotation = deployment?.spec?.template.metadata?.annotations?.[RELEASE_UUID_ANNOTATION]
+    return parseReleaseAnnotation(annotation, app.slug)
+  }
+
+  async readHealth(app: AppRef): Promise<AppHealth> {
+    const deployment = await this.readDeployment(namespaceOf(app.environment), app.slug)
+    if (deployment === null) {
+      return { found: false, desiredReplicas: 0, availableReplicas: 0, updatedReplicas: 0 }
+    }
+    const status = deployment.status
+    return {
+      found: true,
+      desiredReplicas: deployment.spec?.replicas ?? 0,
+      availableReplicas: status?.availableReplicas ?? 0,
+      updatedReplicas: status?.updatedReplicas ?? 0,
+    }
+  }
+
+  async readDeployFailure(app: AppRef): Promise<DeployFailure | null> {
+    const pods = await this.listAppPods(namespaceOf(app.environment), app.slug)
+    return extractDeployFailure(pods)
+  }
+
+  async readRunLogs(app: AppRef, options: RunLogsOptions): Promise<RunLogs | null> {
+    const namespace = namespaceOf(app.environment)
+    const pods = await this.listAppPods(namespace, app.slug)
+    // Newest pod reflects the current rollout; aggregating across replicas is
+    // out of scope for V0.1 (#114).
+    const pod = newestPod(pods)
+    const name = pod?.metadata?.name
+    if (!name) {
+      return null
+    }
+
+    try {
+      const logs = await this.core.readNamespacedPodLog({
+        name,
+        namespace,
+        tailLines: options.tailLines,
+      })
+      return { podName: name, logs }
+    } catch (error) {
+      // The pod can vanish between the list and this read (eviction, rollout
+      // churn); a 404 here is the same "not found → null" case, not a failure.
+      if (isNotFound(error)) {
+        return null
+      }
+      throw error
+    }
+  }
+
+  /**
+   * Pods owned by an app's Deployment, selected by the Deployment's own
+   * `matchLabels` — no name-prefix guessing, no sibling bleed. Empty when the
+   * Deployment (or a usable selector) can't be found.
+   */
+  private async listAppPods(namespace: string, deploymentName: string): Promise<V1Pod[]> {
+    const deployment = await this.readDeployment(namespace, deploymentName)
+    const matchLabels = deployment?.spec?.selector?.matchLabels
+    if (!matchLabels || Object.keys(matchLabels).length === 0) {
+      return []
+    }
+
+    const labelSelector = Object.entries(matchLabels)
+      .map(([key, value]) => `${key}=${value}`)
+      .join(',')
+    const { items } = await this.core.listNamespacedPod({ namespace, labelSelector })
+    return items
+  }
+
+  private async readDeployment(
+    namespace: string,
+    deploymentName: string,
+  ): Promise<V1Deployment | null> {
+    try {
+      return await this.apps.readNamespacedDeployment({ name: deploymentName, namespace })
+    } catch (error) {
+      if (isNotFound(error)) {
+        return null
+      }
+      throw error
+    }
+  }
+}
