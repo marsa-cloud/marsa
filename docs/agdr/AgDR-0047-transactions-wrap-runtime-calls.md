@@ -41,8 +41,11 @@ Chosen: **transaction with the runtime call last**.
 - A use-case may inject `Database` only to call `db.transaction`; repositories take the `tx` as
   an `Executor`.
 - Reads that decide a write lock with `FOR UPDATE OF <table>`. One job per repository method.
-- A write that must survive the rollback — `deploy-release` recording `Failed` — runs after the
-  transaction, on its own.
+- A write that must survive a failed runtime call — `deploy-release` recording `Failed` — runs
+  in the same transaction: the runtime call sits in a savepoint, and on failure the use-case rolls
+  back to it, writes `Failed`, commits, then rethrows. Writing it after the transaction instead
+  released the app lock first, so a concurrent retry's `Pending` could be overwritten by the stale
+  `Failed` (PR #232 review).
 
 ## Consequences
 

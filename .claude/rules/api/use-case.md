@@ -51,7 +51,9 @@ await this.db.transaction(async (tx) => {
 Why: DB-first means constraint failures (a taken slug, a RESTRICT FK) surface before any side
 effect, and a runtime failure throws and rolls every write back, so an identical retry sees the
 same starting state. Runtime calls must be idempotent for that retry to converge. A write that
-must survive the rollback — recording a failed rollout — goes after the transaction, on its own.
+must survive a failed runtime call — recording a failed rollout — stays in the transaction: put
+the runtime call in a savepoint (`tx.transaction`), write after rolling it back, commit, then
+rethrow. Writing after the transaction releases the locks first, letting a concurrent retry in.
 The one unhandled case, a commit failing after the runtime call succeeded, is accepted
 (AgDR-0047).
 

@@ -9,13 +9,10 @@ import {
 import { type Release, releaseTable } from '#src/app/release/entities/release.table.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
-import type { Database, Executor } from '#src/modules/database/drizzle.factory.js'
-import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
+import type { Executor } from '#src/modules/database/drizzle.factory.js'
 
 @Injectable()
 export class DeployReleaseRepository {
-  constructor(@InjectDatabase() private readonly db: Database) {}
-
   // The app row lock also serialises two deploys of one app, so the newest-release read agrees.
   async findPlacement(tx: Executor, slug: string): Promise<AppPlacement | undefined> {
     const [placement] = await selectAppPlacement(tx)
@@ -42,13 +39,5 @@ export class DeployReleaseRepository {
     deployStatus: DeployStatus,
   ): Promise<void> {
     await tx.update(releaseTable).set({ deployStatus }).where(eq(releaseTable.uuid, uuid))
-  }
-
-  // Outside any transaction: it records a rollout the rollback just undid.
-  async markFailed(uuid: ReleaseUuid): Promise<void> {
-    await this.db
-      .update(releaseTable)
-      .set({ deployStatus: DeployStatus.Failed })
-      .where(eq(releaseTable.uuid, uuid))
   }
 }

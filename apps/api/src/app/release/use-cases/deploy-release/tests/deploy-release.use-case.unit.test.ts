@@ -25,7 +25,6 @@ function build(release = new ReleaseBuilder().withApp(app).withImageRef('nginx:1
   repository.findPlacement.resolves(placement)
   repository.findNewestRelease.resolves(release)
   repository.setDeployStatus.resolves()
-  repository.markFailed.resolves()
 
   const appRuntime = createStubInstance(MockAppRuntime)
   appRuntime.deploy.resolves()
@@ -92,7 +91,9 @@ describe('DeployReleaseUseCase', () => {
     appRuntime.deploy.rejects(error)
 
     await expect(usecase.execute('my-app')).rejects.toThrow(error)
-    expect(repository.markFailed.calledOnceWithExactly(release.uuid)).toBe(true)
+    expect(
+      repository.setDeployStatus.calledWith(match.any, release.uuid, DeployStatus.Failed),
+    ).toBe(true)
   })
 
   it('marks the rollout failed when the credentials cannot be decrypted', async () => {
@@ -101,7 +102,9 @@ describe('DeployReleaseUseCase', () => {
     cipher.openForApp.throws(new Error('could not be decrypted'))
 
     await expect(usecase.execute('my-app')).rejects.toThrow(/could not be decrypted/)
-    expect(repository.markFailed.calledOnceWithExactly(release.uuid)).toBe(true)
+    expect(
+      repository.setDeployStatus.calledWith(match.any, release.uuid, DeployStatus.Failed),
+    ).toBe(true)
   })
 
   it('re-applies a release that is already running without touching its status', async () => {
@@ -120,7 +123,6 @@ describe('DeployReleaseUseCase', () => {
 
     await expect(usecase.execute('my-app')).rejects.toThrow('transient apiserver error')
     expect(repository.setDeployStatus.called).toBe(false)
-    expect(repository.markFailed.called).toBe(false)
   })
 
   it('refuses an app with no release with 409', async () => {
@@ -143,6 +145,8 @@ describe('DeployReleaseUseCase', () => {
     appRuntime.deploy.rejects(new EnvironmentConflictError('taken'))
 
     await expect(usecase.execute('my-app')).rejects.toThrow(EnvironmentConflictError)
-    expect(repository.markFailed.calledOnceWithExactly(release.uuid)).toBe(true)
+    expect(
+      repository.setDeployStatus.calledWith(match.any, release.uuid, DeployStatus.Failed),
+    ).toBe(true)
   })
 })
