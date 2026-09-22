@@ -240,7 +240,7 @@ Use-case:
 
 ```ts
 import { BadGatewayException, Injectable, NotFoundException } from '@nestjs/common'
-import { type AppPlacement, appRefOf } from '#src/app/app-management/queries/app-placement.js'
+import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import { DeleteAppRepository } from '#src/app/app-management/use-cases/delete-app/delete-app.repository.js'
 import type { Database } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
@@ -267,7 +267,7 @@ export class DeleteAppUseCase {
 
   private async destroy(placement: AppPlacement): Promise<void> {
     try {
-      await this.appRuntime.destroy(appRefOf(placement))
+      await this.appRuntime.destroy(placement)
     } catch (error) {
       // The rows roll back, so the app stays listed and the delete can be retried.
       throw new BadGatewayException(
@@ -413,6 +413,8 @@ Delete `applyPin` and the "Cluster first, database second" comment block. `reapp
 ---
 
 ### Task 4: `deploy-release` — lock, mark pending, deploy; record `Failed` after the rollback
+
+> **Superseded in review (PR #232):** `Failed` is now written inside the transaction after rolling back a savepoint, not by `markFailed` after it — see AgDR-0047.
 
 **Files:**
 
@@ -808,7 +810,7 @@ Use-case — move the lookup inside the existing transaction:
           )
         }
         await this.repository.delete(tx, found.environment.uuid)
-        await this.destroy(environmentRefOf(found.project, found.environment))
+        await this.destroy(found)
       })
     } catch (error) {
       // The app FK is RESTRICT, so the DELETE itself fails while apps remain — no check-then-act race.
@@ -865,7 +867,7 @@ Why: a use-case whose only database call is `db.transaction` is still unit-testa
 await this.db.transaction(async (tx) => {
   const placement = await this.repository.findBySlug(tx, slug) // deciding read, locked
   await this.repository.deleteWithReleases(tx, placement.app.uuid) // DB writes
-  await this.appRuntime.destroy(appRefOf(placement)) // runtime call, last
+  await this.appRuntime.destroy(placement) // runtime call, last
 })
 ```
 
