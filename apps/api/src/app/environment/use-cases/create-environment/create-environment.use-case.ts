@@ -37,7 +37,7 @@ export class CreateEnvironmentUseCase {
       .withSlug(command.slug)
       .build()
 
-    // Provisioning runs inside the transaction so a runtime failure rolls the row back with it.
+    // Provisioning is the last step inside the transaction, so a runtime failure rolls the row back.
     const created = await this.db.transaction(async (tx) => {
       const inserted = await this.repository.insert(tx, environment)
       if (!inserted) {

@@ -20,15 +20,14 @@ export class DeleteEnvironmentUseCase {
   ) {}
 
   async execute(projectSlug: string, environmentSlug: string): Promise<void> {
-    const found = await this.repository.findBySlugs(projectSlug, environmentSlug)
-    if (!found) {
-      throw new NotFoundException(
-        `Environment '${environmentSlug}' was not found in project '${projectSlug}'.`,
-      )
-    }
     try {
-      // The environment is removed inside the transaction so a cluster failure keeps the row.
       await this.db.transaction(async (tx) => {
+        const found = await this.repository.findBySlugs(tx, projectSlug, environmentSlug)
+        if (!found) {
+          throw new NotFoundException(
+            `Environment '${environmentSlug}' was not found in project '${projectSlug}'.`,
+          )
+        }
         await this.repository.delete(tx, found.environment.uuid)
         await this.destroy(found)
       })

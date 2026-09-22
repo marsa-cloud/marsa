@@ -1,7 +1,7 @@
 import { before, describe, it } from 'node:test'
 import { BadGatewayException, ConflictException, NotFoundException } from '@nestjs/common'
 import { expect } from 'expect'
-import { createStubInstance } from 'sinon'
+import { createStubInstance, match } from 'sinon'
 import { EnvironmentBuilder } from '#src/app/environment/entities/environment.builder.js'
 import { DeleteEnvironmentRepository } from '#src/app/environment/use-cases/delete-environment/delete-environment.repository.js'
 import { DeleteEnvironmentUseCase } from '#src/app/environment/use-cases/delete-environment/delete-environment.use-case.js'
@@ -34,6 +34,7 @@ describe('DeleteEnvironmentUseCase', () => {
 
     await usecase.execute('demo', 'dev')
 
+    expect(repository.findBySlugs.calledOnceWithExactly(match.any, 'demo', 'dev')).toBe(true)
     expect(repository.delete.firstCall.args[1]).toBe(environment.uuid)
     expect(environments.destroy.firstCall.args[0]).toMatchObject({
       project: { slug: 'demo' },

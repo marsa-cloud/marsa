@@ -4,7 +4,12 @@ import { expect } from 'expect'
 import request from 'supertest'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
+import { EnvironmentBuilder } from '#src/app/environment/entities/environment.builder.js'
 import { environmentTable } from '#src/app/environment/entities/environment.table.js'
+import { ProjectBuilder } from '#src/app/project/entities/project.builder.js'
+import { projectTable } from '#src/app/project/entities/project.table.js'
+import type { MockEnvironmentRuntime } from '#src/modules/runtime/adapters/mock/mock-environment-runtime.js'
+import { EnvironmentRuntime } from '#src/modules/runtime/environment-runtime.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -48,5 +53,26 @@ describe('DELETE /api/v1/projects/:projectSlug/environments/:environmentSlug (e2
       .set('Cookie', cookie)
       .expect(404)
     await request(setup.httpServer).delete('/api/v1/projects/ghost/environments/dev').expect(401)
+  })
+
+  it('keeps the environment when the runtime cannot remove it', async () => {
+    const project = new ProjectBuilder().withSlug('keep-env').build()
+    const environment = new EnvironmentBuilder().withProject(project).withSlug('dev').build()
+    await setup.db.insert(projectTable).values(project)
+    await setup.db.insert(environmentTable).values(environment)
+    setup.testModule
+      .get<EnvironmentRuntime, MockEnvironmentRuntime>(EnvironmentRuntime)
+      .failNext('destroy', new Error('cluster down'))
+
+    await request(setup.httpServer)
+      .delete(`/api/v1/projects/${project.slug}/environments/${environment.slug}`)
+      .set('Cookie', cookie)
+      .expect(502)
+
+    const rows = await setup.db
+      .select()
+      .from(environmentTable)
+      .where(eq(environmentTable.uuid, environment.uuid))
+    expect(rows).toHaveLength(1)
   })
 })
