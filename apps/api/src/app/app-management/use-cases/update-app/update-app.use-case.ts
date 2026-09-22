@@ -7,6 +7,8 @@ import { UpdateAppRepository } from '#src/app/app-management/use-cases/update-ap
 import { UpdateAppResponse } from '#src/app/app-management/use-cases/update-app/update-app.response.js'
 import { deploySpecOf } from '#src/app/release/entities/release-deploy-spec.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
+import type { Database, Executor } from '#src/modules/database/drizzle.factory.js'
+import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
 
 // Writes App, then re-applies only when the pin actually changed: a pin is location rather than
@@ -16,6 +18,7 @@ export class UpdateAppUseCase {
   private readonly baseDomain: string
 
   constructor(
+    @InjectDatabase() private readonly db: Database,
     private readonly repository: UpdateAppRepository,
     private readonly credentialsCipher: ImagePullCredentialsCipher,
     private readonly appRuntime: AppRuntime,
@@ -25,54 +28,41 @@ export class UpdateAppUseCase {
   }
 
   async execute(slug: string, command: UpdateAppCommand): Promise<UpdateAppResponse> {
-    // Cluster first, database second. If the apply fails nothing is stored, so an identical retry
-    // still sees a changed pin and applies again. Storing first made the retry a no-op — the row
-    // already matched — leaving the cluster on the old affinity with nothing to surface the drift.
-    const pinned = command.nodePin === undefined ? undefined : await this.applyPin(slug, command)
+    return this.db.transaction(async (tx) => {
+      const placement = await this.repository.findPlacementBySlug(tx, slug)
+      if (!placement) {
+        throw new NotFoundException(`App '${slug}' was not found.`)
+      }
 
-    const updated = await this.repository.updateBySlug(slug, {
-      image: command.image,
-      containerPort: command.containerPort,
-      minReplicas: command.minReplicas,
-      maxReplicas: command.maxReplicas,
-      env: command.env,
-      nodePin: command.nodePin,
-      imagePullCredentialsEnc: this.credentialsEnc(command),
+      const updated = await this.repository.updateBySlug(tx, slug, {
+        image: command.image,
+        containerPort: command.containerPort,
+        minReplicas: command.minReplicas,
+        maxReplicas: command.maxReplicas,
+        env: command.env,
+        nodePin: command.nodePin,
+        imagePullCredentialsEnc: this.credentialsEnc(command),
+      })
+      if (!updated) {
+        throw new NotFoundException(`App '${slug}' was not found.`)
+      }
+
+      const pinChanged =
+        command.nodePin !== undefined && !nodePinEquals(placement.app.nodePin, updated.nodePin)
+      if (pinChanged) {
+        await this.reapply(tx, { ...placement, app: updated })
+      }
+      return new UpdateAppResponse(updated)
     })
-    if (!updated) {
-      throw new NotFoundException(`App '${slug}' was not found.`)
-    }
-    if (pinned === 'missing') {
-      throw new NotFoundException(`App '${slug}' was not found.`)
-    }
-
-    return new UpdateAppResponse(updated)
   }
 
-  private async applyPin(
-    slug: string,
-    command: UpdateAppCommand,
-  ): Promise<'applied' | 'unchanged' | 'missing'> {
-    const placement = await this.repository.findPlacementBySlug(slug)
-    if (!placement) {
-      return 'missing'
-    }
-    const nodePin = command.nodePin ?? null
-    if (nodePinEquals(placement.app.nodePin, nodePin)) {
-      return 'unchanged'
-    }
-
-    await this.reapply({ ...placement, app: { ...placement.app, nodePin } })
-    return 'applied'
-  }
-
-  private async reapply(placement: AppPlacement): Promise<void> {
+  private async reapply(tx: Executor, placement: AppPlacement): Promise<void> {
     const liveUuid = await this.appRuntime.readLiveReleaseUuid(placement)
     if (!liveUuid) {
       return
     }
 
-    const release = await this.repository.findRelease(liveUuid, placement.app.uuid)
+    const release = await this.repository.findRelease(tx, liveUuid, placement.app.uuid)
     if (!release) {
       // The runtime runs a release Marsa has no record of for this app: state is already wrong.
       throw new InternalServerErrorException(

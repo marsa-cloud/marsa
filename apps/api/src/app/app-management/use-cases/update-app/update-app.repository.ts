@@ -9,8 +9,7 @@ import {
 } from '#src/app/app-management/queries/app-placement.js'
 import { type Release, releaseTable } from '#src/app/release/entities/release.table.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
-import type { Database } from '#src/modules/database/drizzle.factory.js'
-import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
+import type { Executor } from '#src/modules/database/drizzle.factory.js'
 
 export interface AppConfigPatch {
   image?: string
@@ -24,16 +23,14 @@ export interface AppConfigPatch {
 
 @Injectable()
 export class UpdateAppRepository {
-  constructor(@InjectDatabase() private readonly db: Database) {}
-
   // Undefined fields are left untouched; undefined result means no app has the slug.
-  async updateBySlug(slug: string, patch: AppConfigPatch): Promise<App | undefined> {
+  async updateBySlug(tx: Executor, slug: string, patch: AppConfigPatch): Promise<App | undefined> {
     const { maxReplicas, ...rest } = patch
     const floor = sql`COALESCE(${patch.minReplicas ?? null}::integer, ${appTable.minReplicas})`
     // The command can only compare the fields it carries; the stored floor may be higher.
     const ceiling = sql`GREATEST(COALESCE(${maxReplicas ?? null}::integer, ${appTable.maxReplicas}), ${floor})`
 
-    const [app] = await this.db
+    const [app] = await tx
       .update(appTable)
       .set({ ...rest, maxReplicas: ceiling })
       .where(eq(appTable.slug, slug))
@@ -41,14 +38,21 @@ export class UpdateAppRepository {
     return app
   }
 
-  async findPlacementBySlug(slug: string): Promise<AppPlacement | undefined> {
-    const [placement] = await selectAppPlacement(this.db).where(eq(appTable.slug, slug)).limit(1)
+  async findPlacementBySlug(tx: Executor, slug: string): Promise<AppPlacement | undefined> {
+    const [placement] = await selectAppPlacement(tx)
+      .where(eq(appTable.slug, slug))
+      .limit(1)
+      .for('update', { of: appTable })
     return placement
   }
 
   // Scoped by app too: a release uuid read off the cluster can't address another app's release.
-  async findRelease(uuid: ReleaseUuid, appUuid: AppUuid): Promise<Release | undefined> {
-    const [release] = await this.db
+  async findRelease(
+    tx: Executor,
+    uuid: ReleaseUuid,
+    appUuid: AppUuid,
+  ): Promise<Release | undefined> {
+    const [release] = await tx
       .select()
       .from(releaseTable)
       .where(and(eq(releaseTable.uuid, uuid), eq(releaseTable.appUuid, appUuid)))
