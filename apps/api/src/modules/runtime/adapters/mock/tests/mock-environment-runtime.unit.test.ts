@@ -12,9 +12,17 @@ const ENVIRONMENT: EnvironmentRef = {
 describe('MockEnvironmentRuntime.provision', () => {
   it('fails exactly once when armed, so one test cannot leak into the next suite', async () => {
     const runtime = new MockEnvironmentRuntime()
-    runtime.failNextProvision(new Error('cluster down'))
+    runtime.failNext('provision', new Error('cluster down'))
 
     await expect(runtime.provision(ENVIRONMENT)).rejects.toThrow('cluster down')
     await expect(runtime.provision(ENVIRONMENT)).resolves.toBeUndefined()
+  })
+
+  it('arms destroy independently of provision', async () => {
+    const runtime = new MockEnvironmentRuntime()
+    runtime.failNext('destroy', new Error('cluster down'))
+
+    await expect(runtime.provision(ENVIRONMENT)).resolves.toBeUndefined()
+    await expect(runtime.destroy(ENVIRONMENT)).rejects.toThrow('cluster down')
   })
 })
