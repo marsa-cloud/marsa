@@ -3,6 +3,7 @@ import { expect } from 'expect'
 import request from 'supertest'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
+import type { Environment } from '#src/app/environment/entities/environment.table.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
@@ -14,12 +15,14 @@ const SLUG = 'detail-e2e-app'
 
 describe('GET /api/v1/apps/:slug (e2e)', () => {
   let setup: TestSetup
+  let environment: Environment
   let sessionCookie: string
   const mockBackend = () => setup.testModule.get<DeployBackend, MockDeployBackend>(DeployBackend)
 
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
     sessionCookie = await setup.authenticate()
+    environment = (await setup.seedEnvironment()).environment
   })
 
   after(async () => {
@@ -31,6 +34,7 @@ describe('GET /api/v1/apps/:slug (e2e)', () => {
       .insert(appTable)
       .values(
         new AppBuilder()
+          .withEnvironmentUuid(environment.uuid)
           .withSlug(SLUG)
           .withImage('nginx:1.27')
           .withContainerPort(8080)
@@ -47,6 +51,8 @@ describe('GET /api/v1/apps/:slug (e2e)', () => {
 
     expect(response.body).toMatchObject({
       slug: SLUG,
+      project: { slug: 'my-project', name: 'My Project' },
+      environment: { uuid: environment.uuid, slug: 'production', name: 'Production' },
       image: 'nginx:1.27',
       containerPort: 8080,
       minReplicas: 2,
@@ -57,7 +63,11 @@ describe('GET /api/v1/apps/:slug (e2e)', () => {
   })
 
   it('reports no undeployed changes when the running release matches the saved config', async () => {
-    const app = new AppBuilder().withSlug('detail-e2e-live').withEnv({ A: '1' }).build()
+    const app = new AppBuilder()
+      .withEnvironmentUuid(environment.uuid)
+      .withSlug('detail-e2e-live')
+      .withEnv({ A: '1' })
+      .build()
     const live = new ReleaseBuilder().withApp(app).build()
     await setup.db.insert(appTable).values(app)
     await setup.db.insert(releaseTable).values(live)
@@ -72,7 +82,11 @@ describe('GET /api/v1/apps/:slug (e2e)', () => {
   })
 
   it('still warns when a matching release exists but never reached the cluster', async () => {
-    const app = new AppBuilder().withSlug('detail-e2e-stuck').withEnv({ A: 'new' }).build()
+    const app = new AppBuilder()
+      .withEnvironmentUuid(environment.uuid)
+      .withSlug('detail-e2e-stuck')
+      .withEnv({ A: 'new' })
+      .build()
     const live = new ReleaseBuilder().withApp({ ...app, env: { A: 'old' } }).build()
     const neverDeployed = new ReleaseBuilder().withApp(app).build()
     await setup.db.insert(appTable).values(app)

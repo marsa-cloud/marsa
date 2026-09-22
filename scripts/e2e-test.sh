@@ -5,11 +5,13 @@ set -euo pipefail
 CLUSTER="${MARSA_E2E_CLUSTER:-marsa-e2e}"
 BASE_DOMAIN="${MARSA_E2E_DOMAIN:-127.0.0.1.nip.io}"
 NS="${MARSA_NAMESPACE:-marsa}"
-APPS_NS="${MARSA_APPS_NAMESPACE:-marsa-apps}"
 KEDA_NS="${MARSA_KEDA_NAMESPACE:-keda}"
 TRAEFIK_NS="${MARSA_TRAEFIK_NAMESPACE:-kube-system}"
 APP_SLUG="e2e-app"
 APP_IMAGE="nginx:1.27"
+PROJECT_SLUG="e2e"
+ENV_SLUG="dev"
+APPS_NS="${PROJECT_SLUG}-${ENV_SLUG}"
 
 # Defaults to 443 (CI's real-K3s path). Locally set to the k3d host port when
 # :443 is taken; the suffix is appended to every HTTPS URL.
@@ -78,14 +80,45 @@ if [ "$seed_rc" -ne 0 ]; then
   cat "$seed_out" >&2
 fi
 
-echo "== stage: deploy app via API =="
+echo "== stage: create project + environment =="
 api="https://api.${BASE_DOMAIN}${PORT_SUFFIX}/api/v1"
+for attempt in $(seq 1 20); do
+  http -X POST "${api}/projects" -H 'Content-Type: application/json' -H "Cookie: ${cookie}" \
+    -d "{\"name\":\"E2E\",\"slug\":\"${PROJECT_SLUG}\"}" || true
+  echo "  attempt ${attempt}: POST /projects -> ${HTTP_STATUS}"
+  case "$HTTP_STATUS" in 2??|409) break ;; esac
+  sleep 3
+done
+case "$HTTP_STATUS" in 2??|409) : ;; *) fail project "POST /projects -> ${HTTP_STATUS}; body: ${HTTP_BODY}" ;; esac
+
+http -X POST "${api}/projects/${PROJECT_SLUG}/environments" -H 'Content-Type: application/json' \
+  -H "Cookie: ${cookie}" -d "{\"name\":\"Dev\",\"slug\":\"${ENV_SLUG}\"}" || true
+case "$HTTP_STATUS" in 2??|409) : ;; *) fail environment "POST environments -> ${HTTP_STATUS}; body: ${HTTP_BODY}" ;; esac
+
+http "${api}/projects/${PROJECT_SLUG}/environments" -H "Cookie: ${cookie}" || true
+env_uuid="$(printf '%s' "$HTTP_BODY" | grep -oE '"uuid":"[0-9a-f-]{36}"' | head -1 | cut -d'"' -f4)"
+[ -n "$env_uuid" ] || fail environment "no environment uuid in: ${HTTP_BODY}"
+
+echo "== stage: environment namespace provisioned =="
+kubectl get ns "$APPS_NS" -o jsonpath='{.metadata.labels.marsa\.cloud/managed-by}' | grep -qx marsa-api \
+  || fail namespace "namespace ${APPS_NS} missing or not labelled managed-by=marsa-api"
+kubectl -n "$APPS_NS" get rolebinding marsa-deployer >/dev/null \
+  || fail namespace "RoleBinding marsa-deployer missing in ${APPS_NS}"
+
+echo "== stage: admission fence holds =="
+# Server-side dry run runs admission. Target the release namespace: kube-public is refused by
+# Kubernetes itself, which would pass without the policy.
+fence_out="$(kubectl --as="system:serviceaccount:${NS}:marsa-api" delete ns "$NS" --dry-run=server 2>&1 || true)"
+printf '%s' "$fence_out" | grep -q 'marsa-api-namespace-fence' \
+  || fail fence "deleting ${NS} as marsa-api was not refused by the fence: ${fence_out}"
+
+echo "== stage: deploy app via API =="
 create_status=""
 for attempt in $(seq 1 20); do
   http -X POST "${api}/apps" \
     -H 'Content-Type: application/json' \
     -H "Cookie: ${cookie}" \
-    -d "{\"slug\":\"${APP_SLUG}\",\"image\":\"${APP_IMAGE}\",\"containerPort\":80}" || true
+    -d "{\"slug\":\"${APP_SLUG}\",\"image\":\"${APP_IMAGE}\",\"containerPort\":80,\"environmentUuid\":\"${env_uuid}\"}" || true
   create_status="$HTTP_STATUS"
   echo "  attempt ${attempt}: POST /apps -> ${create_status}"
   case "$create_status" in
@@ -109,7 +142,6 @@ case "$HTTP_STATUS" in
   2??) : ;;
   *) fail deploy "POST /apps/${APP_SLUG}/deploy -> ${HTTP_STATUS}; body: ${HTTP_BODY}" ;;
 esac
-
 echo "== stage: k8s resources created =="
 kubectl -n "$APPS_NS" get deploy "$APP_SLUG" || fail resources "deployment ${APP_SLUG} missing in ${APPS_NS}"
 kubectl -n "$APPS_NS" get service "$APP_SLUG" || fail resources "service ${APP_SLUG} missing in ${APPS_NS}"
@@ -140,11 +172,29 @@ kubectl -n "$APPS_NS" get hpa -o name 2>/dev/null | grep -q "$APP_SLUG" \
   || fail scaling "no HPA for ${APP_SLUG} — KEDA never took ownership of spec.replicas"
 
 echo "== stage: app reachable over HTTPS =="
+reachable=""
 for _ in $(seq 1 30); do
   if http "https://${APP_SLUG}.${BASE_DOMAIN}${PORT_SUFFIX}/" && [ "$HTTP_STATUS" = 200 ]; then
-    echo "E2E PASS: ${APP_SLUG}.${BASE_DOMAIN} reachable over HTTPS (200)"
-    exit 0
+    reachable=1
+    break
   fi
   sleep 2
 done
-fail app-reachable "GET https://${APP_SLUG}.${BASE_DOMAIN}${PORT_SUFFIX}/ -> ${HTTP_STATUS}; body: ${HTTP_BODY}"
+[ -n "$reachable" ] || fail app-reachable "GET https://${APP_SLUG}.${BASE_DOMAIN}${PORT_SUFFIX}/ -> ${HTTP_STATUS}; body: ${HTTP_BODY}"
+echo "  ${APP_SLUG}.${BASE_DOMAIN} reachable over HTTPS (200)"
+
+echo "== stage: environment delete is blocked while it has an app =="
+env_url="${api}/projects/${PROJECT_SLUG}/environments/${ENV_SLUG}"
+http -X DELETE "$env_url" -H "Cookie: ${cookie}" || true
+[ "$HTTP_STATUS" = 409 ] || fail env-delete "expected 409 deleting a non-empty environment, got ${HTTP_STATUS}"
+
+echo "== stage: teardown =="
+http -X DELETE "${api}/apps/${APP_SLUG}" -H "Cookie: ${cookie}" || true
+[ "$HTTP_STATUS" = 204 ] || fail teardown "DELETE /apps/${APP_SLUG} -> ${HTTP_STATUS}; body: ${HTTP_BODY}"
+http -X DELETE "$env_url" -H "Cookie: ${cookie}" || true
+[ "$HTTP_STATUS" = 204 ] || fail teardown "DELETE environment -> ${HTTP_STATUS}; body: ${HTTP_BODY}"
+kubectl wait --for=delete "ns/${APPS_NS}" --timeout=120s || fail teardown "namespace ${APPS_NS} was not deleted"
+http -X DELETE "${api}/projects/${PROJECT_SLUG}" -H "Cookie: ${cookie}" || true
+[ "$HTTP_STATUS" = 204 ] || fail teardown "DELETE /projects/${PROJECT_SLUG} -> ${HTTP_STATUS}"
+
+echo "E2E PASS"

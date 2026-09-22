@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common'
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { CreateAppCommand } from '#src/app/app-management/use-cases/create-app/create-app.command.js'
@@ -19,6 +19,7 @@ export class CreateAppUseCase {
     const credentials = command.imagePullCredentials
 
     const app = new AppBuilder()
+      .withEnvironmentUuid(command.environmentUuid)
       .withSlug(command.slug)
       .withDomain({ type: 'subdomain' })
       .withImage(command.image)
@@ -29,7 +30,11 @@ export class CreateAppUseCase {
       .withImagePullCredentialsEnc(credentials ? this.credentialsCipher.seal(credentials) : null)
       .build()
 
-    if (!(await this.repository.insert(app))) {
+    const outcome = await this.repository.insert(app)
+    if (outcome === 'environment-missing') {
+      throw new NotFoundException(`Environment '${command.environmentUuid}' was not found.`)
+    }
+    if (outcome === 'slug-taken') {
       throw new ConflictException(`An app with slug '${command.slug}' already exists.`)
     }
 

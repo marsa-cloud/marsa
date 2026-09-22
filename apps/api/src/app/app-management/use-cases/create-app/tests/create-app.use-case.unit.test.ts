@@ -1,5 +1,5 @@
 import { before, describe, it } from 'node:test'
-import { ConflictException } from '@nestjs/common'
+import { ConflictException, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
@@ -11,7 +11,7 @@ import { TestBench } from '#src/test/setup/test-bench.js'
 
 function build() {
   const repository = createStubInstance(CreateAppRepository)
-  repository.insert.resolves(true)
+  repository.insert.resolves('inserted')
   const config = createStubInstance(ConfigService)
   config.getOrThrow.returns('demo.marsa.cc')
   const cipher = createStubInstance(ImagePullCredentialsCipher)
@@ -25,11 +25,13 @@ describe('CreateAppUseCase', () => {
   it('stores the app without touching the cluster and returns its URL', async () => {
     const { usecase, repository } = build()
 
-    const result = await usecase.execute(new CreateAppCommandBuilder().withEnv({ A: '1' }).build())
+    const command = new CreateAppCommandBuilder().withEnv({ A: '1' }).build()
+    const result = await usecase.execute(command)
 
     expect(result).toEqual({ slug: 'my-app', url: 'https://my-app.demo.marsa.cc' })
     const [app] = repository.insert.firstCall.args
     expect(app).toMatchObject({
+      environmentUuid: command.environmentUuid,
       slug: 'my-app',
       image: 'nginx:1.27',
       containerPort: 80,
@@ -62,10 +64,19 @@ describe('CreateAppUseCase', () => {
 
   it('rejects a taken slug with 409', async () => {
     const { usecase, repository } = build()
-    repository.insert.resolves(false)
+    repository.insert.resolves('slug-taken')
 
     await expect(usecase.execute(new CreateAppCommandBuilder().build())).rejects.toThrow(
       ConflictException,
+    )
+  })
+
+  it('rejects an unknown environment with 404', async () => {
+    const { usecase, repository } = build()
+    repository.insert.resolves('environment-missing')
+
+    await expect(usecase.execute(new CreateAppCommandBuilder().build())).rejects.toThrow(
+      NotFoundException,
     )
   })
 })

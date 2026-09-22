@@ -110,6 +110,59 @@ export const zUpdateUserRoleResponse = z.object({
   role: zUserRole,
 })
 
+export const zCreateProjectCommand = z.object({
+  name: z.string().max(255),
+  slug: z
+    .string()
+    .max(30)
+    .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/),
+})
+
+export const zCreateProjectResponse = z.object({
+  uuid: z.uuid(),
+  name: z.string(),
+  slug: z.string(),
+})
+
+export const zProjectSummary = z.object({
+  uuid: z.uuid(),
+  name: z.string(),
+  slug: z.string(),
+  createdAt: z.iso.datetime(),
+})
+
+export const zViewProjectIndexResponse = z.object({
+  items: z.array(zProjectSummary),
+})
+
+export const zCreateEnvironmentCommand = z.object({
+  name: z.string().max(255),
+  slug: z
+    .string()
+    .max(32)
+    .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/),
+})
+
+export const zCreateEnvironmentResponse = z.object({
+  uuid: z.uuid(),
+  name: z.string(),
+  slug: z.string(),
+  namespace: z.string(),
+  projectSlug: z.string(),
+})
+
+export const zEnvironmentSummary = z.object({
+  uuid: z.uuid(),
+  name: z.string(),
+  slug: z.string(),
+  namespace: z.string(),
+  createdAt: z.iso.datetime(),
+})
+
+export const zViewEnvironmentIndexResponse = z.object({
+  items: z.array(zEnvironmentSummary),
+})
+
 export const zCreateReleaseCommand = z.object({
   fromReleaseUuid: z.uuid().optional(),
 })
@@ -168,6 +221,7 @@ export const zImagePullCredentials = z.object({
 })
 
 export const zCreateAppCommand = z.object({
+  environmentUuid: z.uuid(),
   slug: z
     .string()
     .max(63)
@@ -194,10 +248,23 @@ export const zViewAppIndexPaginationQuery = z.object({
   key: zViewAppIndexQueryKey.nullish(),
 })
 
+export const zAppProjectRef = z.object({
+  slug: z.string(),
+  name: z.string(),
+})
+
+export const zAppEnvironmentRef = z.object({
+  uuid: z.uuid(),
+  slug: z.string(),
+  name: z.string(),
+})
+
 export const zAppSummary = z.object({
   slug: z.string(),
   image: z.string(),
   url: z.string(),
+  project: zAppProjectRef,
+  environment: zAppEnvironmentRef,
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 })
@@ -215,6 +282,8 @@ export const zViewAppDetailResponse = z.object({
   slug: z.string(),
   image: z.string(),
   url: z.string(),
+  project: zAppProjectRef,
+  environment: zAppEnvironmentRef,
   containerPort: z.int(),
   minReplicas: z.int(),
   maxReplicas: z.int(),
@@ -262,6 +331,7 @@ export const zImagePullCredentialsWritable = z.object({
 })
 
 export const zCreateAppCommandWritable = z.object({
+  environmentUuid: z.uuid(),
   slug: z
     .string()
     .max(63)
@@ -314,6 +384,45 @@ export const zUpdateUserRoleV1Path = z.object({
 })
 
 export const zUpdateUserRoleV1Response = zUpdateUserRoleResponse
+
+export const zViewProjectIndexV1Response = zViewProjectIndexResponse
+
+export const zCreateProjectV1Body = zCreateProjectCommand
+
+export const zCreateProjectV1Response = zCreateProjectResponse
+
+export const zDeleteProjectV1Path = z.object({
+  slug: z.string(),
+})
+
+/**
+ * The project was deleted.
+ */
+export const zDeleteProjectV1Response = z.void()
+
+export const zViewEnvironmentIndexV1Path = z.object({
+  projectSlug: z.string(),
+})
+
+export const zViewEnvironmentIndexV1Response = zViewEnvironmentIndexResponse
+
+export const zCreateEnvironmentV1Body = zCreateEnvironmentCommand
+
+export const zCreateEnvironmentV1Path = z.object({
+  projectSlug: z.string(),
+})
+
+export const zCreateEnvironmentV1Response = zCreateEnvironmentResponse
+
+export const zDeleteEnvironmentV1Path = z.object({
+  projectSlug: z.string(),
+  environmentSlug: z.string(),
+})
+
+/**
+ * The environment and its namespace were deleted.
+ */
+export const zDeleteEnvironmentV1Response = z.void()
 
 export const zViewReleaseIndexV1Path = z.object({
   slug: z.string(),

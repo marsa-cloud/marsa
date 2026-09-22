@@ -5,6 +5,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   Max,
   MaxLength,
@@ -22,8 +23,13 @@ import {
 import { IsAppEnvRecord } from '#src/app/app-management/entities/app-env.js'
 import { ImagePullCredentials } from '#src/app/app-management/entities/image-pull-credentials.js'
 import { IsGteField } from '#src/app/app-management/entities/is-gte-field.validator.js'
+import type { EnvironmentUuid } from '#src/app/environment/entities/environment.uuid.js'
 
 export class CreateAppCommand {
+  @ApiProperty({ type: String, format: 'uuid', description: 'Environment the app lives in.' })
+  @IsUUID()
+  environmentUuid!: EnvironmentUuid
+
   @ApiProperty({
     type: String,
     example: 'my-app',

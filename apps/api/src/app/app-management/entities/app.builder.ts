@@ -1,6 +1,7 @@
 import type { App } from '#src/app/app-management/entities/app.table.js'
 import type { AppUuid } from '#src/app/app-management/entities/app.uuid.js'
 import type { AppDomain } from '#src/app/app-management/entities/app-domain.types.js'
+import type { EnvironmentUuid } from '#src/app/environment/entities/environment.uuid.js'
 import { generateUuid } from '#src/utils/uuid.js'
 
 /** Fluent builder for {@link App}; constructor seeds valid defaults so `new AppBuilder().build()` is always usable. */
@@ -11,6 +12,7 @@ export class AppBuilder {
     const now = new Date()
     this.app = {
       uuid: generateUuid<AppUuid>(),
+      environmentUuid: generateUuid<EnvironmentUuid>(),
       slug: 'my-app',
       domain: { type: 'subdomain' },
       image: 'nginx:1.27',
@@ -22,6 +24,11 @@ export class AppBuilder {
       createdAt: now,
       updatedAt: now,
     }
+  }
+
+  withEnvironmentUuid(environmentUuid: EnvironmentUuid): this {
+    this.app.environmentUuid = environmentUuid
+    return this
   }
 
   withSlug(slug: string): this {

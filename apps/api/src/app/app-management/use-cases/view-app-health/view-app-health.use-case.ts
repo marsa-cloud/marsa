@@ -1,10 +1,10 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, NotFoundException } from '@nestjs/common'
 import { ViewAppHealthRepository } from '#src/app/app-management/use-cases/view-app-health/view-app-health.repository.js'
 import {
   AppHealthStatus,
   ViewAppHealthResponse,
 } from '#src/app/app-management/use-cases/view-app-health/view-app-health.response.js'
-import { OPERATOR_APPS_NAMESPACE } from '#src/modules/kubernetes/deploy-backend.constants.js'
+import { namespaceOf } from '#src/app/environment/entities/namespace.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
 import type { AppHealth } from '#src/modules/kubernetes/deploy-backend.types.js'
 
@@ -36,8 +36,12 @@ export class ViewAppHealthUseCase {
   ) {}
 
   async execute(slug: string): Promise<ViewAppHealthResponse> {
-    const app = await this.repository.findBySlug(slug)
-    const health = await this.deployBackend.readAppHealth(OPERATOR_APPS_NAMESPACE, slug)
-    return new ViewAppHealthResponse(verdict(health, app?.minReplicas ?? 1), health)
+    const placement = await this.repository.findBySlug(slug)
+    if (!placement) {
+      throw new NotFoundException(`App '${slug}' was not found.`)
+    }
+    const namespace = namespaceOf(placement.project, placement.environment)
+    const health = await this.deployBackend.readAppHealth(namespace, slug)
+    return new ViewAppHealthResponse(verdict(health, placement.app.minReplicas), health)
   }
 }

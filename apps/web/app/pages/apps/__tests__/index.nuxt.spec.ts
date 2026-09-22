@@ -30,6 +30,8 @@ const anApp = (over = {}) => ({
   slug: 'my-app',
   image: 'ghcr.io/acme/my-app:v2',
   url: 'https://my-app.marsa.app',
+  project: { slug: 'demo', name: 'Demo' },
+  environment: { uuid: '0190c3c0-0000-7000-8000-000000000002', slug: 'dev', name: 'Dev' },
   createdAt: '2026-07-10T10:00:00.000Z',
   updatedAt: '2026-07-10T10:01:00.000Z',
   ...over,
@@ -62,6 +64,7 @@ describe('apps/index list page', () => {
     expect(wrapper.text()).toContain('web-ui')
     expect(wrapper.text()).toContain('ghcr.io/acme/my-app:v2')
     expect(wrapper.text()).toContain('https://my-app.marsa.app')
+    expect(wrapper.text()).toContain('demo / dev')
     const detailLink = wrapper.findAll('a').find(a => a.attributes('href') === '/apps/my-app')
     expect(detailLink).toBeTruthy()
   })

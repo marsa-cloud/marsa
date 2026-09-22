@@ -4,6 +4,7 @@ import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import type { App } from '#src/app/app-management/entities/app.table.js'
+import { AppPlacementBuilder } from '#src/app/app-management/queries/app-placement.builder.js'
 import { ViewAppIndexQueryBuilder } from '#src/app/app-management/use-cases/view-app-index/query/view-app-index.query.builder.js'
 import { ViewAppIndexRepository } from '#src/app/app-management/use-cases/view-app-index/view-app-index.repository.js'
 import { ViewAppIndexUseCase } from '#src/app/app-management/use-cases/view-app-index/view-app-index.use-case.js'
@@ -14,7 +15,7 @@ const BASE_DOMAIN = 'demo.marsa.cc'
 
 function build(apps: App[]) {
   const repository = createStubInstance(ViewAppIndexRepository)
-  repository.listApps.resolves(apps)
+  repository.listApps.resolves(apps.map((app) => new AppPlacementBuilder().withApp(app).build()))
   const config = createStubInstance(ConfigService)
   config.getOrThrow.returns(BASE_DOMAIN)
   const usecase = new ViewAppIndexUseCase(repository, config)
@@ -36,6 +37,8 @@ describe('ViewAppIndexUseCase', () => {
     expect(result.items[0].slug).toBe('alpha')
     expect(result.items[0].image).toBe('nginx:1.27')
     expect(result.items[0].url).toBe('https://alpha.demo.marsa.cc')
+    expect(result.items[0].project).toEqual({ slug: 'my-project', name: 'My Project' })
+    expect(result.items[0].environment).toMatchObject({ slug: 'production', name: 'Production' })
   })
 
   it('preserves repository ordering across multiple apps', async () => {

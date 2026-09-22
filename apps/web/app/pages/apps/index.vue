@@ -85,6 +85,7 @@ function formatTime(iso: string) {
             class="-mx-2 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md px-2 py-3 transition-colors first:pt-0 last:pb-0 hover:bg-elevated/50"
           >
             <span class="font-medium">{{ app.slug }}</span>
+            <span class="text-xs text-muted">{{ app.project.slug }} / {{ app.environment.slug }}</span>
             <span class="font-mono text-xs text-muted">{{ app.image }}</span>
             <span class="font-mono text-xs text-muted">{{ app.url }}</span>
             <span class="text-xs text-muted ms-auto">{{ formatTime(app.createdAt) }}</span>

@@ -2,7 +2,23 @@ import { defineRelations } from 'drizzle-orm'
 import * as schema from '#src/sql/schema.js'
 
 export const relations = defineRelations(schema, (r) => ({
+  projectTable: {
+    environments: r.many.environmentTable(),
+  },
+  environmentTable: {
+    project: r.one.projectTable({
+      from: r.environmentTable.projectUuid,
+      to: r.projectTable.uuid,
+      optional: false,
+    }),
+    apps: r.many.appTable(),
+  },
   appTable: {
+    environment: r.one.environmentTable({
+      from: r.appTable.environmentUuid,
+      to: r.environmentTable.uuid,
+      optional: false,
+    }),
     releases: r.many.releaseTable(),
   },
   releaseTable: {
