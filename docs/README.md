@@ -4,9 +4,10 @@
 
 Installing on a VPS and adding nodes are covered in the [root README](../README.md).
 
-| Page                           | What it covers                                      |
-| ------------------------------ | --------------------------------------------------- |
-| [`hardening.md`](hardening.md) | Secrets encryption at rest, node-to-node encryption |
+| Page                           | What it covers                                           |
+| ------------------------------ | -------------------------------------------------------- |
+| [`hardening.md`](hardening.md) | Secrets encryption at rest, node-to-node encryption      |
+| [`placement.md`](placement.md) | Pinning apps to nodes, and what pinning does not buy you |
 
 ## Working on Marsa
 

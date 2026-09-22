@@ -1,4 +1,5 @@
 import type { ImagePullCredentials } from '#src/app/app-management/entities/image-pull-credentials.js'
+import type { NodePin } from '#src/app/app-management/entities/node-pin.js'
 import { UpdateAppCommand } from '#src/app/app-management/use-cases/update-app/update-app.command.js'
 
 export class UpdateAppCommandBuilder {
@@ -26,6 +27,11 @@ export class UpdateAppCommandBuilder {
 
   withImagePullCredentials(imagePullCredentials: ImagePullCredentials | null): this {
     this.command.imagePullCredentials = imagePullCredentials
+    return this
+  }
+
+  withNodePin(nodePin: NodePin | null): this {
+    this.command.nodePin = nodePin
     return this
   }
 

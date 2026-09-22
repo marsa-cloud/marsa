@@ -23,6 +23,7 @@ import {
 import { IsAppEnvRecord } from '#src/app/app-management/entities/app-env.js'
 import { ImagePullCredentials } from '#src/app/app-management/entities/image-pull-credentials.js'
 import { IsGteField } from '#src/app/app-management/entities/is-gte-field.validator.js'
+import { NodePin } from '#src/app/app-management/entities/node-pin.js'
 import type { EnvironmentUuid } from '#src/app/environment/entities/environment.uuid.js'
 
 export class CreateAppCommand {
@@ -105,4 +106,13 @@ export class CreateAppCommand {
   @ValidateNested()
   @Type(() => ImagePullCredentials)
   imagePullCredentials?: ImagePullCredentials
+
+  @ApiPropertyOptional({
+    type: NodePin,
+    description: 'Restrict scheduling to nodes matching this label. Omit to schedule anywhere.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => NodePin)
+  nodePin?: NodePin
 }

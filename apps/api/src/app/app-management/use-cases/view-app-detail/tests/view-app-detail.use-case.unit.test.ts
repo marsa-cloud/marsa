@@ -8,6 +8,7 @@ import { AppPlacementBuilder } from '#src/app/app-management/queries/app-placeme
 import { ViewAppDetailRepository } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.repository.js'
 import { ViewAppDetailUseCase } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.use-case.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
+import { InvalidReleaseAnnotationError } from '#src/modules/kubernetes/deploy-backend.js'
 import { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
@@ -89,5 +90,21 @@ describe('ViewAppDetailUseCase', () => {
     repository.findBySlug.resolves(undefined)
 
     await expect(usecase.execute('ghost')).rejects.toThrow(NotFoundException)
+  })
+
+  it('surfaces a malformed release annotation instead of hiding it as "no changes"', async () => {
+    const { usecase, deployBackend } = build()
+    deployBackend.readLiveReleaseUuid.rejects(new InvalidReleaseAnnotationError('bad annotation'))
+
+    await expect(usecase.execute('my-app')).rejects.toThrow(InvalidReleaseAnnotationError)
+  })
+
+  it('still reports no undeployed changes when the cluster is unreachable', async () => {
+    const { usecase, deployBackend } = build()
+    deployBackend.readLiveReleaseUuid.rejects(new Error('ECONNREFUSED'))
+
+    const response = await usecase.execute('my-app')
+
+    expect(response.hasUndeployedChanges).toBe(false)
   })
 })

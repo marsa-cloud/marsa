@@ -8,7 +8,9 @@ import type {
   RunLogs,
   RunLogsOptions,
 } from '#src/modules/kubernetes/deploy-backend.types.js'
+import { parseReleaseAnnotation } from '#src/modules/kubernetes/release-annotation.js'
 import { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
+import type { Uuid } from '#src/utils/uuid.js'
 
 /**
  * Network-free `DeployBackend` for test/local environments (mirrors the
@@ -45,8 +47,10 @@ export class MockDeployBackend extends DeployBackend {
     return Promise.resolve(RolloutStatus.Complete)
   }
 
-  readLiveReleaseUuid(_namespace: string, deploymentName: string): Promise<string | null> {
-    return Promise.resolve(this.liveReleases.get(deploymentName) ?? null)
+  readLiveReleaseUuid(_namespace: string, deploymentName: string): Promise<Uuid<'Release'> | null> {
+    const annotation = this.liveReleases.get(deploymentName)
+    // Deferred so a malformed annotation rejects like the real backend instead of throwing sync.
+    return Promise.resolve().then(() => parseReleaseAnnotation(annotation, deploymentName))
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

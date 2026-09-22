@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger'
 import type { App } from '#src/app/app-management/entities/app.table.js'
+import { NodePin } from '#src/app/app-management/entities/node-pin.js'
 
 export class UpdateAppResponse {
   @ApiProperty({ type: String, example: 'my-app' })
@@ -20,6 +21,9 @@ export class UpdateAppResponse {
   @ApiProperty({ type: Object, additionalProperties: { type: 'string' }, example: { A: '1' } })
   readonly env: Record<string, string>
 
+  @ApiProperty({ type: NodePin, nullable: true })
+  readonly nodePin: NodePin | null
+
   constructor(app: App) {
     this.slug = app.slug
     this.image = app.image
@@ -27,5 +31,6 @@ export class UpdateAppResponse {
     this.minReplicas = app.minReplicas
     this.maxReplicas = app.maxReplicas
     this.env = app.env
+    this.nodePin = app.nodePin
   }
 }

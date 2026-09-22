@@ -18,8 +18,10 @@ import {
   REGISTRY_SECRET_SUFFIX,
   RELEASE_UUID_ANNOTATION,
 } from '#src/modules/kubernetes/deploy-backend.constants.js'
+import { InvalidReleaseAnnotationError } from '#src/modules/kubernetes/deploy-backend.js'
 import type { RenderedManifests } from '#src/modules/kubernetes/deploy-backend.types.js'
 import { DirectApplyDeployBackend } from '#src/modules/kubernetes/direct-apply-deploy-backend.js'
+import { generateUuid, type Uuid } from '#src/utils/uuid.js'
 
 const SLUG = 'billing-api'
 const NAMESPACE = 'demo-dev'
@@ -157,6 +159,18 @@ describe('DirectApplyDeployBackend.readLiveReleaseUuid', () => {
   })
 
   it('returns the release uuid stamped on the live pod template', async () => {
+    const releaseUuid = generateUuid<Uuid<'Release'>>()
+    apps.readNamespacedDeployment.resolves({
+      spec: {
+        selector: {},
+        template: { metadata: { annotations: { [RELEASE_UUID_ANNOTATION]: releaseUuid } } },
+      },
+    })
+
+    expect(await backend.readLiveReleaseUuid(NAMESPACE, SLUG)).toBe(releaseUuid)
+  })
+
+  it('rejects a malformed annotation rather than returning it', async () => {
     apps.readNamespacedDeployment.resolves({
       spec: {
         selector: {},
@@ -164,7 +178,9 @@ describe('DirectApplyDeployBackend.readLiveReleaseUuid', () => {
       },
     })
 
-    expect(await backend.readLiveReleaseUuid(NAMESPACE, SLUG)).toBe('r-1')
+    await expect(backend.readLiveReleaseUuid(NAMESPACE, SLUG)).rejects.toThrow(
+      InvalidReleaseAnnotationError,
+    )
   })
 
   it('returns null when the Deployment does not exist', async () => {

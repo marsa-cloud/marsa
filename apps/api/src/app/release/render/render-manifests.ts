@@ -1,5 +1,7 @@
 import type { V1Deployment, V1Secret, V1Service } from '@kubernetes/client-node'
+import type { NodePin } from '#src/app/app-management/entities/node-pin.js'
 import type { Release } from '#src/app/release/entities/release.table.js'
+import { buildNodeAffinity } from '#src/app/release/render/node-affinity.js'
 import {
   INTERCEPTOR_PORT,
   INTERCEPTOR_SERVICE_NAME,
@@ -27,16 +29,26 @@ function buildDockerConfigJson(credentials: RegistryCredentials): string {
   return JSON.stringify({ auths: { [registry]: { username, password, auth } } })
 }
 
-export function renderManifests(
-  slug: string,
-  release: Release,
-  baseDomain: string,
-  credentials?: RegistryCredentials,
-): RenderedManifests {
+export interface RenderManifestsOptions {
+  slug: string
+  release: Release
+  baseDomain: string
+  credentials?: RegistryCredentials
+  nodePin: NodePin | null
+}
+
+export function renderManifests({
+  slug,
+  release,
+  baseDomain,
+  credentials,
+  nodePin,
+}: RenderManifestsOptions): RenderedManifests {
   const name = slug
   const host = `${slug}.${baseDomain}`
   const labels = { app: name }
   const env = Object.entries(release.env).map(([key, value]) => ({ name: key, value }))
+  const affinity = buildNodeAffinity(nodePin)
 
   const imagePullSecret: V1Secret | undefined = credentials
     ? {
@@ -59,6 +71,7 @@ export function renderManifests(
       template: {
         metadata: { labels, annotations: { [RELEASE_UUID_ANNOTATION]: release.uuid } },
         spec: {
+          ...(affinity ? { affinity } : {}),
           ...(imagePullSecret?.metadata?.name
             ? { imagePullSecrets: [{ name: imagePullSecret.metadata.name }] }
             : {}),

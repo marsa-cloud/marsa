@@ -27,6 +27,7 @@ export class CreateAppUseCase {
       .withMinReplicas(minReplicas)
       .withMaxReplicas(Math.max(command.maxReplicas ?? 1, minReplicas))
       .withEnv(command.env ?? {})
+      .withNodePin(command.nodePin ?? null)
       .withImagePullCredentialsEnc(credentials ? this.credentialsCipher.seal(credentials) : null)
       .build()
 

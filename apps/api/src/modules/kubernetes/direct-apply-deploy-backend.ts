@@ -32,7 +32,9 @@ import { extractDeployFailure } from '#src/modules/kubernetes/extract-deploy-fai
 import { mapRolloutStatus } from '#src/modules/kubernetes/map-rollout-status.js'
 import { newestPod } from '#src/modules/kubernetes/newest-pod.js'
 import { ignoreNotFound, isNotFound } from '#src/modules/kubernetes/not-found.js'
+import { parseReleaseAnnotation } from '#src/modules/kubernetes/release-annotation.js'
 import { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
+import type { Uuid } from '#src/utils/uuid.js'
 
 function requireName(object: { metadata?: { name?: string } }, kind: string): string {
   const name = object.metadata?.name
@@ -186,9 +188,13 @@ export class DirectApplyDeployBackend extends DeployBackend {
     return mapRolloutStatus(deployment)
   }
 
-  async readLiveReleaseUuid(namespace: string, deploymentName: string): Promise<string | null> {
+  async readLiveReleaseUuid(
+    namespace: string,
+    deploymentName: string,
+  ): Promise<Uuid<'Release'> | null> {
     const deployment = await this.readDeployment(namespace, deploymentName)
-    return deployment?.spec?.template.metadata?.annotations?.[RELEASE_UUID_ANNOTATION] ?? null
+    const annotation = deployment?.spec?.template.metadata?.annotations?.[RELEASE_UUID_ANNOTATION]
+    return parseReleaseAnnotation(annotation, deploymentName)
   }
 
   async readAppHealth(namespace: string, deploymentName: string): Promise<AppHealth> {

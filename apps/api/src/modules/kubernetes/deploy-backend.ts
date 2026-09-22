@@ -6,6 +6,9 @@ import type {
   RunLogsOptions,
 } from '#src/modules/kubernetes/deploy-backend.types.js'
 import type { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
+import type { Uuid } from '#src/utils/uuid.js'
+
+export class InvalidReleaseAnnotationError extends Error {}
 
 /**
  * Single seam for applying an operator app's manifest bundle to the cluster
@@ -33,8 +36,11 @@ export abstract class DeployBackend {
    */
   abstract readRolloutStatus(namespace: string, deploymentName: string): Promise<RolloutStatus>
 
-  // The release-uuid annotation on the live pod template; null when absent or not deployed.
-  abstract readLiveReleaseUuid(namespace: string, deploymentName: string): Promise<string | null>
+  // Null when nothing is deployed; InvalidReleaseAnnotationError when the annotation is malformed.
+  abstract readLiveReleaseUuid(
+    namespace: string,
+    deploymentName: string,
+  ): Promise<Uuid<'Release'> | null>
 
   /** Live runtime-health snapshot of a Deployment (#100) — never stored. */
   abstract readAppHealth(namespace: string, deploymentName: string): Promise<AppHealth>

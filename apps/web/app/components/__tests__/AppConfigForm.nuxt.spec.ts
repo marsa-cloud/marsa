@@ -1,12 +1,17 @@
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { ViewAppDetailResponse } from '~/api/types.gen'
+
 import AppConfigForm from '../AppConfigForm.vue'
 
 const update = vi.hoisted(() => vi.fn())
 mockNuxtImport('useUpdateApp', () => () => ({ update }))
 
-const config = {
+const listNodes = vi.hoisted(() => vi.fn())
+mockNuxtImport('useNodeList', () => () => ({ list: listNodes }))
+
+const config: ViewAppDetailResponse = {
   slug: 'my-app',
   image: 'nginx:1.27',
   url: 'https://my-app.marsa.cc',
@@ -14,6 +19,7 @@ const config = {
   minReplicas: 1,
   maxReplicas: 2,
   env: { LOG_LEVEL: 'info' },
+  nodePin: null,
   hasUndeployedChanges: false,
   project: { slug: 'demo', name: 'Demo' },
   environment: { uuid: '0190c3c0-0000-7000-8000-000000000002', slug: 'dev', name: 'Dev' },
@@ -22,10 +28,14 @@ const config = {
 }
 
 const flush = () => new Promise(resolve => setTimeout(resolve))
-const mount = () => mountSuspended(AppConfigForm, { props: { slug: 'my-app', config } })
+const mount = (over: typeof config = config) =>
+  mountSuspended(AppConfigForm, { props: { slug: 'my-app', config: over } })
 
 beforeEach(() => {
   update.mockReset().mockResolvedValue({ ...config })
+  listNodes.mockReset().mockResolvedValue([
+    { name: 'node-a', labels: { 'kubernetes.io/hostname': 'node-a' }, ready: true },
+  ])
 })
 
 describe('AppConfigForm', () => {
@@ -51,6 +61,7 @@ describe('AppConfigForm', () => {
       minReplicas: 1,
       maxReplicas: 2,
       env: { LOG_LEVEL: 'debug' },
+      nodePin: null,
     })
     expect(wrapper.emitted('saved')).toHaveLength(1)
   })
@@ -121,5 +132,28 @@ describe('AppConfigForm', () => {
     expect((wrapper.find('input#config-image').element as HTMLInputElement).value).toBe(
       'nginx:1.28-normalised',
     )
+  })
+
+  it('seeds the picker from the saved pin', async () => {
+    const wrapper = await mount({
+      ...config,
+      nodePin: { key: 'kubernetes.io/hostname', values: ['node-a'], strategy: 'required' },
+    })
+    await flush()
+
+    expect(wrapper.text()).toContain('node-a')
+  })
+
+  it('clears the pin with an explicit null rather than omitting it', async () => {
+    const wrapper = await mount({
+      ...config,
+      nodePin: { key: 'kubernetes.io/hostname', values: ['node-a'], strategy: 'required' },
+    })
+    await flush()
+    await wrapper.find('button[aria-label="Remove node-a"]').trigger('click')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flush()
+
+    expect(update).toHaveBeenCalledWith('my-app', expect.objectContaining({ nodePin: null }))
   })
 })

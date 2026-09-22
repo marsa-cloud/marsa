@@ -1,6 +1,7 @@
 import type { App } from '#src/app/app-management/entities/app.table.js'
 import type { AppUuid } from '#src/app/app-management/entities/app.uuid.js'
 import type { AppDomain } from '#src/app/app-management/entities/app-domain.types.js'
+import type { NodePin } from '#src/app/app-management/entities/node-pin.js'
 import type { EnvironmentUuid } from '#src/app/environment/entities/environment.uuid.js'
 import { generateUuid } from '#src/utils/uuid.js'
 
@@ -20,6 +21,7 @@ export class AppBuilder {
       minReplicas: 1,
       maxReplicas: 1,
       env: {},
+      nodePin: null,
       imagePullCredentialsEnc: null,
       createdAt: now,
       updatedAt: now,
@@ -63,6 +65,11 @@ export class AppBuilder {
 
   withEnv(env: Record<string, string>): this {
     this.app.env = env
+    return this
+  }
+
+  withNodePin(nodePin: NodePin | null): this {
+    this.app.nodePin = nodePin
     return this
   }
 

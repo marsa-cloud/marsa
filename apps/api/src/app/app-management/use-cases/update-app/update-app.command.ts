@@ -10,6 +10,7 @@ import {
 import { IsAppEnvRecord } from '#src/app/app-management/entities/app-env.js'
 import { ImagePullCredentials } from '#src/app/app-management/entities/image-pull-credentials.js'
 import { IsGteField } from '#src/app/app-management/entities/is-gte-field.validator.js'
+import { NodePin } from '#src/app/app-management/entities/node-pin.js'
 
 export class UpdateAppCommand {
   @ApiPropertyOptional({ type: String, example: 'nginx:1.28' })
@@ -69,4 +70,14 @@ export class UpdateAppCommand {
   @ValidateNested()
   @Type(() => ImagePullCredentials)
   imagePullCredentials?: ImagePullCredentials | null
+
+  @ApiPropertyOptional({
+    type: NodePin,
+    nullable: true,
+    description: 'Omit to keep the stored pin, null to clear it, an object to replace it.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => NodePin)
+  nodePin?: NodePin | null
 }

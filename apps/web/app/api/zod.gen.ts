@@ -220,6 +220,17 @@ export const zImagePullCredentials = z.object({
   username: z.string().max(255),
 })
 
+/**
+ * required keeps the pod Pending when no node matches; preferred places it anyway.
+ */
+export const zPinStrategy = z.enum(['required', 'preferred'])
+
+export const zNodePin = z.object({
+  key: z.string(),
+  values: z.array(z.string()),
+  strategy: zPinStrategy,
+})
+
 export const zCreateAppCommand = z.object({
   environmentUuid: z.uuid(),
   slug: z
@@ -232,6 +243,7 @@ export const zCreateAppCommand = z.object({
   maxReplicas: z.int().gte(1).lte(100).optional(),
   env: z.record(z.string(), z.string()).optional(),
   imagePullCredentials: zImagePullCredentials.optional(),
+  nodePin: zNodePin.optional(),
 })
 
 export const zCreateAppResponse = z.object({
@@ -288,6 +300,7 @@ export const zViewAppDetailResponse = z.object({
   minReplicas: z.int(),
   maxReplicas: z.int(),
   env: z.record(z.string(), z.string()),
+  nodePin: zNodePin.nullable(),
   hasUndeployedChanges: z.boolean(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
@@ -313,6 +326,7 @@ export const zUpdateAppCommand = z.object({
   maxReplicas: z.int().gte(1).lte(100).optional(),
   env: z.record(z.string(), z.string()).optional(),
   imagePullCredentials: zImagePullCredentials.nullish(),
+  nodePin: zNodePin.nullish(),
 })
 
 export const zUpdateAppResponse = z.object({
@@ -322,6 +336,17 @@ export const zUpdateAppResponse = z.object({
   minReplicas: z.int(),
   maxReplicas: z.int(),
   env: z.record(z.string(), z.string()),
+  nodePin: zNodePin.nullable(),
+})
+
+export const zNodeSummary = z.object({
+  name: z.string(),
+  labels: z.record(z.string(), z.string()),
+  ready: z.boolean(),
+})
+
+export const zViewNodeIndexResponse = z.object({
+  items: z.array(zNodeSummary),
 })
 
 export const zImagePullCredentialsWritable = z.object({
@@ -342,6 +367,7 @@ export const zCreateAppCommandWritable = z.object({
   maxReplicas: z.int().gte(1).lte(100).optional(),
   env: z.record(z.string(), z.string()).optional(),
   imagePullCredentials: zImagePullCredentialsWritable.optional(),
+  nodePin: zNodePin.optional(),
 })
 
 export const zUpdateAppCommandWritable = z.object({
@@ -351,6 +377,7 @@ export const zUpdateAppCommandWritable = z.object({
   maxReplicas: z.int().gte(1).lte(100).optional(),
   env: z.record(z.string(), z.string()).optional(),
   imagePullCredentials: zImagePullCredentialsWritable.nullish(),
+  nodePin: zNodePin.nullish(),
 })
 
 export const zGetApiInfoV1Response = zGetApiInfoResponse
@@ -496,3 +523,5 @@ export const zViewAppLogsV1Query = z.object({
 })
 
 export const zViewAppLogsV1Response = zViewAppLogsResponse
+
+export const zViewNodeIndexV1Response = zViewNodeIndexResponse
