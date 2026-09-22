@@ -1,5 +1,6 @@
 import { before, describe, it } from 'node:test'
 import { InternalServerErrorException, NotFoundException } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
@@ -10,9 +11,8 @@ import { UpdateAppCommandBuilder } from '#src/app/app-management/use-cases/updat
 import { UpdateAppRepository } from '#src/app/app-management/use-cases/update-app/update-app.repository.js'
 import { UpdateAppUseCase } from '#src/app/app-management/use-cases/update-app/update-app.use-case.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
-import { ApplyReleaseService } from '#src/app/release/services/apply-release/apply-release.service.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
-import { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
+import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 const saved = new AppBuilder().withImage('nginx:1.28').withEnv({ A: '1' }).build()
@@ -33,14 +33,15 @@ function build() {
   repository.updateBySlug.resolves(saved)
   const cipher = createStubInstance(ImagePullCredentialsCipher)
   cipher.seal.returns('new-sealed')
-  const deployBackend = createStubInstance(MockDeployBackend)
-  const applyRelease = createStubInstance(ApplyReleaseService)
+  const appRuntime = createStubInstance(MockAppRuntime)
+  appRuntime.deploy.resolves()
+  const config = createStubInstance(ConfigService)
+  config.getOrThrow.returns('demo.marsa.cc')
   return {
-    usecase: new UpdateAppUseCase(repository, cipher, deployBackend, applyRelease),
+    usecase: new UpdateAppUseCase(repository, cipher, appRuntime, config),
     repository,
     cipher,
-    deployBackend,
-    applyRelease,
+    appRuntime,
   }
 }
 
@@ -48,7 +49,7 @@ function buildPinned() {
   const context = build()
   context.repository.updateBySlug.resolves(pinnedApp)
   context.repository.findPlacementBySlug.resolves(placement)
-  context.deployBackend.readLiveReleaseUuid.resolves(liveRelease.uuid)
+  context.appRuntime.readLiveReleaseUuid.resolves(liveRelease.uuid)
   context.repository.findRelease.resolves(liveRelease)
   return context
 }
@@ -120,48 +121,54 @@ describe('UpdateAppUseCase', () => {
   })
 
   it('re-applies the live release when the pin changes', async () => {
-    const { usecase, applyRelease } = buildPinned()
+    const { usecase, appRuntime } = buildPinned()
 
     await usecase.execute('my-app', new UpdateAppCommandBuilder().withNodePin(PIN).build())
 
-    // Applied with the incoming pin, not the stored one, so the manifests carry the new affinity.
-    expect(
-      applyRelease.apply.calledOnceWithExactly({ ...placement, app: pinnedApp }, liveRelease),
-    ).toBe(true)
+    // Deployed with the incoming pin, not the stored one, so the runtime gets the new placement.
+    expect(appRuntime.deploy.calledOnce).toBe(true)
+    const [appRef, spec] = appRuntime.deploy.firstCall.args
+    expect(appRef.slug).toBe(placement.app.slug)
+    expect(spec.releaseUuid).toBe(liveRelease.uuid)
+    expect(spec.nodePin).toEqual({
+      key: 'kubernetes.io/hostname',
+      values: ['node-a'],
+      strategy: 'required',
+    })
   })
 
   it('makes no cluster call when the command carries no pin', async () => {
-    const { usecase, deployBackend, applyRelease } = buildPinned()
+    const { usecase, appRuntime } = buildPinned()
 
     await usecase.execute('my-app', new UpdateAppCommandBuilder().withImage('nginx:1.28').build())
 
-    expect(deployBackend.readLiveReleaseUuid.called).toBe(false)
-    expect(applyRelease.apply.called).toBe(false)
+    expect(appRuntime.readLiveReleaseUuid.called).toBe(false)
+    expect(appRuntime.deploy.called).toBe(false)
   })
 
   it('stores the pin without applying when nothing is deployed', async () => {
-    const { usecase, deployBackend, applyRelease } = buildPinned()
-    deployBackend.readLiveReleaseUuid.resolves(null)
+    const { usecase, appRuntime } = buildPinned()
+    appRuntime.readLiveReleaseUuid.resolves(null)
 
     await usecase.execute('my-app', new UpdateAppCommandBuilder().withNodePin(PIN).build())
 
-    expect(applyRelease.apply.called).toBe(false)
+    expect(appRuntime.deploy.called).toBe(false)
   })
 
   it('makes no cluster call when the pin is sent unchanged', async () => {
-    const { usecase, repository, deployBackend, applyRelease } = build()
+    const { usecase, repository, appRuntime } = build()
     const pinned = new AppPlacementBuilder().withApp(pinnedApp).build()
     repository.findPlacementBySlug.resolves(pinned)
     repository.updateBySlug.resolves(pinned.app)
 
     await usecase.execute('my-app', new UpdateAppCommandBuilder().withNodePin(PIN).build())
 
-    expect(deployBackend.readLiveReleaseUuid.called).toBe(false)
-    expect(applyRelease.apply.called).toBe(false)
+    expect(appRuntime.readLiveReleaseUuid.called).toBe(false)
+    expect(appRuntime.deploy.called).toBe(false)
   })
 
   it('treats a reordered value list as unchanged', async () => {
-    const { usecase, repository, applyRelease } = build()
+    const { usecase, repository, appRuntime } = build()
     const multi = { ...PIN, values: ['node-a', 'node-b'] }
     const pinned = new AppPlacementBuilder().withApp({ ...placement.app, nodePin: multi }).build()
     repository.findPlacementBySlug.resolves(pinned)
@@ -172,24 +179,24 @@ describe('UpdateAppUseCase', () => {
       new UpdateAppCommandBuilder().withNodePin({ ...multi, values: ['node-b', 'node-a'] }).build(),
     )
 
-    expect(applyRelease.apply.called).toBe(false)
+    expect(appRuntime.deploy.called).toBe(false)
   })
 
   it('fails, and writes nothing, when the live release is not a release of this app', async () => {
-    const { usecase, repository, applyRelease } = buildPinned()
+    const { usecase, repository, appRuntime } = buildPinned()
     repository.findRelease.resolves(undefined)
 
     await expect(
       usecase.execute('my-app', new UpdateAppCommandBuilder().withNodePin(PIN).build()),
     ).rejects.toThrow(InternalServerErrorException)
 
-    expect(applyRelease.apply.called).toBe(false)
+    expect(appRuntime.deploy.called).toBe(false)
     expect(repository.updateBySlug.called).toBe(false)
   })
 
   it('stores nothing when the apply fails, so an identical retry applies again', async () => {
-    const { usecase, repository, applyRelease } = buildPinned()
-    applyRelease.apply.rejects(new Error('cluster unreachable'))
+    const { usecase, repository, appRuntime } = buildPinned()
+    appRuntime.deploy.rejects(new Error('cluster unreachable'))
 
     await expect(
       usecase.execute('my-app', new UpdateAppCommandBuilder().withNodePin(PIN).build()),
@@ -201,9 +208,9 @@ describe('UpdateAppUseCase', () => {
   })
 
   it('applies before it writes', async () => {
-    const { usecase, repository, applyRelease } = buildPinned()
+    const { usecase, repository, appRuntime } = buildPinned()
     const order: string[] = []
-    applyRelease.apply.callsFake(() => {
+    appRuntime.deploy.callsFake(() => {
       order.push('apply')
       return Promise.resolve()
     })
