@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm'
 import { integer, jsonb, pgTable, text, uuid, varchar } from 'drizzle-orm/pg-core'
 import type { AppUuid } from '#src/app/app-management/entities/app.uuid.js'
 import type { AppDomain } from '#src/app/app-management/entities/app-domain.types.js'
+import type { NodePin } from '#src/app/app-management/entities/node-pin.js'
 import { environmentTable } from '#src/app/environment/entities/environment.table.js'
 import type { EnvironmentUuid } from '#src/app/environment/entities/environment.uuid.js'
 import { timestamps } from '#src/sql/timestamps.js'
@@ -22,6 +23,7 @@ export const appTable = pgTable('app', {
   minReplicas: integer('min_replicas').notNull().default(1),
   maxReplicas: integer('max_replicas').notNull().default(1),
   env: jsonb().$type<Record<string, string>>().notNull().default({}),
+  nodePin: jsonb('node_pin').$type<NodePin>(),
   imagePullCredentialsEnc: text('image_pull_credentials_enc'),
   ...timestamps,
 })

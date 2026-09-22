@@ -2,7 +2,7 @@
 import type { FormSubmitEvent } from '@nuxt/ui'
 import * as z from 'zod'
 
-import type { CreateAppCommand, CreateAppResponse } from '~/api/types.gen'
+import type { CreateAppCommand, CreateAppResponse, NodePin } from '~/api/types.gen'
 import { appConfigFields, isReplicaRangeValid, REPLICA_RANGE_ERROR } from '~/utils/appConfigSchema'
 
 // useCreateApp / useShipRelease / buildEnvRecord / extractApiError are Nuxt auto-imports,
@@ -34,6 +34,7 @@ const state = reactive<{
   containerPort: number | undefined
   minReplicas: number | undefined
   maxReplicas: number | undefined
+  nodePin: NodePin | null
 }>({
   environmentUuid: undefined,
   slug: '',
@@ -41,6 +42,7 @@ const state = reactive<{
   containerPort: undefined,
   minReplicas: undefined,
   maxReplicas: undefined,
+  nodePin: null,
 })
 
 // Stable per-row id so :key survives removals.
@@ -72,6 +74,7 @@ function toCommand(data: Schema): CreateAppCommand {
     containerPort: data.containerPort,
     ...(data.minReplicas !== undefined ? { minReplicas: data.minReplicas } : {}),
     ...(data.maxReplicas !== undefined ? { maxReplicas: data.maxReplicas } : {}),
+    ...(state.nodePin ? { nodePin: state.nodePin } : {}),
     ...(Object.keys(env).length ? { env } : {}),
   }
 }
@@ -224,6 +227,11 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
               class="w-full"
             />
           </UFormField>
+
+          <NodePinPicker
+            v-model="state.nodePin"
+            :max-replicas="state.maxReplicas"
+          />
 
           <UFormField
             label="Environment variables"

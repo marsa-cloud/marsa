@@ -6,7 +6,10 @@ import { ViewAppDetailResponse } from '#src/app/app-management/use-cases/view-ap
 import { namespaceOf } from '#src/app/environment/entities/namespace.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import { isSnapshotOf } from '#src/app/release/entities/release-snapshot.js'
-import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
+import {
+  DeployBackend,
+  InvalidReleaseAnnotationError,
+} from '#src/modules/kubernetes/deploy-backend.js'
 
 @Injectable()
 export class ViewAppDetailUseCase {
@@ -35,17 +38,23 @@ export class ViewAppDetailUseCase {
     project,
     environment,
   }: AppPlacement): Promise<boolean> {
-    let liveUuid: string | null
+    let liveUuid: ReleaseUuid | null
     try {
       liveUuid = await this.deployBackend.readLiveReleaseUuid(
         namespaceOf(project, environment),
         app.slug,
       )
-    } catch {
+    } catch (error) {
+      // A malformed annotation is a Marsa bug, not an unreachable cluster, so it must not be hidden.
+      if (error instanceof InvalidReleaseAnnotationError) throw error
       // Unknown is not "changed"; the health card is where an unreachable cluster shows up.
       return false
     }
-    const live = liveUuid && (await this.repository.findRelease(liveUuid as ReleaseUuid, app.uuid))
+    if (!liveUuid) {
+      return true
+    }
+
+    const live = await this.repository.findRelease(liveUuid, app.uuid)
     return !live || !isSnapshotOf(live, app)
   }
 }

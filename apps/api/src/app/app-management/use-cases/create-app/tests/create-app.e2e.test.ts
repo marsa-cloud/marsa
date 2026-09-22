@@ -27,6 +27,42 @@ describe('POST /api/v1/apps (e2e)', () => {
     await setup.teardown()
   })
 
+  it('stores a node pin', async () => {
+    const slug = 'create-app-pinned'
+    await request(setup.httpServer)
+      .post('/api/v1/apps')
+      .set('Cookie', cookie)
+      .send({
+        environmentUuid: environment.uuid,
+        slug,
+        image: 'nginx:1.27',
+        containerPort: 80,
+        nodePin: { key: 'kubernetes.io/hostname', values: ['node-a'], strategy: 'required' },
+      })
+      .expect(201)
+
+    const [app] = await setup.db.select().from(appTable).where(eq(appTable.slug, slug))
+    expect(app.nodePin).toEqual({
+      key: 'kubernetes.io/hostname',
+      values: ['node-a'],
+      strategy: 'required',
+    })
+  })
+
+  it('rejects a malformed node pin', async () => {
+    await request(setup.httpServer)
+      .post('/api/v1/apps')
+      .set('Cookie', cookie)
+      .send({
+        environmentUuid: environment.uuid,
+        slug: 'create-app-bad-pin',
+        image: 'nginx:1.27',
+        containerPort: 80,
+        nodePin: { key: 'not a key', values: [], strategy: 'required' },
+      })
+      .expect(400)
+  })
+
   it('creates the app with no release and returns its URL', async () => {
     const response = await request(setup.httpServer)
       .post('/api/v1/apps')

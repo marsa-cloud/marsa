@@ -3,6 +3,7 @@ import { expect } from 'expect'
 import request from 'supertest'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
+import { PinStrategy } from '#src/app/app-management/enums/pin-strategy.enum.js'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
@@ -110,5 +111,43 @@ describe('GET /api/v1/apps/:slug (e2e)', () => {
 
   it('rejects an unauthenticated request with 401', async () => {
     await request(setup.httpServer).get(`/api/v1/apps/${SLUG}`).expect(401)
+  })
+
+  it('returns the node pin, and null when unpinned', async () => {
+    const pinnedSlug = 'detail-e2e-pinned'
+    await setup.db.insert(appTable).values(
+      new AppBuilder()
+        .withEnvironmentUuid(environment.uuid)
+        .withSlug(pinnedSlug)
+        .withNodePin({
+          key: 'kubernetes.io/hostname',
+          values: ['node-a', 'node-b'],
+          strategy: PinStrategy.Preferred,
+        })
+        .build(),
+    )
+
+    const pinned = await request(setup.httpServer)
+      .get(`/api/v1/apps/${pinnedSlug}`)
+      .set('Cookie', sessionCookie)
+      .expect(200)
+
+    expect(pinned.body.nodePin).toEqual({
+      key: 'kubernetes.io/hostname',
+      values: ['node-a', 'node-b'],
+      strategy: 'preferred',
+    })
+
+    const unpinnedSlug = 'detail-e2e-unpinned'
+    await setup.db
+      .insert(appTable)
+      .values(new AppBuilder().withEnvironmentUuid(environment.uuid).withSlug(unpinnedSlug).build())
+
+    const unpinned = await request(setup.httpServer)
+      .get(`/api/v1/apps/${unpinnedSlug}`)
+      .set('Cookie', sessionCookie)
+      .expect(200)
+
+    expect(unpinned.body.nodePin).toBeNull()
   })
 })

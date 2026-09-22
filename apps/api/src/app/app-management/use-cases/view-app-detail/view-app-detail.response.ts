@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
+import { NodePin } from '#src/app/app-management/entities/node-pin.js'
 import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import {
   AppEnvironmentRef,
@@ -39,6 +40,13 @@ export class ViewAppDetailResponse {
   readonly env: Record<string, string>
 
   @ApiProperty({
+    type: NodePin,
+    nullable: true,
+    description: 'Nodes this app is restricted to; null schedules anywhere.',
+  })
+  readonly nodePin: NodePin | null
+
+  @ApiProperty({
     type: Boolean,
     description:
       'True when the saved config differs from the release the cluster is running, or nothing is running.',
@@ -65,6 +73,7 @@ export class ViewAppDetailResponse {
     this.minReplicas = app.minReplicas
     this.maxReplicas = app.maxReplicas
     this.env = app.env
+    this.nodePin = app.nodePin
     this.hasUndeployedChanges = hasUndeployedChanges
     this.createdAt = app.createdAt.toISOString()
     this.updatedAt = app.updatedAt.toISOString()
