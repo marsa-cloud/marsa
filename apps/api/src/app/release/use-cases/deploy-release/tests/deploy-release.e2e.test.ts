@@ -9,6 +9,8 @@ import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
+import type { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
+import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -74,5 +76,27 @@ describe('POST /api/v1/apps/:slug/deploy (e2e)', () => {
       .set('Cookie', cookie)
       .expect(404)
     await request(setup.httpServer).post(`/api/v1/apps/${SLUG}/deploy`).expect(401)
+  })
+
+  it('records the failure when the runtime rejects the rollout', async () => {
+    const slug = 'deploy-release-e2e-fail'
+    const app = new AppBuilder().withEnvironmentUuid(environment.uuid).withSlug(slug).build()
+    const release = new ReleaseBuilder().withApp(app).build()
+    await setup.db.insert(appTable).values(app)
+    await setup.db.insert(releaseTable).values(release)
+    setup.testModule
+      .get<AppRuntime, MockAppRuntime>(AppRuntime)
+      .failNext('deploy', new Error('cluster down'))
+
+    await request(setup.httpServer)
+      .post(`/api/v1/apps/${slug}/deploy`)
+      .set('Cookie', cookie)
+      .expect(500)
+
+    const [stored] = await setup.db
+      .select()
+      .from(releaseTable)
+      .where(eq(releaseTable.uuid, release.uuid))
+    expect(stored?.deployStatus).toBe(DeployStatus.Failed)
   })
 })

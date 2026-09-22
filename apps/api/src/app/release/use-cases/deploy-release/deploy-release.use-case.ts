@@ -7,6 +7,8 @@ import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { DeployReleaseRepository } from '#src/app/release/use-cases/deploy-release/deploy-release.repository.js'
 import { DeployReleaseResponse } from '#src/app/release/use-cases/deploy-release/deploy-release.response.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
+import type { Database } from '#src/modules/database/drizzle.factory.js'
+import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
 
 // Deploys the app's newest release: releases are append-only, so the newest is what should run.
@@ -15,6 +17,7 @@ export class DeployReleaseUseCase {
   private readonly baseDomain: string
 
   constructor(
+    @InjectDatabase() private readonly db: Database,
     private readonly repository: DeployReleaseRepository,
     private readonly appRuntime: AppRuntime,
     private readonly cipher: ImagePullCredentialsCipher,
@@ -24,42 +27,39 @@ export class DeployReleaseUseCase {
   }
 
   async execute(slug: string): Promise<DeployReleaseResponse> {
-    const found = await this.repository.findAppWithNewestRelease(slug)
-    if (!found) {
-      throw new NotFoundException(`App '${slug}' was not found.`)
-    }
-    const { placement, release } = found
-    if (!release) {
-      throw new ConflictException(`App '${slug}' has no release to deploy. Create one first.`)
-    }
-
-    const deployStatus =
-      release.deployStatus === DeployStatus.Succeeded
-        ? await this.reapplyRunning(placement, release)
-        : await this.rollOut(placement, release)
-
-    return new DeployReleaseResponse(
-      placement.app.slug,
-      { ...release, deployStatus },
-      this.baseDomain,
-    )
-  }
-
-  // Already live, so the deploy is a runtime no-op; a failed retry must not mark it failed.
-  private async reapplyRunning(placement: AppPlacement, release: Release): Promise<DeployStatus> {
-    await this.deploy(placement, release)
-    return release.deployStatus
-  }
-
-  private async rollOut(placement: AppPlacement, release: Release): Promise<DeployStatus> {
-    await this.repository.setDeployStatus(release.uuid, DeployStatus.Pending)
+    const attempt: { rollingOut?: Release } = {}
     try {
-      await this.deploy(placement, release)
+      return await this.db.transaction(async (tx) => {
+        const placement = await this.repository.findPlacement(tx, slug)
+        if (!placement) {
+          throw new NotFoundException(`App '${slug}' was not found.`)
+        }
+        const release = await this.repository.findNewestRelease(tx, placement.app.uuid)
+        if (!release) {
+          throw new ConflictException(`App '${slug}' has no release to deploy. Create one first.`)
+        }
+
+        // Already live, so the deploy is a runtime no-op; a failed retry must not mark it failed.
+        if (release.deployStatus !== DeployStatus.Succeeded) {
+          attempt.rollingOut = release
+          await this.repository.setDeployStatus(tx, release.uuid, DeployStatus.Pending)
+        }
+        await this.deploy(placement, release)
+
+        const deployStatus = attempt.rollingOut ? DeployStatus.Pending : release.deployStatus
+        return new DeployReleaseResponse(
+          placement.app.slug,
+          { ...release, deployStatus },
+          this.baseDomain,
+        )
+      })
     } catch (error) {
-      await this.repository.setDeployStatus(release.uuid, DeployStatus.Failed)
+      // The rollback undid Pending; Failed is written on its own so the failure stays visible.
+      if (attempt.rollingOut) {
+        await this.repository.markFailed(attempt.rollingOut.uuid)
+      }
       throw error
     }
-    return DeployStatus.Pending
   }
 
   private async deploy(placement: AppPlacement, release: Release): Promise<void> {

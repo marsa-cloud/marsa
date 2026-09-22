@@ -2,7 +2,7 @@ import { before, describe, it } from 'node:test'
 import { ConflictException, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
-import { createStubInstance } from 'sinon'
+import { createStubInstance, match } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { AppPlacementBuilder } from '#src/app/app-management/queries/app-placement.builder.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
@@ -12,6 +12,7 @@ import { DeployReleaseUseCase } from '#src/app/release/use-cases/deploy-release/
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
 import { EnvironmentConflictError } from '#src/modules/runtime/runtime.errors.js'
+import { stubDatabase } from '#src/test/setup/stub-database.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 const placement = new AppPlacementBuilder()
@@ -21,8 +22,10 @@ const app = placement.app
 
 function build(release = new ReleaseBuilder().withApp(app).withImageRef('nginx:1.27').build()) {
   const repository = createStubInstance(DeployReleaseRepository)
-  repository.findAppWithNewestRelease.resolves({ placement, release })
+  repository.findPlacement.resolves(placement)
+  repository.findNewestRelease.resolves(release)
   repository.setDeployStatus.resolves()
+  repository.markFailed.resolves()
 
   const appRuntime = createStubInstance(MockAppRuntime)
   appRuntime.deploy.resolves()
@@ -32,7 +35,7 @@ function build(release = new ReleaseBuilder().withApp(app).withImageRef('nginx:1
   cipher.openForApp.returns({ registry: 'ghcr.io', username: 'org', password: 'pw' })
 
   return {
-    usecase: new DeployReleaseUseCase(repository, appRuntime, cipher, config),
+    usecase: new DeployReleaseUseCase(stubDatabase(), repository, appRuntime, cipher, config),
     repository,
     appRuntime,
     cipher,
@@ -51,9 +54,14 @@ describe('DeployReleaseUseCase', () => {
 
     const result = await usecase.execute('my-app')
 
-    expect(repository.findAppWithNewestRelease.calledOnceWithExactly('my-app')).toBe(true)
+    expect(repository.findPlacement.calledOnceWithExactly(match.any, 'my-app')).toBe(true)
+    expect(repository.findNewestRelease.calledOnceWithExactly(match.any, app.uuid)).toBe(true)
     expect(
-      repository.setDeployStatus.calledOnceWithExactly(release.uuid, DeployStatus.Pending),
+      repository.setDeployStatus.calledOnceWithExactly(
+        match.any,
+        release.uuid,
+        DeployStatus.Pending,
+      ),
     ).toBe(true)
     const [ref, spec] = appRuntime.deploy.firstCall.args
     expect(ref).toBe(placement)
@@ -84,7 +92,7 @@ describe('DeployReleaseUseCase', () => {
     appRuntime.deploy.rejects(error)
 
     await expect(usecase.execute('my-app')).rejects.toThrow(error)
-    expect(repository.setDeployStatus.lastCall.args).toEqual([release.uuid, DeployStatus.Failed])
+    expect(repository.markFailed.calledOnceWithExactly(release.uuid)).toBe(true)
   })
 
   it('marks the rollout failed when the credentials cannot be decrypted', async () => {
@@ -93,7 +101,7 @@ describe('DeployReleaseUseCase', () => {
     cipher.openForApp.throws(new Error('could not be decrypted'))
 
     await expect(usecase.execute('my-app')).rejects.toThrow(/could not be decrypted/)
-    expect(repository.setDeployStatus.lastCall.args).toEqual([release.uuid, DeployStatus.Failed])
+    expect(repository.markFailed.calledOnceWithExactly(release.uuid)).toBe(true)
   })
 
   it('re-applies a release that is already running without touching its status', async () => {
@@ -112,11 +120,12 @@ describe('DeployReleaseUseCase', () => {
 
     await expect(usecase.execute('my-app')).rejects.toThrow('transient apiserver error')
     expect(repository.setDeployStatus.called).toBe(false)
+    expect(repository.markFailed.called).toBe(false)
   })
 
   it('refuses an app with no release with 409', async () => {
     const { usecase, repository, appRuntime } = build()
-    repository.findAppWithNewestRelease.resolves({ placement, release: null })
+    repository.findNewestRelease.resolves(null)
 
     await expect(usecase.execute('my-app')).rejects.toThrow(ConflictException)
     expect(appRuntime.deploy.called).toBe(false)
@@ -124,7 +133,7 @@ describe('DeployReleaseUseCase', () => {
 
   it('throws NotFound for an unknown app', async () => {
     const { usecase, repository } = build()
-    repository.findAppWithNewestRelease.resolves(undefined)
+    repository.findPlacement.resolves(undefined)
 
     await expect(usecase.execute('ghost')).rejects.toThrow(NotFoundException)
   })
@@ -134,6 +143,6 @@ describe('DeployReleaseUseCase', () => {
     appRuntime.deploy.rejects(new EnvironmentConflictError('taken'))
 
     await expect(usecase.execute('my-app')).rejects.toThrow(EnvironmentConflictError)
-    expect(repository.setDeployStatus.calledWith(release.uuid, DeployStatus.Failed)).toBe(true)
+    expect(repository.markFailed.calledOnceWithExactly(release.uuid)).toBe(true)
   })
 })
