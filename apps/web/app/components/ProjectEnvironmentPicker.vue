@@ -115,7 +115,7 @@ async function confirmDelete() {
     <UFormField
       label="Environment"
       name="environmentUuid"
-      description="Each environment is its own Kubernetes namespace"
+      description="Each environment is isolated from the others"
       required
     >
       <div class="flex gap-2">

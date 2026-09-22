@@ -147,7 +147,6 @@ export const zCreateEnvironmentResponse = z.object({
   uuid: z.uuid(),
   name: z.string(),
   slug: z.string(),
-  namespace: z.string(),
   projectSlug: z.string(),
 })
 
@@ -155,7 +154,6 @@ export const zEnvironmentSummary = z.object({
   uuid: z.uuid(),
   name: z.string(),
   slug: z.string(),
-  namespace: z.string(),
   createdAt: z.iso.datetime(),
 })
 
@@ -447,7 +445,7 @@ export const zDeleteEnvironmentV1Path = z.object({
 })
 
 /**
- * The environment and its namespace were deleted.
+ * The environment was deleted.
  */
 export const zDeleteEnvironmentV1Response = z.void()
 

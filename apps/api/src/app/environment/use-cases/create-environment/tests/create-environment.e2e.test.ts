@@ -5,8 +5,8 @@ import request from 'supertest'
 import { environmentTable } from '#src/app/environment/entities/environment.table.js'
 import { ProjectBuilder } from '#src/app/project/entities/project.builder.js'
 import { projectTable } from '#src/app/project/entities/project.table.js'
-import type { MockNamespaceBackend } from '#src/modules/kubernetes/mock-namespace-backend.js'
-import { NamespaceBackend } from '#src/modules/kubernetes/namespace-backend.js'
+import type { MockEnvironmentRuntime } from '#src/modules/runtime/adapters/mock/mock-environment-runtime.js'
+import { EnvironmentRuntime } from '#src/modules/runtime/environment-runtime.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -30,19 +30,20 @@ describe('POST /api/v1/projects/:projectSlug/environments (e2e)', () => {
       .set('Cookie', cookie)
       .send({ name: 'Dev', slug })
 
-  it('creates the environment and reports its namespace', async () => {
+  it('creates the environment', async () => {
     const response = await post('dev').expect(201)
 
-    expect(response.body).toMatchObject({ slug: 'dev', namespace: 'demo-dev', projectSlug: 'demo' })
+    expect(response.body).toMatchObject({ slug: 'dev', projectSlug: 'demo' })
+    expect(response.body).not.toHaveProperty('namespace')
   })
 
   it('rejects a duplicate slug in the same project with 409', async () => {
     await post('dev').expect(409)
   })
 
-  it('rolls the row back when the namespace cannot be created', async () => {
+  it('rolls the row back when the environment cannot be provisioned', async () => {
     setup.testModule
-      .get<NamespaceBackend, MockNamespaceBackend>(NamespaceBackend)
+      .get<EnvironmentRuntime, MockEnvironmentRuntime>(EnvironmentRuntime)
       .failNextProvision(new Error('cluster down'))
 
     await post('staging').expect(502)

@@ -62,7 +62,7 @@ One feature module per **domain aggregate root** — not per business capability
 - **Split out when a cluster of use-cases centres on a different aggregate.** One module holding two aggregates is the smell.
 - **Shared building blocks are the only cross-feature seam.** Never reach into another feature's repository, use-case, command, or response. Importing another feature's `entities/` / `errors/` / `enums/` / `events/` is sanctioned — that's how `release/` depends on `App`. The dependency must stay **one-directional**; preserving acyclicity is the property the split protects.
 
-- **Placement**: `project/ ← environment/ ← app-management/ ← release/`. An app's Kubernetes namespace is derived by `namespaceOf(project, environment)` (never stored); app-keyed repositories load it through `selectAppPlacement` in `app-management/entities/app-placement.ts`. `NamespaceBackend` (`src/modules/kubernetes/`) creates an environment's namespace on create and on every deploy, and deletes it with the environment.
+- **Placement**: `project/ ← environment/ ← app-management/ ← release/`. App-keyed repositories load an app's project and environment through `selectAppPlacement` (`app-management/queries/app-placement.ts`), and features hand the runtime an `AppRef` / `EnvironmentRef` (`appRefOf(placement)`, `environmentRefOf` in `environment/entities/`). How that maps to a Kubernetes namespace is private to the runtime adapter (`src/modules/runtime/adapters/kubernetes/environment/namespace-name.ts`). `EnvironmentRuntime` provisions an environment on create and on every deploy, and removes it with the environment.
 
 Driver + options: `docs/agdr/AgDR-0040-feature-module-boundary-aggregate-ownership.md` (marsa#131).
 

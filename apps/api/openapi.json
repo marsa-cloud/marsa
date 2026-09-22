@@ -464,10 +464,10 @@
             "description": "No project with that slug."
           },
           "409": {
-            "description": "The slug is taken in this project, or its namespace is taken or still deleting."
+            "description": "The slug is taken in this project, or the environment is taken or still being removed."
           },
           "502": {
-            "description": "The namespace could not be created on the cluster."
+            "description": "The environment could not be provisioned."
           }
         },
         "security": [
@@ -545,7 +545,7 @@
         ],
         "responses": {
           "204": {
-            "description": "The environment and its namespace were deleted."
+            "description": "The environment was deleted."
           },
           "401": {
             "description": "No active session."
@@ -560,7 +560,7 @@
             "description": "The environment still has apps."
           },
           "502": {
-            "description": "The namespace could not be deleted; nothing changed."
+            "description": "The environment could not be removed; nothing changed."
           }
         },
         "security": [
@@ -1551,7 +1551,7 @@
           "slug": {
             "type": "string",
             "example": "demo",
-            "description": "First half of every environment namespace name.",
+            "description": "Unique across Marsa.",
             "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
             "maxLength": 30
           }
@@ -1635,7 +1635,7 @@
           "slug": {
             "type": "string",
             "example": "dev",
-            "description": "Unique within the project; second half of the namespace name.",
+            "description": "Unique within the project.",
             "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
             "maxLength": 32
           }
@@ -1660,10 +1660,6 @@
             "type": "string",
             "example": "dev"
           },
-          "namespace": {
-            "type": "string",
-            "example": "demo-dev"
-          },
           "projectSlug": {
             "type": "string",
             "example": "demo"
@@ -1673,7 +1669,6 @@
           "uuid",
           "name",
           "slug",
-          "namespace",
           "projectSlug"
         ]
       },
@@ -1692,10 +1687,6 @@
             "type": "string",
             "example": "dev"
           },
-          "namespace": {
-            "type": "string",
-            "example": "demo-dev"
-          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -1705,7 +1696,6 @@
           "uuid",
           "name",
           "slug",
-          "namespace",
           "createdAt"
         ]
       },

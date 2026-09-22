@@ -30,14 +30,15 @@ describe('GET /api/v1/projects/:projectSlug/environments (e2e)', () => {
     await setup.teardown()
   })
 
-  it("lists only that project's environments with their namespaces", async () => {
+  it("lists only that project's environments", async () => {
     const response = await request(setup.httpServer)
       .get('/api/v1/projects/demo/environments')
       .set('Cookie', cookie)
       .expect(200)
 
     expect(response.body.items).toHaveLength(1)
-    expect(response.body.items[0]).toMatchObject({ slug: 'dev', namespace: 'demo-dev' })
+    expect(response.body.items[0]).toMatchObject({ slug: 'dev' })
+    expect(response.body.items[0]).not.toHaveProperty('namespace')
   })
 
   it('returns 404 for an unknown project and 401 without a session', async () => {
