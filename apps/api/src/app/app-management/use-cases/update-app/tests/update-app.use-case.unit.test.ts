@@ -1,5 +1,5 @@
 import { before, describe, it } from 'node:test'
-import { NotFoundException } from '@nestjs/common'
+import { InternalServerErrorException, NotFoundException } from '@nestjs/common'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
@@ -175,14 +175,16 @@ describe('UpdateAppUseCase', () => {
     expect(applyRelease.apply.called).toBe(false)
   })
 
-  it('does not query for a release when the live annotation is not a uuid', async () => {
-    const { usecase, repository, deployBackend, applyRelease } = buildPinned()
-    deployBackend.readLiveReleaseUuid.resolves('not-a-uuid')
+  it('fails, and writes nothing, when the live release is not a release of this app', async () => {
+    const { usecase, repository, applyRelease } = buildPinned()
+    repository.findRelease.resolves(undefined)
 
-    await usecase.execute('my-app', new UpdateAppCommandBuilder().withNodePin(PIN).build())
+    await expect(
+      usecase.execute('my-app', new UpdateAppCommandBuilder().withNodePin(PIN).build()),
+    ).rejects.toThrow(InternalServerErrorException)
 
-    expect(repository.findRelease.called).toBe(false)
     expect(applyRelease.apply.called).toBe(false)
+    expect(repository.updateBySlug.called).toBe(false)
   })
 
   it('stores nothing when the apply fails, so an identical retry applies again', async () => {

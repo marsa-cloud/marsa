@@ -1,22 +1,18 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common'
 import { nodePinEquals } from '#src/app/app-management/entities/node-pin.js'
 import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import { UpdateAppCommand } from '#src/app/app-management/use-cases/update-app/update-app.command.js'
 import { UpdateAppRepository } from '#src/app/app-management/use-cases/update-app/update-app.repository.js'
 import { UpdateAppResponse } from '#src/app/app-management/use-cases/update-app/update-app.response.js'
 import { namespaceOf } from '#src/app/environment/entities/namespace.js'
-import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import { ApplyReleaseService } from '#src/app/release/services/apply-release/apply-release.service.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
-import { isUuid } from '#src/utils/uuid.js'
 
 // Writes App, then re-applies only when the pin actually changed: a pin is location rather than
 // config, so it never reaches a Release and hasUndeployedChanges structurally cannot see it.
 @Injectable()
 export class UpdateAppUseCase {
-  private readonly logger = new Logger(UpdateAppUseCase.name)
-
   constructor(
     private readonly repository: UpdateAppRepository,
     private readonly credentialsCipher: ImagePullCredentialsCipher,
@@ -72,18 +68,16 @@ export class UpdateAppUseCase {
       namespaceOf(project, environment),
       app.slug,
     )
-    if (!isUuid<ReleaseUuid>(liveUuid)) {
+    if (!liveUuid) {
       return
     }
 
     const release = await this.repository.findRelease(liveUuid, app.uuid)
     if (!release) {
-      // Nothing to re-render against; the pin is stored and the next deploy will carry it.
-      this.logger.warn(
-        `App '${app.slug}' runs release ${liveUuid}, which is not a release of this app. ` +
-          'The new node pin will be saved but not applied; deploy to apply it.',
+      // The cluster runs a release Marsa has no record of for this app: state is already wrong.
+      throw new InternalServerErrorException(
+        `App '${app.slug}' is running release ${liveUuid}, which is not a release of this app.`,
       )
-      return
     }
 
     await this.applyRelease.apply(placement, release)

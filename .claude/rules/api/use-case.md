@@ -50,6 +50,30 @@ Presence, type, and shape are already enforced by the `ValidationPipe`. A use-ca
 **domain** rules (does this app exist, is this transition legal) only. See
 `.claude/rules/api/command-dto.md`.
 
+## Give every awaited call its own line
+
+```ts
+// WRONG — the await is buried inside another expression
+return new ViewNodeIndexResponse(await this.nodes.listNodes())
+if (!(await this.repository.insert(project))) {
+}
+
+// RIGHT — name the result, then use it
+const nodes = await this.nodes.listNodes()
+return new ViewNodeIndexResponse(nodes)
+
+const inserted = await this.repository.insert(project)
+if (!inserted) {
+}
+```
+
+Why: an awaited call is where the use-case waits on I/O and where it can fail. On its own line it
+gets a name, a breakpoint, and a stack frame that points straight at it; nested inside a
+constructor call or a negated condition, a reader has to parse the whole expression to find where
+control actually leaves the function.
+
+Existing sites that predate this rule are tracked in #227 — fix them in that sweep, not piecemeal.
+
 ## Naming
 
 The `<Action>` prefix comes from the use-case folder name, and the folder vocabulary

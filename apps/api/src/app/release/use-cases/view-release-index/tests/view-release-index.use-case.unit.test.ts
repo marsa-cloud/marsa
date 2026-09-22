@@ -5,6 +5,7 @@ import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { AppPlacementBuilder } from '#src/app/app-management/queries/app-placement.builder.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import type { Release } from '#src/app/release/entities/release.table.js'
+import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { ViewReleaseIndexQueryBuilder } from '#src/app/release/use-cases/view-release-index/query/view-release-index.query.builder.js'
 import { ViewReleaseIndexRepository } from '#src/app/release/use-cases/view-release-index/view-release-index.repository.js'
@@ -12,6 +13,7 @@ import { ViewReleaseIndexUseCase } from '#src/app/release/use-cases/view-release
 import { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
 import { RolloutStatus } from '#src/modules/kubernetes/rollout-status.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
+import { generateUuid } from '#src/utils/uuid.js'
 
 const SLUG = 'my-app'
 
@@ -170,7 +172,7 @@ describe('ViewReleaseIndexUseCase', () => {
   })
   it('leaves an undeployed head pending while another release is live', async () => {
     const { usecase, repository, deployBackend } = build()
-    deployBackend.readLiveReleaseUuid.resolves('some-other-release')
+    deployBackend.readLiveReleaseUuid.resolves(generateUuid<ReleaseUuid>())
     deployBackend.readRolloutStatus.resolves(RolloutStatus.Complete)
 
     const result = await usecase.execute(SLUG, firstPage())

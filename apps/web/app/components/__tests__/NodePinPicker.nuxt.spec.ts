@@ -126,4 +126,19 @@ describe('NodePinPicker', () => {
 
     expect(wrapper.text()).toContain('bare-node')
   })
+
+  it('emits nothing on mount, so seeding a saved pin never looks like an edit', async () => {
+    const wrapper = await mount({ modelValue: pinnedToNodeA })
+    await flush()
+
+    // AppConfigForm treats any emitted change as unsaved work, which blocks it from reseeding.
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+  })
+
+  it('emits nothing on mount when unpinned', async () => {
+    const wrapper = await mount({ modelValue: null })
+    await flush()
+
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+  })
 })

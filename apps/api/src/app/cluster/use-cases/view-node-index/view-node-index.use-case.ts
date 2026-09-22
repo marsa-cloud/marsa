@@ -7,6 +7,7 @@ export class ViewNodeIndexUseCase {
   constructor(private readonly nodes: NodeBackend) {}
 
   async execute(): Promise<ViewNodeIndexResponse> {
-    return new ViewNodeIndexResponse(await this.nodes.listNodes())
+    const nodes = await this.nodes.listNodes()
+    return new ViewNodeIndexResponse(nodes)
   }
 }
