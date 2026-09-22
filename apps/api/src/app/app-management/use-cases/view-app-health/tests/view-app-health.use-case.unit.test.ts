@@ -7,8 +7,8 @@ import { AppPlacementBuilder } from '#src/app/app-management/queries/app-placeme
 import { ViewAppHealthRepository } from '#src/app/app-management/use-cases/view-app-health/view-app-health.repository.js'
 import { AppHealthStatus } from '#src/app/app-management/use-cases/view-app-health/view-app-health.response.js'
 import { ViewAppHealthUseCase } from '#src/app/app-management/use-cases/view-app-health/view-app-health.use-case.js'
-import type { AppHealth } from '#src/modules/kubernetes/deploy-backend.types.js'
-import { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
+import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
+import type { AppHealth } from '#src/modules/runtime/runtime.types.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 const HEALTHY: AppHealth = {
@@ -19,15 +19,15 @@ const HEALTHY: AppHealth = {
 }
 
 function stubs(health: AppHealth, minReplicas = 1) {
-  const deployBackend = createStubInstance(MockDeployBackend)
-  deployBackend.readAppHealth.resolves(health)
+  const appRuntime = createStubInstance(MockAppRuntime)
+  appRuntime.readHealth.resolves(health)
   const repository = createStubInstance(ViewAppHealthRepository)
   repository.findBySlug.resolves(
     new AppPlacementBuilder()
       .withApp(new AppBuilder().withMinReplicas(minReplicas).build())
       .build(),
   )
-  return { usecase: new ViewAppHealthUseCase(repository, deployBackend), repository, deployBackend }
+  return { usecase: new ViewAppHealthUseCase(repository, appRuntime), repository, appRuntime }
 }
 
 const build = (health: AppHealth, minReplicas = 1) => stubs(health, minReplicas).usecase
@@ -122,12 +122,14 @@ describe('ViewAppHealthUseCase', () => {
     expect(result.status).toBe(AppHealthStatus.NotFound)
   })
 
-  it('reads health from the app namespace', async () => {
-    const { usecase, deployBackend } = stubs(HEALTHY)
+  it('reads health from the app environment', async () => {
+    const { usecase, appRuntime } = stubs(HEALTHY)
 
     await usecase.execute('my-app')
 
-    expect(deployBackend.readAppHealth.firstCall.args[0]).toBe('my-project-production')
+    expect(appRuntime.readHealth.firstCall.args[0]).toMatchObject({
+      environment: { projectSlug: 'my-project', environmentSlug: 'production' },
+    })
   })
 
   it('throws 404 for an unknown app', async () => {

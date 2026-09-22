@@ -8,8 +8,8 @@ import { AppPlacementBuilder } from '#src/app/app-management/queries/app-placeme
 import { ViewAppDetailRepository } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.repository.js'
 import { ViewAppDetailUseCase } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.use-case.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
-import { InvalidReleaseAnnotationError } from '#src/modules/kubernetes/deploy-backend.js'
-import { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
+import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
+import { InvalidReleaseAnnotationError } from '#src/modules/runtime/runtime.errors.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 const placement = new AppPlacementBuilder()
@@ -21,12 +21,12 @@ function build() {
   const repository = createStubInstance(ViewAppDetailRepository)
   repository.findBySlug.resolves(placement)
   repository.findRelease.resolves(undefined)
-  const deployBackend = createStubInstance(MockDeployBackend)
-  deployBackend.readLiveReleaseUuid.resolves(null)
+  const appRuntime = createStubInstance(MockAppRuntime)
+  appRuntime.readLiveReleaseUuid.resolves(null)
   const config = createStubInstance(ConfigService)
   config.getOrThrow.returns('demo.marsa.cc')
-  const usecase = new ViewAppDetailUseCase(repository, deployBackend, config)
-  return { repository, deployBackend, usecase }
+  const usecase = new ViewAppDetailUseCase(repository, appRuntime, config)
+  return { repository, appRuntime, usecase }
 }
 
 describe('ViewAppDetailUseCase', () => {
@@ -41,14 +41,16 @@ describe('ViewAppDetailUseCase', () => {
     expect(response.env).toEqual({ A: '1' })
   })
 
-  it('reads the live release from the app namespace and names its placement', async () => {
-    const { deployBackend, usecase } = build()
+  it('reads the live release from the app environment and names its placement', async () => {
+    const { appRuntime, usecase } = build()
 
     const response = await usecase.execute('my-app')
 
-    expect(
-      deployBackend.readLiveReleaseUuid.calledOnceWith('my-project-production', 'my-app'),
-    ).toBe(true)
+    expect(appRuntime.readLiveReleaseUuid.calledOnce).toBe(true)
+    expect(appRuntime.readLiveReleaseUuid.firstCall.args[0]).toMatchObject({
+      slug: 'my-app',
+      environment: { projectSlug: 'my-project', environmentSlug: 'production' },
+    })
     expect(response.project).toEqual({ slug: 'my-project', name: 'My Project' })
     expect(response.environment).toMatchObject({ slug: 'production', name: 'Production' })
   })
@@ -60,9 +62,9 @@ describe('ViewAppDetailUseCase', () => {
   })
 
   it('reports no changes when the running release matches the saved config', async () => {
-    const { repository, deployBackend, usecase } = build()
+    const { repository, appRuntime, usecase } = build()
     const running = new ReleaseBuilder().withApp(app).build()
-    deployBackend.readLiveReleaseUuid.resolves(running.uuid)
+    appRuntime.readLiveReleaseUuid.resolves(running.uuid)
     repository.findRelease.resolves(running)
 
     expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(false)
@@ -70,17 +72,17 @@ describe('ViewAppDetailUseCase', () => {
   })
 
   it('reports changes when the running release predates the saved config', async () => {
-    const { repository, deployBackend, usecase } = build()
+    const { repository, appRuntime, usecase } = build()
     const running = new ReleaseBuilder().withApp({ ...app, env: { A: 'old' } }).build()
-    deployBackend.readLiveReleaseUuid.resolves(running.uuid)
+    appRuntime.readLiveReleaseUuid.resolves(running.uuid)
     repository.findRelease.resolves(running)
 
     expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(true)
   })
 
   it('does not warn when the cluster cannot be read', async () => {
-    const { deployBackend, usecase } = build()
-    deployBackend.readLiveReleaseUuid.rejects(new Error('cluster unreachable'))
+    const { appRuntime, usecase } = build()
+    appRuntime.readLiveReleaseUuid.rejects(new Error('cluster unreachable'))
 
     expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(false)
   })
@@ -93,15 +95,15 @@ describe('ViewAppDetailUseCase', () => {
   })
 
   it('surfaces a malformed release annotation instead of hiding it as "no changes"', async () => {
-    const { usecase, deployBackend } = build()
-    deployBackend.readLiveReleaseUuid.rejects(new InvalidReleaseAnnotationError('bad annotation'))
+    const { usecase, appRuntime } = build()
+    appRuntime.readLiveReleaseUuid.rejects(new InvalidReleaseAnnotationError('bad annotation'))
 
     await expect(usecase.execute('my-app')).rejects.toThrow(InvalidReleaseAnnotationError)
   })
 
   it('still reports no undeployed changes when the cluster is unreachable', async () => {
-    const { usecase, deployBackend } = build()
-    deployBackend.readLiveReleaseUuid.rejects(new Error('ECONNREFUSED'))
+    const { usecase, appRuntime } = build()
+    appRuntime.readLiveReleaseUuid.rejects(new Error('ECONNREFUSED'))
 
     const response = await usecase.execute('my-app')
 

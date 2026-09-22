@@ -6,16 +6,16 @@ import { AppPlacementBuilder } from '#src/app/app-management/queries/app-placeme
 import { DEFAULT_TAIL_LINES } from '#src/app/app-management/use-cases/view-app-logs/view-app-logs.constants.js'
 import { ViewAppLogsRepository } from '#src/app/app-management/use-cases/view-app-logs/view-app-logs.repository.js'
 import { ViewAppLogsUseCase } from '#src/app/app-management/use-cases/view-app-logs/view-app-logs.use-case.js'
-import type { RunLogs } from '#src/modules/kubernetes/deploy-backend.types.js'
-import { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
+import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
+import type { RunLogs } from '#src/modules/runtime/runtime.types.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 function build(result: RunLogs | null) {
-  const deployBackend = createStubInstance(MockDeployBackend)
-  deployBackend.readRunLogs.resolves(result)
+  const appRuntime = createStubInstance(MockAppRuntime)
+  appRuntime.readRunLogs.resolves(result)
   const repository = createStubInstance(ViewAppLogsRepository)
   repository.findBySlug.resolves(new AppPlacementBuilder().build())
-  return { usecase: new ViewAppLogsUseCase(repository, deployBackend), deployBackend, repository }
+  return { usecase: new ViewAppLogsUseCase(repository, appRuntime), appRuntime, repository }
 }
 
 describe('ViewAppLogsUseCase', () => {
@@ -31,24 +31,25 @@ describe('ViewAppLogsUseCase', () => {
   })
 
   it('passes the requested tailLines through to the backend', async () => {
-    const { usecase, deployBackend } = build({ podName: 'p', logs: '' })
+    const { usecase, appRuntime } = build({ podName: 'p', logs: '' })
 
     await usecase.execute('my-app', 50)
 
-    expect(deployBackend.readRunLogs.calledOnce).toBe(true)
-    expect(deployBackend.readRunLogs.firstCall.args).toEqual([
-      'my-project-production',
-      'my-app',
-      { tailLines: 50 },
-    ])
+    expect(appRuntime.readRunLogs.calledOnce).toBe(true)
+    const [appRef, options] = appRuntime.readRunLogs.firstCall.args
+    expect(appRef).toMatchObject({
+      slug: 'my-app',
+      environment: { projectSlug: 'my-project', environmentSlug: 'production' },
+    })
+    expect(options).toEqual({ tailLines: 50 })
   })
 
   it('defaults tailLines when the caller omits it', async () => {
-    const { usecase, deployBackend } = build({ podName: 'p', logs: '' })
+    const { usecase, appRuntime } = build({ podName: 'p', logs: '' })
 
     await usecase.execute('my-app')
 
-    expect(deployBackend.readRunLogs.firstCall.args[2]).toEqual({ tailLines: DEFAULT_TAIL_LINES })
+    expect(appRuntime.readRunLogs.firstCall.args[1]).toEqual({ tailLines: DEFAULT_TAIL_LINES })
   })
 
   it('returns an empty, null-pod snapshot when the backend finds no pod', async () => {

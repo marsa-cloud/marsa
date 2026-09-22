@@ -4,7 +4,7 @@ import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import { DeployStatus, DeployStatusApiProperty } from '#src/app/release/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/release/enums/release-trigger.enum.js'
 import { ViewReleaseIndexQueryKey } from '#src/app/release/use-cases/view-release-index/query/view-release-index.query.js'
-import type { DeployFailure } from '#src/modules/kubernetes/deploy-backend.types.js'
+import type { DeployFailure } from '#src/modules/runtime/runtime.types.js'
 import {
   PaginatedKeysetResponse,
   PaginatedKeysetResponseMeta,

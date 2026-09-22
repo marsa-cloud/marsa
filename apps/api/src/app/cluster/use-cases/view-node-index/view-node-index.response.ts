@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger'
-import type { ClusterNode } from '#src/modules/kubernetes/node-backend.js'
+import type { ClusterNode } from '#src/modules/runtime/runtime.types.js'
 
 export class NodeSummary {
   @ApiProperty({ type: String, example: 'node-a' })

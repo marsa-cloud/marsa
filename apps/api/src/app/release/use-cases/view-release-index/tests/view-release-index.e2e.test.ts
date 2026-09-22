@@ -6,8 +6,9 @@ import { appTable } from '#src/app/app-management/entities/app.table.js'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
-import { DeployBackend } from '#src/modules/kubernetes/deploy-backend.js'
-import type { MockDeployBackend } from '#src/modules/kubernetes/mock-deploy-backend.js'
+import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
+import type { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
+import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -17,8 +18,8 @@ describe('GET /api/v1/apps/:slug/releases (e2e)', () => {
   let setup: TestSetup
   let environment: Environment
   let sessionCookie: string
-  let releaseUuid: string
-  const mockBackend = () => setup.testModule.get<DeployBackend, MockDeployBackend>(DeployBackend)
+  let releaseUuid: ReleaseUuid
+  const mockRuntime = () => setup.testModule.get<AppRuntime, MockAppRuntime>(AppRuntime)
 
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
@@ -53,7 +54,7 @@ describe('GET /api/v1/apps/:slug/releases (e2e)', () => {
   })
 
   it('lists releases and reconciles the live one to succeeded (mock rollout Complete)', async () => {
-    mockBackend().setLiveRelease(SLUG, releaseUuid)
+    mockRuntime().setLiveRelease(SLUG, releaseUuid)
 
     const response = await request(setup.httpServer)
       .get(`/api/v1/apps/${SLUG}/releases`)
