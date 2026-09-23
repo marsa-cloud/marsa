@@ -337,6 +337,91 @@ export const zUpdateAppResponse = z.object({
   nodePin: zNodePin.nullable(),
 })
 
+export const zDatabaseEngine = z.enum(['postgres'])
+
+export const zCreateDatabaseCommand = z.object({
+  environmentUuid: z.uuid(),
+  slug: z
+    .string()
+    .max(63)
+    .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/),
+  engine: zDatabaseEngine,
+  version: z.string(),
+  storageGib: z.int().gte(1).lte(1024).optional(),
+  nodePin: zNodePin.optional(),
+})
+
+export const zCreateDatabaseResponse = z.object({
+  slug: z.string(),
+  engine: zDatabaseEngine,
+  version: z.string(),
+  host: z.string(),
+  port: z.int(),
+})
+
+export const zViewDatabaseIndexQueryKey = z.object({
+  uuid: z.uuid(),
+})
+
+export const zViewDatabaseIndexPaginationQuery = z.object({
+  limit: z.number().gte(1).lte(100).optional(),
+  key: zViewDatabaseIndexQueryKey.nullish(),
+})
+
+export const zDatabaseStatus = z.enum(['provisioning', 'ready', 'failed', 'not_found'])
+
+export const zDatabaseProjectRef = z.object({
+  slug: z.string(),
+  name: z.string(),
+})
+
+export const zDatabaseEnvironmentRef = z.object({
+  slug: z.string(),
+  name: z.string(),
+})
+
+export const zDatabaseSummary = z.object({
+  slug: z.string(),
+  engine: zDatabaseEngine,
+  version: z.string(),
+  status: zDatabaseStatus,
+  project: zDatabaseProjectRef,
+  environment: zDatabaseEnvironmentRef,
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+})
+
+export const zViewDatabaseIndexResponseMeta = z.object({
+  next: zViewDatabaseIndexQueryKey.nullable(),
+})
+
+export const zViewDatabaseIndexResponse = z.object({
+  items: z.array(zDatabaseSummary),
+  meta: zViewDatabaseIndexResponseMeta,
+})
+
+export const zDatabaseConnectionInfo = z.object({
+  host: z.string(),
+  port: z.int(),
+  user: z.string(),
+  database: z.string(),
+})
+
+export const zViewDatabaseDetailResponse = z.object({
+  slug: z.string(),
+  engine: zDatabaseEngine,
+  version: z.string(),
+  image: z.string(),
+  storageGib: z.int(),
+  status: zDatabaseStatus,
+  nodePin: zNodePin.nullable(),
+  connection: zDatabaseConnectionInfo,
+  project: zDatabaseProjectRef,
+  environment: zDatabaseEnvironmentRef,
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+})
+
 export const zNodeSummary = z.object({
   name: z.string(),
   labels: z.record(z.string(), z.string()),
@@ -521,5 +606,30 @@ export const zViewAppLogsV1Query = z.object({
 })
 
 export const zViewAppLogsV1Response = zViewAppLogsResponse
+
+export const zViewDatabaseIndexV1Query = z.object({
+  pagination: zViewDatabaseIndexPaginationQuery.optional(),
+})
+
+export const zViewDatabaseIndexV1Response = zViewDatabaseIndexResponse
+
+export const zCreateDatabaseV1Body = zCreateDatabaseCommand
+
+export const zCreateDatabaseV1Response = zCreateDatabaseResponse
+
+export const zDeleteDatabaseV1Path = z.object({
+  slug: z.string(),
+})
+
+/**
+ * The database, its Kubernetes resources and its data were removed.
+ */
+export const zDeleteDatabaseV1Response = z.void()
+
+export const zViewDatabaseDetailV1Path = z.object({
+  slug: z.string(),
+})
+
+export const zViewDatabaseDetailV1Response = zViewDatabaseDetailResponse
 
 export const zViewNodeIndexV1Response = zViewNodeIndexResponse

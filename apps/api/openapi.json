@@ -1057,6 +1057,181 @@
         ]
       }
     },
+    "/api/v1/databases": {
+      "post": {
+        "operationId": "createDatabaseV1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDatabaseCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateDatabaseResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body, or an invalid slug / version / size."
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
+          "404": {
+            "description": "No environment with that uuid, or an unavailable version."
+          },
+          "409": {
+            "description": "An app or database in that environment owns the name."
+          },
+          "502": {
+            "description": "Kubernetes provisioning failed; nothing was created."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "databases"
+        ]
+      },
+      "get": {
+        "operationId": "viewDatabaseIndexV1",
+        "parameters": [
+          {
+            "name": "pagination",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ViewDatabaseIndexPaginationQuery"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewDatabaseIndexResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "databases"
+        ]
+      }
+    },
+    "/api/v1/databases/{slug}": {
+      "get": {
+        "operationId": "viewDatabaseDetailV1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewDatabaseDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
+          "404": {
+            "description": "No database with that slug."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "databases"
+        ]
+      },
+      "delete": {
+        "operationId": "deleteDatabaseV1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The database, its Kubernetes resources and its data were removed."
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
+          "404": {
+            "description": "No database with that slug."
+          },
+          "502": {
+            "description": "Kubernetes teardown failed; the database was kept."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "databases"
+        ]
+      }
+    },
     "/api/v1/nodes": {
       "get": {
         "operationId": "viewNodeIndexV1",
@@ -2489,6 +2664,367 @@
           "maxReplicas",
           "env",
           "nodePin"
+        ]
+      },
+      "DatabaseEngine": {
+        "type": "string",
+        "enum": [
+          "postgres"
+        ]
+      },
+      "CreateDatabaseCommand": {
+        "type": "object",
+        "properties": {
+          "environmentUuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Environment the database lives in."
+          },
+          "slug": {
+            "type": "string",
+            "example": "orders",
+            "description": "In-cluster hostname + K8s object name.",
+            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "maxLength": 63
+          },
+          "engine": {
+            "example": "postgres",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DatabaseEngine"
+              }
+            ]
+          },
+          "version": {
+            "type": "string",
+            "example": "17",
+            "description": "Major version, pinned at creation."
+          },
+          "storageGib": {
+            "type": "integer",
+            "example": 10,
+            "description": "Requested volume size. Recorded, but local-path does not enforce it (#209).",
+            "minimum": 1,
+            "maximum": 1024
+          },
+          "nodePin": {
+            "description": "Node the data lives on. Set at creation, immutable afterwards.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NodePin"
+              }
+            ]
+          }
+        },
+        "required": [
+          "environmentUuid",
+          "slug",
+          "engine",
+          "version"
+        ]
+      },
+      "CreateDatabaseResponse": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "example": "orders"
+          },
+          "engine": {
+            "example": "postgres",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DatabaseEngine"
+              }
+            ]
+          },
+          "version": {
+            "type": "string",
+            "example": "17"
+          },
+          "host": {
+            "type": "string",
+            "example": "orders",
+            "description": "In-cluster hostname."
+          },
+          "port": {
+            "type": "integer",
+            "example": 5432
+          }
+        },
+        "required": [
+          "slug",
+          "engine",
+          "version",
+          "host",
+          "port"
+        ]
+      },
+      "ViewDatabaseIndexQueryKey": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "uuid"
+        ]
+      },
+      "ViewDatabaseIndexPaginationQuery": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "key": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ViewDatabaseIndexQueryKey"
+              }
+            ]
+          }
+        }
+      },
+      "DatabaseStatus": {
+        "type": "string",
+        "enum": [
+          "provisioning",
+          "ready",
+          "failed",
+          "not_found"
+        ]
+      },
+      "DatabaseProjectRef": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "example": "demo"
+          },
+          "name": {
+            "type": "string",
+            "example": "Demo"
+          }
+        },
+        "required": [
+          "slug",
+          "name"
+        ]
+      },
+      "DatabaseEnvironmentRef": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "example": "dev"
+          },
+          "name": {
+            "type": "string",
+            "example": "Development"
+          }
+        },
+        "required": [
+          "slug",
+          "name"
+        ]
+      },
+      "DatabaseSummary": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "example": "orders"
+          },
+          "engine": {
+            "example": "postgres",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DatabaseEngine"
+              }
+            ]
+          },
+          "version": {
+            "type": "string",
+            "example": "17"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DatabaseStatus"
+              }
+            ]
+          },
+          "project": {
+            "$ref": "#/components/schemas/DatabaseProjectRef"
+          },
+          "environment": {
+            "$ref": "#/components/schemas/DatabaseEnvironmentRef"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "slug",
+          "engine",
+          "version",
+          "status",
+          "project",
+          "environment",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ViewDatabaseIndexResponseMeta": {
+        "type": "object",
+        "properties": {
+          "next": {
+            "nullable": true,
+            "description": "Key for the next page, or null on the last page. Opaque — send it back as-is.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ViewDatabaseIndexQueryKey"
+              }
+            ]
+          }
+        },
+        "required": [
+          "next"
+        ]
+      },
+      "ViewDatabaseIndexResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "The items for the current page",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DatabaseSummary"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ViewDatabaseIndexResponseMeta"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
+      "DatabaseConnectionInfo": {
+        "type": "object",
+        "properties": {
+          "host": {
+            "type": "string",
+            "example": "orders",
+            "description": "In-cluster hostname."
+          },
+          "port": {
+            "type": "integer",
+            "example": 5432
+          },
+          "user": {
+            "type": "string",
+            "example": "postgres"
+          },
+          "database": {
+            "type": "string",
+            "example": "orders"
+          }
+        },
+        "required": [
+          "host",
+          "port",
+          "user",
+          "database"
+        ]
+      },
+      "ViewDatabaseDetailResponse": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "example": "orders"
+          },
+          "engine": {
+            "example": "postgres",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DatabaseEngine"
+              }
+            ]
+          },
+          "version": {
+            "type": "string",
+            "example": "17"
+          },
+          "image": {
+            "type": "string",
+            "example": "postgres:17.11"
+          },
+          "storageGib": {
+            "type": "integer",
+            "example": 10
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DatabaseStatus"
+              }
+            ]
+          },
+          "nodePin": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/NodePin"
+              }
+            ]
+          },
+          "connection": {
+            "$ref": "#/components/schemas/DatabaseConnectionInfo"
+          },
+          "project": {
+            "$ref": "#/components/schemas/DatabaseProjectRef"
+          },
+          "environment": {
+            "$ref": "#/components/schemas/DatabaseEnvironmentRef"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "slug",
+          "engine",
+          "version",
+          "image",
+          "storageGib",
+          "status",
+          "nodePin",
+          "connection",
+          "project",
+          "environment",
+          "createdAt",
+          "updatedAt"
         ]
       },
       "NodeSummary": {
