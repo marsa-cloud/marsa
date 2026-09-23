@@ -101,7 +101,8 @@ ${C_BOLD}Options (server mode)${C_RESET}
                         Default: latest published, including pre-releases.
   --namespace <ns>      Namespace to install into. Default: ${NAMESPACE}.
   --release <name>      Install/release name. Default: ${RELEASE_NAME}.
-  --no-tls              Disable HTTPS. Not recommended.
+  --no-tls              Disable HTTPS. Not recommended; nodes also skip TLS
+                        verification for registry.<domain>.
   --skip-keda           Don't install KEDA + its HTTP add-on. Only pass this when
                         the cluster already provides both — deployed apps are
                         scaled by KEDA and routed through its interceptor, so
@@ -308,6 +309,23 @@ install_k3s_agent() {
     sleep 2
   done
   ok "K3s agent is up and has joined the cluster"
+}
+
+write_registry_trust() {
+  # A --no-tls install serves Traefik's self-signed default cert, which containerd refuses on pull.
+  [ "$TLS_ENABLED" = "false" ] || return 0
+  local file="/etc/rancher/k3s/registries.yaml" wanted
+  wanted="$(printf 'configs:\n  "registry.%s":\n    tls:\n      insecure_skip_verify: true\n' "$DOMAIN")"
+  if [ -r "$file" ] && [ "$(cat "$file")" = "$wanted" ]; then
+    return 0
+  fi
+  mkdir -p /etc/rancher/k3s
+  printf '%s\n' "$wanted" > "$file"
+  ok "Nodes will trust registry.${DOMAIN} without a public certificate (--no-tls)"
+  # K3s reads registries.yaml only at startup.
+  if systemctl is-active --quiet k3s 2>/dev/null; then
+    warn "K3s is already running: restart it (sudo systemctl restart k3s) for nodes to pull built images"
+  fi
 }
 
 # --- Helm ---------------------------------------------------------------------
@@ -574,6 +592,7 @@ main() {
     export KUBECONFIG="${KUBECONFIG:-$K3S_KUBECONFIG}"
     kubectl get nodes >/dev/null 2>&1 || die "No reachable cluster at KUBECONFIG=$KUBECONFIG"
   else
+    write_registry_trust
     install_k3s
   fi
   install_helm
