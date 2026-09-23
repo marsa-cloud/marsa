@@ -500,11 +500,11 @@ spec:
       labels:
         app: marsa-registry
       annotations:
-        checksum/config: { { include "marsa.registryConfig" . | sha256sum | trunc 16 | quote } }
+        checksum/config: {{ include "marsa.registryConfig" . | sha256sum | trunc 16 | quote }}
     spec:
       containers:
         - name: zot
-          image: 'ghcr.io/project-zot/zot-minimal:{{ .Values.registry.imageTag }}'
+          image: "ghcr.io/project-zot/zot-minimal:{{ .Values.registry.imageTag }}"
           ports:
             - containerPort: 5000
           env:
@@ -556,10 +556,10 @@ spec:
     - metadata:
         name: data
       spec:
-        accessModes: ['ReadWriteOnce']
+        accessModes: ["ReadWriteOnce"]
         resources:
           requests:
-            storage: { { .Values.registry.storageSize } }
+            storage: {{ .Values.registry.storageSize }}
 ```
 
 - [ ] **Step 4: Run the tests and validate the rendered Zot config**
