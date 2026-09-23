@@ -1,10 +1,12 @@
 import { Global, Module } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { KubernetesAppRuntime } from '#src/modules/runtime/adapters/kubernetes/kubernetes-app-runtime.js'
+import { KubernetesBuildRuntime } from '#src/modules/runtime/adapters/kubernetes/kubernetes-build-runtime.js'
 import { KubernetesEnvironmentRuntime } from '#src/modules/runtime/adapters/kubernetes/kubernetes-environment-runtime.js'
 import { KubernetesNodeRuntime } from '#src/modules/runtime/adapters/kubernetes/kubernetes-node-runtime.js'
 import { ZotImageRegistry } from '#src/modules/runtime/adapters/zot/zot-image-registry.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
+import { BuildRuntime } from '#src/modules/runtime/build-runtime.js'
 import { EnvironmentRuntime } from '#src/modules/runtime/environment-runtime.js'
 import { ImageRegistry } from '#src/modules/runtime/image-registry.js'
 import { NodeRuntime } from '#src/modules/runtime/node-runtime.js'
@@ -24,6 +26,7 @@ import { NodeRuntime } from '#src/modules/runtime/node-runtime.js'
       inject: [EnvironmentRuntime],
     },
     { provide: NodeRuntime, useClass: KubernetesNodeRuntime },
+    { provide: BuildRuntime, useClass: KubernetesBuildRuntime },
     {
       // Zot runs in the same cluster as the apps, so this adapter ships with the Kubernetes one.
       provide: ImageRegistry,
@@ -37,6 +40,6 @@ import { NodeRuntime } from '#src/modules/runtime/node-runtime.js'
       inject: [ConfigService],
     },
   ],
-  exports: [AppRuntime, EnvironmentRuntime, NodeRuntime, ImageRegistry],
+  exports: [AppRuntime, EnvironmentRuntime, NodeRuntime, ImageRegistry, BuildRuntime],
 })
 export class KubernetesRuntimeModule {}
