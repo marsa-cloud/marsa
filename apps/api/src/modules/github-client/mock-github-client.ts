@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { GithubClient } from '#src/modules/github-client/github-client.js'
 import type {
+  BranchHeadParams,
   GitHubAppCredentials,
   GitHubUser,
   InstallationTokenParams,
@@ -8,6 +9,8 @@ import type {
 } from '#src/modules/github-client/github-client.types.js'
 
 const MOCK_PREFIX = 'mock'
+
+export const MOCK_COMMIT_SHA = `c0ffee${'0'.repeat(34)}`
 
 /** Canned credentials returned by the mock so test/local runs need no real App. */
 const MOCK_CREDENTIALS: GitHubAppCredentials = {
@@ -44,6 +47,11 @@ export class MockGithubClient extends GithubClient {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getInstallationToken(_params: InstallationTokenParams): Promise<string> {
     return Promise.resolve('ghs_mock_installation_token')
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  getBranchHead(_params: BranchHeadParams): Promise<string> {
+    return Promise.resolve(MOCK_COMMIT_SHA)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

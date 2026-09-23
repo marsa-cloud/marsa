@@ -8,6 +8,7 @@ import {
 } from '#src/modules/github-client/github-client.constants.js'
 import { GithubClient } from '#src/modules/github-client/github-client.js'
 import type {
+  BranchHeadParams,
   GitHubAppCredentials,
   GitHubManifestConversionResponse,
   GitHubOAuthAccessTokenResponse,
@@ -62,6 +63,30 @@ export class OctokitGithubClient extends GithubClient {
       // Log GitHub's detail server-side; surface a generic error to the caller.
       this.logger.error(`installation token mint failed: ${(error as Error).message}`)
       throw new Error('Could not mint a GitHub installation access token.')
+    }
+  }
+
+  async getBranchHead({ token, repo, branch }: BranchHeadParams): Promise<string> {
+    const [owner, name] = repo.split('/')
+    try {
+      const response = await request('GET /repos/{owner}/{repo}/commits/{ref}', {
+        owner,
+        repo: name,
+        ref: branch,
+        headers: { authorization: `token ${token}`, accept: 'application/vnd.github.sha' },
+        request: { signal: AbortSignal.timeout(GITHUB_REQUEST_TIMEOUT_MS) },
+      })
+      // The sha media type returns the bare SHA as text; Octokit still types it as a commit.
+      return (response.data as unknown as string).trim()
+    } catch (error) {
+      const status = (error as { status?: number }).status
+      if (status === 404 || status === 422) {
+        throw new Error(
+          `Branch '${branch}' of '${repo}' was not found, or the GitHub App cannot access it.`,
+        )
+      }
+      this.logger.error(`branch head lookup failed: ${(error as Error).message}`)
+      throw new Error(`Could not read '${repo}' from GitHub.`)
     }
   }
 
