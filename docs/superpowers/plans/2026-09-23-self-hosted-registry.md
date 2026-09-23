@@ -276,6 +276,7 @@ entry under `properties`:
 
 `charts/marsa/templates/registry-secrets.yml`:
 
+<!-- prettier-ignore -->
 ```yaml
 {{- /*
   Generate-once / reuse-on-upgrade, like marsa-api-secrets. The htpasswd file is reused rather
@@ -421,6 +422,7 @@ The config lives in a named template so the StatefulSet can hash it (restarting 
 
 `charts/marsa/templates/_registry.tpl`:
 
+<!-- prettier-ignore -->
 ```yaml
 {{- define "marsa.registryConfig" -}}
 {
@@ -465,6 +467,7 @@ The config lives in a named template so the StatefulSet can hash it (restarting 
 
 `charts/marsa/templates/registry.yml`:
 
+<!-- prettier-ignore -->
 ```yaml
 apiVersion: v1
 kind: ConfigMap
@@ -673,6 +676,7 @@ Expected: FAIL on the three new cases.
 In `charts/marsa/templates/ingress-route.yml`, inside the `{{- with .Values.tls.domain }}` block,
 after the `api.{{ . }}` route and before `{{- end }}`:
 
+<!-- prettier-ignore -->
 ```yaml
 - match: Host(`registry.{{ . }}`)
   kind: Rule
@@ -683,6 +687,7 @@ after the `api.{{ . }}` route and before `{{- end }}`:
 
 In `charts/marsa/templates/configmap.yml`, append to the `marsa-config` data:
 
+<!-- prettier-ignore -->
 ```yaml
 # Nodes pull built images by this public name; the api and build Jobs push to the Service.
 MARSA_REGISTRY_HOST: 'registry.{{ .Values.tls.domain }}'
