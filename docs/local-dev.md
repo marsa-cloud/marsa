@@ -43,6 +43,21 @@ base domain with `MARSA_E2E_CLUSTER` / `MARSA_E2E_DOMAIN`, and the host ports
 with `MARSA_E2E_HTTP_PORT` / `MARSA_E2E_HTTPS_PORT` when something already holds
 `:80` / `:443`.
 
+### Reaching a database
+
+Databases are in-cluster only — nothing is exposed outside the cluster in v0.2 (#233 adds
+external access). To open a psql shell against one on a k3d install:
+
+```bash
+kubectl -n <project>-<environment> exec -it <slug>-0 -- psql -U postgres -d <slug_with_underscores>
+```
+
+Two things the UI also says, worth repeating here: the requested storage size is **recorded but
+not enforced** — the default `local-path` class ignores capacity and cannot resize — and the data
+lives on whichever node the pod first landed on, so moving it means a dump and restore (#209).
+Point the volumes at another storage class with `MARSA_DATABASE_STORAGE_CLASS` (default
+`local-path`) **before** creating anything; a volume cannot change class in place.
+
 ### Clicking through your own branch
 
 `e2e:up` installs whatever image tag the chart resolves — by default the
