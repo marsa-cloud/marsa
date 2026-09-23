@@ -10,6 +10,7 @@ import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-crede
 import type { Database, Transaction } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
+import { ImageRegistry } from '#src/modules/runtime/image-registry.js'
 
 type Outcome =
   | { deployed: true; response: DeployReleaseResponse }
@@ -25,6 +26,7 @@ export class DeployReleaseUseCase {
     private readonly repository: DeployReleaseRepository,
     private readonly appRuntime: AppRuntime,
     private readonly cipher: ImagePullCredentialsCipher,
+    private readonly imageRegistry: ImageRegistry,
     config: ConfigService,
   ) {
     this.baseDomain = config.getOrThrow<string>('MARSA_BASE_DOMAIN')
@@ -68,7 +70,9 @@ export class DeployReleaseUseCase {
   }
 
   private async deploy(placement: AppPlacement, release: Release): Promise<void> {
-    const credentials = this.cipher.openForApp(placement.app.slug, release.imagePullCredentialsEnc)
+    const credentials =
+      this.imageRegistry.pullCredentialsFor(release.imageRef) ??
+      this.cipher.openForApp(placement.app.slug, release.imagePullCredentialsEnc)
     const spec = deploySpecOf(placement, release, { baseDomain: this.baseDomain, credentials })
     await this.appRuntime.deploy(placement, spec)
   }
