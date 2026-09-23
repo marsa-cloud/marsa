@@ -213,6 +213,44 @@ export const zViewReleaseIndexResponse = z.object({
   meta: zViewReleaseIndexResponseMeta,
 })
 
+export const zBuildStatus = z.enum(['running', 'succeeded', 'failed', 'cancelled'])
+
+export const zBuildTrigger = z.enum(['push', 'create', 'manual'])
+
+export const zBuildSummary = z.object({
+  uuid: z.uuid(),
+  commitSha: z.string(),
+  branch: z.string(),
+  status: zBuildStatus,
+  trigger: zBuildTrigger,
+  imageRef: z.string().nullable(),
+  failureReason: z.string().nullable(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
+})
+
+export const zViewBuildIndexQueryKey = z.object({
+  uuid: z.uuid(),
+})
+
+export const zViewBuildIndexPaginationQuery = z.object({
+  limit: z.number().gte(1).lte(100).optional(),
+  key: zViewBuildIndexQueryKey.nullish(),
+})
+
+export const zViewBuildIndexResponseMeta = z.object({
+  next: zViewBuildIndexQueryKey.nullable(),
+})
+
+export const zViewBuildIndexResponse = z.object({
+  items: z.array(zBuildSummary),
+  meta: zViewBuildIndexResponseMeta,
+})
+
+export const zViewBuildLogsResponse = z.object({
+  logs: z.string(),
+})
+
 export const zImagePullCredentials = z.object({
   registry: z.string().max(253),
   username: z.string().max(255),
@@ -472,6 +510,29 @@ export const zDeployReleaseV1Path = z.object({
 })
 
 export const zDeployReleaseV1Response = zDeployReleaseResponse
+
+export const zViewBuildIndexV1Path = z.object({
+  slug: z.string(),
+})
+
+export const zViewBuildIndexV1Query = z.object({
+  pagination: zViewBuildIndexPaginationQuery.optional(),
+})
+
+export const zViewBuildIndexV1Response = zViewBuildIndexResponse
+
+export const zStartBuildV1Path = z.object({
+  slug: z.string(),
+})
+
+export const zStartBuildV1Response = zBuildSummary
+
+export const zViewBuildLogsV1Path = z.object({
+  slug: z.string(),
+  buildUuid: z.string(),
+})
+
+export const zViewBuildLogsV1Response = zViewBuildLogsResponse
 
 export const zViewAppIndexV1Query = z.object({
   pagination: zViewAppIndexPaginationQuery.optional(),
