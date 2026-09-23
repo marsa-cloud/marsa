@@ -35,6 +35,7 @@
     "@nestjs/core": "catalog:",
     "@nestjs/platform-express": "catalog:",
     "@nestjs/platform-fastify": "^11.1.21",
+    "@nestjs/schedule": "catalog:",
     "@nestjs/swagger": "catalog:",
     "@octokit/auth-app": "catalog:",
     "@octokit/request": "catalog:",
