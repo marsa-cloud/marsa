@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common'
 import { AppModule } from '#src/app.module.js'
 import { AppManagementModule } from '#src/app/app-management/app-management.module.js'
 import { AuthModule } from '#src/app/auth/auth.module.js'
+import { BuildModule } from '#src/app/build/build.module.js'
 import { ClusterModule } from '#src/app/cluster/cluster.module.js'
 import { EnvironmentModule } from '#src/app/environment/environment.module.js'
 import { GitHubAppModule } from '#src/app/github-app/github-app.module.js'
@@ -20,6 +21,7 @@ import { StatusModule } from '#src/modules/status/status.module.js'
       ProjectModule,
       EnvironmentModule,
       ReleaseModule,
+      BuildModule,
       AppManagementModule,
       ClusterModule,
     ]),
