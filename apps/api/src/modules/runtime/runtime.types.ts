@@ -73,3 +73,35 @@ export interface ClusterNode {
   labels: Record<string, string>
   ready: boolean
 }
+
+export interface DatabaseRef extends EnvironmentRef {
+  database: { slug: string }
+}
+
+// Decrypted, held in memory only for the length of a provision (AgDR-0036).
+export interface DatabaseCredentials {
+  user: string
+  password: string
+  database: string
+}
+
+export interface DatabaseDeploySpec {
+  image: string
+  port: number
+  dataMountPath: string
+  env: Record<string, string>
+  // Env the engine image reads its init values from, keyed by published-variable name.
+  credentialEnv: Array<{ name: string; key: string }>
+  publishedVariables: Record<string, string>
+  storageGib: number
+  storageClass: string
+  readinessExec: string[]
+  nodePin: NodePinSpec | null
+}
+
+export enum DatabaseStatus {
+  Provisioning = 'provisioning',
+  Ready = 'ready',
+  Failed = 'failed',
+  NotFound = 'not_found',
+}
