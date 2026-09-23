@@ -103,3 +103,15 @@ describe('ZotImageRegistry.deleteRepository', () => {
     )
   })
 })
+
+describe('ZotImageRegistry refs', () => {
+  const { registry } = registryWith({})
+
+  it('names the image nodes pull by the public registry host', () => {
+    expect(registry.imageRefFor('my-app', 'abc')).toBe('registry.demo.marsa.cc/my-app:abc')
+  })
+
+  it('names the image builds push by the in-cluster service host', () => {
+    expect(registry.pushRefFor('my-app', 'abc')).toBe('marsa-registry:5000/my-app:abc')
+  })
+})

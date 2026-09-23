@@ -73,3 +73,28 @@ export interface ClusterNode {
   labels: Record<string, string>
   ready: boolean
 }
+
+export interface BuildRef {
+  build: { uuid: Uuid<'Build'> }
+  app: { slug: string }
+}
+
+export interface BuildSpec {
+  repoUrl: string
+  commitSha: string
+  rootDir: string
+  dockerfilePath: string
+  gitToken: string
+  pushRef: string
+}
+
+export enum BuildState {
+  Running = 'running',
+  Succeeded = 'succeeded',
+  Failed = 'failed',
+  NotFound = 'not_found',
+}
+
+export type BuildObservation =
+  | { state: BuildState.Running | BuildState.Succeeded | BuildState.NotFound }
+  | { state: BuildState.Failed; reason: string }
