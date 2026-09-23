@@ -1,0 +1,8 @@
+export const BUILD_NAMESPACE = 'marsa-builds'
+export const BUILDKIT_IMAGE = 'moby/buildkit:v0.33.0-rootless'
+export const BUILD_TTL_SECONDS = 3600
+export const REGISTRY_PUSH_SECRET = 'marsa-registry-push'
+export const BUILD_UUID_LABEL = 'marsa.cloud/build-uuid'
+export const BUILD_APP_LABEL = 'marsa.cloud/app'
+export const JOB_NAME_LABEL = 'batch.kubernetes.io/job-name'
+export const GIT_TOKEN_KEY = 'token'
