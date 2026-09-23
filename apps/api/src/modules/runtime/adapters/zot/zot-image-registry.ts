@@ -21,6 +21,7 @@ export interface ZotRegistryConfig {
 
 export class ZotImageRegistry extends ImageRegistry {
   private readonly url: string
+  private readonly pushHost: string
   private readonly authorization: string
 
   constructor(
@@ -29,6 +30,7 @@ export class ZotImageRegistry extends ImageRegistry {
   ) {
     super()
     this.url = stripTrailingSlash(config.url)
+    this.pushHost = new URL(this.url).host
     const token = Buffer.from(`${REGISTRY_PUSH_USER}:${config.pushPassword}`).toString('base64')
     this.authorization = `Basic ${token}`
   }
@@ -42,6 +44,14 @@ export class ZotImageRegistry extends ImageRegistry {
       username: REGISTRY_PULL_USER,
       password: this.config.pullPassword,
     }
+  }
+
+  imageRefFor(appSlug: string, tag: string): string {
+    return `${this.config.host}/${appSlug}:${tag}`
+  }
+
+  pushRefFor(appSlug: string, tag: string): string {
+    return `${this.pushHost}/${appSlug}:${tag}`
   }
 
   async deleteRepository(appSlug: string): Promise<void> {

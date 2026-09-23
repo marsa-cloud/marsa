@@ -6,4 +6,8 @@ export abstract class ImageRegistry {
 
   // Idempotent: a repository that never existed or is already gone counts as deleted.
   abstract deleteRepository(appSlug: string): Promise<void>
+
+  abstract imageRefFor(appSlug: string, tag: string): string
+
+  abstract pushRefFor(appSlug: string, tag: string): string
 }
