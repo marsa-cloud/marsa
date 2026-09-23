@@ -8,7 +8,9 @@ import type { Environment } from '#src/app/environment/entities/environment.tabl
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
 import type { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
+import type { MockImageRegistry } from '#src/modules/runtime/adapters/mock/mock-image-registry.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
+import { ImageRegistry } from '#src/modules/runtime/image-registry.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -43,6 +45,8 @@ describe('DELETE /api/v1/apps/:slug (e2e)', () => {
     expect(apps).toHaveLength(0)
     const releases = await setup.db.select().from(releaseTable)
     expect(releases).toHaveLength(0)
+    const imageRegistry = setup.testModule.get<ImageRegistry, MockImageRegistry>(ImageRegistry)
+    expect(imageRegistry.deletedRepositories).toContain(SLUG)
   })
 
   it('returns 404 for a slug that does not exist', async () => {
@@ -77,5 +81,22 @@ describe('DELETE /api/v1/apps/:slug (e2e)', () => {
       .from(releaseTable)
       .where(eq(releaseTable.appUuid, app.uuid))
     expect(releases).toHaveLength(1)
+  })
+
+  it('keeps the app when its registry repository cannot be deleted', async () => {
+    const slug = 'delete-e2e-registry-down'
+    const app = new AppBuilder().withEnvironmentUuid(environment.uuid).withSlug(slug).build()
+    await setup.db.insert(appTable).values(app)
+    setup.testModule
+      .get<ImageRegistry, MockImageRegistry>(ImageRegistry)
+      .failNextDelete(new Error('registry down'))
+
+    await request(setup.httpServer)
+      .delete(`/api/v1/apps/${slug}`)
+      .set('Cookie', sessionCookie)
+      .expect(502)
+
+    const apps = await setup.db.select().from(appTable).where(eq(appTable.slug, slug))
+    expect(apps).toHaveLength(1)
   })
 })
