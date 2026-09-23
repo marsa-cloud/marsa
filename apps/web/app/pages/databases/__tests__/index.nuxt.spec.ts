@@ -76,7 +76,7 @@ describe('databases/index list page', () => {
     const wrapper = await mountSuspended(Index)
 
     expect(wrapper.text()).toContain('orders')
-    expect(wrapper.text()).not.toContain("Couldn't load databases")
+    expect(wrapper.text()).not.toContain('Couldn\'t load databases')
   })
 
   it('shows the empty state when there is nothing yet', async () => {

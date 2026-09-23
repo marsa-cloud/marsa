@@ -1,7 +1,7 @@
 import type { NodePin } from '#src/app/app-management/entities/node-pin.js'
-import { DEFAULT_STORAGE_GIB } from '#src/app/database/entities/database-config.constants.js'
 import type { DatabaseRow } from '#src/app/database/entities/database.table.js'
 import type { DatabaseUuid } from '#src/app/database/entities/database.uuid.js'
+import { DEFAULT_STORAGE_GIB } from '#src/app/database/entities/database-config.constants.js'
 import { DatabaseEngine } from '#src/app/database/enums/database-engine.enum.js'
 import type { EnvironmentUuid } from '#src/app/environment/entities/environment.uuid.js'
 import { generateUuid } from '#src/utils/uuid.js'

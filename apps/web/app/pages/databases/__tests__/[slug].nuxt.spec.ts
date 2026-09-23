@@ -139,6 +139,6 @@ describe('databases/[slug] detail page', () => {
 
     const wrapper = await mountSuspended(Detail)
 
-    expect(wrapper.text()).toContain("Couldn't load this database")
+    expect(wrapper.text()).toContain('Couldn\'t load this database')
   })
 })

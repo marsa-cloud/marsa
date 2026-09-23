@@ -4,7 +4,6 @@ import {
   AppsV1Api,
   CoreV1Api,
   KubeConfig,
-  type V1Status,
 } from '@kubernetes/client-node'
 import { expect } from 'expect'
 import {
@@ -119,7 +118,7 @@ describe('KubernetesDatabaseRuntime', () => {
   it('tolerates a 404 from any teardown step so a retry can finish', async () => {
     apps.deleteNamespacedStatefulSet.rejects(new ApiException(404, 'Not Found', {}, {}))
     core.deleteNamespacedService.rejects(new ApiException(404, 'Not Found', {}, {}))
-    core.deleteNamespacedSecret.resolves({} as V1Status)
+    core.deleteNamespacedSecret.resolves({})
     core.deleteNamespacedPersistentVolumeClaim.rejects(new ApiException(404, 'Not Found', {}, {}))
 
     await runtime.destroy(DATABASE)

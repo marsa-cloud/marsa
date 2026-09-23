@@ -26,7 +26,7 @@ export class ViewDatabaseIndexUseCase {
       placements.map((placement) => this.runtime.readStatus(databaseRefOf(placement))),
     )
     const summaries = placements.map(
-      (placement, index) => new DatabaseSummary(placement, statuses[index]!),
+      (placement, index) => new DatabaseSummary(placement, statuses[index]),
     )
     return new ViewDatabaseIndexResponse(summaries, placements)
   }
