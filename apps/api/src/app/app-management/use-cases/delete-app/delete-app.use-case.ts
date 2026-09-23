@@ -21,7 +21,7 @@ export class DeleteAppUseCase {
       if (!placement) {
         throw new NotFoundException(`App '${slug}' was not found.`)
       }
-      await this.repository.deleteWithReleases(tx, placement.app.uuid)
+      await this.repository.deleteWithHistory(tx, placement.app.uuid)
       await this.destroy(placement)
       await this.deleteImages(placement.app.slug)
     })

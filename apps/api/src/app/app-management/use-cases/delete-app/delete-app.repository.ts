@@ -6,6 +6,7 @@ import {
   type AppPlacement,
   selectAppPlacement,
 } from '#src/app/app-management/queries/app-placement.js'
+import { buildTable } from '#src/app/build/entities/build.table.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
 import type { Executor } from '#src/modules/database/drizzle.factory.js'
 
@@ -19,9 +20,10 @@ export class DeleteAppRepository {
     return placement
   }
 
-  /** Releases first — their FK has no cascade, so deleting the app alone would fail. */
-  async deleteWithReleases(tx: Executor, appUuid: AppUuid): Promise<void> {
+  // Releases reference builds and both reference the app, none with a cascade.
+  async deleteWithHistory(tx: Executor, appUuid: AppUuid): Promise<void> {
     await tx.delete(releaseTable).where(eq(releaseTable.appUuid, appUuid))
+    await tx.delete(buildTable).where(eq(buildTable.appUuid, appUuid))
     await tx.delete(appTable).where(eq(appTable.uuid, appUuid))
   }
 }

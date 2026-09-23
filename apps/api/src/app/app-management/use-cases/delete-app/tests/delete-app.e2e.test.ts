@@ -4,6 +4,8 @@ import { expect } from 'expect'
 import request from 'supertest'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
+import { BuildBuilder } from '#src/app/build/entities/build.builder.js'
+import { buildTable } from '#src/app/build/entities/build.table.js'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
@@ -34,6 +36,7 @@ describe('DELETE /api/v1/apps/:slug (e2e)', () => {
   it('removes the app and its releases', async () => {
     const app = new AppBuilder().withEnvironmentUuid(environment.uuid).withSlug(SLUG).build()
     await setup.db.insert(appTable).values(app)
+    await setup.db.insert(buildTable).values(new BuildBuilder().withApp(app).build())
     await setup.db.insert(releaseTable).values(new ReleaseBuilder().withApp(app).build())
 
     await request(setup.httpServer)
@@ -45,6 +48,7 @@ describe('DELETE /api/v1/apps/:slug (e2e)', () => {
     expect(apps).toHaveLength(0)
     const releases = await setup.db.select().from(releaseTable)
     expect(releases).toHaveLength(0)
+    expect(await setup.db.select().from(buildTable)).toHaveLength(0)
     const imageRegistry = setup.testModule.get<ImageRegistry, MockImageRegistry>(ImageRegistry)
     expect(imageRegistry.deletedRepositories).toContain(SLUG)
   })
