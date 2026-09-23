@@ -12,7 +12,7 @@ cluster**, and deploys it with no manual step. That is v0.2 Goals 2 and 3.
 ```text
 git push ─► GitHub webhook ─► Marsa api (HMAC verify, match apps by repo+branch)
          ─► build row (running) + BuildKit Job in marsa-builds
-         ─► Job pushes registry.<base>/<app-slug>:<sha> to Zot
+         ─► Job pushes <app-slug>:<sha> to Zot via the in-cluster Service
          ─► BuildSweeper (every 5s) sees the Job finished
          ─► CompleteBuild: app.image = imageRef, new Release, AppRuntime.deploy
          ─► kubelet pulls registry.<base>/… with the read-only marsa-pull credential
@@ -35,26 +35,30 @@ git push ─► GitHub webhook ─► Marsa api (HMAC verify, match apps by repo
 
 ## Decisions
 
-| #   | Decision                    | Choice                                                                                                                                                                                                                               |
-| --- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| D1  | Where built images live     | An in-cluster registry, from the first build. External registries are not supported for built images                                                                                                                                 |
-| D2  | How nodes pull              | `registry.<MARSA_BASE_DOMAIN>` behind Traefik with the chart's existing Let's Encrypt resolver. containerd trusts LE by default, so real installs need no node config. Only k3d uses a `registries.yaml` that skips TLS verification |
-| D3  | Registry software           | **Zot**, run minimally: the `zot-minimal` image, or full `zot` with every extension disabled. Memory limit ~256Mi with `GOMEMLIMIT`                                                                                                  |
-| D4  | Build engine / strategy     | **Rootless BuildKit** (Kaniko was archived 2025-06-03), `buildctl-daemonless.sh` in a one-shot Job. Dockerfile-first                                                                                                                 |
-| D5  | Source fetch                | BuildKit's git context `https://github.com/<repo>.git#<sha>:<rootDir>` with the installation token as a BuildKit secret. Marsa never clones                                                                                          |
-| D6  | Completion detection        | A sweep: `@nestjs/schedule` `@Cron('*/5 * * * * *', { waitForCompletion: true })`, row-claimed with `FOR UPDATE SKIP LOCKED`                                                                                                         |
-| D7  | App ↔ repo link             | Nullable `app.source` jsonb; `app.image` becomes nullable and means "the image the next release uses"                                                                                                                                |
-| D8  | Push during a running build | The new build replaces the old one: the old build is `cancelled` and its Job deleted                                                                                                                                                 |
-| D9  | Retention                   | Zot keeps the 10 most recently pushed tags per app repo (chart value). Deleting an app deletes its registry repo. Rolling back past the kept images fails at pull time via the existing `readDeployFailure`                          |
-| D10 | Build namespace             | `marsa-builds`, never an environment namespace. Rootless BuildKit needs `Unconfined` seccomp/AppArmor, which must not leak into env namespaces (#219)                                                                                |
-| D11 | Registry auth               | Zot htpasswd with two users: `marsa-push` (write, mounted only into build Jobs) and `marsa-pull` (read-only, copied into env namespaces as the image-pull Secret)                                                                    |
-| D12 | UI                          | Minimal: "Deploy from GitHub" is the main create path, "Deploy an image" moves to advanced; app detail gets a builds list, rebuild and a log view                                                                                    |
+| #   | Decision                    | Choice                                                                                                                                                                                                                                                                                                                                                                                                             |
+| --- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| D1  | Where built images live     | An in-cluster registry, from the first build. External registries are not supported for built images                                                                                                                                                                                                                                                                                                               |
+| D2  | How images move             | **Pull** via `registry.<MARSA_BASE_DOMAIN>` behind Traefik with the chart's Let's Encrypt resolver; containerd trusts LE by default, so real installs need no node config. **Push** from pods to the in-cluster Service `marsa-registry.<ns>.svc.cluster.local:5000` over plain HTTP. Same Zot repo and tag under both names. Only `--no-tls` installs and k3d get a `registries.yaml` that skips TLS verification |
+| D3  | Registry software           | **Zot**, run minimally: the `zot-minimal` image, or full `zot` with every extension disabled. Memory limit ~256Mi with `GOMEMLIMIT`                                                                                                                                                                                                                                                                                |
+| D4  | Build engine / strategy     | **Rootless BuildKit** (Kaniko was archived 2025-06-03), `buildctl-daemonless.sh` in a one-shot Job. Dockerfile-first                                                                                                                                                                                                                                                                                               |
+| D5  | Source fetch                | BuildKit's git context `https://github.com/<repo>.git#<sha>:<rootDir>` with the installation token as a BuildKit secret. Marsa never clones                                                                                                                                                                                                                                                                        |
+| D6  | Completion detection        | A sweep: `@nestjs/schedule` `@Cron('*/5 * * * * *', { waitForCompletion: true })`, row-claimed with `FOR UPDATE SKIP LOCKED`                                                                                                                                                                                                                                                                                       |
+| D7  | App ↔ repo link             | Nullable `app.source` jsonb; `app.image` becomes nullable and means "the image the next release uses"                                                                                                                                                                                                                                                                                                              |
+| D8  | Push during a running build | The new build replaces the old one: the old build is `cancelled` and its Job deleted                                                                                                                                                                                                                                                                                                                               |
+| D9  | Retention                   | Zot keeps the 10 most recently pushed tags per app repo (chart value). Deleting an app deletes its registry repo. Rolling back past the kept images fails at pull time via the existing `readDeployFailure`                                                                                                                                                                                                        |
+| D10 | Build namespace             | `marsa-builds`, never an environment namespace. Rootless BuildKit needs `Unconfined` seccomp/AppArmor, which must not leak into env namespaces (#219)                                                                                                                                                                                                                                                              |
+| D11 | Registry auth               | Zot htpasswd with two users: `marsa-push` (write; held by build Jobs and by the api for repo deletion) and `marsa-pull` (read-only, copied into env namespaces as the image-pull Secret)                                                                                                                                                                                                                           |
+| D12 | UI                          | Minimal: "Deploy from GitHub" is the main create path, "Deploy an image" moves to advanced; app detail gets a builds list, rebuild and a log view                                                                                                                                                                                                                                                                  |
 
 ### Why these, briefly
 
 - **D2 over `registries.yaml` on every node.** The api runs in a pod and can't edit node files. The
   same limit forced Epinio to pull its built-in registry over plain HTTP. Push webhooks already
   require public DNS + TLS (AgDR-0005), so D2 adds no new requirement.
+- **D2's push/pull split.** A pod resolving `registry.<base>` goes through public DNS: in e2e that
+  is `127.0.0.1` (the pod's own loopback), and on clouds that NAT the public IP it depends on
+  hairpin support. Pushing to the in-cluster Service avoids both. A registry stores `repo:tag`, not
+  the hostname a client used, so the image pushed under one name is pulled under the other.
 - **D3.** Distribution (`registry:2/3`) has no retention policies and needs the registry read-only
   to reclaim space. Its htpasswd auth has no permission levels, so D11 would need a separate token
   server. Harbor needs 2–4 GB and its own Postgres/Redis. Measured idle RAM: Distribution 10 MiB,
@@ -99,9 +103,10 @@ AgDRs, numbered when each PR opens:
   - `storage.retention.policies: [{ repositories: ["**"], deleteUntagged: true, keepTags: [{ mostRecentlyPushedCount: <values.registry.keepImages, default 10> }] }]`
   - `http.auth.htpasswd` plus `accessControl`: `marsa-push` can read/create/update/delete on `**`,
     `marsa-pull` can only read `**`.
-- Two generated Secrets:
-  - `marsa-registry-push`: a dockerconfigjson in `marsa-builds`, for build Jobs.
-  - `marsa-registry-pull`: `{ username, password }` in `marsa`, read by the api as env.
+- One generated Secret, `marsa-registry-secrets` in the release namespace, generate-once like
+  `marsa-api-secrets`: `PUSH_PASSWORD`, `PULL_PASSWORD` and a bcrypt `htpasswd` file for Zot. The
+  api reads both passwords as env. PR 2 adds the push dockerconfigjson that build Jobs mount in
+  `marsa-builds`.
 - Resources: requests 50m / 64Mi, limit 256Mi, `GOMEMLIMIT` ~200MiB.
 - **First implementation step:** check on k3d that `mostRecentlyPushedCount` retention works in the
   minimal setup (zot-minimal, or full zot with extensions off). If it needs the metadata DB and
@@ -110,25 +115,30 @@ AgDRs, numbered when each PR opens:
 
 ### Api (marsa)
 
-- Config, validated by the global Joi schema: `MARSA_REGISTRY_HOST`, `MARSA_REGISTRY_PULL_USERNAME`,
-  `MARSA_REGISTRY_PULL_PASSWORD`.
-- `deploySpecOf` picks credentials by image host. If `image` starts with `MARSA_REGISTRY_HOST/`, it
-  attaches the pull credentials from config. Otherwise it uses the app's decrypted
-  `imagePullCredentialsEnc` as today. Nothing registry-related is stored in Postgres.
-- A new port `ImageRegistry` (`src/modules/runtime/image-registry.ts`) with
-  `deleteRepository(appSlug)`. The Zot adapter deletes every tag via the OCI distribution API as
-  `marsa-push`; Zot GC then reclaims blobs and drops the empty repo. There's also a mock adapter.
-  `delete-app` calls it last, after `AppRuntime.destroy`. It is idempotent: a missing repo counts as
-  success.
+- Config, validated by the global Joi schema and required only when `MARSA_RUNTIME=kubernetes`:
+  `MARSA_REGISTRY_HOST` (public pull host), `MARSA_REGISTRY_URL` (in-cluster `http://…:5000`),
+  `MARSA_REGISTRY_PUSH_PASSWORD`, `MARSA_REGISTRY_PULL_PASSWORD`. Usernames are fixed constants
+  (`marsa-push`, `marsa-pull`).
+- A new port `ImageRegistry` (`src/modules/runtime/image-registry.ts`):
+  - `pullCredentialsFor(imageRef): RegistryCredentials | undefined`. Returns the `marsa-pull`
+    credentials when the image's host is `MARSA_REGISTRY_HOST`, otherwise `undefined`.
+    `deploy-release` and `update-app` use it before falling back to the app's decrypted
+    `imagePullCredentialsEnc`, so nothing registry-related is stored in Postgres.
+  - `deleteRepository(appSlug)`. The Zot adapter deletes every tag through the OCI distribution API
+    at `MARSA_REGISTRY_URL` as `marsa-push`; Zot GC then reclaims blobs and drops the empty repo.
+    Idempotent: a missing repo counts as success.
+  - Mock adapter for tests. `delete-app` calls `deleteRepository` last, after `AppRuntime.destroy`.
 
-### k3d / e2e (marsa)
+### Installer / k3d / e2e (marsa)
 
-- `scripts/e2e-up.sh` writes a k3d `--registry-config` mapping `registry.127.0.0.1.nip.io` to
-  `insecure_skip_verify: true`.
-- `pnpm e2e:test` gains:
-  - push as `marsa-push`, pull from a pod
+- `install.sh --no-tls` writes `/etc/rancher/k3s/registries.yaml` with `insecure_skip_verify` for
+  `registry.<domain>` before installing K3s. A `--no-tls` install serves Traefik's self-signed
+  default certificate, so its nodes could not pull built images otherwise. CI's real-K3s e2e uses
+  this path.
+- `scripts/e2e-up.sh` passes the same file to k3d via `--registry-config`.
+- `pnpm e2e:test` gains a registry stage, pushing from an in-cluster Job (as builds will):
+  - push as `marsa-push` to the in-cluster Service, then a pod pulls it via `registry.<domain>`
   - a push as `marsa-pull` is rejected
-  - with `keepImages` set low: push `keepImages + 1` tags and assert the oldest is gone after GC
 
 ---
 
@@ -184,7 +194,8 @@ interface BuildSpec {
   rootDir: string
   dockerfilePath: string
   gitToken: string
-  imageRef: string // registry.<base>/<app-slug>:<commitSha>
+  pushRef: string // marsa-registry.<ns>.svc.cluster.local:5000/<app-slug>:<commitSha>
+  imageRef: string // registry.<base>/<app-slug>:<commitSha>, recorded on the build and release
 }
 type BuildObservation =
   | { state: 'running' }
@@ -206,13 +217,16 @@ One `batch/v1` Job per build in `marsa-builds`, named `build-<uuid>`, labelled
   - `--opt context=<repoUrl>#<commitSha>:<rootDir>`
   - `--opt filename=<dockerfilePath>`
   - the git token as BuildKit's git-auth secret
-  - `--output type=image,name=<imageRef>,push=true`
+  - `--output type=image,name=<pushRef>,push=true,registry.insecure=true` (plain HTTP to the
+    in-cluster Service; see D2)
 
   Pin the exact flags and secret id during implementation, against the pinned BuildKit version.
 
 - **Security context:** `runAsUser/runAsGroup: 1000`, seccomp + AppArmor `Unconfined`,
   `BUILDKITD_FLAGS=--oci-worker-no-process-sandbox`.
-- **Push credentials:** `DOCKER_CONFIG` mounted from the `marsa-registry-push` Secret.
+- **Push credentials:** `DOCKER_CONFIG` mounted from a `marsa-registry-push` dockerconfigjson
+  Secret in `marsa-builds`, generated by the chart in this PR from `marsa-registry-secrets`.
+  `ImageRegistry` gains `imageRefFor(appSlug, tag)` and `pushRefFor(appSlug, tag)` here.
 - **Git token:** a per-build Secret `build-<uuid>-git` with an `ownerReference` to the Job, created
   right after the Job so Kubernetes garbage-collects it with the Job.
 - **Job settings:**
@@ -376,7 +390,7 @@ commit is its point.
   - Job/pod → `BuildObservation` mapping, including `DeadlineExceeded` and the termination message.
   - Webhook signature verification and payload filtering.
   - The `image`-xor-`source` validator.
-  - `deploySpecOf` credential selection by host.
+  - `ImageRegistry.pullCredentialsFor` host matching and the Zot adapter's repo deletion.
   - `PORT` injection.
 - **Api e2e (least-mocks harness, real Postgres, mock runtime + mock GitHub):**
   - push → running build → `sweep()` → release deployed, checked via `GET builds` / `GET releases`
