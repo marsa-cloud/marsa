@@ -27,6 +27,9 @@ export const envValidationSchema = Joi.object({
   // Supplied by the chart from the downward API, never set by hand: it must equal the pod's real
   // namespace or the RoleBindings it writes are denied by the admission policy. Default is dev-only.
   MARSA_API_NAMESPACE: Joi.string().hostname().default('marsa'),
+  // A volume cannot change storage class in place, so a fresh install must be able to pick
+  // another backend on day one (#210).
+  MARSA_DATABASE_STORAGE_CLASS: Joi.string().default('local-path'),
   VERSION: Joi.string().default('0.0.0'),
   COMMIT: Joi.string().optional(),
 })
