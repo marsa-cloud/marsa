@@ -18,7 +18,7 @@ const placement = new AppPlacementBuilder()
 function build() {
   const repository = createStubInstance(DeleteAppRepository)
   repository.findBySlug.resolves(placement)
-  repository.deleteWithReleases.resolves()
+  repository.deleteWithHistory.resolves()
   const appRuntime = createStubInstance(MockAppRuntime)
   appRuntime.destroy.resolves()
   const imageRegistry = createStubInstance(MockImageRegistry)
@@ -54,7 +54,7 @@ describe('DeleteAppUseCase', () => {
     await usecase.execute('my-app')
 
     expect(repository.findBySlug.calledOnceWithExactly(match.any, 'my-app')).toBe(true)
-    expect(repository.deleteWithReleases.calledOnceWithExactly(match.any, placement.app.uuid)).toBe(
+    expect(repository.deleteWithHistory.calledOnceWithExactly(match.any, placement.app.uuid)).toBe(
       true,
     )
     expect(appRuntime.destroy.firstCall.args[0]).toMatchObject({
@@ -63,7 +63,7 @@ describe('DeleteAppUseCase', () => {
       environment: { slug: 'production' },
     })
     expect(
-      repository.deleteWithReleases.getCall(0).calledBefore(appRuntime.destroy.getCall(0)),
+      repository.deleteWithHistory.getCall(0).calledBefore(appRuntime.destroy.getCall(0)),
     ).toBe(true)
   })
 
@@ -74,7 +74,7 @@ describe('DeleteAppUseCase', () => {
     await expect(usecase.execute('ghost')).rejects.toThrow(NotFoundException)
 
     expect(appRuntime.destroy.called).toBe(false)
-    expect(repository.deleteWithReleases.called).toBe(false)
+    expect(repository.deleteWithHistory.called).toBe(false)
   })
 
   it('maps a runtime failure to 502 so the transaction rolls the rows back', async () => {
