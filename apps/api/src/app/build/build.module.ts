@@ -3,6 +3,8 @@ import { ConditionalModule } from '@nestjs/config'
 import { ScheduleModule } from '@nestjs/schedule'
 import { StartBuildModule } from '#src/app/build/use-cases/start-build/start-build.module.js'
 import { SweepBuildsModule } from '#src/app/build/use-cases/sweep-builds/sweep-builds.module.js'
+import { ViewBuildIndexModule } from '#src/app/build/use-cases/view-build-index/view-build-index.module.js'
+import { ViewBuildLogsModule } from '#src/app/build/use-cases/view-build-logs/view-build-logs.module.js'
 
 @Module({
   imports: [
@@ -10,6 +12,8 @@ import { SweepBuildsModule } from '#src/app/build/use-cases/sweep-builds/sweep-b
     ConditionalModule.registerWhen(ScheduleModule.forRoot(), (env) => env.MARSA_RUNTIME !== 'mock'),
     StartBuildModule,
     SweepBuildsModule,
+    ViewBuildIndexModule,
+    ViewBuildLogsModule,
   ],
 })
 export class BuildModule {}
