@@ -160,9 +160,10 @@ second-guess.
 catches the violation and answers 409 listing the dependent apps, rather than pre-checking and
 racing a concurrent attach.
 
-**Injection lives in `deploySpecOf`**, so every path that reaches the runtime is covered:
-`deploy-release`, `update-app`'s re-apply, and the two new use-cases. Each of those repositories
-loads the app's attachments alongside the release. That is `release/` and `app-management/`
+**Injection lives in `deploySpecOf`**, so every path that reaches the runtime is covered. That
+function is pure and has no database access, so each caller loads the app's attachments and passes
+them in. It has two app-side callers today — `deploy-release` and `update-app`'s re-apply — and
+this ticket adds `attach-database` and `detach-database`, for four. That is `release/` and `app-management/`
 importing the `database` feature's `queries/`, which the building-block rule allows in either
 direction.
 
@@ -236,7 +237,7 @@ Commit sequence:
 
 1. Port types + `SecretEnvRef` move + renderer expansion
 2. `database_attachment` table, migration, shared queries
-3. `deploySpecOf` injection, with the three existing call sites loading attachments
+3. `deploySpecOf` injection, with both existing call sites loading attachments
 4. `attach-database` and `detach-database`, plus the `delete-database` 409
 5. `environmentUuid` filter on the database index, contract regeneration
 6. Web UI
@@ -256,6 +257,7 @@ Commit sequence:
 - **Detaching breaks a running app** by design. The confirmation has to say so; there is no dry run.
 - **The unique index on a nullable alias** is the one place a naive migration silently does the
   wrong thing (see Data model).
-- **Three existing deploy paths change** to load attachments. A path that forgets to would deploy
-  an app without its variables — covered by asserting injection through `deploy-release` and
-  `update-app`, not only through the attach use-case.
+- **Every deploy path must load attachments.** `deploySpecOf` cannot fetch them itself, so all
+  four callers pass them in. A path that forgets would deploy an app without its variables — a
+  node-pin change silently dropping an app's `DATABASE_URL`, for instance. Covered by asserting
+  injection through `deploy-release` and `update-app`, not only through the attach use-case.
