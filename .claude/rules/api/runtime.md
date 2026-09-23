@@ -6,7 +6,7 @@ paths:
 # Runtime ports and adapters
 
 `src/modules/runtime/` is where Marsa meets whatever runs its apps. The abstract classes
-(`AppRuntime`, `EnvironmentRuntime`, `NodeRuntime`) are **ports**; `adapters/<tech>/` are
+(`AppRuntime`, `EnvironmentRuntime`, `NodeRuntime`, `ImageRegistry`) are **ports**; `adapters/<tech>/` are
 **adapters**. AgDR-0046.
 
 ## Ports speak Marsa, not the runtime
@@ -25,6 +25,10 @@ Why: a port shaped like one technology can only ever have that technology behind
 
 `@kubernetes/client-node` is imported under `adapters/kubernetes/**` and nowhere else.
 Rendering, namespace naming and rollout parsing live in the adapter.
+
+`ImageRegistry` is implemented by `adapters/zot/` and bound by the Kubernetes adapter module,
+because Zot is installed into the same cluster. It speaks plain `fetch` to the OCI distribution
+API; no registry client library is imported.
 
 ## Features never import an adapter
 

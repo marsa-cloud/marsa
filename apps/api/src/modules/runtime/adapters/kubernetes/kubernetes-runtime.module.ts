@@ -3,8 +3,10 @@ import { ConfigService } from '@nestjs/config'
 import { KubernetesAppRuntime } from '#src/modules/runtime/adapters/kubernetes/kubernetes-app-runtime.js'
 import { KubernetesEnvironmentRuntime } from '#src/modules/runtime/adapters/kubernetes/kubernetes-environment-runtime.js'
 import { KubernetesNodeRuntime } from '#src/modules/runtime/adapters/kubernetes/kubernetes-node-runtime.js'
+import { ZotImageRegistry } from '#src/modules/runtime/adapters/zot/zot-image-registry.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
 import { EnvironmentRuntime } from '#src/modules/runtime/environment-runtime.js'
+import { ImageRegistry } from '#src/modules/runtime/image-registry.js'
 import { NodeRuntime } from '#src/modules/runtime/node-runtime.js'
 
 @Global()
@@ -22,7 +24,19 @@ import { NodeRuntime } from '#src/modules/runtime/node-runtime.js'
       inject: [EnvironmentRuntime],
     },
     { provide: NodeRuntime, useClass: KubernetesNodeRuntime },
+    {
+      // Zot runs in the same cluster as the apps, so this adapter ships with the Kubernetes one.
+      provide: ImageRegistry,
+      useFactory: (config: ConfigService) =>
+        new ZotImageRegistry({
+          host: config.getOrThrow<string>('MARSA_REGISTRY_HOST'),
+          url: config.getOrThrow<string>('MARSA_REGISTRY_URL'),
+          pushPassword: config.getOrThrow<string>('MARSA_REGISTRY_PUSH_PASSWORD'),
+          pullPassword: config.getOrThrow<string>('MARSA_REGISTRY_PULL_PASSWORD'),
+        }),
+      inject: [ConfigService],
+    },
   ],
-  exports: [AppRuntime, EnvironmentRuntime, NodeRuntime],
+  exports: [AppRuntime, EnvironmentRuntime, NodeRuntime, ImageRegistry],
 })
 export class KubernetesRuntimeModule {}
