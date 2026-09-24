@@ -20,6 +20,19 @@ export const relations = defineRelations(schema, (r) => ({
       to: r.environmentTable.uuid,
       optional: false,
     }),
+    attachments: r.many.databaseAttachmentTable(),
+  },
+  databaseAttachmentTable: {
+    app: r.one.appTable({
+      from: r.databaseAttachmentTable.appUuid,
+      to: r.appTable.uuid,
+      optional: false,
+    }),
+    database: r.one.databaseTable({
+      from: r.databaseAttachmentTable.databaseUuid,
+      to: r.databaseTable.uuid,
+      optional: false,
+    }),
   },
   appTable: {
     environment: r.one.environmentTable({
@@ -28,6 +41,7 @@ export const relations = defineRelations(schema, (r) => ({
       optional: false,
     }),
     releases: r.many.releaseTable(),
+    attachments: r.many.databaseAttachmentTable(),
   },
   releaseTable: {
     app: r.one.appTable({
