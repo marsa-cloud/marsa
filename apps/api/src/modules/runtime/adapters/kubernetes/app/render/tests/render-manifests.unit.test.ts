@@ -19,6 +19,7 @@ const specOf = (overrides: Partial<AppDeploySpec> = {}): AppDeploySpec => ({
   maxReplicas: 3,
   host: 'my-app.demo.marsa.cc',
   nodePin: null,
+  attachments: [],
   ...overrides,
 })
 
@@ -160,5 +161,77 @@ describe('renderManifests node pinning', () => {
       deployment.spec?.template.spec?.affinity?.nodeAffinity
         ?.requiredDuringSchedulingIgnoredDuringExecution?.nodeSelectorTerms[0]?.matchExpressions,
     ).toEqual([{ key: 'kubernetes.io/hostname', operator: 'In', values: ['node-a'] }])
+  })
+})
+
+describe('renderManifests database attachments', () => {
+  it('expands an unprefixed attachment into secretKeyRef entries', () => {
+    const { deployment } = renderManifests(
+      'billing-api',
+      specOf({
+        env: {},
+        attachments: [
+          { databaseSlug: 'orders', envPrefix: null, keys: ['DATABASE_URL', 'PGHOST'] },
+        ],
+      }),
+    )
+
+    expect(deployment.spec?.template.spec?.containers[0]?.env).toEqual([
+      {
+        name: 'DATABASE_URL',
+        valueFrom: { secretKeyRef: { name: 'orders-credentials', key: 'DATABASE_URL' } },
+      },
+      {
+        name: 'PGHOST',
+        valueFrom: { secretKeyRef: { name: 'orders-credentials', key: 'PGHOST' } },
+      },
+    ])
+  })
+
+  it('prefixes an aliased attachment without changing the Secret key it reads', () => {
+    const { deployment } = renderManifests(
+      'billing-api',
+      specOf({
+        env: {},
+        attachments: [
+          { databaseSlug: 'analytics-db', envPrefix: 'ANALYTICS_', keys: ['DATABASE_URL'] },
+        ],
+      }),
+    )
+
+    expect(deployment.spec?.template.spec?.containers[0]?.env).toEqual([
+      {
+        name: 'ANALYTICS_DATABASE_URL',
+        valueFrom: { secretKeyRef: { name: 'analytics-db-credentials', key: 'DATABASE_URL' } },
+      },
+    ])
+  })
+
+  it('keeps plain env first, then the attachment refs', () => {
+    const { deployment } = renderManifests(
+      'billing-api',
+      specOf({
+        env: { LOG_LEVEL: 'info' },
+        attachments: [{ databaseSlug: 'orders', envPrefix: null, keys: ['DATABASE_URL'] }],
+      }),
+    )
+
+    const env = deployment.spec?.template.spec?.containers[0]?.env
+    expect(env?.[0]).toEqual({ name: 'LOG_LEVEL', value: 'info' })
+    expect(env?.[1]?.name).toBe('DATABASE_URL')
+  })
+
+  it('never puts a literal value on an attachment variable', () => {
+    const { deployment } = renderManifests(
+      'billing-api',
+      specOf({
+        env: {},
+        attachments: [{ databaseSlug: 'orders', envPrefix: null, keys: ['PGPASSWORD'] }],
+      }),
+    )
+
+    const entry = deployment.spec?.template.spec?.containers[0]?.env?.[0]
+    expect(entry?.value).toBeUndefined()
+    expect(entry?.valueFrom?.secretKeyRef?.name).toBe('orders-credentials')
   })
 })
