@@ -18,6 +18,8 @@ async function bootstrap(): Promise<void> {
         allowUnsafeRegex: false,
       },
     }),
+    // GitHub signs the exact bytes it sent; the push webhook verifies against them.
+    { rawBody: true },
   )
 
   const config = app.get(ConfigService)
