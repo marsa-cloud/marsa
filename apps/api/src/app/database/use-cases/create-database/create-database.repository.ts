@@ -18,7 +18,13 @@ export class CreateDatabaseRepository {
     return isNameTakenInEnvironment(tx, environmentUuid, slug)
   }
 
-  async insert(tx: Executor, database: DatabaseRow): Promise<void> {
-    await tx.insert(databaseTable).values(database)
+  // The name check covers one environment; this guards the global slug constraint.
+  async insert(tx: Executor, database: DatabaseRow): Promise<'inserted' | 'slug-taken'> {
+    const rows = await tx
+      .insert(databaseTable)
+      .values(database)
+      .onConflictDoNothing({ target: databaseTable.slug })
+      .returning({ uuid: databaseTable.uuid })
+    return rows.length > 0 ? 'inserted' : 'slug-taken'
   }
 }

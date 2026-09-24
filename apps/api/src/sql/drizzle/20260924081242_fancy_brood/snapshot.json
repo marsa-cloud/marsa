@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "39e6e39b-5a3a-4485-89d8-aafaf33257e4",
+  "id": "0d06d319-8193-4e3b-95b9-4e74820fb912",
   "prevIds": [
     "24ece233-6bbf-45db-9e57-34145ab14ff4"
   ],
@@ -1324,18 +1324,6 @@
     {
       "nameExplicit": true,
       "columns": [
-        "environment_uuid",
-        "slug"
-      ],
-      "nullsNotDistinct": false,
-      "name": "database_environment_uuid_slug_unique",
-      "entityType": "uniques",
-      "schema": "public",
-      "table": "database"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
         "project_uuid",
         "slug"
       ],
@@ -1354,6 +1342,17 @@
       "name": "app_slug_key",
       "schema": "public",
       "table": "app",
+      "entityType": "uniques"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "slug"
+      ],
+      "nullsNotDistinct": false,
+      "name": "database_slug_key",
+      "schema": "public",
+      "table": "database",
       "entityType": "uniques"
     },
     {

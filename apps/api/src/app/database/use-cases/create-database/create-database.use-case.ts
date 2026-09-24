@@ -76,7 +76,10 @@ export class CreateDatabaseUseCase {
         )
       }
 
-      await this.repository.insert(tx, database)
+      const outcome = await this.repository.insert(tx, database)
+      if (outcome === 'slug-taken') {
+        throw new ConflictException(`A database named '${command.slug}' already exists.`)
+      }
       await this.provision({ ...placement, database }, entry, credentials)
     })
 

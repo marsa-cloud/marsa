@@ -20,7 +20,7 @@ function build() {
   const repository = createStubInstance(CreateDatabaseRepository)
   repository.lockEnvironment.resolves({ environment, project })
   repository.isNameTaken.resolves(false)
-  repository.insert.resolves()
+  repository.insert.resolves('inserted')
 
   const cipher = createStubInstance(DatabaseCredentialsCipher)
   cipher.seal.returns('sealed-token')
@@ -108,6 +108,15 @@ describe('CreateDatabaseUseCase', () => {
     await expect(usecase.execute(command)).rejects.toThrow(ConflictException)
 
     expect(repository.insert.called).toBe(false)
+    expect(runtime.provision.called).toBe(false)
+  })
+
+  it('throws 409 when a database in another environment already owns the slug', async () => {
+    const { repository, runtime, usecase, command } = build()
+    repository.insert.resolves('slug-taken')
+
+    await expect(usecase.execute(command)).rejects.toThrow(ConflictException)
+
     expect(runtime.provision.called).toBe(false)
   })
 

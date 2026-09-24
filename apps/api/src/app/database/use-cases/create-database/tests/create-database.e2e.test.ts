@@ -86,7 +86,7 @@ describe('POST /api/v1/databases (e2e)', () => {
       .expect(409)
   })
 
-  it('allows the same name in a different environment', async () => {
+  it('rejects a name a database in another environment already uses with 409', async () => {
     const otherProject = new ProjectBuilder().withSlug('other-project').build()
     const other = new EnvironmentBuilder().withProject(otherProject).withSlug('staging').build()
     await setup.db.insert(projectTable).values(otherProject)
@@ -101,7 +101,7 @@ describe('POST /api/v1/databases (e2e)', () => {
         engine: 'postgres',
         version: '17',
       })
-      .expect(201)
+      .expect(409)
   })
 
   it('rejects an unknown environment with 404', async () => {
