@@ -18,7 +18,7 @@ const environment = new EnvironmentBuilder().withProject(project).build()
 
 function build() {
   const repository = createStubInstance(CreateDatabaseRepository)
-  repository.lockEnvironment.resolves({ environment, project })
+  repository.findEnvironmentForUpdate.resolves({ environment, project })
   repository.isNameTaken.resolves(false)
   repository.insert.resolves('inserted')
 
@@ -94,7 +94,7 @@ describe('CreateDatabaseUseCase', () => {
 
   it('throws 404 when the environment does not exist', async () => {
     const { repository, runtime, usecase, command } = build()
-    repository.lockEnvironment.resolves(undefined)
+    repository.findEnvironmentForUpdate.resolves(undefined)
 
     await expect(usecase.execute(command)).rejects.toThrow(NotFoundException)
 

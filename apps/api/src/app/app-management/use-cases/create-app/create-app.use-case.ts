@@ -35,7 +35,7 @@ export class CreateAppUseCase {
       .build()
 
     await this.db.transaction(async (tx) => {
-      const placement = await this.repository.lockEnvironment(tx, command.environmentUuid)
+      const placement = await this.repository.findEnvironmentForUpdate(tx, command.environmentUuid)
       if (!placement) {
         throw new NotFoundException(`Environment '${command.environmentUuid}' was not found.`)
       }

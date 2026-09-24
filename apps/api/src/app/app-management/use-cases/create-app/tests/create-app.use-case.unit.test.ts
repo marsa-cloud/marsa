@@ -17,7 +17,7 @@ const environment = new EnvironmentBuilder().withProject(project).build()
 
 function build() {
   const repository = createStubInstance(CreateAppRepository)
-  repository.lockEnvironment.resolves({ environment, project })
+  repository.findEnvironmentForUpdate.resolves({ environment, project })
   repository.isNameTaken.resolves(false)
   repository.insert.resolves('inserted')
   const config = createStubInstance(ConfigService)
@@ -96,7 +96,7 @@ describe('CreateAppUseCase', () => {
 
   it('rejects an unknown environment with 404', async () => {
     const { usecase, repository } = build()
-    repository.lockEnvironment.resolves(undefined)
+    repository.findEnvironmentForUpdate.resolves(undefined)
 
     await expect(usecase.execute(new CreateAppCommandBuilder().build())).rejects.toThrow(
       NotFoundException,
