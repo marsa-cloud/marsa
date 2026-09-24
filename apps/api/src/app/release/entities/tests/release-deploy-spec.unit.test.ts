@@ -37,6 +37,7 @@ describe('deploySpecOf', () => {
       image: 'nginx:1.27',
       port: 8080,
       env: { OLD: '1' },
+      attachments: [],
       minReplicas: release.minReplicas,
       maxReplicas: release.maxReplicas,
       host: 'my-app.demo.marsa.cc',

@@ -23,11 +23,25 @@ export interface RegistryCredentials {
   password: string
 }
 
+export interface SecretEnvRef {
+  name: string
+  secret: string
+  key: string
+}
+
+// What the app should receive, not how: the adapter decides this means a secretKeyRef.
+export interface AttachedDatabaseSpec {
+  databaseSlug: string
+  envPrefix: string | null
+  keys: string[]
+}
+
 export interface AppDeploySpec {
   releaseUuid: Uuid<'Release'>
   image: string
   port: number
   env: Record<string, string>
+  attachments: AttachedDatabaseSpec[]
   minReplicas: number
   maxReplicas: number
   host: string

@@ -20,6 +20,7 @@ export function deploySpecOf(
     image: release.imageRef,
     port: release.containerPort,
     env: release.env,
+    attachments: [],
     minReplicas: release.minReplicas,
     maxReplicas: release.maxReplicas,
     host: `${app.slug}.${baseDomain}`,
