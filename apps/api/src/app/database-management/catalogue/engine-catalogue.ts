@@ -15,6 +15,7 @@ export interface EngineCatalogueEntry {
   env: Record<string, string>
   credentialEnv: Array<{ name: string; key: string }>
   readinessExec: string[]
+  publishedKeys: string[]
   publishedVariables: (connection: ConnectionDetails) => Record<string, string>
 }
 
@@ -39,6 +40,15 @@ const postgresPublishedVariables = ({
   PGDATABASE: database,
 })
 
+const POSTGRES_PUBLISHED_KEYS = [
+  'DATABASE_URL',
+  'PGHOST',
+  'PGPORT',
+  'PGUSER',
+  'PGPASSWORD',
+  'PGDATABASE',
+]
+
 const postgres = (image: string, dataMountPath: string, pgData: string): EngineCatalogueEntry => ({
   image,
   port: 5432,
@@ -48,6 +58,7 @@ const postgres = (image: string, dataMountPath: string, pgData: string): EngineC
   credentialEnv: POSTGRES_CREDENTIAL_ENV,
   // Over TCP, since initdb's temporary server answers on the socket only; unready while recovering.
   readinessExec: ['pg_isready', '-h', '127.0.0.1', '-U', 'postgres'],
+  publishedKeys: POSTGRES_PUBLISHED_KEYS,
   publishedVariables: postgresPublishedVariables,
 })
 

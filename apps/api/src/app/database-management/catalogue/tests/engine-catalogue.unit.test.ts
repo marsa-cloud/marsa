@@ -53,4 +53,30 @@ describe('engine catalogue', () => {
   it('returns undefined for a major it does not carry', () => {
     expect(catalogueEntry(DatabaseEngine.Postgres, '15')).toBeUndefined()
   })
+
+  it('publishes its variable names without needing a connection to name them', () => {
+    const entry = catalogueEntry(DatabaseEngine.Postgres, '17')
+
+    expect(entry?.publishedKeys).toEqual([
+      'DATABASE_URL',
+      'PGHOST',
+      'PGPORT',
+      'PGUSER',
+      'PGPASSWORD',
+      'PGDATABASE',
+    ])
+  })
+
+  it('keeps publishedKeys in step with what publishedVariables actually returns', () => {
+    const entry = catalogueEntry(DatabaseEngine.Postgres, '17')
+    const produced = entry?.publishedVariables({
+      host: 'h',
+      port: 5432,
+      user: 'u',
+      password: 'p',
+      database: 'd',
+    })
+
+    expect(Object.keys(produced ?? {}).sort()).toEqual([...(entry?.publishedKeys ?? [])].sort())
+  })
 })
