@@ -1,9 +1,11 @@
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
-import { flushPromises } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount, flushPromises } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, ref } from 'vue'
 
 import Detail from '../[slug].vue'
+
+enableAutoUnmount(afterEach)
 
 const remove = vi.hoisted(() => vi.fn())
 const nav = vi.hoisted(() => vi.fn())
