@@ -10,6 +10,7 @@ import { AppPlacementBuilder } from '#src/app/app-management/queries/app-placeme
 import { UpdateAppCommandBuilder } from '#src/app/app-management/use-cases/update-app/update-app.command.builder.js'
 import { UpdateAppRepository } from '#src/app/app-management/use-cases/update-app/update-app.repository.js'
 import { UpdateAppUseCase } from '#src/app/app-management/use-cases/update-app/update-app.use-case.js'
+import { DatabaseEngine } from '#src/app/database-management/enums/database-engine.enum.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
@@ -36,6 +37,7 @@ function build() {
   repository.updateBySlug.resolves(saved)
   const cipher = createStubInstance(ImagePullCredentialsCipher)
   cipher.seal.returns('new-sealed')
+  repository.findAttachments.resolves([])
   const appRuntime = createStubInstance(MockAppRuntime)
   appRuntime.deploy.resolves()
   const config = createStubInstance(ConfigService)
@@ -221,5 +223,16 @@ describe('UpdateAppUseCase', () => {
     await usecase.execute('my-app', new UpdateAppCommandBuilder().withNodePin(PIN).build())
 
     expect(order).toEqual(['write', 'deploy'])
+  })
+
+  it('keeps attachments injected when a pin change re-applies the live release', async () => {
+    const { repository, appRuntime, usecase } = buildPinned()
+    repository.findAttachments.resolves([
+      { alias: null, databaseSlug: 'orders', engine: DatabaseEngine.Postgres, version: '17' },
+    ])
+
+    await usecase.execute('my-app', new UpdateAppCommandBuilder().withNodePin(PIN).build())
+
+    expect(appRuntime.deploy.firstCall.args[1].attachments).toHaveLength(1)
   })
 })

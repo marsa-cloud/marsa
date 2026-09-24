@@ -6,6 +6,10 @@ import {
   type AppPlacement,
   selectAppPlacement,
 } from '#src/app/app-management/queries/app-placement.js'
+import {
+  type AttachedDatabase,
+  selectAttachmentsForApp,
+} from '#src/app/database-management/queries/app-attachments.js'
 import { type Release, releaseTable } from '#src/app/release/entities/release.table.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
@@ -39,5 +43,10 @@ export class DeployReleaseRepository {
     deployStatus: DeployStatus,
   ): Promise<void> {
     await tx.update(releaseTable).set({ deployStatus }).where(eq(releaseTable.uuid, uuid))
+  }
+
+  // Attachments are placement, so they are read live rather than restored from the release.
+  findAttachments(tx: Executor, appUuid: AppUuid): Promise<AttachedDatabase[]> {
+    return selectAttachmentsForApp(tx, appUuid)
   }
 }
