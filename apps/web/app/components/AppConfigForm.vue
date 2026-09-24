@@ -39,7 +39,7 @@ const formSnapshot = () =>
 let seededSnapshot = ''
 
 function seed(config: ViewAppDetailResponse) {
-  state.image = config.image
+  state.image = config.image ?? ''
   state.containerPort = config.containerPort
   state.minReplicas = config.minReplicas
   state.maxReplicas = config.maxReplicas

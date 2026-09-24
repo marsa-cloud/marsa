@@ -56,6 +56,17 @@ export const zCaptureInstallationResponse = z.object({
   connected: z.boolean(),
 })
 
+export const zGitHubRepositorySummary = z.object({
+  installationUuid: z.uuid(),
+  fullName: z.string(),
+  defaultBranch: z.string(),
+  private: z.boolean(),
+})
+
+export const zViewRepositoryIndexResponse = z.object({
+  items: z.array(zGitHubRepositorySummary),
+})
+
 export const zCompleteGithubLoginCommand = z.object({
   code: z.string(),
   state: z.string(),
@@ -251,6 +262,14 @@ export const zViewBuildLogsResponse = z.object({
   logs: z.string(),
 })
 
+export const zCreateAppSourceCommand = z.object({
+  installationUuid: z.uuid(),
+  repo: z.string().regex(/^[\w.-]+\/[\w.-]+$/),
+  branch: z.string().max(255),
+  rootDir: z.string().optional().default('.'),
+  dockerfilePath: z.string().optional().default('Dockerfile'),
+})
+
 export const zImagePullCredentials = z.object({
   registry: z.string().max(253),
   username: z.string().max(255),
@@ -273,8 +292,9 @@ export const zCreateAppCommand = z.object({
     .string()
     .max(63)
     .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/),
-  image: z.string(),
-  containerPort: z.int().gte(1).lte(65535),
+  image: z.string().optional(),
+  source: zCreateAppSourceCommand.optional(),
+  containerPort: z.int().gte(1).lte(65535).optional(),
   minReplicas: z.int().gte(0).lte(100).optional(),
   maxReplicas: z.int().gte(1).lte(100).optional(),
   env: z.record(z.string(), z.string()).optional(),
@@ -309,7 +329,7 @@ export const zAppEnvironmentRef = z.object({
 
 export const zAppSummary = z.object({
   slug: z.string(),
-  image: z.string(),
+  image: z.string().nullable(),
   url: z.string(),
   project: zAppProjectRef,
   environment: zAppEnvironmentRef,
@@ -326,9 +346,25 @@ export const zViewAppIndexResponse = z.object({
   meta: zViewAppIndexResponseMeta,
 })
 
+export const zAppSourceResponse = z.object({
+  installationUuid: z.uuid(),
+  repo: z.string(),
+  branch: z.string(),
+  rootDir: z.string(),
+  dockerfilePath: z.string(),
+})
+
+export const zAppLatestBuild = z.object({
+  uuid: z.uuid(),
+  status: zBuildStatus,
+  commitSha: z.string(),
+  failureReason: z.string().nullable(),
+  createdAt: z.iso.datetime(),
+})
+
 export const zViewAppDetailResponse = z.object({
   slug: z.string(),
-  image: z.string(),
+  image: z.string().nullable(),
   url: z.string(),
   project: zAppProjectRef,
   environment: zAppEnvironmentRef,
@@ -337,6 +373,8 @@ export const zViewAppDetailResponse = z.object({
   maxReplicas: z.int(),
   env: z.record(z.string(), z.string()),
   nodePin: zNodePin.nullable(),
+  source: zAppSourceResponse.nullable(),
+  latestBuild: zAppLatestBuild.nullable(),
   hasUndeployedChanges: z.boolean(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
@@ -367,7 +405,7 @@ export const zUpdateAppCommand = z.object({
 
 export const zUpdateAppResponse = z.object({
   slug: z.string(),
-  image: z.string(),
+  image: z.string().nullable(),
   containerPort: z.int(),
   minReplicas: z.int(),
   maxReplicas: z.int(),
@@ -397,8 +435,9 @@ export const zCreateAppCommandWritable = z.object({
     .string()
     .max(63)
     .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/),
-  image: z.string(),
-  containerPort: z.int().gte(1).lte(65535),
+  image: z.string().optional(),
+  source: zCreateAppSourceCommand.optional(),
+  containerPort: z.int().gte(1).lte(65535).optional(),
   minReplicas: z.int().gte(0).lte(100).optional(),
   maxReplicas: z.int().gte(1).lte(100).optional(),
   env: z.record(z.string(), z.string()).optional(),
@@ -427,6 +466,8 @@ export const zConvertManifestV1Response = zConvertManifestResponse
 export const zCaptureInstallationV1Body = zCaptureInstallationCommand
 
 export const zCaptureInstallationV1Response = zCaptureInstallationResponse
+
+export const zViewRepositoryIndexV1Response = zViewRepositoryIndexResponse
 
 export const zCompleteGithubLoginV1Body = zCompleteGithubLoginCommand
 

@@ -20,6 +20,8 @@ const config: ViewAppDetailResponse = {
   maxReplicas: 2,
   env: { LOG_LEVEL: 'info' },
   nodePin: null,
+  source: null,
+  latestBuild: null,
   hasUndeployedChanges: false,
   project: { slug: 'demo', name: 'Demo' },
   environment: { uuid: '0190c3c0-0000-7000-8000-000000000002', slug: 'dev', name: 'Dev' },

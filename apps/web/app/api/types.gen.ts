@@ -90,6 +90,20 @@ export type CaptureInstallationResponse = {
   connected: boolean
 }
 
+export type GitHubRepositorySummary = {
+  /**
+   * Installation that can read it.
+   */
+  installationUuid: string
+  fullName: string
+  defaultBranch: string
+  private: boolean
+}
+
+export type ViewRepositoryIndexResponse = {
+  items: Array<GitHubRepositorySummary>
+}
+
 export type CompleteGithubLoginCommand = {
   /**
    * GitHub's user-OAuth authorization code from the consent redirect.
@@ -324,6 +338,23 @@ export type ViewBuildLogsResponse = {
   logs: string
 }
 
+export type CreateAppSourceCommand = {
+  /**
+   * Installation that can read the repo.
+   */
+  installationUuid: string
+  repo: string
+  branch: string
+  /**
+   * Build context, relative to the repo root.
+   */
+  rootDir?: string
+  /**
+   * Relative to rootDir.
+   */
+  dockerfilePath?: string
+}
+
 export type ImagePullCredentials = {
   /**
    * Registry host the credentials authenticate against.
@@ -365,13 +396,17 @@ export type CreateAppCommand = {
    */
   slug: string
   /**
-   * Fully-qualified image ref.
+   * Fully-qualified image ref. Send this or source, not both.
    */
-  image: string
+  image?: string
   /**
-   * Port the container listens on.
+   * GitHub repo to build and deploy. Send this or image, not both.
    */
-  containerPort: number
+  source?: CreateAppSourceCommand
+  /**
+   * Port the container listens on. Required with image; defaults to 8080 with source.
+   */
+  containerPort?: number
   /**
    * Replica floor. 0 lets the app sleep when idle and wake on the first request.
    */
@@ -423,7 +458,10 @@ export type AppEnvironmentRef = {
 
 export type AppSummary = {
   slug: string
-  image: string
+  /**
+   * Image the next release uses. Null until a source app finishes its first build.
+   */
+  image: string | null
   url: string
   project: AppProjectRef
   environment: AppEnvironmentRef
@@ -446,9 +484,28 @@ export type ViewAppIndexResponse = {
   meta: ViewAppIndexResponseMeta
 }
 
+export type AppSourceResponse = {
+  installationUuid: string
+  repo: string
+  branch: string
+  rootDir: string
+  dockerfilePath: string
+}
+
+export type AppLatestBuild = {
+  uuid: string
+  status: BuildStatus
+  commitSha: string
+  failureReason: string | null
+  createdAt: string
+}
+
 export type ViewAppDetailResponse = {
   slug: string
-  image: string
+  /**
+   * Image the next release uses. Null until a source app finishes its first build.
+   */
+  image: string | null
   url: string
   project: AppProjectRef
   environment: AppEnvironmentRef
@@ -468,6 +525,14 @@ export type ViewAppDetailResponse = {
    * Nodes this app is restricted to; null schedules anywhere.
    */
   nodePin: NodePin | null
+  /**
+   * GitHub repo the app builds from; null for an image app.
+   */
+  source: AppSourceResponse | null
+  /**
+   * Newest build, if any.
+   */
+  latestBuild: AppLatestBuild | null
   /**
    * True when the saved config differs from the release the cluster is running, or nothing is running.
    */
@@ -515,7 +580,10 @@ export type UpdateAppCommand = {
 
 export type UpdateAppResponse = {
   slug: string
-  image: string
+  /**
+   * Image the next release uses. Null until a source app finishes its first build.
+   */
+  image: string | null
   containerPort: number
   minReplicas: number
   maxReplicas: number
@@ -565,13 +633,17 @@ export type CreateAppCommandWritable = {
    */
   slug: string
   /**
-   * Fully-qualified image ref.
+   * Fully-qualified image ref. Send this or source, not both.
    */
-  image: string
+  image?: string
   /**
-   * Port the container listens on.
+   * GitHub repo to build and deploy. Send this or image, not both.
    */
-  containerPort: number
+  source?: CreateAppSourceCommand
+  /**
+   * Port the container listens on. Required with image; defaults to 8080 with source.
+   */
+  containerPort?: number
   /**
    * Replica floor. 0 lets the app sleep when idle and wake on the first request.
    */
@@ -691,6 +763,35 @@ export type CaptureInstallationV1Responses = {
 
 export type CaptureInstallationV1Response =
   CaptureInstallationV1Responses[keyof CaptureInstallationV1Responses]
+
+export type ViewRepositoryIndexV1Data = {
+  body?: never
+  path?: never
+  query?: never
+  url: '/api/v1/github-app/repositories'
+}
+
+export type ViewRepositoryIndexV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
+   * GitHub refused every installation.
+   */
+  502: unknown
+}
+
+export type ViewRepositoryIndexV1Responses = {
+  200: ViewRepositoryIndexResponse
+}
+
+export type ViewRepositoryIndexV1Response =
+  ViewRepositoryIndexV1Responses[keyof ViewRepositoryIndexV1Responses]
 
 export type BeginGithubLoginV1Data = {
   body?: never
@@ -1074,6 +1175,10 @@ export type CreateReleaseV1Errors = {
    * No app with that slug, or no such release for it.
    */
   404: unknown
+  /**
+   * The app has no image yet; its first build is pending.
+   */
+  409: unknown
 }
 
 export type CreateReleaseV1Responses = {
@@ -1260,7 +1365,7 @@ export type CreateAppV1Data = {
 
 export type CreateAppV1Errors = {
   /**
-   * Malformed body, or an invalid slug / image / port.
+   * Malformed body, an invalid slug / image / port, or both or neither of image and source.
    */
   400: unknown
   /**
@@ -1279,6 +1384,14 @@ export type CreateAppV1Errors = {
    * An app with that slug already exists.
    */
   409: unknown
+  /**
+   * The installation is unknown, or it cannot read the repo or branch.
+   */
+  422: unknown
+  /**
+   * GitHub refused the installation token.
+   */
+  502: unknown
 }
 
 export type CreateAppV1Responses = {

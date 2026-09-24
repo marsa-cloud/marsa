@@ -117,6 +117,41 @@
         ]
       }
     },
+    "/api/v1/github-app/repositories": {
+      "get": {
+        "operationId": "viewRepositoryIndexV1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewRepositoryIndexResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
+          "502": {
+            "description": "GitHub refused every installation."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "github-app"
+        ]
+      }
+    },
     "/api/v1/auth/github": {
       "get": {
         "operationId": "beginGithubLoginV1",
@@ -618,6 +653,9 @@
           },
           "404": {
             "description": "No app with that slug, or no such release for it."
+          },
+          "409": {
+            "description": "The app has no image yet; its first build is pending."
           }
         },
         "security": [
@@ -908,7 +946,7 @@
             }
           },
           "400": {
-            "description": "Malformed body, or an invalid slug / image / port."
+            "description": "Malformed body, an invalid slug / image / port, or both or neither of image and source."
           },
           "401": {
             "description": "No active session."
@@ -921,6 +959,12 @@
           },
           "409": {
             "description": "An app with that slug already exists."
+          },
+          "422": {
+            "description": "The installation is unknown, or it cannot read the repo or branch."
+          },
+          "502": {
+            "description": "GitHub refused the installation token."
           }
         },
         "security": [
@@ -1479,6 +1523,47 @@
           "installationId",
           "accountLogin",
           "connected"
+        ]
+      },
+      "GitHubRepositorySummary": {
+        "type": "object",
+        "properties": {
+          "installationUuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Installation that can read it."
+          },
+          "fullName": {
+            "type": "string",
+            "example": "acme/shop"
+          },
+          "defaultBranch": {
+            "type": "string",
+            "example": "main"
+          },
+          "private": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "installationUuid",
+          "fullName",
+          "defaultBranch",
+          "private"
+        ]
+      },
+      "ViewRepositoryIndexResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GitHubRepositorySummary"
+            }
+          }
+        },
+        "required": [
+          "items"
         ]
       },
       "CompleteGithubLoginCommand": {
@@ -2246,6 +2331,43 @@
           "logs"
         ]
       },
+      "CreateAppSourceCommand": {
+        "type": "object",
+        "properties": {
+          "installationUuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Installation that can read the repo."
+          },
+          "repo": {
+            "type": "string",
+            "example": "acme/shop",
+            "pattern": "^[\\w.-]+\\/[\\w.-]+$"
+          },
+          "branch": {
+            "type": "string",
+            "example": "main",
+            "maxLength": 255
+          },
+          "rootDir": {
+            "type": "string",
+            "example": ".",
+            "default": ".",
+            "description": "Build context, relative to the repo root."
+          },
+          "dockerfilePath": {
+            "type": "string",
+            "example": "Dockerfile",
+            "default": "Dockerfile",
+            "description": "Relative to rootDir."
+          }
+        },
+        "required": [
+          "installationUuid",
+          "repo",
+          "branch"
+        ]
+      },
       "ImagePullCredentials": {
         "type": "object",
         "properties": {
@@ -2337,12 +2459,20 @@
           "image": {
             "type": "string",
             "example": "nginx:1.27",
-            "description": "Fully-qualified image ref."
+            "description": "Fully-qualified image ref. Send this or source, not both."
+          },
+          "source": {
+            "description": "GitHub repo to build and deploy. Send this or image, not both.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CreateAppSourceCommand"
+              }
+            ]
           },
           "containerPort": {
             "type": "integer",
             "example": 80,
-            "description": "Port the container listens on.",
+            "description": "Port the container listens on. Required with image; defaults to 8080 with source.",
             "minimum": 1,
             "maximum": 65535
           },
@@ -2389,9 +2519,7 @@
         },
         "required": [
           "environmentUuid",
-          "slug",
-          "image",
-          "containerPort"
+          "slug"
         ]
       },
       "CreateAppResponse": {
@@ -2490,7 +2618,9 @@
           },
           "image": {
             "type": "string",
-            "example": "nginx:1.27"
+            "nullable": true,
+            "example": "nginx:1.27",
+            "description": "Image the next release uses. Null until a source app finishes its first build."
           },
           "url": {
             "type": "string",
@@ -2558,6 +2688,74 @@
           "meta"
         ]
       },
+      "AppSourceResponse": {
+        "type": "object",
+        "properties": {
+          "installationUuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "repo": {
+            "type": "string",
+            "example": "acme/shop"
+          },
+          "branch": {
+            "type": "string",
+            "example": "main"
+          },
+          "rootDir": {
+            "type": "string",
+            "example": "."
+          },
+          "dockerfilePath": {
+            "type": "string",
+            "example": "Dockerfile"
+          }
+        },
+        "required": [
+          "installationUuid",
+          "repo",
+          "branch",
+          "rootDir",
+          "dockerfilePath"
+        ]
+      },
+      "AppLatestBuild": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "example": "running",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BuildStatus"
+              }
+            ]
+          },
+          "commitSha": {
+            "type": "string",
+            "example": "c0ffee0000000000000000000000000000000000"
+          },
+          "failureReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "uuid",
+          "status",
+          "commitSha",
+          "failureReason",
+          "createdAt"
+        ]
+      },
       "ViewAppDetailResponse": {
         "type": "object",
         "properties": {
@@ -2567,7 +2765,9 @@
           },
           "image": {
             "type": "string",
-            "example": "nginx:1.27"
+            "nullable": true,
+            "example": "nginx:1.27",
+            "description": "Image the next release uses. Null until a source app finishes its first build."
           },
           "url": {
             "type": "string",
@@ -2612,6 +2812,26 @@
               }
             ]
           },
+          "source": {
+            "nullable": true,
+            "description": "GitHub repo the app builds from; null for an image app.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AppSourceResponse"
+              }
+            ]
+          },
+          "latestBuild": {
+            "nullable": true,
+            "description": "Newest build, if any.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AppLatestBuild"
+              }
+            ]
+          },
           "hasUndeployedChanges": {
             "type": "boolean",
             "description": "True when the saved config differs from the release the cluster is running, or nothing is running."
@@ -2636,6 +2856,8 @@
           "maxReplicas",
           "env",
           "nodePin",
+          "source",
+          "latestBuild",
           "hasUndeployedChanges",
           "createdAt",
           "updatedAt"
@@ -2762,7 +2984,9 @@
           },
           "image": {
             "type": "string",
-            "example": "nginx:1.27"
+            "nullable": true,
+            "example": "nginx:1.27",
+            "description": "Image the next release uses. Null until a source app finishes its first build."
           },
           "containerPort": {
             "type": "integer",
