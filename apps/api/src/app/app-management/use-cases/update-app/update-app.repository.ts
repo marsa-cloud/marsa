@@ -7,6 +7,10 @@ import {
   type AppPlacement,
   selectAppPlacement,
 } from '#src/app/app-management/queries/app-placement.js'
+import {
+  type AttachedDatabase,
+  selectAttachmentsForApp,
+} from '#src/app/database-management/queries/app-attachments.js'
 import { type Release, releaseTable } from '#src/app/release/entities/release.table.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import type { Executor } from '#src/modules/database/drizzle.factory.js'
@@ -58,5 +62,10 @@ export class UpdateAppRepository {
       .where(and(eq(releaseTable.uuid, uuid), eq(releaseTable.appUuid, appUuid)))
       .limit(1)
     return release
+  }
+
+  // Attachments are placement, so they are read live rather than restored from the release.
+  findAttachments(tx: Executor, appUuid: AppUuid): Promise<AttachedDatabase[]> {
+    return selectAttachmentsForApp(tx, appUuid)
   }
 }
