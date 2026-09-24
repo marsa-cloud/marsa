@@ -1,3 +1,4 @@
+import type { App } from '#src/app/app-management/entities/app.table.js'
 import type { NodePin } from '#src/app/app-management/entities/node-pin.js'
 import { PinStrategy } from '#src/app/app-management/enums/pin-strategy.enum.js'
 import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
@@ -25,13 +26,23 @@ export function deploySpecOf(
     releaseUuid: release.uuid,
     image: release.imageRef,
     port: release.containerPort,
-    env: release.env,
+    env: envOf(app, release),
     minReplicas: release.minReplicas,
     maxReplicas: release.maxReplicas,
     host: `${app.slug}.${baseDomain}`,
     nodePin: nodePinSpecOf(app.nodePin),
     ...(credentials ? { credentials } : {}),
   }
+}
+
+const PORT_ENV = 'PORT'
+
+// A built app can't know the port Marsa routes to unless told; a user-set PORT still wins.
+function envOf(app: App, release: Release): Record<string, string> {
+  if (!app.source || PORT_ENV in release.env) {
+    return release.env
+  }
+  return { ...release.env, [PORT_ENV]: String(release.containerPort) }
 }
 
 function nodePinSpecOf(nodePin: NodePin | null): NodePinSpec | null {

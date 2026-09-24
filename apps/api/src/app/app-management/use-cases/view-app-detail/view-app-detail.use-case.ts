@@ -23,15 +23,21 @@ export class ViewAppDetailUseCase {
     }
 
     const hasUndeployedChanges = await this.hasUndeployedChanges(placement)
+    const latestBuild = await this.repository.findLatestBuild(placement.app.uuid)
     return new ViewAppDetailResponse(
       placement,
       this.config.getOrThrow<string>('MARSA_BASE_DOMAIN'),
       hasUndeployedChanges,
+      latestBuild,
     )
   }
 
   // Compared against what the cluster runs, not the newest row: a release can exist yet never ship.
   private async hasUndeployedChanges(placement: AppPlacement): Promise<boolean> {
+    // Before the first build there is nothing to deploy; the builds list shows progress instead.
+    if (placement.app.image === null) {
+      return false
+    }
     let liveUuid: ReleaseUuid | null
     try {
       liveUuid = await this.appRuntime.readLiveReleaseUuid(placement)

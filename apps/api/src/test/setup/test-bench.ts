@@ -81,7 +81,9 @@ export class TestBench {
       },
     })
 
-    const app = testModule.createNestApplication<NestFastifyApplication>(adapter)
+    const app = testModule.createNestApplication<NestFastifyApplication>(adapter, {
+      rawBody: true,
+    })
 
     await app.register(fastifySecureSession, {
       key: process.env.AUTH_SESSION_SECRET_KEY as string,

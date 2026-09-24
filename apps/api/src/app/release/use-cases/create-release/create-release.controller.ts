@@ -1,6 +1,7 @@
 import { Body, Controller, Param, Post } from '@nestjs/common'
 import {
   ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiCookieAuth,
   ApiCreatedResponse,
   ApiForbiddenResponse,
@@ -27,6 +28,7 @@ export class CreateReleaseController {
   @ApiBadRequestResponse({ description: 'fromReleaseUuid is not a uuid.' })
   @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiNotFoundResponse({ description: 'No app with that slug, or no such release for it.' })
+  @ApiConflictResponse({ description: 'The app has no image yet; its first build is pending.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   handle(
     @Param('slug') slug: string,

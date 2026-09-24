@@ -57,3 +57,10 @@ export interface GitHubOAuthAccessTokenResponse {
   error?: string
   error_description?: string
 }
+
+/** A repository an installation can read, normalised to the fields the create form needs. */
+export interface GitHubRepository {
+  fullName: string
+  defaultBranch: string
+  private: boolean
+}

@@ -18,3 +18,6 @@ export const MAX_CONTAINER_PORT = 65535
  */
 export const MIN_REPLICAS = 0
 export const MAX_REPLICAS = 100
+
+/** Port a source app is routed to unless told otherwise; the app reads it from $PORT. */
+export const DEFAULT_SOURCE_CONTAINER_PORT = 8080

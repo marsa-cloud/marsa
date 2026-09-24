@@ -86,7 +86,7 @@ function formatTime(iso: string) {
           >
             <span class="font-medium">{{ app.slug }}</span>
             <span class="text-xs text-muted">{{ app.project.slug }} / {{ app.environment.slug }}</span>
-            <span class="font-mono text-xs text-muted">{{ app.image }}</span>
+            <span class="font-mono text-xs text-muted">{{ app.image ?? 'no image yet' }}</span>
             <span class="font-mono text-xs text-muted">{{ app.url }}</span>
             <span class="text-xs text-muted ms-auto">{{ formatTime(app.createdAt) }}</span>
             <UIcon

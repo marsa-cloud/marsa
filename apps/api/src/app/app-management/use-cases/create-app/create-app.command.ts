@@ -10,9 +10,11 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator'
 import {
+  DEFAULT_SOURCE_CONTAINER_PORT,
   MAX_CONTAINER_PORT,
   MAX_REPLICAS,
   MIN_CONTAINER_PORT,
@@ -22,8 +24,10 @@ import {
 } from '#src/app/app-management/entities/app-config.constants.js'
 import { IsAppEnvRecord } from '#src/app/app-management/entities/app-env.js'
 import { ImagePullCredentials } from '#src/app/app-management/entities/image-pull-credentials.js'
+import { IsExactlyOneOf } from '#src/app/app-management/entities/is-exactly-one-of.validator.js'
 import { IsGteField } from '#src/app/app-management/entities/is-gte-field.validator.js'
 import { NodePin } from '#src/app/app-management/entities/node-pin.js'
+import { CreateAppSourceCommand } from '#src/app/app-management/use-cases/create-app/create-app-source.command.js'
 import type { EnvironmentUuid } from '#src/app/environment/entities/environment.uuid.js'
 
 export class CreateAppCommand {
@@ -44,22 +48,43 @@ export class CreateAppCommand {
   @Matches(SLUG_PATTERN, { message: 'slug must be a valid DNS-1123 label' })
   slug!: string
 
-  @ApiProperty({ type: String, example: 'nginx:1.27', description: 'Fully-qualified image ref.' })
+  @ApiPropertyOptional({
+    type: String,
+    example: 'nginx:1.27',
+    description: 'Fully-qualified image ref. Send this or source, not both.',
+  })
+  @ValidateIf(
+    (command: CreateAppCommand) => command.image !== undefined || command.source === undefined,
+  )
+  @IsExactlyOneOf('source')
   @IsString()
   @IsNotEmpty()
-  image!: string
+  image?: string
 
-  @ApiProperty({
+  @ApiPropertyOptional({
+    type: CreateAppSourceCommand,
+    description: 'GitHub repo to build and deploy. Send this or image, not both.',
+  })
+  @ValidateIf((command: CreateAppCommand) => command.source !== undefined)
+  @ValidateNested()
+  @Type(() => CreateAppSourceCommand)
+  source?: CreateAppSourceCommand
+
+  @ApiPropertyOptional({
     type: 'integer',
     example: 80,
-    description: 'Port the container listens on.',
+    description: `Port the container listens on. Required with image; defaults to ${DEFAULT_SOURCE_CONTAINER_PORT} with source.`,
     minimum: MIN_CONTAINER_PORT,
     maximum: MAX_CONTAINER_PORT,
   })
+  @ValidateIf(
+    (command: CreateAppCommand) =>
+      command.image !== undefined || command.containerPort !== undefined,
+  )
   @IsInt()
   @Min(MIN_CONTAINER_PORT)
   @Max(MAX_CONTAINER_PORT)
-  containerPort!: number
+  containerPort?: number
 
   @ApiPropertyOptional({
     type: 'integer',

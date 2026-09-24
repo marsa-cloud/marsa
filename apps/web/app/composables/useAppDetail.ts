@@ -1,14 +1,17 @@
 import type {
+  BuildSummary,
   ReleaseSummary,
   ViewAppDetailResponse,
   ViewAppHealthResponse,
   ViewAppLogsResponse,
+  ViewBuildIndexQueryKey,
   ViewReleaseIndexQueryKey,
 } from '~/api/types.gen'
 import {
   zViewAppDetailResponse,
   zViewAppHealthResponse,
   zViewAppLogsResponse,
+  zViewBuildIndexResponse,
   zViewReleaseIndexResponse,
 } from '~/api/zod.gen'
 
@@ -23,6 +26,13 @@ export function useAppReleases(slug: string) {
   return useKeysetList<ReleaseSummary, ViewReleaseIndexQueryKey>(
     `/v1/apps/${encodeURIComponent(slug)}/releases`,
     raw => zViewReleaseIndexResponse.parse(raw),
+  )
+}
+
+export function useAppBuilds(slug: string) {
+  return useKeysetList<BuildSummary, ViewBuildIndexQueryKey>(
+    `/v1/apps/${encodeURIComponent(slug)}/builds`,
+    raw => zViewBuildIndexResponse.parse(raw),
   )
 }
 

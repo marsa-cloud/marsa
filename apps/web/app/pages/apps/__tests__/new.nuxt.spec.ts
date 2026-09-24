@@ -36,6 +36,27 @@ mockComponent('NodePinPicker', async () => {
   })
 })
 
+// Its own spec covers loading and empty states; here it just reports a chosen repository.
+const chosen = vi.hoisted(() => ({
+  repo: null as null | {
+    installationUuid: string
+    fullName: string
+    defaultBranch: string
+    private: boolean
+  },
+}))
+mockComponent('GithubRepoPicker', async () => {
+  const { defineComponent, h } = await import('vue')
+  return defineComponent({
+    props: { modelValue: { type: Object, default: undefined } },
+    emits: ['update:modelValue'],
+    setup(_, { emit }) {
+      if (chosen.repo) emit('update:modelValue', chosen.repo)
+      return () => h('div')
+    },
+  })
+})
+
 mockNuxtImport('useCreateApp', () => () => ({ create }))
 mockNuxtImport('useShipRelease', () => () => ({ ship }))
 mockNuxtImport('navigateTo', () => nav)
@@ -46,6 +67,7 @@ const CREATED = { slug: 'my-app', url: 'https://my-app.marsa.cc' }
 beforeEach(() => {
   picked.uuid = 'e1'
   pinned.value = null
+  chosen.repo = null
   create.mockReset().mockResolvedValue(CREATED)
   ship.mockReset().mockResolvedValue({
     releaseUuid: 'r1',
@@ -59,7 +81,12 @@ beforeEach(() => {
 
 const flush = () => new Promise(resolve => setTimeout(resolve))
 
+async function useImageMode(wrapper: Awaited<ReturnType<typeof mountSuspended>>) {
+  await wrapper.find('[data-testid="toggle-image-mode"]').trigger('click')
+}
+
 async function fillValidForm(wrapper: Awaited<ReturnType<typeof mountSuspended>>) {
+  await useImageMode(wrapper)
   await wrapper.find('input#slug').setValue('my-app')
   await wrapper.find('input#image').setValue('nginx:1.27')
   // UInputNumber (reka-ui NumberField) commits its numeric value on blur.
@@ -180,6 +207,7 @@ describe('apps/new deploy form', () => {
 
   it('blocks submit and does not call the API on invalid input', async () => {
     const wrapper = await mountSuspended(New)
+    await useImageMode(wrapper)
     await wrapper.find('input#image').setValue('nginx:1.27')
     await submit(wrapper)
 
@@ -215,5 +243,72 @@ describe('apps/new deploy form', () => {
         nodePin: { key: 'kubernetes.io/hostname', values: ['node-a'], strategy: 'required' },
       }),
     )
+  })
+})
+
+describe('apps/new deploy from GitHub', () => {
+  const repo = {
+    installationUuid: 'i1',
+    fullName: 'acme/My-Shop',
+    defaultBranch: 'trunk',
+    private: false,
+  }
+
+  it('opens on GitHub mode, without an image field', async () => {
+    const wrapper = await mountSuspended(New)
+
+    expect(wrapper.text()).toContain('Repository')
+    expect(wrapper.find('input#image').exists()).toBe(false)
+  })
+
+  it('fills the branch and suggests a slug from the chosen repository', async () => {
+    chosen.repo = repo
+    const wrapper = await mountSuspended(New)
+    await flush()
+
+    expect((wrapper.find('input#branch').element as HTMLInputElement).value).toBe('trunk')
+    expect((wrapper.find('input#slug').element as HTMLInputElement).value).toBe('my-shop')
+  })
+
+  it('creates from the repository and lands on the app without shipping a release', async () => {
+    chosen.repo = repo
+    const wrapper = await mountSuspended(New)
+    await flush()
+    await submit(wrapper)
+
+    expect(create).toHaveBeenCalledWith({
+      environmentUuid: 'e1',
+      slug: 'my-shop',
+      source: {
+        installationUuid: 'i1',
+        repo: 'acme/My-Shop',
+        branch: 'trunk',
+        rootDir: '.',
+        dockerfilePath: 'Dockerfile',
+      },
+    })
+    expect(ship).not.toHaveBeenCalled()
+    expect(nav).toHaveBeenCalledWith('/apps/my-app')
+    expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Build started' }))
+  })
+
+  it('sends a port only when one is entered', async () => {
+    chosen.repo = repo
+    const wrapper = await mountSuspended(New)
+    await flush()
+    const port = wrapper.find('input#containerPort')
+    await port.setValue('3000')
+    await port.trigger('blur')
+    await submit(wrapper)
+
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({ containerPort: 3000 }))
+  })
+
+  it('does not call the API until a repository is picked', async () => {
+    const wrapper = await mountSuspended(New)
+    await wrapper.find('input#slug').setValue('my-app')
+    await submit(wrapper)
+
+    expect(create).not.toHaveBeenCalled()
   })
 })

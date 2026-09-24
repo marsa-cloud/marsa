@@ -12,6 +12,9 @@ export type AppConfig = Pick<
 >
 
 export function snapshotOf(app: AppConfig): ReleaseSnapshot {
+  if (app.image === null) {
+    throw new Error('An app with no image yet cannot be snapshotted into a release.')
+  }
   return {
     imageRef: app.image,
     env: app.env,

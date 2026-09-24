@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { useIntervalFn } from '@vueuse/core'
+
 import type { AppHealthStatus } from '~/api/types.gen'
 
-// useAppReleases / useAppHealth / useAppRunLogs / useAppDetail / useShipRelease /
-// extractApiError are Nuxt auto-imports — left un-imported so tests can mock them.
+// useAppReleases / useAppHealth / useAppRunLogs / useAppDetail / useAppBuilds / useRebuild /
+// useShipRelease / extractApiError are Nuxt auto-imports — left un-imported so tests can mock them.
 
 // Remount per slug so navigating /apps/a → /apps/b re-runs setup with fresh reads.
 definePageMeta({ key: route => route.fullPath })
@@ -38,6 +40,65 @@ const {
 const { data: config, status: configStatus, error: configError, refresh: refreshConfig }
   = useAppDetail(slug.value)
 
+const toast = useToast()
+
+const {
+  items: builds,
+  pending: buildsPending,
+  error: buildsError,
+  exhausted: buildsExhausted,
+  canLoadMore: canLoadMoreBuilds,
+  loadMore: loadMoreBuilds,
+  reset: refreshBuilds,
+} = useAppBuilds(slug.value)
+
+const source = computed(() => config.value?.source ?? null)
+watch(
+  source,
+  (current) => {
+    if (current) void refreshBuilds()
+  },
+  { immediate: true },
+)
+
+const BUILD_POLL_MS = 5000
+const building = computed(() => config.value?.latestBuild?.status === 'running')
+// A finished build deploys on the server; polling is how the page sees the new release land.
+const { pause, resume } = useIntervalFn(
+  () => Promise.all([refreshBuilds(), refreshConfig(), refreshReleases(), refreshHealth()]),
+  BUILD_POLL_MS,
+  { immediate: false },
+)
+watch(building, isBuilding => (isBuilding ? resume() : pause()), { immediate: true })
+
+const { rebuild } = useRebuild()
+const rebuilding = ref(false)
+
+async function runRebuild() {
+  rebuilding.value = true
+  try {
+    await rebuild(slug.value)
+    toast.add({
+      title: 'Build started',
+      description: 'The branch head is building. It deploys when the build succeeds.',
+      color: 'success',
+      icon: 'i-lucide-hammer',
+    })
+  } catch (err) {
+    toast.add({
+      title: 'Rebuild failed',
+      description: extractApiError(err),
+      color: 'error',
+      icon: 'i-lucide-triangle-alert',
+    })
+  } finally {
+    rebuilding.value = false
+    await Promise.all([refreshBuilds(), refreshConfig()])
+  }
+}
+
+const logsBuildUuid = ref<string | null>(null)
+
 const replicaRange = computed(() => {
   const min = config.value?.minReplicas
   const max = config.value?.maxReplicas
@@ -47,7 +108,6 @@ const replicaRange = computed(() => {
 })
 
 const { ship } = useShipRelease()
-const toast = useToast()
 const shipping = ref(false)
 
 async function runShip(fromReleaseUuid?: string) {
@@ -155,7 +215,7 @@ async function confirmDelete() {
             color="neutral"
             variant="subtle"
             :loading="shipping"
-            :disabled="shipping"
+            :disabled="shipping || config?.image === null"
             @click="runShip()"
           >
             Redeploy
@@ -242,6 +302,45 @@ async function confirmDelete() {
           >
             Scaling: {{ replicaRange }}
           </p>
+        </UCard>
+
+        <!-- Builds -->
+        <UCard v-if="source">
+          <template #header>
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <h2 class="font-medium">
+                Builds
+              </h2>
+              <span class="font-mono text-xs text-muted">{{ source.repo }}@{{ source.branch }}</span>
+              <UButton
+                data-testid="rebuild"
+                class="ms-auto"
+                icon="i-lucide-hammer"
+                color="neutral"
+                variant="subtle"
+                size="sm"
+                :loading="rebuilding"
+                :disabled="rebuilding"
+                @click="runRebuild"
+              >
+                Rebuild
+              </UButton>
+            </div>
+          </template>
+
+          <AppBuildList
+            :builds="builds"
+            :pending="buildsPending"
+            :error="buildsError"
+            :exhausted="buildsExhausted"
+            :can-load-more="canLoadMoreBuilds"
+            :load-more="loadMoreBuilds"
+            @logs="uuid => (logsBuildUuid = uuid)"
+          />
+          <BuildLogModal
+            v-model:build-uuid="logsBuildUuid"
+            :slug="slug"
+          />
         </UCard>
 
         <!-- Release history -->

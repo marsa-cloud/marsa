@@ -1,5 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common'
 import {
+  ApiBadGatewayResponse,
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCookieAuth,
@@ -8,6 +9,7 @@ import {
   ApiNotFoundResponse,
   ApiTags,
   ApiUnauthorizedResponse,
+  ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger'
 import { CreateAppCommand } from '#src/app/app-management/use-cases/create-app/create-app.command.js'
 import { CreateAppResponse } from '#src/app/app-management/use-cases/create-app/create-app.response.js'
@@ -25,7 +27,14 @@ export class CreateAppController {
   @Roles(UserRole.Operator, UserRole.Member)
   @ApiCookieAuth(SESSION_COOKIE_SECURITY_SCHEME)
   @ApiCreatedResponse({ type: CreateAppResponse })
-  @ApiBadRequestResponse({ description: 'Malformed body, or an invalid slug / image / port.' })
+  @ApiBadRequestResponse({
+    description:
+      'Malformed body, an invalid slug / image / port, or both or neither of image and source.',
+  })
+  @ApiUnprocessableEntityResponse({
+    description: 'The installation is unknown, or it cannot read the repo or branch.',
+  })
+  @ApiBadGatewayResponse({ description: 'GitHub refused the installation token.' })
   @ApiNotFoundResponse({ description: 'No environment with that uuid.' })
   @ApiConflictResponse({ description: 'An app with that slug already exists.' })
   @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })

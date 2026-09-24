@@ -1,17 +1,25 @@
 import { ApiProperty } from '@nestjs/swagger'
 import { NodePin } from '#src/app/app-management/entities/node-pin.js'
 import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
+import { AppLatestBuild } from '#src/app/app-management/responses/app-latest-build.response.js'
 import {
   AppEnvironmentRef,
   AppProjectRef,
 } from '#src/app/app-management/responses/app-placement.response.js'
+import { AppSourceResponse } from '#src/app/app-management/responses/app-source.response.js'
+import type { Build } from '#src/app/build/entities/build.table.js'
 
 export class ViewAppDetailResponse {
   @ApiProperty({ type: String, example: 'my-app' })
   readonly slug: string
 
-  @ApiProperty({ type: String, example: 'nginx:1.27' })
-  readonly image: string
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: 'nginx:1.27',
+    description: 'Image the next release uses. Null until a source app finishes its first build.',
+  })
+  readonly image: string | null
 
   @ApiProperty({ type: String, example: 'https://my-app.demo.marsa.cc' })
   readonly url: string
@@ -47,6 +55,16 @@ export class ViewAppDetailResponse {
   readonly nodePin: NodePin | null
 
   @ApiProperty({
+    type: AppSourceResponse,
+    nullable: true,
+    description: 'GitHub repo the app builds from; null for an image app.',
+  })
+  readonly source: AppSourceResponse | null
+
+  @ApiProperty({ type: AppLatestBuild, nullable: true, description: 'Newest build, if any.' })
+  readonly latestBuild: AppLatestBuild | null
+
+  @ApiProperty({
     type: Boolean,
     description:
       'True when the saved config differs from the release the cluster is running, or nothing is running.',
@@ -63,6 +81,7 @@ export class ViewAppDetailResponse {
     { app, project, environment }: AppPlacement,
     baseDomain: string,
     hasUndeployedChanges: boolean,
+    latestBuild: Build | undefined,
   ) {
     this.slug = app.slug
     this.image = app.image
@@ -74,6 +93,8 @@ export class ViewAppDetailResponse {
     this.maxReplicas = app.maxReplicas
     this.env = app.env
     this.nodePin = app.nodePin
+    this.source = app.source ? new AppSourceResponse(app.source) : null
+    this.latestBuild = latestBuild ? new AppLatestBuild(latestBuild) : null
     this.hasUndeployedChanges = hasUndeployedChanges
     this.createdAt = app.createdAt.toISOString()
     this.updatedAt = app.updatedAt.toISOString()
