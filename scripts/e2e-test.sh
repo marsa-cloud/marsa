@@ -250,10 +250,12 @@ kubectl -n "$APPS_NS" get "secret/${DB_SLUG}-credentials" >/dev/null || fail dat
 kubectl -n "$APPS_NS" get "pvc/data-${DB_SLUG}-0" >/dev/null || fail database "pvc data-${DB_SLUG}-0 missing"
 
 echo "== stage: a database gets no HTTP routing =="
-kubectl -n "$APPS_NS" get ingressroutes.traefik.io "$DB_SLUG" >/dev/null 2>&1 \
-  && fail database "a database must not get an IngressRoute"
-kubectl -n "$APPS_NS" get httpscaledobjects.http.keda.sh "$DB_SLUG" >/dev/null 2>&1 \
-  && fail database "a database must not get an HTTPScaledObject"
+ingress_route="$(kubectl -n "$APPS_NS" get ingressroutes.traefik.io "$DB_SLUG" --ignore-not-found -o name)" \
+  || fail database "could not query IngressRoutes"
+[ -z "$ingress_route" ] || fail database "a database must not get an IngressRoute"
+scaled_object="$(kubectl -n "$APPS_NS" get httpscaledobjects.http.keda.sh "$DB_SLUG" --ignore-not-found -o name)" \
+  || fail database "could not query HTTPScaledObjects"
+[ -z "$scaled_object" ] || fail database "a database must not get an HTTPScaledObject"
 
 echo "== stage: data survives a pod restart =="
 kubectl -n "$APPS_NS" exec "${DB_SLUG}-0" -- \
