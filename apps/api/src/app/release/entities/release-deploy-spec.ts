@@ -2,10 +2,10 @@ import type { NodePin } from '#src/app/app-management/entities/node-pin.js'
 import { PinStrategy } from '#src/app/app-management/enums/pin-strategy.enum.js'
 import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import type { Release } from '#src/app/release/entities/release.table.js'
+import { NodePinStrategy } from '#src/modules/runtime/runtime.enums.js'
 import {
   type AppDeploySpec,
   type NodePinSpec,
-  NodePinStrategy,
   type RegistryCredentials,
 } from '#src/modules/runtime/runtime.types.js'
 

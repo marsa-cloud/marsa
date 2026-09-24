@@ -2,7 +2,7 @@ import { describe, it } from 'node:test'
 import type { V1Pod, V1StatefulSet } from '@kubernetes/client-node'
 import { expect } from 'expect'
 import { mapDatabaseStatus } from '#src/modules/runtime/adapters/kubernetes/database/map-database-status.js'
-import { DatabaseStatus } from '#src/modules/runtime/runtime.types.js'
+import { DatabaseStatus } from '#src/modules/runtime/runtime.enums.js'
 
 const statefulSet = (readyReplicas: number): V1StatefulSet => ({
   spec: { replicas: 1, selector: {}, serviceName: 'orders', template: {} },

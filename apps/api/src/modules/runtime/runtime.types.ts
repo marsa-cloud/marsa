@@ -1,3 +1,4 @@
+import type { NodePinStrategy } from '#src/modules/runtime/runtime.enums.js'
 import type { Uuid } from '#src/utils/uuid.js'
 
 export interface EnvironmentRef {
@@ -7,11 +8,6 @@ export interface EnvironmentRef {
 
 export interface AppRef extends EnvironmentRef {
   app: { slug: string }
-}
-
-export enum NodePinStrategy {
-  Required = 'required',
-  Preferred = 'preferred',
 }
 
 export interface NodePinSpec {
@@ -37,14 +33,6 @@ export interface AppDeploySpec {
   host: string
   nodePin: NodePinSpec | null
   credentials?: RegistryCredentials
-}
-
-// NotFound is absence of observation, not a state — never persist a terminal outcome from it.
-export enum RolloutStatus {
-  Complete = 'complete',
-  Failed = 'failed',
-  Progressing = 'progressing',
-  NotFound = 'not_found',
 }
 
 export interface AppHealth {
@@ -97,11 +85,4 @@ export interface DatabaseDeploySpec {
   storageClass: string
   readinessExec: string[]
   nodePin: NodePinSpec | null
-}
-
-export enum DatabaseStatus {
-  Provisioning = 'provisioning',
-  Ready = 'ready',
-  Failed = 'failed',
-  NotFound = 'not_found',
 }

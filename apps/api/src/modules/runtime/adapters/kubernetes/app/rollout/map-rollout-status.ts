@@ -1,5 +1,5 @@
 import type { V1Deployment } from '@kubernetes/client-node'
-import { RolloutStatus } from '#src/modules/runtime/runtime.types.js'
+import { RolloutStatus } from '#src/modules/runtime/runtime.enums.js'
 
 /**
  * Derive the rollout outcome from a Deployment's `.status.conditions` alone

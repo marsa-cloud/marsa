@@ -23,11 +23,8 @@ import {
 } from '#src/modules/runtime/adapters/kubernetes/shared/not-found.js'
 import { DatabaseRuntime } from '#src/modules/runtime/database-runtime.js'
 import { EnvironmentRuntime } from '#src/modules/runtime/environment-runtime.js'
-import type {
-  DatabaseDeploySpec,
-  DatabaseRef,
-  DatabaseStatus,
-} from '#src/modules/runtime/runtime.types.js'
+import { type DatabaseStatus } from '#src/modules/runtime/runtime.enums.js'
+import type { DatabaseDeploySpec, DatabaseRef } from '#src/modules/runtime/runtime.types.js'
 
 @Injectable()
 export class KubernetesDatabaseRuntime extends DatabaseRuntime {

@@ -1,10 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { DatabaseRuntime } from '#src/modules/runtime/database-runtime.js'
-import {
-  type DatabaseDeploySpec,
-  type DatabaseRef,
-  DatabaseStatus,
-} from '#src/modules/runtime/runtime.types.js'
+import { DatabaseStatus } from '#src/modules/runtime/runtime.enums.js'
+import type { DatabaseDeploySpec, DatabaseRef } from '#src/modules/runtime/runtime.types.js'
 
 // Remembers what it provisioned so a live status read sees what a runtime would.
 @Injectable()

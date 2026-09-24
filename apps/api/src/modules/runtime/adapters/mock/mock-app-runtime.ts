@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
+import { RolloutStatus } from '#src/modules/runtime/runtime.enums.js'
 import {
   type AppDeploySpec,
   type AppHealth,
   type AppRef,
   type DeployFailure,
-  RolloutStatus,
   type RunLogs,
   type RunLogsOptions,
 } from '#src/modules/runtime/runtime.types.js'

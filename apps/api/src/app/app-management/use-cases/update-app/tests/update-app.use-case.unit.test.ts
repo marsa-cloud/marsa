@@ -13,7 +13,7 @@ import { UpdateAppUseCase } from '#src/app/app-management/use-cases/update-app/u
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
-import { NodePinStrategy } from '#src/modules/runtime/runtime.types.js'
+import { NodePinStrategy } from '#src/modules/runtime/runtime.enums.js'
 import { stubDatabase } from '#src/test/setup/stub-database.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 

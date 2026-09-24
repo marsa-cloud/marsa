@@ -22,11 +22,11 @@ import { DatabaseCredentialsCipher } from '#src/modules/crypto/database-credenti
 import type { Database } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 import { DatabaseRuntime } from '#src/modules/runtime/database-runtime.js'
+import { NodePinStrategy } from '#src/modules/runtime/runtime.enums.js'
 import {
   type DatabaseCredentials,
   type DatabaseDeploySpec,
   type NodePinSpec,
-  NodePinStrategy,
 } from '#src/modules/runtime/runtime.types.js'
 
 @Injectable()

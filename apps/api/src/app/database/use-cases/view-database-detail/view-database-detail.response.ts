@@ -9,9 +9,12 @@ import type { DatabasePlacement } from '#src/app/database/queries/database-place
 import {
   DatabaseEnvironmentRef,
   DatabaseProjectRef,
-  DatabaseStatusApiProperty,
 } from '#src/app/database/responses/database-refs.response.js'
-import type { DatabaseCredentials, DatabaseStatus } from '#src/modules/runtime/runtime.types.js'
+import {
+  type DatabaseStatus,
+  DatabaseStatusApiProperty,
+} from '#src/modules/runtime/runtime.enums.js'
+import type { DatabaseCredentials } from '#src/modules/runtime/runtime.types.js'
 
 export class DatabaseConnectionInfo {
   @ApiProperty({ type: String, example: 'orders', description: 'In-cluster hostname.' })

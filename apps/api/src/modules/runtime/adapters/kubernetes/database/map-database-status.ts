@@ -1,5 +1,5 @@
 import type { V1Pod, V1StatefulSet } from '@kubernetes/client-node'
-import { DatabaseStatus } from '#src/modules/runtime/runtime.types.js'
+import { DatabaseStatus } from '#src/modules/runtime/runtime.enums.js'
 
 const TERMINAL_WAITING_REASONS = new Set([
   'CrashLoopBackOff',

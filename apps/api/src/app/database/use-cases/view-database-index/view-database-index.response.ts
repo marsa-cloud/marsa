@@ -7,10 +7,12 @@ import type { DatabasePlacement } from '#src/app/database/queries/database-place
 import {
   DatabaseEnvironmentRef,
   DatabaseProjectRef,
-  DatabaseStatusApiProperty,
 } from '#src/app/database/responses/database-refs.response.js'
 import { ViewDatabaseIndexQueryKey } from '#src/app/database/use-cases/view-database-index/query/view-database-index.query.js'
-import type { DatabaseStatus } from '#src/modules/runtime/runtime.types.js'
+import {
+  type DatabaseStatus,
+  DatabaseStatusApiProperty,
+} from '#src/modules/runtime/runtime.enums.js'
 import {
   PaginatedKeysetResponse,
   PaginatedKeysetResponseMeta,

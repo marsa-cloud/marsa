@@ -9,11 +9,8 @@ import {
 } from 'sinon'
 import { KubernetesDatabaseRuntime } from '#src/modules/runtime/adapters/kubernetes/kubernetes-database-runtime.js'
 import { MockEnvironmentRuntime } from '#src/modules/runtime/adapters/mock/mock-environment-runtime.js'
-import {
-  type DatabaseDeploySpec,
-  type DatabaseRef,
-  DatabaseStatus,
-} from '#src/modules/runtime/runtime.types.js'
+import { DatabaseStatus } from '#src/modules/runtime/runtime.enums.js'
+import { type DatabaseDeploySpec, type DatabaseRef } from '#src/modules/runtime/runtime.types.js'
 import { generateUuid, type Uuid } from '#src/utils/uuid.js'
 
 const SLUG = 'orders'

@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test'
 import { expect } from 'expect'
 import { buildNodeAffinity } from '#src/modules/runtime/adapters/kubernetes/app/render/node-affinity.js'
-import { NodePinStrategy } from '#src/modules/runtime/runtime.types.js'
+import { NodePinStrategy } from '#src/modules/runtime/runtime.enums.js'
 
 const pin = (strategy: NodePinStrategy) => ({
   key: 'kubernetes.io/hostname',

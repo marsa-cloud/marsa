@@ -1,8 +1,5 @@
-import type {
-  DatabaseDeploySpec,
-  DatabaseRef,
-  DatabaseStatus,
-} from '#src/modules/runtime/runtime.types.js'
+import { type DatabaseStatus } from '#src/modules/runtime/runtime.enums.js'
+import type { DatabaseDeploySpec, DatabaseRef } from '#src/modules/runtime/runtime.types.js'
 
 export abstract class DatabaseRuntime {
   // Provisions the database's environment too, so a hand-deleted one is healed.

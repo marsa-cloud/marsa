@@ -1,7 +1,6 @@
-import { ApiProperty, type ApiPropertyOptions } from '@nestjs/swagger'
+import { ApiProperty } from '@nestjs/swagger'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
 import type { Project } from '#src/app/project/entities/project.table.js'
-import { DatabaseStatus } from '#src/modules/runtime/runtime.types.js'
 
 export class DatabaseProjectRef {
   @ApiProperty({ type: String, example: 'demo' })
@@ -28,8 +27,3 @@ export class DatabaseEnvironmentRef {
     this.name = environment.name
   }
 }
-
-// The status enum belongs to the runtime port; the decorator lives here so `enum` and
-// `enumName` stay paired for the generated web client.
-export const DatabaseStatusApiProperty = (options?: ApiPropertyOptions): PropertyDecorator =>
-  ApiProperty({ ...options, enum: DatabaseStatus, enumName: 'DatabaseStatus' })

@@ -1,9 +1,9 @@
+import { type RolloutStatus } from '#src/modules/runtime/runtime.enums.js'
 import type {
   AppDeploySpec,
   AppHealth,
   AppRef,
   DeployFailure,
-  RolloutStatus,
   RunLogs,
   RunLogsOptions,
 } from '#src/modules/runtime/runtime.types.js'

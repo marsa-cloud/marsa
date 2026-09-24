@@ -2,7 +2,7 @@ import { describe, it } from 'node:test'
 import { expect } from 'expect'
 import type { PersistentWorkloadSpec } from '#src/modules/runtime/adapters/kubernetes/persistent/persistent-workload.types.js'
 import { renderPersistentWorkload } from '#src/modules/runtime/adapters/kubernetes/persistent/render-persistent-workload.js'
-import { NodePinStrategy } from '#src/modules/runtime/runtime.types.js'
+import { NodePinStrategy } from '#src/modules/runtime/runtime.enums.js'
 
 const spec = (overrides: Partial<PersistentWorkloadSpec> = {}): PersistentWorkloadSpec => ({
   name: 'orders',
