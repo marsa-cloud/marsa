@@ -158,4 +158,24 @@ describe('AppConfigForm', () => {
 
     expect(update).toHaveBeenCalledWith('my-app', expect.objectContaining({ nodePin: null }))
   })
+
+  it('hides the image of a source app and leaves it out of the update', async () => {
+    const wrapper = await mount({
+      ...config,
+      image: null,
+      source: {
+        installationUuid: 'i1',
+        repo: 'acme/shop',
+        branch: 'main',
+        rootDir: '.',
+        dockerfilePath: 'Dockerfile',
+      },
+    })
+
+    expect(wrapper.find('input#config-image').exists()).toBe(false)
+    await wrapper.find('form').trigger('submit.prevent')
+    await flush()
+    expect(update).toHaveBeenCalled()
+    expect(update.mock.calls[0]?.[1]).not.toHaveProperty('image')
+  })
 })

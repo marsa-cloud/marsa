@@ -17,6 +17,9 @@ const s = vi.hoisted(() => ({
     status: 'success',
     error: null as unknown,
   },
+  builds: { items: [] as unknown[], pending: false, error: null as unknown },
+  refreshBuilds: vi.fn(),
+  rebuild: vi.fn(),
   refreshHealth: vi.fn(),
   refreshReleases: vi.fn(),
   refreshLogs: vi.fn(),
@@ -60,6 +63,17 @@ mockNuxtImport('useAppDetail', () => () => ({
   error: ref(s.config.error),
   refresh: s.refreshConfig,
 }))
+mockNuxtImport('useAppBuilds', () => () => ({
+  items: ref(s.builds.items),
+  pending: ref(s.builds.pending),
+  error: ref(s.builds.error),
+  exhausted: ref(true),
+  canLoadMore: () => false,
+  loadMore: vi.fn(),
+  reset: s.refreshBuilds,
+}))
+mockNuxtImport('useRebuild', () => () => ({ rebuild: s.rebuild }))
+mockNuxtImport('useBuildLogs', () => () => ({ read: vi.fn().mockResolvedValue({ logs: '' }) }))
 mockNuxtImport('useUpdateApp', () => () => ({ update: vi.fn() }))
 
 const del = vi.hoisted(() => ({ remove: vi.fn() }))
@@ -97,6 +111,9 @@ beforeEach(() => {
   s.refreshReleases = vi.fn()
   s.refreshLogs = vi.fn()
   s.refreshConfig = vi.fn()
+  s.builds = { items: [], pending: false, error: null }
+  s.refreshBuilds.mockReset()
+  s.rebuild.mockReset().mockResolvedValue({})
   s.ship = vi.fn().mockResolvedValue({
     releaseUuid: 'r-new',
     appSlug: 'my-app',
@@ -391,5 +408,84 @@ describe('apps/[slug] detail page', () => {
     expect(s.ship).toHaveBeenCalledWith('my-app', { fromReleaseUuid: 'r1' })
     expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Rollback started' }))
     wrapper.unmount()
+  })
+})
+
+describe('apps/[slug] builds', () => {
+  const source = {
+    installationUuid: 'i1',
+    repo: 'acme/shop',
+    branch: 'main',
+    rootDir: '.',
+    dockerfilePath: 'Dockerfile',
+  }
+  const sourced = (latestStatus: string | null, extra: Record<string, unknown> = {}) => ({
+    slug: 'my-app',
+    image: latestStatus === 'succeeded' ? 'registry/my-app:abc' : null,
+    env: {},
+    project: { slug: 'p', name: 'P' },
+    environment: { uuid: 'e1', slug: 'dev', name: 'Dev' },
+    source,
+    latestBuild: latestStatus
+      ? {
+          uuid: 'b1',
+          status: latestStatus,
+          commitSha: 'a'.repeat(40),
+          failureReason: null,
+          createdAt: '2026-09-24T00:00:00.000Z',
+        }
+      : null,
+    ...extra,
+  })
+
+  it('hides the builds card for an image app', async () => {
+    const wrapper = await mountSuspended(Detail)
+
+    expect(wrapper.find('[data-testid="rebuild"]').exists()).toBe(false)
+  })
+
+  it('shows the builds card with its source for a source app, and loads the builds', async () => {
+    s.config.data = sourced('succeeded')
+    const wrapper = await mountSuspended(Detail)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('acme/shop@main')
+    expect(s.refreshBuilds).toHaveBeenCalled()
+  })
+
+  it('rebuilds and refreshes the builds', async () => {
+    s.config.data = sourced('succeeded')
+    const wrapper = await mountSuspended(Detail)
+    s.refreshBuilds.mockClear()
+
+    await wrapper.find('[data-testid="rebuild"]').trigger('click')
+    await flushPromises()
+
+    expect(s.rebuild).toHaveBeenCalledWith('my-app')
+    expect(s.refreshBuilds).toHaveBeenCalled()
+    expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Build started' }))
+  })
+
+  it('cannot redeploy before the first image exists', async () => {
+    s.config.data = sourced('running')
+    const wrapper = await mountSuspended(Detail)
+
+    const redeploy = wrapper.findAll('button').find(button => button.text().includes('Redeploy'))
+    expect(redeploy?.attributes('disabled')).toBeDefined()
+  })
+
+  it('follows a running build by refreshing every 5 seconds', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    try {
+      s.config.data = sourced('running')
+      await mountSuspended(Detail)
+      s.refreshConfig.mockClear()
+
+      vi.advanceTimersByTime(5000)
+
+      expect(s.refreshConfig).toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
