@@ -45,6 +45,7 @@ function build() {
     }),
   )
   repository.findCredentials.resolves({
+    installationUuid: source.installationUuid,
     installationId: '7',
     githubAppId: '42',
     privateKeyPemEnc: 'enc',

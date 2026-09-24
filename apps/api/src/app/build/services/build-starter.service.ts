@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common'
 import type { App } from '#src/app/app-management/entities/app.table.js'
 import type { AppSource } from '#src/app/app-management/entities/app-source.js'
 import type { Build } from '#src/app/build/entities/build.table.js'
+import { buildSpecOf } from '#src/app/build/entities/build-spec.js'
 import { BuildStatus } from '#src/app/build/enums/build-status.enum.js'
 import type { BuildTrigger } from '#src/app/build/enums/build-trigger.enum.js'
 import { BuildStarterRepository } from '#src/app/build/services/build-starter.repository.js'
@@ -63,14 +64,15 @@ export class BuildStarter {
       for (const old of superseded) {
         await this.buildRuntime.cancel(refOf(app, old))
       }
-      await this.buildRuntime.start(refOf(app, build), {
-        repoUrl: `https://github.com/${source.repo}.git`,
-        commitSha,
-        rootDir: source.rootDir,
-        dockerfilePath: source.dockerfilePath,
-        gitToken,
-        pushRef: this.imageRegistry.pushRefFor(app.slug, commitSha),
-      })
+      await this.buildRuntime.start(
+        refOf(app, build),
+        buildSpecOf(
+          source,
+          commitSha,
+          gitToken,
+          this.imageRegistry.pushRefFor(app.slug, commitSha),
+        ),
+      )
       return build
     } catch (error) {
       return this.repository.fail(tx, build.uuid, (error as Error).message)

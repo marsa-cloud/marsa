@@ -4,16 +4,13 @@ import type { AppUuid } from '#src/app/app-management/entities/app.uuid.js'
 import { type Build, buildTable, type NewBuild } from '#src/app/build/entities/build.table.js'
 import type { BuildUuid } from '#src/app/build/entities/build.uuid.js'
 import { BuildStatus } from '#src/app/build/enums/build-status.enum.js'
-import { githubAppTable } from '#src/app/github-app/entities/github-app.table.js'
 import { githubInstallationTable } from '#src/app/github-app/entities/github-installation.table.js'
 import type { GitHubInstallationUuid } from '#src/app/github-app/entities/github-installation.uuid.js'
+import {
+  type InstallationCredentials,
+  selectInstallationCredentials,
+} from '#src/app/github-app/queries/installation-credentials.js'
 import type { Executor } from '#src/modules/database/drizzle.factory.js'
-
-export interface InstallationCredentials {
-  installationId: string
-  githubAppId: string
-  privateKeyPemEnc: string
-}
 
 @Injectable()
 export class BuildStarterRepository {
@@ -49,14 +46,7 @@ export class BuildStarterRepository {
     tx: Executor,
     installationUuid: GitHubInstallationUuid,
   ): Promise<InstallationCredentials | undefined> {
-    const [row] = await tx
-      .select({
-        installationId: githubInstallationTable.installationId,
-        githubAppId: githubAppTable.githubAppId,
-        privateKeyPemEnc: githubAppTable.privateKeyPemEnc,
-      })
-      .from(githubInstallationTable)
-      .innerJoin(githubAppTable, eq(githubInstallationTable.appUuid, githubAppTable.uuid))
+    const [row] = await selectInstallationCredentials(tx)
       .where(eq(githubInstallationTable.uuid, installationUuid))
       .limit(1)
     return row
