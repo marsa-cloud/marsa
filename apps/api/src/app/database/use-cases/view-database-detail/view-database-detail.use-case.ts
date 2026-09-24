@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { catalogueEntry } from '#src/app/database/entities/engine-catalogue.js'
-import { databaseRefOf } from '#src/app/database/queries/database-placement.js'
 import { ViewDatabaseDetailRepository } from '#src/app/database/use-cases/view-database-detail/view-database-detail.repository.js'
 import { ViewDatabaseDetailResponse } from '#src/app/database/use-cases/view-database-detail/view-database-detail.response.js'
 import { DatabaseCredentialsCipher } from '#src/modules/crypto/database-credentials.cipher.js'
@@ -29,7 +28,7 @@ export class ViewDatabaseDetailUseCase {
     }
 
     const credentials = this.cipher.openForDatabase(slug, database.credentialsEnc)
-    const status = await this.runtime.readStatus(databaseRefOf(placement))
+    const status = await this.runtime.readStatus(placement)
     return new ViewDatabaseDetailResponse(placement, status, entry.port, credentials)
   }
 }

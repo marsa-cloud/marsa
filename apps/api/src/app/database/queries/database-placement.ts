@@ -6,7 +6,6 @@ import {
 } from '#src/app/environment/entities/environment.table.js'
 import { type Project, projectTable } from '#src/app/project/entities/project.table.js'
 import type { Executor } from '#src/modules/database/drizzle.factory.js'
-import type { DatabaseRef } from '#src/modules/runtime/runtime.types.js'
 
 export interface DatabasePlacement {
   database: DatabaseRow
@@ -20,9 +19,4 @@ export function selectDatabasePlacement(db: Executor) {
     .from(databaseTable)
     .innerJoin(environmentTable, eq(databaseTable.environmentUuid, environmentTable.uuid))
     .innerJoin(projectTable, eq(environmentTable.projectUuid, projectTable.uuid))
-}
-
-// The rows already fit the port's shape, except for the slug the runtime keys on.
-export function databaseRefOf({ database, environment, project }: DatabasePlacement): DatabaseRef {
-  return { project, environment, database: { slug: database.slug } }
 }

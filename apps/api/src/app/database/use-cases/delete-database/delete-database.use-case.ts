@@ -1,8 +1,5 @@
 import { BadGatewayException, Injectable, NotFoundException } from '@nestjs/common'
-import {
-  type DatabasePlacement,
-  databaseRefOf,
-} from '#src/app/database/queries/database-placement.js'
+import type { DatabasePlacement } from '#src/app/database/queries/database-placement.js'
 import { DeleteDatabaseRepository } from '#src/app/database/use-cases/delete-database/delete-database.repository.js'
 import type { Database } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
@@ -29,7 +26,7 @@ export class DeleteDatabaseUseCase {
 
   private async destroy(placement: DatabasePlacement): Promise<void> {
     try {
-      await this.runtime.destroy(databaseRefOf(placement))
+      await this.runtime.destroy(placement)
     } catch (error) {
       // The row rolls back, so the database stays listed and the delete can be retried.
       throw new BadGatewayException(

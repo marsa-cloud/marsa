@@ -14,10 +14,7 @@ import {
   catalogueEntry,
   type EngineCatalogueEntry,
 } from '#src/app/database/entities/engine-catalogue.js'
-import {
-  type DatabasePlacement,
-  databaseRefOf,
-} from '#src/app/database/queries/database-placement.js'
+import type { DatabasePlacement } from '#src/app/database/queries/database-placement.js'
 import { CreateDatabaseCommand } from '#src/app/database/use-cases/create-database/create-database.command.js'
 import { CreateDatabaseRepository } from '#src/app/database/use-cases/create-database/create-database.repository.js'
 import { CreateDatabaseResponse } from '#src/app/database/use-cases/create-database/create-database.response.js'
@@ -93,7 +90,7 @@ export class CreateDatabaseUseCase {
   ): Promise<void> {
     const spec = this.deploySpecOf(placement.database, entry, credentials)
     try {
-      await this.runtime.provision(databaseRefOf(placement), spec)
+      await this.runtime.provision(placement, spec)
     } catch (error) {
       // The row rolls back, so a half-created database is never listed and a retry is clean.
       throw new BadGatewayException(
