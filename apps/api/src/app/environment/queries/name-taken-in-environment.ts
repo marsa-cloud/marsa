@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
-import { databaseTable } from '#src/app/database/entities/database.table.js'
+import { databaseTable } from '#src/app/database-management/entities/database.table.js'
 import type { EnvironmentUuid } from '#src/app/environment/entities/environment.uuid.js'
 import type { Executor } from '#src/modules/database/drizzle.factory.js'
 
