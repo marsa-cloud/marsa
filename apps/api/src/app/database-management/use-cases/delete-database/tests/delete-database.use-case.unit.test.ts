@@ -1,5 +1,5 @@
 import { before, describe, it } from 'node:test'
-import { BadGatewayException, NotFoundException } from '@nestjs/common'
+import { BadGatewayException, ConflictException, NotFoundException } from '@nestjs/common'
 import { expect } from 'expect'
 import { createStubInstance, match } from 'sinon'
 import { DatabaseBuilder } from '#src/app/database-management/entities/database.builder.js'
@@ -61,5 +61,18 @@ describe('DeleteDatabaseUseCase', () => {
     runtime.destroy.rejects(new Error('cluster down'))
 
     await expect(usecase.execute('orders')).rejects.toThrow(BadGatewayException)
+  })
+
+  it('refuses to delete a database an app still uses, naming the apps', async () => {
+    const { repository, runtime, usecase } = build()
+    repository.delete.rejects(
+      Object.assign(new Error('update or delete violates foreign key'), { code: '23503' }),
+    )
+    repository.dependentApps.resolves(['api', 'worker'])
+
+    await expect(usecase.execute('orders')).rejects.toThrow(ConflictException)
+    await expect(usecase.execute('orders')).rejects.toThrow(/api, worker/)
+
+    expect(runtime.destroy.called).toBe(false)
   })
 })
