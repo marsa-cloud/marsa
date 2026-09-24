@@ -25,7 +25,7 @@ Each row was settled during brainstorming; the reasoning is inline below.
 | Generality      | A `database` aggregate with an `engine` enum, Postgres-only catalogue              |
 | Node pin        | Set at creation, immutable afterwards                                              |
 | Lifecycle       | No releases, no persisted status; status is read live                              |
-| Naming          | Slug unique per environment across apps _and_ databases                            |
+| Naming          | Slug unique globally, and per environment across apps _and_ databases              |
 | Password reveal | Not shipped — deferred whole to #233                                               |
 | Image           | Catalogue pins an exact tag per major; the row stores the resolved image           |
 | Role            | Superuser `postgres`; the app database is the slug                                 |
@@ -82,7 +82,13 @@ afterwards leaves a row whose live status reads `Failed`, and the operator delet
 A database's Service shares a namespace with the environment's apps, so an app and a database
 cannot both be called `api`. The invariant belongs to the environment, not to either feature
 folder, so it lives as a shared query that checks both tables. `app.slug` keeps its global unique
-constraint, because it still forms the public host.
+constraint, because it still forms the public host. `database.slug` is unique globally too,
+because `GET` / `DELETE /databases/:slug` look a row up by slug alone; moving routes to UUIDs is
+#241.
+
+A slug is a DNS-1035 label — it must start with a letter, because it names a Service. A database
+slug is at most 52 characters, so the StatefulSet's `controller-revision-hash` label value
+(`<name>-<hash>`) stays within 63.
 
 In-cluster hostname is the bare slug (`orders.acme-staging.svc.cluster.local`), which is what
 `PGHOST` will contain. No `pg-` prefix: that would leak an implementation detail into a value users
@@ -97,7 +103,8 @@ since external TCP access is out of scope for v0.2 (#25). Shipping a reveal butt
 real, so the whole concern moves to #233: external access, reveal endpoint and copyable connection
 string together.
 
-The detail view therefore shows host, port, user and database, and no password.
+The detail view therefore shows no connection details at all: host, port, user and database are
+all derivable from the slug, and #233 brings the complete view, password included.
 
 ### Image: exact tag per major, resolved at creation
 
@@ -153,8 +160,8 @@ Secret it mounts (#99).
 
 ### 3. `database` aggregate
 
-`app/database/` in the #227 feature-folder taxonomy: `entities/` (table, branded uuid, builder,
-catalogue), `use-cases/` (`create-database`, `delete-database`, `view-database-index`,
+`app/database-management/` in the #227 feature-folder taxonomy: `entities/` (table, branded uuid,
+builder), `catalogue/` (engine catalogue; making it data-driven is #243), `use-cases/` (`create-database`, `delete-database`, `view-database-index`,
 `view-database-detail`).
 
 The catalogue is a typed record keyed by engine and major, holding image, data path, port, the
@@ -168,7 +175,7 @@ New `database` table:
 | ------------------ | ---------------------------------------- | ------------------------------------------------------ |
 | `uuid`             | `uuid` pk, `uuidv7()`                    | `Uuid<'Database'>` branded                             |
 | `environment_uuid` | fk → `environment`, `onDelete: restrict` | as `app`                                               |
-| `slug`             | `varchar(255)`                           | unique on `(environment_uuid, slug)`                   |
+| `slug`             | `varchar(52)`                            | unique                                                 |
 | `engine`           | enum `database_engine`                   | `postgres` only                                        |
 | `version`          | `varchar`                                | major: `16` / `17` / `18`                              |
 | `image`            | `varchar(255)`                           | resolved at creation, e.g. `postgres:17.11`            |
@@ -213,8 +220,8 @@ the "blocked while attachments exist" check here.
 
 **`view-database-index`** (`GET /databases`) — rows plus a live status each, paginated like apps.
 
-**`view-database-detail`** (`GET /databases/:slug`) — row, live status, and non-secret connection
-info (`host` = slug, `port`, `user`, `database`). No password (#233).
+**`view-database-detail`** (`GET /databases/:slug`) — row and live status. No connection details
+and no password (#233), so the read never decrypts the credentials.
 
 **`readStatus`** reads the StatefulSet and maps `readyReplicas` plus the newest pod's waiting
 reason to `Provisioning` / `Ready` / `Failed` / `NotFound`, reusing `extract-deploy-failure` for
@@ -230,16 +237,18 @@ For a Postgres 17 database `orders` in namespace `acme-staging`:
   alias renames the env var rather than composing a value, so the `$(VAR)` expansion trick in
   #207's body is unnecessary.
 - **StatefulSet `orders`** — `replicas: 1`, `serviceName: orders`, image `postgres:17.11`.
-  - `POSTGRES_PASSWORD`, `POSTGRES_DB` and `PGDATA` come from the Secret, so no plaintext appears
-    in the pod spec.
+  - `POSTGRES_USER`, `POSTGRES_PASSWORD` and `POSTGRES_DB` come from the Secret (`secretKeyRef`),
+    so no credential appears in the pod spec. `PGDATA` is a plain `env` value.
   - `volumeClaimTemplates: [{ name: data, storage: <n>Gi, storageClassName: <configured> }]`
     mounted at the catalogue's data path.
   - `PGDATA` points at a subdirectory of the mount, because a `local-path` directory can hold
     entries Postgres refuses to initialise into.
   - `persistentVolumeClaimRetentionPolicy: { whenDeleted: Delete, whenScaled: Delete }` — GA in
     Kubernetes 1.32; K3s targets 1.33+ (`docs/hardening.md`).
-  - Readiness `exec: pg_isready -U postgres`, liveness TCP. A TCP readiness probe would call
-    Postgres ready while it is still recovering.
+  - Readiness `exec: pg_isready -h 127.0.0.1 -U postgres`, over TCP because `initdb`'s temporary
+    server listens on the Unix socket only; a plain TCP readiness probe would call Postgres ready
+    while it is still recovering. Liveness is TCP, held off by a TCP startup probe (5 s × 60) so
+    `initdb` and crash recovery are not killed.
   - `affinity` from the shared `buildNodeAffinity`.
 - **Service `orders`** — `ClusterIP`, port 5432, no IngressRoute and no `HTTPScaledObject`.
 
@@ -256,7 +265,7 @@ Mirrors `/apps`, reusing `ProjectEnvironmentPicker` and `NodePinPicker`:
 
 - `/databases` — index with status per row
 - `/databases/new` — engine → major → storage size → environment → optional node pin
-- `/databases/[slug]` — status, connection info, delete behind typed confirmation
+- `/databases/[slug]` — status, details, delete behind typed confirmation
 
 A sidebar entry sits next to Apps. #217 can later regroup both under an environment without either
 page changing much. The create form states that the requested size is recorded but not enforced by
@@ -269,7 +278,7 @@ page changing much. The create form states that the requested size is recorded b
 | Renderer unit | StatefulSet/Service/PVC shape, retention policy, storage class, `PGDATA` subdirectory, per-major data path (16/17 vs 18), node affinity, absence of IngressRoute and `HTTPScaledObject` |
 | Adapter unit  | Secret applied before StatefulSet; `destroy` idempotent and 404-tolerant; `readStatus` mapping                                                                                          |
 | Use-case unit | Create rolls back on runtime failure; collision with an existing app rejected; unknown engine-major rejected; delete calls `destroy` last                                               |
-| API e2e       | Least-mocks harness with the mock runtime: create → list → detail → delete; no password in any response; the same name reused in a different environment is allowed                     |
+| API e2e       | Least-mocks harness with the mock runtime: create → list → detail → delete; no password in any response; a slug another environment uses is rejected                                    |
 | Web           | Component tests for the create form and detail view; types and Zod regenerated from `openapi.json`                                                                                      |
 | k3d e2e       | Provision Postgres, `psql` an insert, delete the pod, confirm the row survives, delete the database, confirm StatefulSet, Service, Secret and PVC are gone                              |
 
