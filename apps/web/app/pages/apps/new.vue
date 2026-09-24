@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { FormSubmitEvent } from '@nuxt/ui'
 import * as z from 'zod'
 
-import type { CreateAppCommand, CreateAppResponse, NodePin } from '~/api/types.gen'
+import type { CreateAppCommand, CreateAppResponse, GitHubRepositorySummary, NodePin } from '~/api/types.gen'
 import { appConfigFields, isReplicaRangeValid, REPLICA_RANGE_ERROR } from '~/utils/appConfigSchema'
+import { repoSlug } from '~/utils/repoSlug'
 
 // useCreateApp / useShipRelease / buildEnvRecord / extractApiError are Nuxt auto-imports,
 // left un-imported so tests can mock them via mockNuxtImport.
@@ -14,22 +14,44 @@ const { create } = useCreateApp()
 const { ship } = useShipRelease()
 const toast = useToast()
 
-const schema = z
+type Mode = 'github' | 'image'
+const mode = ref<Mode>('github')
+
+const sharedFields = {
+  environmentUuid: z.string({ error: 'Pick an environment' }).min(1, 'Pick an environment'),
+  slug: z
+    .string()
+    .min(1, 'Required')
+    .max(63, 'Max 63 characters')
+    .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/, 'Lowercase letters, numbers and hyphens only'),
+  minReplicas: appConfigFields.minReplicas,
+  maxReplicas: appConfigFields.maxReplicas,
+}
+
+const imageSchema = z
+  .object({ ...sharedFields, image: appConfigFields.image, containerPort: appConfigFields.containerPort })
+  .refine(isReplicaRangeValid, REPLICA_RANGE_ERROR)
+
+const githubSchema = z
   .object({
-    environmentUuid: z.string({ error: 'Pick an environment' }).min(1, 'Pick an environment'),
-    slug: z
-      .string()
-      .min(1, 'Required')
-      .max(63, 'Max 63 characters')
-      .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/, 'Lowercase letters, numbers and hyphens only'),
-    ...appConfigFields,
+    ...sharedFields,
+    repo: z.custom<GitHubRepositorySummary>(value => !!value, 'Pick a repository'),
+    branch: z.string().min(1, 'Required'),
+    rootDir: z.string().min(1, 'Required'),
+    dockerfilePath: z.string().min(1, 'Required'),
+    containerPort: appConfigFields.containerPort.optional(),
   })
   .refine(isReplicaRangeValid, REPLICA_RANGE_ERROR)
-type Schema = z.output<typeof schema>
+
+const schema = computed(() => (mode.value === 'github' ? githubSchema : imageSchema))
 
 const state = reactive<{
   environmentUuid: string | undefined
   slug: string
+  repo: GitHubRepositorySummary | undefined
+  branch: string
+  rootDir: string
+  dockerfilePath: string
   image: string
   containerPort: number | undefined
   minReplicas: number | undefined
@@ -38,12 +60,29 @@ const state = reactive<{
 }>({
   environmentUuid: undefined,
   slug: '',
+  repo: undefined,
+  branch: '',
+  rootDir: '.',
+  dockerfilePath: 'Dockerfile',
   image: '',
   containerPort: undefined,
   minReplicas: undefined,
   maxReplicas: undefined,
   nodePin: null,
 })
+
+watch(
+  () => state.repo,
+  (repo) => {
+    if (!repo) return
+    state.branch = repo.defaultBranch
+    if (!state.slug) state.slug = repoSlug(repo.fullName)
+  },
+)
+
+function toggleMode() {
+  mode.value = mode.value === 'github' ? 'image' : 'github'
+}
 
 // Stable per-row id so :key survives removals.
 let nextEnvId = 0
@@ -65,30 +104,56 @@ function removeEnvRow(index: number) {
 const submitting = ref(false)
 const error = ref<string | null>(null)
 
-function toCommand(data: Schema): CreateAppCommand {
+function toCommand(environmentUuid: string): CreateAppCommand {
   const env = buildEnvRecord(envRows.value)
-  return {
-    environmentUuid: data.environmentUuid,
-    slug: data.slug,
-    image: data.image,
-    containerPort: data.containerPort,
-    ...(data.minReplicas !== undefined ? { minReplicas: data.minReplicas } : {}),
-    ...(data.maxReplicas !== undefined ? { maxReplicas: data.maxReplicas } : {}),
+  const shared = {
+    environmentUuid,
+    slug: state.slug,
+    ...(state.containerPort !== undefined ? { containerPort: state.containerPort } : {}),
+    ...(state.minReplicas !== undefined ? { minReplicas: state.minReplicas } : {}),
+    ...(state.maxReplicas !== undefined ? { maxReplicas: state.maxReplicas } : {}),
     ...(state.nodePin ? { nodePin: state.nodePin } : {}),
     ...(Object.keys(env).length ? { env } : {}),
   }
+  if (mode.value === 'image' || !state.repo) {
+    return { ...shared, image: state.image }
+  }
+  return {
+    ...shared,
+    source: {
+      installationUuid: state.repo.installationUuid,
+      repo: state.repo.fullName,
+      branch: state.branch,
+      rootDir: state.rootDir,
+      dockerfilePath: state.dockerfilePath,
+    },
+  }
 }
 
-async function onSubmit(event: FormSubmitEvent<Schema>) {
+// UForm only emits submit once the active schema passes, so state is valid here.
+async function onSubmit() {
+  if (!state.environmentUuid) return
   error.value = null
   submitting.value = true
 
   let created: CreateAppResponse
   try {
-    created = await create(toCommand(event.data))
+    created = await create(toCommand(state.environmentUuid))
   } catch (err) {
     error.value = extractApiError(err)
     submitting.value = false
+    return
+  }
+
+  if (mode.value === 'github') {
+    toast.add({
+      title: 'Build started',
+      description: `${created.slug} is building from ${state.repo?.fullName}@${state.branch}. It deploys when the build succeeds.`,
+      color: 'success',
+      icon: 'i-lucide-hammer',
+    })
+    submitting.value = false
+    await navigateTo(`/apps/${created.slug}`)
     return
   }
 
@@ -118,7 +183,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 <template>
   <UDashboardPanel>
     <template #header>
-      <UDashboardNavbar title="Deploy an app">
+      <UDashboardNavbar :title="mode === 'github' ? 'Deploy from GitHub' : 'Deploy an image'">
         <template #leading>
           <UButton
             to="/apps"
@@ -146,12 +211,73 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           />
         </div>
 
+        <div class="mb-4 flex justify-end">
+          <UButton
+            data-testid="toggle-image-mode"
+            variant="link"
+            color="neutral"
+            size="sm"
+            :icon="mode === 'github' ? 'i-lucide-box' : 'i-lucide-github'"
+            :label="mode === 'github' ? 'Deploy a prebuilt image instead' : 'Deploy from GitHub instead'"
+            @click="toggleMode"
+          />
+        </div>
+
         <UForm
           :schema="schema"
           :state="state"
           class="space-y-4"
-          @submit="onSubmit"
+          @submit="onSubmit()"
         >
+          <template v-if="mode === 'github'">
+            <UFormField
+              label="Repository"
+              name="repo"
+              required
+            >
+              <GithubRepoPicker v-model="state.repo" />
+            </UFormField>
+
+            <UFormField
+              label="Branch"
+              name="branch"
+              description="Every push to this branch builds and deploys"
+              required
+            >
+              <UInput
+                id="branch"
+                v-model="state.branch"
+                placeholder="main"
+                class="w-full"
+              />
+            </UFormField>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <UFormField
+                label="Root directory"
+                name="rootDir"
+                description="Build context inside the repo"
+              >
+                <UInput
+                  id="rootDir"
+                  v-model="state.rootDir"
+                  class="w-full"
+                />
+              </UFormField>
+              <UFormField
+                label="Dockerfile"
+                name="dockerfilePath"
+                description="Relative to the root directory"
+              >
+                <UInput
+                  id="dockerfilePath"
+                  v-model="state.dockerfilePath"
+                  class="w-full"
+                />
+              </UFormField>
+            </div>
+          </template>
+
           <ProjectEnvironmentPicker v-model="state.environmentUuid" />
 
           <UFormField
@@ -168,32 +294,38 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             />
           </UFormField>
 
-          <UFormField
-            label="Image"
-            name="image"
-            description="Fully-qualified container image reference"
-            required
-          >
-            <UInput
-              id="image"
-              v-model="state.image"
-              placeholder="nginx:1.27"
-              class="w-full"
-            />
-          </UFormField>
+          <template v-if="mode === 'image'">
+            <UFormField
+              label="Image"
+              name="image"
+              description="Fully-qualified container image reference"
+              required
+            >
+              <UInput
+                id="image"
+                v-model="state.image"
+                placeholder="nginx:1.27"
+                class="w-full"
+              />
+            </UFormField>
+          </template>
 
           <UFormField
             label="Container port"
             name="containerPort"
-            description="Port the container listens on"
-            required
+            :description="
+              mode === 'github'
+                ? 'Your app reads it from $PORT. Defaults to 8080'
+                : 'Port the container listens on'
+            "
+            :required="mode === 'image'"
           >
             <UInputNumber
               id="containerPort"
               v-model="state.containerPort"
               :min="1"
               :max="65535"
-              placeholder="80"
+              :placeholder="mode === 'github' ? '8080' : '80'"
               class="w-full"
             />
           </UFormField>
