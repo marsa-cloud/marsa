@@ -3,6 +3,7 @@ import { Injectable, Logger } from '@nestjs/common'
 import { createAppAuth } from '@octokit/auth-app'
 import { request } from '@octokit/request'
 import {
+  GITHUB_MAX_PAGE_SIZE,
   GITHUB_OAUTH_TOKEN_URL,
   GITHUB_REQUEST_TIMEOUT_MS,
 } from '#src/modules/github-client/github-client.constants.js'
@@ -12,6 +13,7 @@ import type {
   GitHubAppCredentials,
   GitHubManifestConversionResponse,
   GitHubOAuthAccessTokenResponse,
+  GitHubRepository,
   GitHubUser,
   InstallationTokenParams,
   UserOAuthExchangeParams,
@@ -87,6 +89,34 @@ export class OctokitGithubClient extends GithubClient {
       }
       this.logger.error(`branch head lookup failed: ${(error as Error).message}`)
       throw new Error(`Could not read '${repo}' from GitHub.`)
+    }
+  }
+
+  async listInstallationRepos(token: string): Promise<GitHubRepository[]> {
+    const repos: GitHubRepository[] = []
+    try {
+      for (let page = 1; ; page++) {
+        const response = await request('GET /installation/repositories', {
+          per_page: GITHUB_MAX_PAGE_SIZE,
+          page,
+          headers: { authorization: `token ${token}`, accept: 'application/vnd.github+json' },
+          request: { signal: AbortSignal.timeout(GITHUB_REQUEST_TIMEOUT_MS) },
+        })
+        const { repositories } = response.data
+        repos.push(
+          ...repositories.map((repo) => ({
+            fullName: repo.full_name,
+            defaultBranch: repo.default_branch,
+            private: repo.private,
+          })),
+        )
+        if (repositories.length < GITHUB_MAX_PAGE_SIZE) {
+          return repos
+        }
+      }
+    } catch (error) {
+      this.logger.error(`installation repository listing failed: ${(error as Error).message}`)
+      throw new Error("Could not list the installation's repositories from GitHub.")
     }
   }
 

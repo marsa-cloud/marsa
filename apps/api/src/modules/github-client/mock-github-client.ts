@@ -3,6 +3,7 @@ import { GithubClient } from '#src/modules/github-client/github-client.js'
 import type {
   BranchHeadParams,
   GitHubAppCredentials,
+  GitHubRepository,
   GitHubUser,
   InstallationTokenParams,
   UserOAuthExchangeParams,
@@ -11,6 +12,11 @@ import type {
 const MOCK_PREFIX = 'mock'
 
 export const MOCK_COMMIT_SHA = `c0ffee${'0'.repeat(34)}`
+
+export const MOCK_REPOSITORIES: GitHubRepository[] = [
+  { fullName: 'marsa-mock/hello', defaultBranch: 'main', private: false },
+  { fullName: 'marsa-mock/internal', defaultBranch: 'trunk', private: true },
+]
 
 /** Canned credentials returned by the mock so test/local runs need no real App. */
 const MOCK_CREDENTIALS: GitHubAppCredentials = {
@@ -52,6 +58,11 @@ export class MockGithubClient extends GithubClient {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getBranchHead(_params: BranchHeadParams): Promise<string> {
     return Promise.resolve(MOCK_COMMIT_SHA)
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  listInstallationRepos(_token: string): Promise<GitHubRepository[]> {
+    return Promise.resolve(MOCK_REPOSITORIES.map((repo) => ({ ...repo })))
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
