@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { DatabaseStatus } from '~/api/types.gen'
 
-// useDatabaseDetail / useDeleteDatabase / useToast / extractApiError are auto-imports,
+// useDatabaseDetail / useDatabaseDependents / useDeleteDatabase / useToast / extractApiError
+// are auto-imports,
 // left un-imported so tests can mock them via mockNuxtImport.
 
 const route = useRoute()
@@ -10,6 +11,7 @@ const slug = computed(() => String(route.params.slug))
 useSeoMeta({ title: () => `${slug.value} — Marsa` })
 
 const { data: database, pending, error } = useDatabaseDetail(slug.value)
+const { data: dependents } = useDatabaseDependents(slug.value)
 const { remove } = useDeleteDatabase()
 const toast = useToast()
 
@@ -164,6 +166,37 @@ async function confirmDelete() {
           </dl>
         </UCard>
 
+        <UCard>
+          <template #header>
+            <h2 class="font-medium">
+              Used by
+            </h2>
+          </template>
+
+          <p
+            v-if="!dependents || dependents.items.length === 0"
+            class="text-sm text-muted"
+          >
+            No apps are using this database.
+          </p>
+          <ul
+            v-else
+            class="flex flex-col gap-2 text-sm"
+          >
+            <li
+              v-for="app in dependents.items"
+              :key="app"
+            >
+              <NuxtLink
+                :to="`/apps/${app}`"
+                class="font-mono hover:underline"
+              >
+                {{ app }}
+              </NuxtLink>
+            </li>
+          </ul>
+        </UCard>
+
         <UCard class="ring-error">
           <template #header>
             <h2 class="font-medium text-error">
@@ -174,7 +207,7 @@ async function confirmDelete() {
           <div class="flex flex-wrap items-center justify-between gap-3">
             <p class="text-sm text-muted">
               Deleting removes this database, its Kubernetes resources and its data. This cannot be
-              undone.
+              undone, and an app still attached to it blocks the delete.
             </p>
             <UButton
               data-testid="delete-database"
