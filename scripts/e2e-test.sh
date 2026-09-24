@@ -268,6 +268,42 @@ rows="$(kubectl -n "$APPS_NS" exec "${DB_SLUG}-0" -- \
   psql -U postgres -d "$DB_NAME" -tAc 'select count(*) from survivors' | tr -d '[:space:]')"
 [ "$rows" = 1 ] || fail database "expected the row to survive the restart, got '${rows}'"
 
+echo "== stage: attach the database to the app =="
+http -X POST "${api}/apps/${APP_SLUG}/attachments" -H 'Content-Type: application/json' \
+  -H "Cookie: ${cookie}" -d "{\"databaseSlug\":\"${DB_SLUG}\"}" || true
+case "$HTTP_STATUS" in 2??) : ;; *) fail attach "POST attachments -> ${HTTP_STATUS}; body: ${HTTP_BODY}" ;; esac
+
+echo "== stage: the app's pods read the database's Secret, never a literal =="
+kubectl -n "$APPS_NS" rollout status "deploy/${APP_SLUG}" --timeout=120s \
+  || fail attach "app did not roll out after attaching"
+env_json="$(kubectl -n "$APPS_NS" get "deploy/${APP_SLUG}" \
+  -o jsonpath='{.spec.template.spec.containers[0].env}')"
+printf '%s' "$env_json" | grep -q '"name":"DATABASE_URL"' \
+  || fail attach "DATABASE_URL was not injected: ${env_json}"
+printf '%s' "$env_json" | grep -q "\"name\":\"${DB_SLUG}-credentials\"" \
+  || fail attach "DATABASE_URL does not reference the database's Secret: ${env_json}"
+secret_password="$(kubectl -n "$APPS_NS" get "secret/${DB_SLUG}-credentials" \
+  -o jsonpath='{.data.PGPASSWORD}' | base64 -d)"
+# An empty password would make the grep below match anything and fail the stage for no reason.
+[ -n "$secret_password" ] || fail attach "could not read PGPASSWORD from the credentials Secret"
+printf '%s' "$env_json" | grep -qF "$secret_password" \
+  && fail attach "the password appears literally in the app's Deployment"
+
+echo "== stage: deleting an attached database is refused =="
+http -X DELETE "${api}/databases/${DB_SLUG}" -H "Cookie: ${cookie}" || true
+[ "$HTTP_STATUS" = 409 ] || fail attach "expected 409 deleting an attached database, got ${HTTP_STATUS}"
+printf '%s' "$HTTP_BODY" | grep -q "$APP_SLUG" \
+  || fail attach "the 409 did not name the dependent app: ${HTTP_BODY}"
+
+echo "== stage: detaching removes the variables =="
+http -X DELETE "${api}/apps/${APP_SLUG}/attachments/${DB_SLUG}" -H "Cookie: ${cookie}" || true
+[ "$HTTP_STATUS" = 204 ] || fail attach "DELETE attachment -> ${HTTP_STATUS}; body: ${HTTP_BODY}"
+kubectl -n "$APPS_NS" rollout status "deploy/${APP_SLUG}" --timeout=120s \
+  || fail attach "app did not roll out after detaching"
+kubectl -n "$APPS_NS" get "deploy/${APP_SLUG}" \
+  -o jsonpath='{.spec.template.spec.containers[0].env}' | grep -q '"name":"DATABASE_URL"' \
+  && fail attach "DATABASE_URL survived the detach"
+
 echo "== stage: deleting the database removes its resources =="
 http -X DELETE "${api}/databases/${DB_SLUG}" -H "Cookie: ${cookie}" || true
 [ "$HTTP_STATUS" = 204 ] || fail database "DELETE /databases/${DB_SLUG} -> ${HTTP_STATUS}; body: ${HTTP_BODY}"
