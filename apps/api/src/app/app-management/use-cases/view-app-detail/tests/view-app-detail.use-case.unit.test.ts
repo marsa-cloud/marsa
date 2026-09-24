@@ -7,10 +7,14 @@ import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { AppPlacementBuilder } from '#src/app/app-management/queries/app-placement.builder.js'
 import { ViewAppDetailRepository } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.repository.js'
 import { ViewAppDetailUseCase } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.use-case.js'
+import { BuildBuilder } from '#src/app/build/entities/build.builder.js'
+import { BuildStatus } from '#src/app/build/enums/build-status.enum.js'
+import type { GitHubInstallationUuid } from '#src/app/github-app/entities/github-installation.uuid.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
 import { InvalidReleaseAnnotationError } from '#src/modules/runtime/runtime.errors.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
+import { generateUuid } from '#src/utils/uuid.js'
 
 const placement = new AppPlacementBuilder()
   .withApp(new AppBuilder().withSlug('my-app').withEnv({ A: '1' }).build())
@@ -21,6 +25,7 @@ function build() {
   const repository = createStubInstance(ViewAppDetailRepository)
   repository.findBySlug.resolves(placement)
   repository.findRelease.resolves(undefined)
+  repository.findLatestBuild.resolves(undefined)
   const appRuntime = createStubInstance(MockAppRuntime)
   appRuntime.readLiveReleaseUuid.resolves(null)
   const config = createStubInstance(ConfigService)
@@ -118,5 +123,51 @@ describe('ViewAppDetailUseCase', () => {
     )
 
     expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(false)
+  })
+
+  it('names the source and the newest build of a source app', async () => {
+    const { repository, usecase } = build()
+    const source = {
+      type: 'github' as const,
+      installationUuid: generateUuid<GitHubInstallationUuid>(),
+      repo: 'acme/shop',
+      branch: 'main',
+      rootDir: '.',
+      dockerfilePath: 'Dockerfile',
+    }
+    const sourced = new AppBuilder().withSource(source).withImage(null).build()
+    const latest = new BuildBuilder()
+      .withApp(sourced)
+      .withStatus(BuildStatus.Failed)
+      .withFailureReason('no Dockerfile')
+      .build()
+    repository.findBySlug.resolves(new AppPlacementBuilder().withApp(sourced).build())
+    repository.findLatestBuild.resolves(latest)
+
+    const response = await usecase.execute('my-app')
+
+    expect(response.source).toEqual({
+      installationUuid: source.installationUuid,
+      repo: 'acme/shop',
+      branch: 'main',
+      rootDir: '.',
+      dockerfilePath: 'Dockerfile',
+    })
+    expect(response.latestBuild).toEqual({
+      uuid: latest.uuid,
+      status: BuildStatus.Failed,
+      commitSha: latest.commitSha,
+      failureReason: 'no Dockerfile',
+      createdAt: latest.createdAt.toISOString(),
+    })
+  })
+
+  it('has no source or build for an image app', async () => {
+    const { usecase } = build()
+
+    const response = await usecase.execute('my-app')
+
+    expect(response.source).toBeNull()
+    expect(response.latestBuild).toBeNull()
   })
 })

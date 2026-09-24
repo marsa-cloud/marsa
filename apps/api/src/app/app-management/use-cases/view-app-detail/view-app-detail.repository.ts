@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common'
-import { and, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
 import type { AppUuid } from '#src/app/app-management/entities/app.uuid.js'
 import {
   type AppPlacement,
   selectAppPlacement,
 } from '#src/app/app-management/queries/app-placement.js'
+import { type Build, buildTable } from '#src/app/build/entities/build.table.js'
 import { type Release, releaseTable } from '#src/app/release/entities/release.table.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import type { Database } from '#src/modules/database/drizzle.factory.js'
@@ -27,5 +28,15 @@ export class ViewAppDetailRepository {
       .where(and(eq(releaseTable.uuid, uuid), eq(releaseTable.appUuid, appUuid)))
       .limit(1)
     return release
+  }
+
+  async findLatestBuild(appUuid: AppUuid): Promise<Build | undefined> {
+    const [build] = await this.db
+      .select()
+      .from(buildTable)
+      .where(eq(buildTable.appUuid, appUuid))
+      .orderBy(desc(buildTable.uuid))
+      .limit(1)
+    return build
   }
 }

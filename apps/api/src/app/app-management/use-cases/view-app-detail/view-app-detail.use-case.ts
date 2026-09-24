@@ -23,10 +23,12 @@ export class ViewAppDetailUseCase {
     }
 
     const hasUndeployedChanges = await this.hasUndeployedChanges(placement)
+    const latestBuild = await this.repository.findLatestBuild(placement.app.uuid)
     return new ViewAppDetailResponse(
       placement,
       this.config.getOrThrow<string>('MARSA_BASE_DOMAIN'),
       hasUndeployedChanges,
+      latestBuild,
     )
   }
 
