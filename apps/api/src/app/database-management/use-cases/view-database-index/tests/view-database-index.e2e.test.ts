@@ -3,7 +3,13 @@ import { expect } from 'expect'
 import request from 'supertest'
 import { DatabaseBuilder } from '#src/app/database-management/entities/database.builder.js'
 import { databaseTable } from '#src/app/database-management/entities/database.table.js'
-import type { Environment } from '#src/app/environment/entities/environment.table.js'
+import { EnvironmentBuilder } from '#src/app/environment/entities/environment.builder.js'
+import {
+  type Environment,
+  environmentTable,
+} from '#src/app/environment/entities/environment.table.js'
+import { ProjectBuilder } from '#src/app/project/entities/project.builder.js'
+import { projectTable } from '#src/app/project/entities/project.table.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
@@ -50,5 +56,25 @@ describe('GET /api/v1/databases (e2e)', () => {
 
   it('rejects an unauthenticated request with 401', async () => {
     await request(setup.httpServer).get('/api/v1/databases').expect(401)
+  })
+
+  it('lists only the databases of the environment asked for', async () => {
+    const otherProject = new ProjectBuilder().withSlug('index-other-project').build()
+    const other = new EnvironmentBuilder().withProject(otherProject).withSlug('staging').build()
+    await setup.db.insert(projectTable).values(otherProject)
+    await setup.db.insert(environmentTable).values(other)
+    await setup.db
+      .insert(databaseTable)
+      .values(new DatabaseBuilder().withEnvironmentUuid(other.uuid).withSlug('elsewhere').build())
+
+    const response = await request(setup.httpServer)
+      .get('/api/v1/databases')
+      .query({ environmentUuid: environment.uuid })
+      .set('Cookie', cookie)
+      .expect(200)
+
+    const slugs = response.body.items.map((item: { slug: string }) => item.slug)
+    expect(slugs).not.toContain('elsewhere')
+    expect(slugs.length).toBeGreaterThan(0)
   })
 })
