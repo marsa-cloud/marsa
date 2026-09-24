@@ -350,6 +350,13 @@ async function confirmDelete() {
           />
         </UCard>
 
+        <AppDatabasesCard
+          v-if="config"
+          :slug="slug"
+          :environment-uuid="config.environment.uuid"
+          @changed="refreshConfig()"
+        />
+
         <!-- Danger zone -->
         <UCard class="ring-error">
           <template #header>
