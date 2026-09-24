@@ -568,6 +568,48 @@ export type ViewDatabaseDetailResponse = {
   updatedAt: string
 }
 
+export type AttachDatabaseCommand = {
+  /**
+   * Database in this app's environment.
+   */
+  databaseSlug: string
+  /**
+   * Prefixes the injected variables (ANALYTICS_DATABASE_URL). Required for a second attachment.
+   */
+  alias?: string
+}
+
+export type AttachDatabaseResponse = {
+  databaseSlug: string
+  alias: string | null
+  /**
+   * Variable names this attachment injects into the app.
+   */
+  variables: Array<string>
+}
+
+export type AppAttachmentSummary = {
+  databaseSlug: string
+  alias: string | null
+  engine: DatabaseEngine
+  version: string
+  /**
+   * Variable names this attachment injects into the app.
+   */
+  variables: Array<string>
+}
+
+export type ViewAppAttachmentIndexResponse = {
+  items: Array<AppAttachmentSummary>
+}
+
+export type ViewDatabaseDependentIndexResponse = {
+  /**
+   * Slugs of the apps this database is attached to.
+   */
+  items: Array<string>
+}
+
 export type NodeSummary = {
   name: string
   /**
@@ -1400,6 +1442,10 @@ export type ViewDatabaseIndexV1Data = {
   path?: never
   query?: {
     pagination?: ViewDatabaseIndexPaginationQuery
+    /**
+     * Only databases in this environment.
+     */
+    environmentUuid?: string
   }
   url: '/api/v1/databases'
 }
@@ -1529,6 +1575,148 @@ export type ViewDatabaseDetailV1Responses = {
 
 export type ViewDatabaseDetailV1Response =
   ViewDatabaseDetailV1Responses[keyof ViewDatabaseDetailV1Responses]
+
+export type ViewAppAttachmentIndexV1Data = {
+  body?: never
+  path: {
+    slug: string
+  }
+  query?: never
+  url: '/api/v1/apps/{slug}/attachments'
+}
+
+export type ViewAppAttachmentIndexV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
+   * No app with that slug.
+   */
+  404: unknown
+}
+
+export type ViewAppAttachmentIndexV1Responses = {
+  200: ViewAppAttachmentIndexResponse
+}
+
+export type ViewAppAttachmentIndexV1Response =
+  ViewAppAttachmentIndexV1Responses[keyof ViewAppAttachmentIndexV1Responses]
+
+export type AttachDatabaseV1Data = {
+  body: AttachDatabaseCommand
+  path: {
+    slug: string
+  }
+  query?: never
+  url: '/api/v1/apps/{slug}/attachments'
+}
+
+export type AttachDatabaseV1Errors = {
+  /**
+   * Malformed body, or an invalid database slug / alias.
+   */
+  400: unknown
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
+   * No such app, or no such database in its environment.
+   */
+  404: unknown
+  /**
+   * Already attached, or the alias is taken.
+   */
+  409: unknown
+  /**
+   * The cluster update failed; the attachment was not kept.
+   */
+  502: unknown
+}
+
+export type AttachDatabaseV1Responses = {
+  201: AttachDatabaseResponse
+}
+
+export type AttachDatabaseV1Response = AttachDatabaseV1Responses[keyof AttachDatabaseV1Responses]
+
+export type DetachDatabaseV1Data = {
+  body?: never
+  path: {
+    slug: string
+    databaseSlug: string
+  }
+  query?: never
+  url: '/api/v1/apps/{slug}/attachments/{databaseSlug}'
+}
+
+export type DetachDatabaseV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
+   * No such app, or that database is not attached to it.
+   */
+  404: unknown
+  /**
+   * The cluster update failed; the attachment was kept.
+   */
+  502: unknown
+}
+
+export type DetachDatabaseV1Responses = {
+  /**
+   * The variables were removed and the app restarted.
+   */
+  204: void
+}
+
+export type DetachDatabaseV1Response = DetachDatabaseV1Responses[keyof DetachDatabaseV1Responses]
+
+export type ViewDatabaseDependentIndexV1Data = {
+  body?: never
+  path: {
+    slug: string
+  }
+  query?: never
+  url: '/api/v1/databases/{slug}/dependents'
+}
+
+export type ViewDatabaseDependentIndexV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
+   * No database with that slug.
+   */
+  404: unknown
+}
+
+export type ViewDatabaseDependentIndexV1Responses = {
+  200: ViewDatabaseDependentIndexResponse
+}
+
+export type ViewDatabaseDependentIndexV1Response =
+  ViewDatabaseDependentIndexV1Responses[keyof ViewDatabaseDependentIndexV1Responses]
 
 export type ViewNodeIndexV1Data = {
   body?: never
