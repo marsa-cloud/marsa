@@ -1,10 +1,5 @@
 import { afterEach, beforeEach, describe, it } from 'node:test'
-import {
-  ApiException,
-  AppsV1Api,
-  CoreV1Api,
-  KubeConfig,
-} from '@kubernetes/client-node'
+import { ApiException, AppsV1Api, CoreV1Api, KubeConfig } from '@kubernetes/client-node'
 import { expect } from 'expect'
 import {
   createSandbox,
