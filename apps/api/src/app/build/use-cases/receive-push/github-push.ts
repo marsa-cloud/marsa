@@ -18,7 +18,7 @@ interface PushPayload {
 }
 
 const asPayload = (payload: unknown): PushPayload =>
-  typeof payload === 'object' && payload !== null ? (payload as PushPayload) : {}
+  typeof payload === 'object' && payload !== null ? payload : {}
 
 export function installationIdOf(payload: unknown): string | null {
   const id = asPayload(payload).installation?.id
