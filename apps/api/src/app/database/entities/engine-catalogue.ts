@@ -46,8 +46,8 @@ const postgres = (image: string, dataMountPath: string, pgData: string): EngineC
   // A local-path directory can hold entries initdb refuses to start in, so PGDATA is a subdir.
   env: { PGDATA: pgData },
   credentialEnv: POSTGRES_CREDENTIAL_ENV,
-  // A TCP probe calls Postgres ready while it is still recovering.
-  readinessExec: ['pg_isready', '-U', 'postgres'],
+  // Over TCP, since initdb's temporary server answers on the socket only; unready while recovering.
+  readinessExec: ['pg_isready', '-h', '127.0.0.1', '-U', 'postgres'],
   publishedVariables: postgresPublishedVariables,
 })
 

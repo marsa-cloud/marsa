@@ -26,6 +26,8 @@ export function renderPersistentWorkload(spec: PersistentWorkloadSpec): Rendered
     env,
     volumeMounts: [{ name: DATA_VOLUME_NAME, mountPath: spec.volume.mountPath }],
     readinessProbe: { exec: { command: spec.readinessExec } },
+    // initdb and crash recovery keep the port closed; allow them 5 minutes before liveness counts.
+    startupProbe: { tcpSocket: { port: spec.port }, periodSeconds: 5, failureThreshold: 60 },
     livenessProbe: { tcpSocket: { port: spec.port } },
   }
 

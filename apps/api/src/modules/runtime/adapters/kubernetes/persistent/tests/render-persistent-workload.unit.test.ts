@@ -59,6 +59,17 @@ describe('renderPersistentWorkload', () => {
     expect(container?.livenessProbe?.tcpSocket?.port).toBe(5432)
   })
 
+  it('holds liveness off behind a TCP startup probe while Postgres initialises', () => {
+    const container =
+      renderPersistentWorkload(spec()).statefulSet.spec?.template.spec?.containers[0]
+
+    expect(container?.startupProbe).toEqual({
+      tcpSocket: { port: 5432 },
+      periodSeconds: 5,
+      failureThreshold: 60,
+    })
+  })
+
   it('renders a plain ClusterIP Service and nothing HTTP-shaped', () => {
     const rendered = renderPersistentWorkload(spec())
 
