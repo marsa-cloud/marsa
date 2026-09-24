@@ -110,4 +110,13 @@ describe('ViewAppDetailUseCase', () => {
 
     expect(response.hasUndeployedChanges).toBe(false)
   })
+
+  it('reports no undeployed changes before the first build, since nothing can be deployed', async () => {
+    const { repository, usecase } = build()
+    repository.findBySlug.resolves(
+      new AppPlacementBuilder().withApp(new AppBuilder().withImage(null).build()).build(),
+    )
+
+    expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(false)
+  })
 })

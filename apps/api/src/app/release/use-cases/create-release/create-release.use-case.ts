@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import type { App } from '#src/app/app-management/entities/app.table.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import type { Release } from '#src/app/release/entities/release.table.js'
@@ -24,6 +24,9 @@ export class CreateReleaseUseCase {
       const app = await this.repository.findAppBySlug(tx, slug)
       if (!app) {
         throw new NotFoundException(`App '${slug}' was not found.`)
+      }
+      if (app.image === null) {
+        throw new ConflictException(`App '${slug}' has no image yet; wait for its first build.`)
       }
 
       const source = command.fromReleaseUuid

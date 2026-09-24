@@ -32,6 +32,10 @@ export class ViewAppDetailUseCase {
 
   // Compared against what the cluster runs, not the newest row: a release can exist yet never ship.
   private async hasUndeployedChanges(placement: AppPlacement): Promise<boolean> {
+    // Before the first build there is nothing to deploy; the builds list shows progress instead.
+    if (placement.app.image === null) {
+      return false
+    }
     let liveUuid: ReleaseUuid | null
     try {
       liveUuid = await this.appRuntime.readLiveReleaseUuid(placement)
