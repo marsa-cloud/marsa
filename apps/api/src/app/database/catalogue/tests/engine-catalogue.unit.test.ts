@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test'
 import { expect } from 'expect'
-import { catalogueEntry, SUPPORTED_MAJORS } from '#src/app/database/entities/engine-catalogue.js'
+import { catalogueEntry, SUPPORTED_MAJORS } from '#src/app/database/catalogue/engine-catalogue.js'
 import { DatabaseEngine } from '#src/app/database/enums/database-engine.enum.js'
 
 describe('engine catalogue', () => {

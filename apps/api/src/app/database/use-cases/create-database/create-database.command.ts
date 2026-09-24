@@ -14,13 +14,13 @@ import {
   ValidateNested,
 } from 'class-validator'
 import { NodePin } from '#src/app/app-management/entities/node-pin.js'
+import { SUPPORTED_MAJORS } from '#src/app/database/catalogue/engine-catalogue.js'
 import {
   DATABASE_SLUG_MAX_LENGTH,
   DATABASE_SLUG_PATTERN,
   MAX_STORAGE_GIB,
   MIN_STORAGE_GIB,
 } from '#src/app/database/entities/database-config.constants.js'
-import { SUPPORTED_MAJORS } from '#src/app/database/entities/engine-catalogue.js'
 import {
   DatabaseEngine,
   DatabaseEngineApiProperty,

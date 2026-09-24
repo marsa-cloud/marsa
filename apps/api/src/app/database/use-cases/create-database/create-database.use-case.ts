@@ -6,14 +6,14 @@ import {
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { nodePinSpecOf } from '#src/app/app-management/entities/node-pin.js'
+import {
+  catalogueEntry,
+  type EngineCatalogueEntry,
+} from '#src/app/database/catalogue/engine-catalogue.js'
 import { DatabaseBuilder } from '#src/app/database/entities/database.builder.js'
 import type { DatabaseRow } from '#src/app/database/entities/database.table.js'
 import { DEFAULT_STORAGE_GIB } from '#src/app/database/entities/database-config.constants.js'
 import { generateCredentials } from '#src/app/database/entities/database-credentials.js'
-import {
-  catalogueEntry,
-  type EngineCatalogueEntry,
-} from '#src/app/database/entities/engine-catalogue.js'
 import type { DatabasePlacement } from '#src/app/database/queries/database-placement.js'
 import { CreateDatabaseCommand } from '#src/app/database/use-cases/create-database/create-database.command.js'
 import { CreateDatabaseRepository } from '#src/app/database/use-cases/create-database/create-database.repository.js'
