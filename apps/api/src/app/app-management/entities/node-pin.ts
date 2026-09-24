@@ -17,6 +17,8 @@ import {
   PinStrategy,
   PinStrategyApiProperty,
 } from '#src/app/app-management/enums/pin-strategy.enum.js'
+import { NodePinStrategy } from '#src/modules/runtime/runtime.enums.js'
+import type { NodePinSpec } from '#src/modules/runtime/runtime.types.js'
 
 export class NodePin {
   @ApiProperty({
@@ -64,4 +66,13 @@ export function nodePinEquals(a: NodePin | null, b: NodePin | null): boolean {
     left.length === right.length &&
     left.every((value, index) => value === right[index])
   )
+}
+
+export function nodePinSpecOf(nodePin: NodePin | null): NodePinSpec | null {
+  if (!nodePin) {
+    return null
+  }
+  const strategy =
+    nodePin.strategy === PinStrategy.Required ? NodePinStrategy.Required : NodePinStrategy.Preferred
+  return { key: nodePin.key, values: nodePin.values, strategy }
 }

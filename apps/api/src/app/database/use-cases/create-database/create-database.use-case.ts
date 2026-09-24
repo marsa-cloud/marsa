@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { PinStrategy } from '#src/app/app-management/enums/pin-strategy.enum.js'
+import { nodePinSpecOf } from '#src/app/app-management/entities/node-pin.js'
 import { DatabaseBuilder } from '#src/app/database/entities/database.builder.js'
 import type { DatabaseRow } from '#src/app/database/entities/database.table.js'
 import { DEFAULT_STORAGE_GIB } from '#src/app/database/entities/database-config.constants.js'
@@ -22,11 +22,9 @@ import { DatabaseCredentialsCipher } from '#src/modules/crypto/database-credenti
 import type { Database } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 import { DatabaseRuntime } from '#src/modules/runtime/database-runtime.js'
-import { NodePinStrategy } from '#src/modules/runtime/runtime.enums.js'
 import {
   type DatabaseCredentials,
   type DatabaseDeploySpec,
-  type NodePinSpec,
 } from '#src/modules/runtime/runtime.types.js'
 
 @Injectable()
@@ -119,17 +117,7 @@ export class CreateDatabaseUseCase {
       storageGib: database.storageGib,
       storageClass: this.config.getOrThrow<string>('MARSA_DATABASE_STORAGE_CLASS'),
       readinessExec: entry.readinessExec,
-      nodePin: nodePinSpecOf(database),
+      nodePin: nodePinSpecOf(database.nodePin),
     }
   }
-}
-
-function nodePinSpecOf(database: DatabaseRow): NodePinSpec | null {
-  const nodePin = database.nodePin
-  if (!nodePin) {
-    return null
-  }
-  const strategy =
-    nodePin.strategy === PinStrategy.Required ? NodePinStrategy.Required : NodePinStrategy.Preferred
-  return { key: nodePin.key, values: nodePin.values, strategy }
 }
