@@ -147,10 +147,10 @@ describe('AppDatabasesCard', () => {
     expect(attach).toHaveBeenCalledWith('my-app', { databaseSlug: 'analytics' })
   })
 
-  it("surfaces the API's conflict message when an alias is missing", async () => {
+  it('surfaces the API\'s conflict message when an alias is missing', async () => {
     s.attachments = { items: [] }
     attach.mockRejectedValue({
-      data: { message: "App 'my-app' already has an unprefixed database attached." },
+      data: { message: 'App \'my-app\' already has an unprefixed database attached.' },
     })
 
     const wrapper = await mount()
