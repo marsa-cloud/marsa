@@ -15,7 +15,7 @@ export class DeleteDatabaseUseCase {
 
   async execute(slug: string): Promise<void> {
     await this.db.transaction(async (tx) => {
-      const placement = await this.repository.findBySlug(tx, slug)
+      const placement = await this.repository.findPlacementBySlugForUpdate(tx, slug)
       if (!placement) {
         throw new NotFoundException(`Database '${slug}' was not found.`)
       }

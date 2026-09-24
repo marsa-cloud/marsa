@@ -14,7 +14,7 @@ export class ViewDatabaseDetailUseCase {
   ) {}
 
   async execute(slug: string): Promise<ViewDatabaseDetailResponse> {
-    const placement = await this.repository.findBySlug(slug)
+    const placement = await this.repository.findPlacementBySlug(slug)
     if (!placement) {
       throw new NotFoundException(`Database '${slug}' was not found.`)
     }

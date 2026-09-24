@@ -12,7 +12,7 @@ import { InjectDatabase } from '#src/modules/database/inject-database.decorator.
 export class ViewDatabaseDetailRepository {
   constructor(@InjectDatabase() private readonly db: Database) {}
 
-  async findBySlug(slug: string): Promise<DatabasePlacement | undefined> {
+  async findPlacementBySlug(slug: string): Promise<DatabasePlacement | undefined> {
     const [placement] = await selectDatabasePlacement(this.db)
       .where(eq(databaseTable.slug, slug))
       .limit(1)

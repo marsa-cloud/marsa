@@ -21,7 +21,7 @@ const placement = {
 
 function build() {
   const repository = createStubInstance(DeleteDatabaseRepository)
-  repository.findBySlug.resolves(placement)
+  repository.findPlacementBySlugForUpdate.resolves(placement)
   repository.delete.resolves()
   const runtime = createStubInstance(MockDatabaseRuntime)
   runtime.destroy.resolves()
@@ -48,7 +48,7 @@ describe('DeleteDatabaseUseCase', () => {
 
   it('throws 404 for an unknown slug and touches neither the runtime nor the rows', async () => {
     const { repository, runtime, usecase } = build()
-    repository.findBySlug.resolves(undefined)
+    repository.findPlacementBySlugForUpdate.resolves(undefined)
 
     await expect(usecase.execute('ghost')).rejects.toThrow(NotFoundException)
 

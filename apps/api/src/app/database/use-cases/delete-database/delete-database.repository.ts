@@ -10,7 +10,10 @@ import type { Executor } from '#src/modules/database/drizzle.factory.js'
 
 @Injectable()
 export class DeleteDatabaseRepository {
-  async findBySlug(tx: Executor, slug: string): Promise<DatabasePlacement | undefined> {
+  async findPlacementBySlugForUpdate(
+    tx: Executor,
+    slug: string,
+  ): Promise<DatabasePlacement | undefined> {
     const [placement] = await selectDatabasePlacement(tx)
       .where(eq(databaseTable.slug, slug))
       .limit(1)
