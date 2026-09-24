@@ -35,7 +35,6 @@ const aDatabase = (over = {}) => ({
   storageGib: 10,
   status: 'ready',
   nodePin: null,
-  connection: { host: 'orders', port: 5432, user: 'postgres', database: 'orders' },
   project: { slug: 'demo', name: 'Demo' },
   environment: { slug: 'dev', name: 'Dev' },
   createdAt: '2026-09-23T10:00:00.000Z',
@@ -69,12 +68,9 @@ async function openConfirmAndType(
 }
 
 describe('databases/[slug] detail page', () => {
-  it('shows the connection details and never a password', async () => {
+  it('never shows credentials', async () => {
     const wrapper = await mountSuspended(Detail)
 
-    expect(wrapper.find('[data-testid="connection-host"]').text()).toBe('orders')
-    expect(wrapper.text()).toContain('5432')
-    expect(wrapper.text()).toContain('postgres')
     expect(wrapper.text().toLowerCase()).not.toContain('password')
   })
 

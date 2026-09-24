@@ -505,11 +505,6 @@ export type CreateDatabaseResponse = {
   slug: string
   engine: DatabaseEngine
   version: string
-  /**
-   * In-cluster hostname.
-   */
-  host: string
-  port: number
 }
 
 export type ViewDatabaseIndexQueryKey = {
@@ -559,16 +554,6 @@ export type ViewDatabaseIndexResponse = {
   meta: ViewDatabaseIndexResponseMeta
 }
 
-export type DatabaseConnectionInfo = {
-  /**
-   * In-cluster hostname.
-   */
-  host: string
-  port: number
-  user: string
-  database: string
-}
-
 export type ViewDatabaseDetailResponse = {
   slug: string
   engine: DatabaseEngine
@@ -577,7 +562,6 @@ export type ViewDatabaseDetailResponse = {
   storageGib: number
   status: DatabaseStatus
   nodePin: NodePin | null
-  connection: DatabaseConnectionInfo
   project: DatabaseProjectRef
   environment: DatabaseEnvironmentRef
   createdAt: string

@@ -15,17 +15,9 @@ export class CreateDatabaseResponse {
   @ApiProperty({ type: String, example: '17' })
   readonly version: string
 
-  @ApiProperty({ type: String, example: 'orders', description: 'In-cluster hostname.' })
-  readonly host: string
-
-  @ApiProperty({ type: 'integer', example: 5432 })
-  readonly port: number
-
-  constructor(database: DatabaseRow, port: number) {
+  constructor(database: DatabaseRow) {
     this.slug = database.slug
     this.engine = database.engine
     this.version = database.version
-    this.host = database.slug
-    this.port = port
   }
 }

@@ -355,8 +355,6 @@ export const zCreateDatabaseResponse = z.object({
   slug: z.string(),
   engine: zDatabaseEngine,
   version: z.string(),
-  host: z.string(),
-  port: z.int(),
 })
 
 export const zViewDatabaseIndexQueryKey = z.object({
@@ -400,13 +398,6 @@ export const zViewDatabaseIndexResponse = z.object({
   meta: zViewDatabaseIndexResponseMeta,
 })
 
-export const zDatabaseConnectionInfo = z.object({
-  host: z.string(),
-  port: z.int(),
-  user: z.string(),
-  database: z.string(),
-})
-
 export const zViewDatabaseDetailResponse = z.object({
   slug: z.string(),
   engine: zDatabaseEngine,
@@ -415,7 +406,6 @@ export const zViewDatabaseDetailResponse = z.object({
   storageGib: z.int(),
   status: zDatabaseStatus,
   nodePin: zNodePin.nullable(),
-  connection: zDatabaseConnectionInfo,
   project: zDatabaseProjectRef,
   environment: zDatabaseEnvironmentRef,
   createdAt: z.iso.datetime(),

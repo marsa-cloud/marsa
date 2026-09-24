@@ -164,57 +164,6 @@ async function confirmDelete() {
           </dl>
         </UCard>
 
-        <UCard>
-          <template #header>
-            <h2 class="font-medium">
-              Connection
-            </h2>
-          </template>
-
-          <p class="mb-3 text-sm text-muted">
-            Apps in this environment reach the database at this address. Attaching a database to an
-            app is coming in a later release.
-          </p>
-
-          <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-            <div>
-              <dt class="text-muted">
-                Host
-              </dt>
-              <dd
-                class="font-mono"
-                data-testid="connection-host"
-              >
-                {{ database.connection.host }}
-              </dd>
-            </div>
-            <div>
-              <dt class="text-muted">
-                Port
-              </dt>
-              <dd class="font-mono">
-                {{ database.connection.port }}
-              </dd>
-            </div>
-            <div>
-              <dt class="text-muted">
-                User
-              </dt>
-              <dd class="font-mono">
-                {{ database.connection.user }}
-              </dd>
-            </div>
-            <div>
-              <dt class="text-muted">
-                Database
-              </dt>
-              <dd class="font-mono">
-                {{ database.connection.database }}
-              </dd>
-            </div>
-          </dl>
-        </UCard>
-
         <UCard class="ring-error">
           <template #header>
             <h2 class="font-medium text-error">

@@ -56,7 +56,6 @@ export type {
   CreateReleaseV1Errors,
   CreateReleaseV1Response,
   CreateReleaseV1Responses,
-  DatabaseConnectionInfo,
   DatabaseEngine,
   DatabaseEnvironmentRef,
   DatabaseProjectRef,

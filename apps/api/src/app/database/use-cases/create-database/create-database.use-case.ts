@@ -78,7 +78,7 @@ export class CreateDatabaseUseCase {
       await this.provision({ ...placement, database }, entry, credentials)
     })
 
-    return new CreateDatabaseResponse(database, entry.port)
+    return new CreateDatabaseResponse(database)
   }
 
   private async provision(

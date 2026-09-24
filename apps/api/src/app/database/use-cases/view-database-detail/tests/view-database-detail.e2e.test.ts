@@ -25,7 +25,7 @@ describe('GET /api/v1/databases/:slug (e2e)', () => {
     await setup.teardown()
   })
 
-  it('returns the connection details without the password', async () => {
+  it('returns the database without its credentials', async () => {
     const cipher = setup.testModule.get(DatabaseCredentialsCipher)
     await setup.db.insert(databaseTable).values(
       new DatabaseBuilder()
@@ -50,10 +50,10 @@ describe('GET /api/v1/databases/:slug (e2e)', () => {
       storageGib: 10,
       status: 'not_found',
       nodePin: null,
-      connection: { host: SLUG, port: 5432, user: 'postgres', database: 'detail_db_e2e' },
     })
     expect(JSON.stringify(response.body)).not.toContain('super-secret')
     expect(JSON.stringify(response.body)).not.toContain('password')
+    expect(response.body).not.toHaveProperty('connection')
   })
 
   it('returns 404 for a slug that does not exist', async () => {

@@ -36,7 +36,7 @@ describe('POST /api/v1/databases (e2e)', () => {
     await setup.teardown()
   })
 
-  it('creates the database and answers with its in-cluster address', async () => {
+  it('creates the database and answers with what it created', async () => {
     const response = await request(setup.httpServer)
       .post('/api/v1/databases')
       .set('Cookie', cookie)
@@ -53,8 +53,6 @@ describe('POST /api/v1/databases (e2e)', () => {
       slug: SLUG,
       engine: 'postgres',
       version: '17',
-      host: SLUG,
-      port: 5432,
     })
     expect(JSON.stringify(response.body)).not.toContain('PGPASSWORD')
 

@@ -2741,23 +2741,12 @@
           "version": {
             "type": "string",
             "example": "17"
-          },
-          "host": {
-            "type": "string",
-            "example": "orders",
-            "description": "In-cluster hostname."
-          },
-          "port": {
-            "type": "integer",
-            "example": 5432
           }
         },
         "required": [
           "slug",
           "engine",
-          "version",
-          "host",
-          "port"
+          "version"
         ]
       },
       "ViewDatabaseIndexQueryKey": {
@@ -2923,34 +2912,6 @@
           "meta"
         ]
       },
-      "DatabaseConnectionInfo": {
-        "type": "object",
-        "properties": {
-          "host": {
-            "type": "string",
-            "example": "orders",
-            "description": "In-cluster hostname."
-          },
-          "port": {
-            "type": "integer",
-            "example": 5432
-          },
-          "user": {
-            "type": "string",
-            "example": "postgres"
-          },
-          "database": {
-            "type": "string",
-            "example": "orders"
-          }
-        },
-        "required": [
-          "host",
-          "port",
-          "user",
-          "database"
-        ]
-      },
       "ViewDatabaseDetailResponse": {
         "type": "object",
         "properties": {
@@ -2994,9 +2955,6 @@
               }
             ]
           },
-          "connection": {
-            "$ref": "#/components/schemas/DatabaseConnectionInfo"
-          },
           "project": {
             "$ref": "#/components/schemas/DatabaseProjectRef"
           },
@@ -3020,7 +2978,6 @@
           "storageGib",
           "status",
           "nodePin",
-          "connection",
           "project",
           "environment",
           "createdAt",

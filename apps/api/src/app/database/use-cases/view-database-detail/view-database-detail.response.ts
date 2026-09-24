@@ -14,29 +14,6 @@ import {
   type DatabaseStatus,
   DatabaseStatusApiProperty,
 } from '#src/modules/runtime/runtime.enums.js'
-import type { DatabaseCredentials } from '#src/modules/runtime/runtime.types.js'
-
-export class DatabaseConnectionInfo {
-  @ApiProperty({ type: String, example: 'orders', description: 'In-cluster hostname.' })
-  readonly host: string
-
-  @ApiProperty({ type: 'integer', example: 5432 })
-  readonly port: number
-
-  @ApiProperty({ type: String, example: 'postgres' })
-  readonly user: string
-
-  @ApiProperty({ type: String, example: 'orders' })
-  readonly database: string
-
-  // The password stays in the database's Secret and is never returned (#233).
-  constructor(host: string, port: number, credentials: DatabaseCredentials) {
-    this.host = host
-    this.port = port
-    this.user = credentials.user
-    this.database = credentials.database
-  }
-}
 
 export class ViewDatabaseDetailResponse {
   @ApiProperty({ type: String, example: 'orders' })
@@ -60,9 +37,6 @@ export class ViewDatabaseDetailResponse {
   @ApiProperty({ type: NodePin, nullable: true })
   readonly nodePin: NodePin | null
 
-  @ApiProperty({ type: DatabaseConnectionInfo })
-  readonly connection: DatabaseConnectionInfo
-
   @ApiProperty({ type: DatabaseProjectRef })
   readonly project: DatabaseProjectRef
 
@@ -75,12 +49,7 @@ export class ViewDatabaseDetailResponse {
   @ApiProperty({ type: String, format: 'date-time' })
   readonly updatedAt: string
 
-  constructor(
-    { database, project, environment }: DatabasePlacement,
-    status: DatabaseStatus,
-    port: number,
-    credentials: DatabaseCredentials,
-  ) {
+  constructor({ database, project, environment }: DatabasePlacement, status: DatabaseStatus) {
     this.slug = database.slug
     this.engine = database.engine
     this.version = database.version
@@ -88,7 +57,6 @@ export class ViewDatabaseDetailResponse {
     this.storageGib = database.storageGib
     this.status = status
     this.nodePin = nodePinOf(database)
-    this.connection = new DatabaseConnectionInfo(database.slug, port, credentials)
     this.project = new DatabaseProjectRef(project)
     this.environment = new DatabaseEnvironmentRef(environment)
     this.createdAt = database.createdAt.toISOString()
