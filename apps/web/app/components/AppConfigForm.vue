@@ -5,7 +5,7 @@ import * as z from 'zod'
 import type { NodePin, ViewAppDetailResponse } from '~/api/types.gen'
 import { appConfigFields, isReplicaRangeValid, REPLICA_RANGE_ERROR } from '~/utils/appConfigSchema'
 
-const props = defineProps<{ slug: string, config: ViewAppDetailResponse }>()
+const props = defineProps<{ slug: string, config: ViewAppDetailResponse, overriddenKeys?: string[] }>()
 const emit = defineEmits<{ saved: [] }>()
 
 const { update } = useUpdateApp()
@@ -60,6 +60,11 @@ watch(
 
 function addEnvRow() {
   envRows.value.push(makeEnvRow())
+}
+
+// An attached database wins the name, so the value typed here never reaches the pods (#207).
+function isOverridden(key: string): boolean {
+  return props.overriddenKeys?.includes(key.trim()) ?? false
 }
 
 function removeEnvRow(index: number) {
@@ -185,12 +190,21 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           :key="row.id"
           class="flex items-center gap-2"
         >
-          <UInput
-            v-model="row.key"
-            placeholder="KEY"
-            class="flex-1"
-            :aria-label="`env key ${index + 1}`"
-          />
+          <div class="flex flex-1 flex-col gap-1">
+            <UInput
+              v-model="row.key"
+              placeholder="KEY"
+              :aria-label="`env key ${index + 1}`"
+            />
+            <UBadge
+              v-if="isOverridden(row.key)"
+              color="warning"
+              variant="subtle"
+              size="sm"
+            >
+              Overridden by an attached database
+            </UBadge>
+          </div>
           <UInput
             v-model="row.value"
             placeholder="value"

@@ -156,4 +156,27 @@ describe('AppConfigForm', () => {
 
     expect(update).toHaveBeenCalledWith('my-app', expect.objectContaining({ nodePin: null }))
   })
+
+  it('marks an env row whose value an attached database overrides', async () => {
+    const wrapper = await mountSuspended(AppConfigForm, {
+      props: {
+        slug: 'my-app',
+        config: { ...config, env: { DATABASE_URL: 'hand-written', LOG_LEVEL: 'info' } },
+        overriddenKeys: ['DATABASE_URL'],
+      },
+    })
+
+    expect(wrapper.text()).toContain('Overridden by an attached database')
+  })
+
+  it('leaves every row unmarked when nothing is attached', async () => {
+    const wrapper = await mountSuspended(AppConfigForm, {
+      props: {
+        slug: 'my-app',
+        config: { ...config, env: { DATABASE_URL: 'hand-written' } },
+      },
+    })
+
+    expect(wrapper.text()).not.toContain('Overridden by an attached database')
+  })
 })
