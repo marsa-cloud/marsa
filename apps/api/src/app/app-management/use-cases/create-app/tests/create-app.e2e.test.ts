@@ -114,6 +114,19 @@ describe('POST /api/v1/apps (e2e)', () => {
       .expect(400)
   })
 
+  it('rejects a slug starting with a digit with 400', async () => {
+    await request(setup.httpServer)
+      .post('/api/v1/apps')
+      .set('Cookie', cookie)
+      .send({
+        environmentUuid: environment.uuid,
+        slug: '1-create-app',
+        image: 'nginx:1.27',
+        containerPort: 80,
+      })
+      .expect(400)
+  })
+
   it('rejects an unknown environment with 404', async () => {
     await request(setup.httpServer)
       .post('/api/v1/apps')

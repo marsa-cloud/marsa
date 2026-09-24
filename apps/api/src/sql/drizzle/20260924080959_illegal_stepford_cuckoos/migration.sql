@@ -2,7 +2,7 @@ CREATE TYPE "database_engine_enum" AS ENUM('postgres');--> statement-breakpoint
 CREATE TABLE "database" (
 	"uuid" uuid PRIMARY KEY DEFAULT uuidv7(),
 	"environment_uuid" uuid NOT NULL,
-	"slug" varchar(63) NOT NULL,
+	"slug" varchar(52) NOT NULL,
 	"engine" "database_engine_enum" NOT NULL,
 	"version" varchar(8) NOT NULL,
 	"image" varchar(255) NOT NULL,

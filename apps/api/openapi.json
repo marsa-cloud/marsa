@@ -2192,7 +2192,7 @@
             "type": "string",
             "example": "my-app",
             "description": "Public subdomain label + K8s object name.",
-            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+            "pattern": "^[a-z]([-a-z0-9]*[a-z0-9])?$",
             "maxLength": 63
           },
           "image": {
@@ -2684,8 +2684,8 @@
             "type": "string",
             "example": "orders",
             "description": "In-cluster hostname + K8s object name.",
-            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
-            "maxLength": 63
+            "pattern": "^[a-z]([-a-z0-9]*[a-z0-9])?$",
+            "maxLength": 52
           },
           "engine": {
             "example": "postgres",

@@ -18,8 +18,11 @@ const schema = z.object({
   slug: z
     .string()
     .min(1, 'Required')
-    .max(63, 'Max 63 characters')
-    .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/, 'Lowercase letters, numbers and hyphens only'),
+    .max(52, 'Max 52 characters')
+    .regex(
+      /^[a-z]([-a-z0-9]*[a-z0-9])?$/,
+      'Start with a letter; lowercase letters, numbers and hyphens only',
+    ),
   version: z.enum(VERSIONS),
   storageGib: z.number().int().min(1, 'At least 1 GiB').max(1024, 'At most 1024 GiB'),
 })

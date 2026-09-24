@@ -42,7 +42,7 @@ export class CreateDatabaseCommand {
   @IsString()
   @IsNotEmpty()
   @MaxLength(DATABASE_SLUG_MAX_LENGTH)
-  @Matches(DATABASE_SLUG_PATTERN, { message: 'slug must be a valid DNS-1123 label' })
+  @Matches(DATABASE_SLUG_PATTERN, { message: 'slug must be a valid DNS-1035 label' })
   slug!: string
 
   @DatabaseEngineApiProperty({ example: DatabaseEngine.Postgres })

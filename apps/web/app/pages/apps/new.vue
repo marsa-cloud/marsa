@@ -21,7 +21,10 @@ const schema = z
       .string()
       .min(1, 'Required')
       .max(63, 'Max 63 characters')
-      .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/, 'Lowercase letters, numbers and hyphens only'),
+      .regex(
+        /^[a-z]([-a-z0-9]*[a-z0-9])?$/,
+        'Start with a letter; lowercase letters, numbers and hyphens only',
+      ),
     ...appConfigFields,
   })
   .refine(isReplicaRangeValid, REPLICA_RANGE_ERROR)

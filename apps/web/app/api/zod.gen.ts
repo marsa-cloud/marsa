@@ -234,7 +234,7 @@ export const zCreateAppCommand = z.object({
   slug: z
     .string()
     .max(63)
-    .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/),
+    .regex(/^[a-z]([-a-z0-9]*[a-z0-9])?$/),
   image: z.string(),
   containerPort: z.int().gte(1).lte(65535),
   minReplicas: z.int().gte(0).lte(100).optional(),
@@ -343,8 +343,8 @@ export const zCreateDatabaseCommand = z.object({
   environmentUuid: z.uuid(),
   slug: z
     .string()
-    .max(63)
-    .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/),
+    .max(52)
+    .regex(/^[a-z]([-a-z0-9]*[a-z0-9])?$/),
   engine: zDatabaseEngine,
   version: z.string(),
   storageGib: z.int().gte(1).lte(1024).optional(),
@@ -443,7 +443,7 @@ export const zCreateAppCommandWritable = z.object({
   slug: z
     .string()
     .max(63)
-    .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/),
+    .regex(/^[a-z]([-a-z0-9]*[a-z0-9])?$/),
   image: z.string(),
   containerPort: z.int().gte(1).lte(65535),
   minReplicas: z.int().gte(0).lte(100).optional(),

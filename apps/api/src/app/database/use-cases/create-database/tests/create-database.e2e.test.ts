@@ -117,6 +117,19 @@ describe('POST /api/v1/databases (e2e)', () => {
       .expect(404)
   })
 
+  for (const [reason, slug] of [
+    ['starts with a digit', '1-create-db'],
+    ['is longer than 52 characters', 'd'.repeat(53)],
+  ]) {
+    it(`rejects a slug that ${reason} with 400`, async () => {
+      await request(setup.httpServer)
+        .post('/api/v1/databases')
+        .set('Cookie', cookie)
+        .send({ environmentUuid: environment.uuid, slug, engine: 'postgres', version: '17' })
+        .expect(400)
+    })
+  }
+
   it('rejects an unsupported version with 400', async () => {
     await request(setup.httpServer)
       .post('/api/v1/databases')

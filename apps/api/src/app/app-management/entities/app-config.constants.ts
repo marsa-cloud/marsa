@@ -1,9 +1,5 @@
-/**
- * DNS-1123 label: the slug becomes the public subdomain (`<slug>.<base>`) and
- * the K8s object names, so it must be a valid label (lowercase alphanumeric +
- * hyphens, ≤ 63 chars). Validated at the DTO boundary (Rex flagged this on #97).
- */
-export const SLUG_PATTERN = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/
+/** DNS-1035 label: the slug is the public subdomain and names the app's Service. */
+export const SLUG_PATTERN = /^[a-z]([-a-z0-9]*[a-z0-9])?$/
 export const SLUG_MAX_LENGTH = 63
 
 /** Inclusive TCP port range a container may listen on. */
