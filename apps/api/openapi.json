@@ -1120,6 +1120,16 @@
             "schema": {
               "$ref": "#/components/schemas/ViewDatabaseIndexPaginationQuery"
             }
+          },
+          {
+            "name": "environmentUuid",
+            "required": false,
+            "in": "query",
+            "description": "Only databases in this environment.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1220,6 +1230,203 @@
           },
           "502": {
             "description": "Kubernetes teardown failed; the database was kept."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "databases"
+        ]
+      }
+    },
+    "/api/v1/apps/{slug}/attachments": {
+      "post": {
+        "operationId": "attachDatabaseV1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttachDatabaseCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachDatabaseResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed body, or an invalid database slug / alias."
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
+          "404": {
+            "description": "No such app, or no such database in its environment."
+          },
+          "409": {
+            "description": "Already attached, or the alias is taken."
+          },
+          "502": {
+            "description": "The cluster update failed; the attachment was not kept."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "databases"
+        ]
+      },
+      "get": {
+        "operationId": "viewAppAttachmentIndexV1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewAppAttachmentIndexResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
+          "404": {
+            "description": "No app with that slug."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "databases"
+        ]
+      }
+    },
+    "/api/v1/apps/{slug}/attachments/{databaseSlug}": {
+      "delete": {
+        "operationId": "detachDatabaseV1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "databaseSlug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The variables were removed and the app restarted."
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
+          "404": {
+            "description": "No such app, or that database is not attached to it."
+          },
+          "502": {
+            "description": "The cluster update failed; the attachment was kept."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "databases"
+        ]
+      }
+    },
+    "/api/v1/databases/{slug}/dependents": {
+      "get": {
+        "operationId": "viewDatabaseDependentIndexV1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewDatabaseDependentIndexResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
+          "404": {
+            "description": "No database with that slug."
           }
         },
         "security": [
@@ -2982,6 +3189,135 @@
           "environment",
           "createdAt",
           "updatedAt"
+        ]
+      },
+      "AttachDatabaseCommand": {
+        "type": "object",
+        "properties": {
+          "databaseSlug": {
+            "type": "string",
+            "example": "orders",
+            "description": "Database in this app's environment.",
+            "pattern": "^[a-z]([-a-z0-9]*[a-z0-9])?$",
+            "maxLength": 52
+          },
+          "alias": {
+            "type": "string",
+            "example": "analytics",
+            "description": "Prefixes the injected variables (ANALYTICS_DATABASE_URL). Required for a second attachment.",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "maxLength": 63
+          }
+        },
+        "required": [
+          "databaseSlug"
+        ]
+      },
+      "AttachDatabaseResponse": {
+        "type": "object",
+        "properties": {
+          "databaseSlug": {
+            "type": "string",
+            "example": "orders"
+          },
+          "alias": {
+            "type": "string",
+            "nullable": true,
+            "example": "analytics"
+          },
+          "variables": {
+            "example": [
+              "DATABASE_URL",
+              "PGHOST"
+            ],
+            "description": "Variable names this attachment injects into the app.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "databaseSlug",
+          "alias",
+          "variables"
+        ]
+      },
+      "AppAttachmentSummary": {
+        "type": "object",
+        "properties": {
+          "databaseSlug": {
+            "type": "string",
+            "example": "orders"
+          },
+          "alias": {
+            "type": "string",
+            "nullable": true,
+            "example": "analytics"
+          },
+          "engine": {
+            "example": "postgres",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DatabaseEngine"
+              }
+            ]
+          },
+          "version": {
+            "type": "string",
+            "example": "17"
+          },
+          "variables": {
+            "example": [
+              "DATABASE_URL",
+              "PGHOST"
+            ],
+            "description": "Variable names this attachment injects into the app.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "databaseSlug",
+          "alias",
+          "engine",
+          "version",
+          "variables"
+        ]
+      },
+      "ViewAppAttachmentIndexResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AppAttachmentSummary"
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "ViewDatabaseDependentIndexResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "example": [
+              "api",
+              "worker"
+            ],
+            "description": "Slugs of the apps this database is attached to.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "items"
         ]
       },
       "NodeSummary": {

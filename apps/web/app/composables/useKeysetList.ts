@@ -20,6 +20,7 @@ export function useKeysetList<TItem, TKey>(
   path: string,
   parse: (raw: unknown) => { items: TItem[], meta: { next: TKey | null } },
   limit = 20,
+  filters: Record<string, unknown> = {},
 ) {
   const { $api } = useNuxtApp()
 
@@ -46,10 +47,13 @@ export function useKeysetList<TItem, TKey>(
     try {
       const page = parse(
         await $api(path, {
-          query: bracketQuery('pagination', {
-            limit,
-            ...(next.value ? { key: next.value } : {}),
-          }),
+          query: {
+            ...filters,
+            ...bracketQuery('pagination', {
+              limit,
+              ...(next.value ? { key: next.value } : {}),
+            }),
+          },
         }),
       )
 

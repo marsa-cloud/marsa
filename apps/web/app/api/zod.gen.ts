@@ -412,6 +412,40 @@ export const zViewDatabaseDetailResponse = z.object({
   updatedAt: z.iso.datetime(),
 })
 
+export const zAttachDatabaseCommand = z.object({
+  databaseSlug: z
+    .string()
+    .max(52)
+    .regex(/^[a-z]([-a-z0-9]*[a-z0-9])?$/),
+  alias: z
+    .string()
+    .max(63)
+    .regex(/^[a-z][a-z0-9-]*$/)
+    .optional(),
+})
+
+export const zAttachDatabaseResponse = z.object({
+  databaseSlug: z.string(),
+  alias: z.string().nullable(),
+  variables: z.array(z.string()),
+})
+
+export const zAppAttachmentSummary = z.object({
+  databaseSlug: z.string(),
+  alias: z.string().nullable(),
+  engine: zDatabaseEngine,
+  version: z.string(),
+  variables: z.array(z.string()),
+})
+
+export const zViewAppAttachmentIndexResponse = z.object({
+  items: z.array(zAppAttachmentSummary),
+})
+
+export const zViewDatabaseDependentIndexResponse = z.object({
+  items: z.array(z.string()),
+})
+
 export const zNodeSummary = z.object({
   name: z.string(),
   labels: z.record(z.string(), z.string()),
@@ -599,6 +633,7 @@ export const zViewAppLogsV1Response = zViewAppLogsResponse
 
 export const zViewDatabaseIndexV1Query = z.object({
   pagination: zViewDatabaseIndexPaginationQuery.optional(),
+  environmentUuid: z.uuid().optional(),
 })
 
 export const zViewDatabaseIndexV1Response = zViewDatabaseIndexResponse
@@ -621,5 +656,35 @@ export const zViewDatabaseDetailV1Path = z.object({
 })
 
 export const zViewDatabaseDetailV1Response = zViewDatabaseDetailResponse
+
+export const zViewAppAttachmentIndexV1Path = z.object({
+  slug: z.string(),
+})
+
+export const zViewAppAttachmentIndexV1Response = zViewAppAttachmentIndexResponse
+
+export const zAttachDatabaseV1Body = zAttachDatabaseCommand
+
+export const zAttachDatabaseV1Path = z.object({
+  slug: z.string(),
+})
+
+export const zAttachDatabaseV1Response = zAttachDatabaseResponse
+
+export const zDetachDatabaseV1Path = z.object({
+  slug: z.string(),
+  databaseSlug: z.string(),
+})
+
+/**
+ * The variables were removed and the app restarted.
+ */
+export const zDetachDatabaseV1Response = z.void()
+
+export const zViewDatabaseDependentIndexV1Path = z.object({
+  slug: z.string(),
+})
+
+export const zViewDatabaseDependentIndexV1Response = zViewDatabaseDependentIndexResponse
 
 export const zViewNodeIndexV1Response = zViewNodeIndexResponse

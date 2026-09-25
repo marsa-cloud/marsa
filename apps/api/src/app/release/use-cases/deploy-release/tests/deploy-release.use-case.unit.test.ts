@@ -5,6 +5,7 @@ import { expect } from 'expect'
 import { createStubInstance, match } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { AppPlacementBuilder } from '#src/app/app-management/queries/app-placement.builder.js'
+import { DatabaseEngine } from '#src/app/database-management/enums/database-engine.enum.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { DeployReleaseRepository } from '#src/app/release/use-cases/deploy-release/deploy-release.repository.js'
@@ -25,6 +26,7 @@ function build(release = new ReleaseBuilder().withApp(app).withImageRef('nginx:1
   repository.findPlacement.resolves(placement)
   repository.findNewestRelease.resolves(release)
   repository.setDeployStatus.resolves()
+  repository.findAttachments.resolves([])
 
   const appRuntime = createStubInstance(MockAppRuntime)
   appRuntime.deploy.resolves()
@@ -148,5 +150,22 @@ describe('DeployReleaseUseCase', () => {
     expect(
       repository.setDeployStatus.calledWith(match.any, release.uuid, DeployStatus.Failed),
     ).toBe(true)
+  })
+
+  it("deploys with the app's attachments injected", async () => {
+    const { repository, appRuntime, usecase } = build()
+    repository.findAttachments.resolves([
+      { alias: null, databaseSlug: 'orders', engine: DatabaseEngine.Postgres, version: '17' },
+    ])
+
+    await usecase.execute('my-app')
+
+    expect(appRuntime.deploy.firstCall.args[1].attachments).toEqual([
+      {
+        databaseSlug: 'orders',
+        envPrefix: null,
+        keys: ['DATABASE_URL', 'PGHOST', 'PGPORT', 'PGUSER', 'PGPASSWORD', 'PGDATABASE'],
+      },
+    ])
   })
 })

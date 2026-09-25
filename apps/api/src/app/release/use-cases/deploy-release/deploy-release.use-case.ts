@@ -7,7 +7,7 @@ import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { DeployReleaseRepository } from '#src/app/release/use-cases/deploy-release/deploy-release.repository.js'
 import { DeployReleaseResponse } from '#src/app/release/use-cases/deploy-release/deploy-release.response.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
-import type { Database, Transaction } from '#src/modules/database/drizzle.factory.js'
+import type { Database, Executor, Transaction } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
 
@@ -50,14 +50,14 @@ export class DeployReleaseUseCase {
 
     // Already live, so the deploy is a runtime no-op; a failed retry must not mark it failed.
     if (release.deployStatus === DeployStatus.Succeeded) {
-      await this.deploy(placement, release)
+      await this.deploy(tx, placement, release)
       return this.deployed(placement, release, DeployStatus.Succeeded)
     }
 
     try {
       await tx.transaction(async (savepoint) => {
         await this.repository.setDeployStatus(savepoint, release.uuid, DeployStatus.Pending)
-        await this.deploy(placement, release)
+        await this.deploy(savepoint, placement, release)
       })
     } catch (error) {
       // Written under the same app lock, so a concurrent retry cannot land between rollback and this.
@@ -67,9 +67,14 @@ export class DeployReleaseUseCase {
     return this.deployed(placement, release, DeployStatus.Pending)
   }
 
-  private async deploy(placement: AppPlacement, release: Release): Promise<void> {
+  private async deploy(tx: Executor, placement: AppPlacement, release: Release): Promise<void> {
     const credentials = this.cipher.openForApp(placement.app.slug, release.imagePullCredentialsEnc)
-    const spec = deploySpecOf(placement, release, { baseDomain: this.baseDomain, credentials })
+    const attachments = await this.repository.findAttachments(tx, placement.app.uuid)
+    const spec = deploySpecOf(placement, release, {
+      baseDomain: this.baseDomain,
+      attachments,
+      credentials,
+    })
     await this.appRuntime.deploy(placement, spec)
   }
 

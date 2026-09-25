@@ -38,6 +38,12 @@ const {
 const { data: config, status: configStatus, error: configError, refresh: refreshConfig }
   = useAppDetail(slug.value)
 
+// The variables an attachment injects win over the app's own env, so the form marks them.
+const { data: attachments, refresh: refreshAttachments } = useAppAttachments(slug.value)
+const overriddenKeys = computed(
+  () => attachments.value?.items.flatMap(item => item.variables) ?? [],
+)
+
 const replicaRange = computed(() => {
   const min = config.value?.minReplicas
   const max = config.value?.maxReplicas
@@ -346,9 +352,17 @@ async function confirmDelete() {
             v-else-if="config"
             :slug="slug"
             :config="config"
+            :overridden-keys="overriddenKeys"
             @saved="refreshConfig()"
           />
         </UCard>
+
+        <AppDatabasesCard
+          v-if="config"
+          :slug="slug"
+          :environment-uuid="config.environment.uuid"
+          @changed="refreshAttachments()"
+        />
 
         <!-- Danger zone -->
         <UCard class="ring-error">

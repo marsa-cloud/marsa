@@ -15,6 +15,7 @@ import type {
   RenderedManifests,
 } from '#src/modules/runtime/adapters/kubernetes/app/kubernetes-objects.types.js'
 import { buildNodeAffinity } from '#src/modules/runtime/adapters/kubernetes/app/render/node-affinity.js'
+import { credentialsSecretName } from '#src/modules/runtime/adapters/kubernetes/database/render-credentials-secret.js'
 import type { AppDeploySpec, RegistryCredentials } from '#src/modules/runtime/runtime.types.js'
 
 /**
@@ -31,7 +32,17 @@ export function renderManifests(slug: string, spec: AppDeploySpec): RenderedMani
   const name = slug
   const host = spec.host
   const labels = { app: name }
-  const env = Object.entries(spec.env).map(([key, value]) => ({ name: key, value }))
+  const env = [
+    ...Object.entries(spec.env).map(([key, value]) => ({ name: key, value })),
+    ...spec.attachments.flatMap((attachment) =>
+      attachment.keys.map((key) => ({
+        name: `${attachment.envPrefix ?? ''}${key}`,
+        valueFrom: {
+          secretKeyRef: { name: credentialsSecretName(attachment.databaseSlug), key },
+        },
+      })),
+    ),
+  ]
   const affinity = buildNodeAffinity(spec.nodePin)
   const credentials = spec.credentials
 
