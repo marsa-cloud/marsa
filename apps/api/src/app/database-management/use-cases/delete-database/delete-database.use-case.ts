@@ -4,9 +4,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
+import type { DatabaseUuid } from '#src/app/database-management/entities/database.uuid.js'
 import type { DatabasePlacement } from '#src/app/database-management/queries/database-placement.js'
 import { DeleteDatabaseRepository } from '#src/app/database-management/use-cases/delete-database/delete-database.repository.js'
-import type { DatabaseUuid } from '#src/app/database-management/entities/database.uuid.js'
 import type { Database, Executor } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 import { isForeignKeyViolation } from '#src/modules/database/postgres-errors.js'

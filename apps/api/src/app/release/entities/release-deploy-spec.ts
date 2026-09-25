@@ -1,7 +1,7 @@
 import { nodePinSpecOf } from '#src/app/app-management/entities/node-pin.js'
 import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
-import { envPrefixOf } from '#src/app/database-management/entities/attachment-env.js'
 import { catalogueEntry } from '#src/app/database-management/catalogue/engine-catalogue.js'
+import { envPrefixOf } from '#src/app/database-management/entities/attachment-env.js'
 import type { AttachedDatabase } from '#src/app/database-management/queries/app-attachments.js'
 import type { Release } from '#src/app/release/entities/release.table.js'
 import {

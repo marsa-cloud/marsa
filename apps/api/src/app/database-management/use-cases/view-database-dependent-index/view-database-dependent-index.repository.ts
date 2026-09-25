@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common'
 import { eq } from 'drizzle-orm'
-import { type DatabaseRow, databaseTable } from '#src/app/database-management/entities/database.table.js'
+import {
+  type DatabaseRow,
+  databaseTable,
+} from '#src/app/database-management/entities/database.table.js'
 import type { DatabaseUuid } from '#src/app/database-management/entities/database.uuid.js'
 import { dependentAppsOf } from '#src/app/database-management/queries/dependent-apps.js'
 import type { Database } from '#src/modules/database/drizzle.factory.js'
