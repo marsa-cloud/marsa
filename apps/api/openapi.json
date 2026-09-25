@@ -3198,8 +3198,8 @@
             "type": "string",
             "example": "orders",
             "description": "Database in this app's environment.",
-            "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
-            "maxLength": 63
+            "pattern": "^[a-z]([-a-z0-9]*[a-z0-9])?$",
+            "maxLength": 52
           },
           "alias": {
             "type": "string",

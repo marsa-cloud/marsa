@@ -415,8 +415,8 @@ export const zViewDatabaseDetailResponse = z.object({
 export const zAttachDatabaseCommand = z.object({
   databaseSlug: z
     .string()
-    .max(63)
-    .regex(/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/),
+    .max(52)
+    .regex(/^[a-z]([-a-z0-9]*[a-z0-9])?$/),
   alias: z
     .string()
     .max(63)

@@ -4,7 +4,10 @@ import request from 'supertest'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
 import { DatabaseBuilder } from '#src/app/database-management/entities/database.builder.js'
-import { type DatabaseRow, databaseTable } from '#src/app/database-management/entities/database.table.js'
+import {
+  type DatabaseRow,
+  databaseTable,
+} from '#src/app/database-management/entities/database.table.js'
 import { DatabaseAttachmentBuilder } from '#src/app/database-management/entities/database-attachment.builder.js'
 import { databaseAttachmentTable } from '#src/app/database-management/entities/database-attachment.table.js'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'

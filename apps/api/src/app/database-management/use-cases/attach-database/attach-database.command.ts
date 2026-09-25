@@ -1,6 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator'
-import { ALIAS_MAX_LENGTH, ALIAS_PATTERN } from '#src/app/database-management/entities/attachment-env.js'
+import {
+  ALIAS_MAX_LENGTH,
+  ALIAS_PATTERN,
+} from '#src/app/database-management/entities/attachment-env.js'
 import {
   DATABASE_SLUG_MAX_LENGTH,
   DATABASE_SLUG_PATTERN,

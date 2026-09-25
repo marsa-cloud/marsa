@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger'
-import { envPrefixOf } from '#src/app/database-management/entities/attachment-env.js'
 import { catalogueEntry } from '#src/app/database-management/catalogue/engine-catalogue.js'
+import { envPrefixOf } from '#src/app/database-management/entities/attachment-env.js'
 import {
   DatabaseEngine,
   DatabaseEngineApiProperty,

@@ -6,7 +6,10 @@ import {
   type AppPlacement,
   selectAppPlacement,
 } from '#src/app/app-management/queries/app-placement.js'
-import { type DatabaseRow, databaseTable } from '#src/app/database-management/entities/database.table.js'
+import {
+  type DatabaseRow,
+  databaseTable,
+} from '#src/app/database-management/entities/database.table.js'
 import type { DatabaseUuid } from '#src/app/database-management/entities/database.uuid.js'
 import { databaseAttachmentTable } from '#src/app/database-management/entities/database-attachment.table.js'
 import {
