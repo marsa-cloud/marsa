@@ -6,6 +6,7 @@ import {
   GITHUB_OAUTH_TOKEN_URL,
   GITHUB_REQUEST_TIMEOUT_MS,
 } from '#src/modules/github-client/github-client.constants.js'
+import { BranchNotFoundError } from '#src/modules/github-client/github-client.errors.js'
 import { GithubClient } from '#src/modules/github-client/github-client.js'
 import type {
   BranchHeadParams,
@@ -81,7 +82,7 @@ export class OctokitGithubClient extends GithubClient {
     } catch (error) {
       const status = (error as { status?: number }).status
       if (status === 404 || status === 422) {
-        throw new Error(
+        throw new BranchNotFoundError(
           `Branch '${branch}' of '${repo}' was not found, or the GitHub App cannot access it.`,
         )
       }

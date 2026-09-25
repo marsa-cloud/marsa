@@ -6,3 +6,4 @@ export const BUILD_UUID_LABEL = 'marsa.cloud/build-uuid'
 export const BUILD_APP_LABEL = 'marsa.cloud/app'
 export const JOB_NAME_LABEL = 'batch.kubernetes.io/job-name'
 export const GIT_TOKEN_KEY = 'token'
+export const BUILD_LOG_LIMIT_BYTES = 1024 * 1024

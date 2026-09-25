@@ -101,6 +101,10 @@ export interface BuildSpec {
   pushRef: string
 }
 
+export interface BuildLogsOptions {
+  tailLines: number
+}
+
 export enum BuildState {
   Running = 'running',
   Succeeded = 'succeeded',

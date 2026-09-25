@@ -2,6 +2,7 @@ import { BatchV1Api, CoreV1Api, KubeConfig, type V1Job, type V1Pod } from '@kube
 import { Injectable } from '@nestjs/common'
 import { newestPod } from '#src/modules/runtime/adapters/kubernetes/app/rollout/newest-pod.js'
 import {
+  BUILD_LOG_LIMIT_BYTES,
   BUILD_NAMESPACE,
   JOB_NAME_LABEL,
 } from '#src/modules/runtime/adapters/kubernetes/build/build.constants.js'
@@ -21,6 +22,7 @@ import {
 } from '#src/modules/runtime/adapters/kubernetes/shared/not-found.js'
 import { BuildRuntime } from '#src/modules/runtime/build-runtime.js'
 import {
+  type BuildLogsOptions,
   type BuildObservation,
   type BuildRef,
   type BuildSpec,
@@ -83,13 +85,18 @@ export class KubernetesBuildRuntime extends BuildRuntime {
     return mapBuildObservation(job, await this.listPods(ref))
   }
 
-  async readLogs(ref: BuildRef): Promise<string | null> {
+  async readLogs(ref: BuildRef, { tailLines }: BuildLogsOptions): Promise<string | null> {
     const name = newestPod(await this.listPods(ref))?.metadata?.name
     if (!name) {
       return null
     }
     try {
-      return await this.core.readNamespacedPodLog({ name, namespace: BUILD_NAMESPACE })
+      return await this.core.readNamespacedPodLog({
+        name,
+        namespace: BUILD_NAMESPACE,
+        tailLines,
+        limitBytes: BUILD_LOG_LIMIT_BYTES,
+      })
     } catch (error) {
       if (isNotFound(error)) {
         return null

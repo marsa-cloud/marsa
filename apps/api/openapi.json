@@ -840,11 +840,15 @@
             }
           },
           {
-            "name": "buildUuid",
-            "required": true,
-            "in": "path",
+            "name": "tailLines",
+            "required": false,
+            "in": "query",
+            "description": "Trailing log lines to return (default 1000).",
             "schema": {
-              "type": "string"
+              "minimum": 1,
+              "maximum": 5000,
+              "example": 1000,
+              "type": "integer"
             }
           }
         ],
@@ -860,7 +864,7 @@
             }
           },
           "400": {
-            "description": "buildUuid is not a uuid."
+            "description": "buildUuid is not a uuid, or tailLines is out of range (1–5000)."
           },
           "401": {
             "description": "No active session."

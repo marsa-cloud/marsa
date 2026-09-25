@@ -1,6 +1,6 @@
-import { describe, it } from 'node:test'
+import { afterEach, describe, it } from 'node:test'
 import { expect } from 'expect'
-import { type SinonStub, stub } from 'sinon'
+import { restore, type SinonStub, stub } from 'sinon'
 import { ZotImageRegistry } from '#src/modules/runtime/adapters/zot/zot-image-registry.js'
 
 const config = {
@@ -12,12 +12,13 @@ const config = {
 
 type Route = (init: RequestInit) => Response
 
-function registryWith(routes: Record<string, Route>) {
-  const fetchFn: SinonStub = stub().callsFake((url: string, init: RequestInit) => {
-    const route = routes[`${init.method} ${url}`]
+const registry = new ZotImageRegistry(config)
+
+function routeFetch(routes: Record<string, Route>): SinonStub {
+  return stub(globalThis, 'fetch').callsFake((url, init = {}) => {
+    const route = routes[`${init.method} ${url as string}`]
     return Promise.resolve(route ? route(init) : new Response(null, { status: 404 }))
   })
-  return { registry: new ZotImageRegistry(config, fetchFn as typeof fetch), fetchFn }
 }
 
 const tags =
@@ -32,8 +33,6 @@ const accepted: Route = () => new Response(null, { status: 202 })
 const base = 'http://marsa-registry:5000/v2/my-app'
 
 describe('ZotImageRegistry.pullCredentialsFor', () => {
-  const { registry } = registryWith({})
-
   it('returns the read-only pull credentials for an image in Marsa registry', () => {
     expect(registry.pullCredentialsFor('registry.demo.marsa.cc/my-app:abc')).toEqual({
       registry: 'registry.demo.marsa.cc',
@@ -52,8 +51,10 @@ describe('ZotImageRegistry.pullCredentialsFor', () => {
 })
 
 describe('ZotImageRegistry.deleteRepository', () => {
+  afterEach(() => restore())
+
   it('deletes the manifest behind every tag, authenticated as marsa-push', async () => {
-    const { registry, fetchFn } = registryWith({
+    const fetchFn = routeFetch({
       [`GET ${base}/tags/list`]: tags('a', 'b'),
       [`HEAD ${base}/manifests/a`]: digest('sha256:aaa'),
       [`HEAD ${base}/manifests/b`]: digest('sha256:bbb'),
@@ -73,15 +74,23 @@ describe('ZotImageRegistry.deleteRepository', () => {
   })
 
   it('treats a repository the registry does not know as already deleted', async () => {
-    const { registry, fetchFn } = registryWith({})
+    const fetchFn = routeFetch({})
 
     await registry.deleteRepository('my-app')
 
     expect(fetchFn.callCount).toBe(1)
   })
 
+  it('bounds every registry request with a timeout', async () => {
+    const fetchFn = routeFetch({})
+
+    await registry.deleteRepository('my-app')
+
+    expect(fetchFn.firstCall.args[1].signal).toBeInstanceOf(AbortSignal)
+  })
+
   it('skips a tag whose manifest another tag already deleted', async () => {
-    const { registry, fetchFn } = registryWith({
+    const fetchFn = routeFetch({
       [`GET ${base}/tags/list`]: tags('a', 'b'),
       [`HEAD ${base}/manifests/a`]: digest('sha256:same'),
       [`DELETE ${base}/manifests/sha256:same`]: accepted,
@@ -94,7 +103,7 @@ describe('ZotImageRegistry.deleteRepository', () => {
   })
 
   it('fails loudly when the registry refuses', async () => {
-    const { registry } = registryWith({
+    routeFetch({
       [`GET ${base}/tags/list`]: () => new Response(null, { status: 403 }),
     })
 
@@ -105,8 +114,6 @@ describe('ZotImageRegistry.deleteRepository', () => {
 })
 
 describe('ZotImageRegistry refs', () => {
-  const { registry } = registryWith({})
-
   it('names the image nodes pull by the public registry host', () => {
     expect(registry.imageRefFor('my-app', 'abc')).toBe('registry.demo.marsa.cc/my-app:abc')
   })

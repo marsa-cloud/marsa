@@ -98,12 +98,17 @@ describe('KubernetesBuildRuntime', () => {
     core.listNamespacedPod.resolves({ items: [{ metadata: { name: 'p-1' } }] })
     core.readNamespacedPodLog.resolves('#1 DONE')
 
-    expect(await runtime.readLogs(ref)).toBe('#1 DONE')
+    expect(await runtime.readLogs(ref, { tailLines: 50 })).toBe('#1 DONE')
     expect(core.listNamespacedPod.firstCall.args[0].labelSelector).toBe(
       `batch.kubernetes.io/job-name=build-${UUID}`,
     )
+    expect(core.readNamespacedPodLog.firstCall.args[0]).toMatchObject({
+      name: 'p-1',
+      tailLines: 50,
+      limitBytes: 1024 * 1024,
+    })
 
     core.listNamespacedPod.resolves({ items: [] })
-    expect(await runtime.readLogs(ref)).toBeNull()
+    expect(await runtime.readLogs(ref, { tailLines: 50 })).toBeNull()
   })
 })

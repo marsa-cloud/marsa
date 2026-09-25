@@ -1287,15 +1287,19 @@ export type ViewBuildLogsV1Data = {
   body?: never
   path: {
     slug: string
-    buildUuid: string
   }
-  query?: never
+  query?: {
+    /**
+     * Trailing log lines to return (default 1000).
+     */
+    tailLines?: number
+  }
   url: '/api/v1/apps/{slug}/builds/{buildUuid}/logs'
 }
 
 export type ViewBuildLogsV1Errors = {
   /**
-   * buildUuid is not a uuid.
+   * buildUuid is not a uuid, or tailLines is out of range (1–5000).
    */
   400: unknown
   /**

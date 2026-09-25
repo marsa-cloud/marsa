@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { BuildRuntime } from '#src/modules/runtime/build-runtime.js'
 import {
+  type BuildLogsOptions,
   type BuildObservation,
   type BuildRef,
   type BuildSpec,
@@ -46,7 +47,8 @@ export class MockBuildRuntime extends BuildRuntime {
     return Promise.resolve({ state })
   }
 
-  readLogs(build: BuildRef): Promise<string | null> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  readLogs(build: BuildRef, _options: BuildLogsOptions): Promise<string | null> {
     return Promise.resolve(
       this.started.has(build.build.uuid) ? `mock build log for ${build.build.uuid}` : null,
     )

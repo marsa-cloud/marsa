@@ -604,7 +604,10 @@ export const zStartBuildV1Response = zBuildSummary
 
 export const zViewBuildLogsV1Path = z.object({
   slug: z.string(),
-  buildUuid: z.string(),
+})
+
+export const zViewBuildLogsV1Query = z.object({
+  tailLines: z.int().gte(1).lte(5000).optional(),
 })
 
 export const zViewBuildLogsV1Response = zViewBuildLogsResponse

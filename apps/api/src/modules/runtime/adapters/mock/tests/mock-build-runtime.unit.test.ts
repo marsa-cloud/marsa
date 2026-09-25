@@ -45,7 +45,9 @@ describe('MockBuildRuntime', () => {
     const started = ref()
     await runtime.start(started, spec)
 
-    expect(await runtime.readLogs(started)).toBe(`mock build log for ${started.build.uuid}`)
-    expect(await runtime.readLogs(ref())).toBeNull()
+    expect(await runtime.readLogs(started, { tailLines: 10 })).toBe(
+      `mock build log for ${started.build.uuid}`,
+    )
+    expect(await runtime.readLogs(ref(), { tailLines: 10 })).toBeNull()
   })
 })

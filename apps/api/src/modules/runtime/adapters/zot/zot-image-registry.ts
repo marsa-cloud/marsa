@@ -1,16 +1,13 @@
+import { assertRegistryOk } from '#src/modules/runtime/adapters/zot/assert-registry-ok.js'
+import {
+  MANIFEST_ACCEPT,
+  REGISTRY_PULL_USER,
+  REGISTRY_PUSH_USER,
+  REGISTRY_REQUEST_TIMEOUT_MS,
+} from '#src/modules/runtime/adapters/zot/zot.constants.js'
 import { ImageRegistry } from '#src/modules/runtime/image-registry.js'
 import type { RegistryCredentials } from '#src/modules/runtime/runtime.types.js'
 import { stripTrailingSlash } from '#src/utils/strip-trailing-slash.js'
-
-export const REGISTRY_PUSH_USER = 'marsa-push'
-export const REGISTRY_PULL_USER = 'marsa-pull'
-
-const MANIFEST_ACCEPT = [
-  'application/vnd.oci.image.index.v1+json',
-  'application/vnd.oci.image.manifest.v1+json',
-  'application/vnd.docker.distribution.manifest.list.v2+json',
-  'application/vnd.docker.distribution.manifest.v2+json',
-].join(', ')
 
 export interface ZotRegistryConfig {
   host: string
@@ -24,10 +21,7 @@ export class ZotImageRegistry extends ImageRegistry {
   private readonly pushHost: string
   private readonly authorization: string
 
-  constructor(
-    private readonly config: ZotRegistryConfig,
-    private readonly fetchFn: typeof fetch = fetch,
-  ) {
+  constructor(private readonly config: ZotRegistryConfig) {
     super()
     this.url = stripTrailingSlash(config.url)
     this.pushHost = new URL(this.url).host
@@ -68,7 +62,7 @@ export class ZotImageRegistry extends ImageRegistry {
     if (response.status === 404) {
       return []
     }
-    assertOk(response, `list the tags of '${repository}'`)
+    assertRegistryOk(response, `list the tags of '${repository}'`)
     const body = (await response.json()) as { tags?: string[] | null }
     return body.tags ?? []
   }
@@ -81,7 +75,7 @@ export class ZotImageRegistry extends ImageRegistry {
     if (response.status === 404) {
       return null
     }
-    assertOk(response, `resolve '${repository}:${tag}'`)
+    assertRegistryOk(response, `resolve '${repository}:${tag}'`)
     const digest = response.headers.get('docker-content-digest')
     if (!digest) {
       throw new Error(`Registry returned no digest for '${repository}:${tag}'`)
@@ -94,19 +88,14 @@ export class ZotImageRegistry extends ImageRegistry {
     if (response.status === 404) {
       return
     }
-    assertOk(response, `delete '${repository}@${digest}'`)
+    assertRegistryOk(response, `delete '${repository}@${digest}'`)
   }
 
   private request(method: string, path: string, headers: Record<string, string> = {}) {
-    return this.fetchFn(`${this.url}${path}`, {
+    return fetch(`${this.url}${path}`, {
       method,
       headers: { Authorization: this.authorization, ...headers },
+      signal: AbortSignal.timeout(REGISTRY_REQUEST_TIMEOUT_MS),
     })
-  }
-}
-
-function assertOk(response: Response, action: string): void {
-  if (!response.ok) {
-    throw new Error(`Registry could not ${action}: HTTP ${response.status}`)
   }
 }

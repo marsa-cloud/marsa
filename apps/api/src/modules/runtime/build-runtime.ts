@@ -1,4 +1,9 @@
-import type { BuildObservation, BuildRef, BuildSpec } from '#src/modules/runtime/runtime.types.js'
+import type {
+  BuildLogsOptions,
+  BuildObservation,
+  BuildRef,
+  BuildSpec,
+} from '#src/modules/runtime/runtime.types.js'
 
 export const BUILD_DEADLINE_SECONDS = 1800
 
@@ -12,5 +17,5 @@ export abstract class BuildRuntime {
   abstract readStatus(build: BuildRef): Promise<BuildObservation>
 
   // Null once the runtime no longer keeps the build's output.
-  abstract readLogs(build: BuildRef): Promise<string | null>
+  abstract readLogs(build: BuildRef, options: BuildLogsOptions): Promise<string | null>
 }
