@@ -31,6 +31,7 @@ DOMAIN=""
 EMAIL=""
 SERVER_URL=""             # agent mode: K3s server URL, e.g. https://10.0.0.5:6443
 TOKEN="${MARSA_K3S_TOKEN:-}"  # agent mode: cluster node-token (env avoids it landing in shell history / ps)
+INSECURE_REGISTRY=""      # agent mode: registry host to trust without TLS verification (--no-tls servers)
 CHART_VERSION=""        # empty → Helm pulls the latest published version (incl. pre-releases)
 IMAGE_TAG="${MARSA_IMAGE_TAG:-}"  # empty → chart default image tag; overridable to pin a build
 MIN_HELM_MAJOR=4        # 4+: --rollback-on-failure (a Helm 4 flag; Helm 3's equivalent is --atomic)
@@ -113,6 +114,9 @@ ${C_BOLD}Agent mode${C_RESET} — join this machine to an existing cluster as a 
   --agent               Join an existing Marsa cluster instead of installing one.
   --server-url <url>    K3s server URL, e.g. https://10.0.0.5:6443   (required with --agent)
   --token <token>       Cluster node-token from the server            (required with --agent)
+  --insecure-registry <host>
+                        Trust <host> without TLS verification. Needed when the server
+                        was installed with --no-tls, so this node can pull built images.
 
   The server's install summary prints a ready-to-paste join command (token filled in).
   In --agent mode the server-only flags (--domain / --email / --no-tls / --chart-version)
@@ -155,6 +159,7 @@ while [ $# -gt 0 ]; do
     --agent)         MODE="agent"; shift ;;
     --server-url)    require_arg_value "$1" "${2:-}"; SERVER_URL="$2"; shift 2 ;;
     --token)         require_arg_value "$1" "${2:-}"; TOKEN="$2"; shift 2 ;;
+    --insecure-registry) require_arg_value "$1" "${2:-}"; INSECURE_REGISTRY="$2"; shift 2 ;;
     --domain)        require_arg_value "$1" "${2:-}"; DOMAIN="$2"; shift 2 ;;
     --email)         require_arg_value "$1" "${2:-}"; EMAIL="$2"; shift 2 ;;
     --chart-version) require_arg_value "$1" "${2:-}"; CHART_VERSION="$2"; shift 2 ;;
@@ -189,6 +194,7 @@ if [ "$MODE" = "agent" ]; then
     die "--server-url '$SERVER_URL' must look like https://<host>:<port> (e.g. https://10.0.0.5:6443)"
   fi
 else
+  [ -z "$INSECURE_REGISTRY" ] || die "--insecure-registry is only valid in --agent mode (--no-tls covers the server)"
   [ -n "$DOMAIN" ] || { usage; echo; die "--domain is required"; }
 
   # Basic domain shape check: at least one dot, no scheme, no path.
@@ -311,21 +317,24 @@ install_k3s_agent() {
   ok "K3s agent is up and has joined the cluster"
 }
 
+# A --no-tls install serves Traefik's self-signed default cert, which containerd refuses on pull.
+# K3s reads registries.yaml per node, so the server and every agent need it.
 write_registry_trust() {
-  # A --no-tls install serves Traefik's self-signed default cert, which containerd refuses on pull.
-  [ "$TLS_ENABLED" = "false" ] || return 0
-  local file="/etc/rancher/k3s/registries.yaml" wanted
-  wanted="$(printf 'configs:\n  "registry.%s":\n    tls:\n      insecure_skip_verify: true\n' "$DOMAIN")"
+  local host="$1" file="/etc/rancher/k3s/registries.yaml" wanted
+  wanted="$(printf 'configs:\n  "%s":\n    tls:\n      insecure_skip_verify: true\n' "$host")"
   if [ -r "$file" ] && [ "$(cat "$file")" = "$wanted" ]; then
     return 0
   fi
   mkdir -p /etc/rancher/k3s
   printf '%s\n' "$wanted" > "$file"
-  ok "Nodes will trust registry.${DOMAIN} without a public certificate (--no-tls)"
+  ok "This node will trust ${host} without a public certificate"
   # K3s reads registries.yaml only at startup.
-  if systemctl is-active --quiet k3s 2>/dev/null; then
-    warn "K3s is already running: restart it (sudo systemctl restart k3s) for nodes to pull built images"
-  fi
+  local unit
+  for unit in k3s k3s-agent; do
+    if systemctl is-active --quiet "$unit" 2>/dev/null; then
+      warn "K3s is already running: restart it (sudo systemctl restart ${unit}) for this node to pull built images"
+    fi
+  done
 }
 
 # --- Helm ---------------------------------------------------------------------
@@ -540,6 +549,9 @@ EOF
 
   local token_file="/var/lib/rancher/k3s/server/node-token" node_token="<node-token>"
   [ -r "$token_file" ] && node_token="$(cat "$token_file")"
+  local registry_flag=""
+  [ "$TLS_ENABLED" = "false" ] && registry_flag=" \\
+            --insecure-registry registry.${DOMAIN}"
 
   cat <<EOF
   • To add a worker node, run this on each new machine (token already filled in):
@@ -547,7 +559,7 @@ EOF
       curl -fsSL https://raw.githubusercontent.com/marsa-cloud/marsa/main/scripts/install.sh \\
         | sudo bash -s -- --agent \\
             --server-url https://<private-ip>:6443 \\
-            --token ${node_token}
+            --token ${node_token}${registry_flag}
 
     Replace <private-ip> with this server's address on the private network the
     nodes share.
@@ -581,6 +593,7 @@ main() {
 
   if [ "$MODE" = "agent" ]; then
     preflight "$@"
+    [ -z "$INSECURE_REGISTRY" ] || write_registry_trust "$INSECURE_REGISTRY"
     install_k3s_agent
     agent_summary
     return
@@ -592,7 +605,7 @@ main() {
     export KUBECONFIG="${KUBECONFIG:-$K3S_KUBECONFIG}"
     kubectl get nodes >/dev/null 2>&1 || die "No reachable cluster at KUBECONFIG=$KUBECONFIG"
   else
-    write_registry_trust
+    [ "$TLS_ENABLED" = "true" ] || write_registry_trust "registry.${DOMAIN}"
     install_k3s
   fi
   install_helm
