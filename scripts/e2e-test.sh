@@ -8,6 +8,8 @@ NS="${MARSA_NAMESPACE:-marsa}"
 KEDA_NS="${MARSA_KEDA_NAMESPACE:-keda}"
 TRAEFIK_NS="${MARSA_TRAEFIK_NAMESPACE:-kube-system}"
 APP_SLUG="e2e-app"
+DB_SLUG="e2e-db"
+DB_NAME="e2e_db"
 APP_IMAGE="nginx:1.27"
 PROJECT_SLUG="e2e"
 ENV_SLUG="dev"
@@ -234,6 +236,49 @@ for _ in $(seq 1 30); do
 done
 [ -n "$reachable" ] || fail app-reachable "GET https://${APP_SLUG}.${BASE_DOMAIN}${PORT_SUFFIX}/ -> ${HTTP_STATUS}; body: ${HTTP_BODY}"
 echo "  ${APP_SLUG}.${BASE_DOMAIN} reachable over HTTPS (200)"
+
+echo "== stage: create a database via API =="
+http -X POST "${api}/databases" -H 'Content-Type: application/json' -H "Cookie: ${cookie}" \
+  -d "{\"environmentUuid\":\"${env_uuid}\",\"slug\":\"${DB_SLUG}\",\"engine\":\"postgres\",\"version\":\"17\",\"storageGib\":1}" || true
+case "$HTTP_STATUS" in 2??) : ;; *) fail database "POST /databases -> ${HTTP_STATUS}; body: ${HTTP_BODY}" ;; esac
+
+echo "== stage: database StatefulSet, Service, Secret and PVC exist =="
+kubectl -n "$APPS_NS" rollout status "statefulset/${DB_SLUG}" --timeout=180s \
+  || fail database "statefulset ${DB_SLUG} did not become ready"
+kubectl -n "$APPS_NS" get "service/${DB_SLUG}" >/dev/null || fail database "service ${DB_SLUG} missing"
+kubectl -n "$APPS_NS" get "secret/${DB_SLUG}-credentials" >/dev/null || fail database "credentials secret missing"
+kubectl -n "$APPS_NS" get "pvc/data-${DB_SLUG}-0" >/dev/null || fail database "pvc data-${DB_SLUG}-0 missing"
+
+echo "== stage: a database gets no HTTP routing =="
+ingress_route="$(kubectl -n "$APPS_NS" get ingressroutes.traefik.io "$DB_SLUG" --ignore-not-found -o name)" \
+  || fail database "could not query IngressRoutes"
+[ -z "$ingress_route" ] || fail database "a database must not get an IngressRoute"
+scaled_object="$(kubectl -n "$APPS_NS" get httpscaledobjects.http.keda.sh "$DB_SLUG" --ignore-not-found -o name)" \
+  || fail database "could not query HTTPScaledObjects"
+[ -z "$scaled_object" ] || fail database "a database must not get an HTTPScaledObject"
+
+echo "== stage: data survives a pod restart =="
+kubectl -n "$APPS_NS" exec "${DB_SLUG}-0" -- \
+  psql -U postgres -d "$DB_NAME" -c 'create table survivors(id int); insert into survivors values (1);' \
+  >/dev/null || fail database "seed insert failed"
+kubectl -n "$APPS_NS" delete pod "${DB_SLUG}-0" >/dev/null
+kubectl -n "$APPS_NS" rollout status "statefulset/${DB_SLUG}" --timeout=180s \
+  || fail database "statefulset ${DB_SLUG} did not recover"
+rows="$(kubectl -n "$APPS_NS" exec "${DB_SLUG}-0" -- \
+  psql -U postgres -d "$DB_NAME" -tAc 'select count(*) from survivors' | tr -d '[:space:]')"
+[ "$rows" = 1 ] || fail database "expected the row to survive the restart, got '${rows}'"
+
+echo "== stage: deleting the database removes its resources =="
+http -X DELETE "${api}/databases/${DB_SLUG}" -H "Cookie: ${cookie}" || true
+[ "$HTTP_STATUS" = 204 ] || fail database "DELETE /databases/${DB_SLUG} -> ${HTTP_STATUS}; body: ${HTTP_BODY}"
+for _ in $(seq 1 30); do
+  kubectl -n "$APPS_NS" get "pvc/data-${DB_SLUG}-0" >/dev/null 2>&1 || break
+  sleep 2
+done
+kubectl -n "$APPS_NS" get "pvc/data-${DB_SLUG}-0" >/dev/null 2>&1 \
+  && fail database "pvc data-${DB_SLUG}-0 outlived the database"
+kubectl -n "$APPS_NS" get "statefulset/${DB_SLUG}" >/dev/null 2>&1 \
+  && fail database "statefulset ${DB_SLUG} outlived the database"
 
 echo "== stage: environment delete is blocked while it has an app =="
 env_url="${api}/projects/${PROJECT_SLUG}/environments/${ENV_SLUG}"

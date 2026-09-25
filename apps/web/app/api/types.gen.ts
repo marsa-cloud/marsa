@@ -475,6 +475,99 @@ export type UpdateAppResponse = {
   nodePin: NodePin | null
 }
 
+export type DatabaseEngine = 'postgres'
+
+export type CreateDatabaseCommand = {
+  /**
+   * Environment the database lives in.
+   */
+  environmentUuid: string
+  /**
+   * In-cluster hostname + K8s object name.
+   */
+  slug: string
+  engine: DatabaseEngine
+  /**
+   * Major version, pinned at creation.
+   */
+  version: string
+  /**
+   * Requested volume size. Recorded, but local-path does not enforce it (#209).
+   */
+  storageGib?: number
+  /**
+   * Node the data lives on. Set at creation, immutable afterwards.
+   */
+  nodePin?: NodePin
+}
+
+export type CreateDatabaseResponse = {
+  slug: string
+  engine: DatabaseEngine
+  version: string
+}
+
+export type ViewDatabaseIndexQueryKey = {
+  uuid: string
+}
+
+export type ViewDatabaseIndexPaginationQuery = {
+  limit?: number
+  key?: ViewDatabaseIndexQueryKey | null
+}
+
+export type DatabaseStatus = 'provisioning' | 'ready' | 'failed' | 'not_found'
+
+export type DatabaseProjectRef = {
+  slug: string
+  name: string
+}
+
+export type DatabaseEnvironmentRef = {
+  slug: string
+  name: string
+}
+
+export type DatabaseSummary = {
+  slug: string
+  engine: DatabaseEngine
+  version: string
+  status: DatabaseStatus
+  project: DatabaseProjectRef
+  environment: DatabaseEnvironmentRef
+  createdAt: string
+  updatedAt: string
+}
+
+export type ViewDatabaseIndexResponseMeta = {
+  /**
+   * Key for the next page, or null on the last page. Opaque — send it back as-is.
+   */
+  next: ViewDatabaseIndexQueryKey | null
+}
+
+export type ViewDatabaseIndexResponse = {
+  /**
+   * The items for the current page
+   */
+  items: Array<DatabaseSummary>
+  meta: ViewDatabaseIndexResponseMeta
+}
+
+export type ViewDatabaseDetailResponse = {
+  slug: string
+  engine: DatabaseEngine
+  version: string
+  image: string
+  storageGib: number
+  status: DatabaseStatus
+  nodePin: NodePin | null
+  project: DatabaseProjectRef
+  environment: DatabaseEnvironmentRef
+  createdAt: string
+  updatedAt: string
+}
+
 export type NodeSummary = {
   name: string
   /**
@@ -1301,6 +1394,141 @@ export type ViewAppLogsV1Responses = {
 }
 
 export type ViewAppLogsV1Response = ViewAppLogsV1Responses[keyof ViewAppLogsV1Responses]
+
+export type ViewDatabaseIndexV1Data = {
+  body?: never
+  path?: never
+  query?: {
+    pagination?: ViewDatabaseIndexPaginationQuery
+  }
+  url: '/api/v1/databases'
+}
+
+export type ViewDatabaseIndexV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+}
+
+export type ViewDatabaseIndexV1Responses = {
+  200: ViewDatabaseIndexResponse
+}
+
+export type ViewDatabaseIndexV1Response =
+  ViewDatabaseIndexV1Responses[keyof ViewDatabaseIndexV1Responses]
+
+export type CreateDatabaseV1Data = {
+  body: CreateDatabaseCommand
+  path?: never
+  query?: never
+  url: '/api/v1/databases'
+}
+
+export type CreateDatabaseV1Errors = {
+  /**
+   * Malformed body, or an invalid slug / version / size.
+   */
+  400: unknown
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
+   * No environment with that uuid, or an unavailable version.
+   */
+  404: unknown
+  /**
+   * An app or database in that environment owns the name.
+   */
+  409: unknown
+  /**
+   * Kubernetes provisioning failed; nothing was created.
+   */
+  502: unknown
+}
+
+export type CreateDatabaseV1Responses = {
+  201: CreateDatabaseResponse
+}
+
+export type CreateDatabaseV1Response = CreateDatabaseV1Responses[keyof CreateDatabaseV1Responses]
+
+export type DeleteDatabaseV1Data = {
+  body?: never
+  path: {
+    slug: string
+  }
+  query?: never
+  url: '/api/v1/databases/{slug}'
+}
+
+export type DeleteDatabaseV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
+   * No database with that slug.
+   */
+  404: unknown
+  /**
+   * Kubernetes teardown failed; the database was kept.
+   */
+  502: unknown
+}
+
+export type DeleteDatabaseV1Responses = {
+  /**
+   * The database, its Kubernetes resources and its data were removed.
+   */
+  204: void
+}
+
+export type DeleteDatabaseV1Response = DeleteDatabaseV1Responses[keyof DeleteDatabaseV1Responses]
+
+export type ViewDatabaseDetailV1Data = {
+  body?: never
+  path: {
+    slug: string
+  }
+  query?: never
+  url: '/api/v1/databases/{slug}'
+}
+
+export type ViewDatabaseDetailV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
+   * No database with that slug.
+   */
+  404: unknown
+}
+
+export type ViewDatabaseDetailV1Responses = {
+  200: ViewDatabaseDetailResponse
+}
+
+export type ViewDatabaseDetailV1Response =
+  ViewDatabaseDetailV1Responses[keyof ViewDatabaseDetailV1Responses]
 
 export type ViewNodeIndexV1Data = {
   body?: never

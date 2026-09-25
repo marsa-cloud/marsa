@@ -8,7 +8,8 @@ import {
   ViewReleaseIndexResponse,
 } from '#src/app/release/use-cases/view-release-index/view-release-index.response.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
-import { type AppRef, RolloutStatus } from '#src/modules/runtime/runtime.types.js'
+import { RolloutStatus } from '#src/modules/runtime/runtime.enums.js'
+import { type AppRef } from '#src/modules/runtime/runtime.types.js'
 import { keysetLimit } from '#src/utils/pagination/pagination-mapper.js'
 
 const TERMINAL_STATUSES: ReadonlySet<DeployStatus> = new Set([

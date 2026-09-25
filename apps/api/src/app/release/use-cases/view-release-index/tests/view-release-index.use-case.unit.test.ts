@@ -11,7 +11,7 @@ import { ViewReleaseIndexQueryBuilder } from '#src/app/release/use-cases/view-re
 import { ViewReleaseIndexRepository } from '#src/app/release/use-cases/view-release-index/view-release-index.repository.js'
 import { ViewReleaseIndexUseCase } from '#src/app/release/use-cases/view-release-index/view-release-index.use-case.js'
 import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
-import { RolloutStatus } from '#src/modules/runtime/runtime.types.js'
+import { RolloutStatus } from '#src/modules/runtime/runtime.enums.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { generateUuid } from '#src/utils/uuid.js'
 

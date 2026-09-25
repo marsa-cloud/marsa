@@ -3,6 +3,8 @@ import { eq } from 'drizzle-orm'
 import { expect } from 'expect'
 import request from 'supertest'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
+import { DatabaseBuilder } from '#src/app/database-management/entities/database.builder.js'
+import { databaseTable } from '#src/app/database-management/entities/database.table.js'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
 import type { EnvironmentUuid } from '#src/app/environment/entities/environment.uuid.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
@@ -112,6 +114,19 @@ describe('POST /api/v1/apps (e2e)', () => {
       .expect(400)
   })
 
+  it('rejects a slug starting with a digit with 400', async () => {
+    await request(setup.httpServer)
+      .post('/api/v1/apps')
+      .set('Cookie', cookie)
+      .send({
+        environmentUuid: environment.uuid,
+        slug: '1-create-app',
+        image: 'nginx:1.27',
+        containerPort: 80,
+      })
+      .expect(400)
+  })
+
   it('rejects an unknown environment with 404', async () => {
     await request(setup.httpServer)
       .post('/api/v1/apps')
@@ -123,6 +138,25 @@ describe('POST /api/v1/apps (e2e)', () => {
         containerPort: 80,
       })
       .expect(404)
+  })
+
+  it('rejects a name a database in the same environment already uses with 409', async () => {
+    await setup.db
+      .insert(databaseTable)
+      .values(
+        new DatabaseBuilder().withEnvironmentUuid(environment.uuid).withSlug('collides').build(),
+      )
+
+    await request(setup.httpServer)
+      .post('/api/v1/apps')
+      .set('Cookie', cookie)
+      .send({
+        environmentUuid: environment.uuid,
+        slug: 'collides',
+        image: 'nginx:1.27',
+        containerPort: 80,
+      })
+      .expect(409)
   })
 
   it('rejects an unauthenticated request with 401', async () => {

@@ -2,7 +2,7 @@ import { before, describe, it } from 'node:test'
 import type { V1Deployment, V1DeploymentCondition } from '@kubernetes/client-node'
 import { expect } from 'expect'
 import { mapRolloutStatus } from '#src/modules/runtime/adapters/kubernetes/app/rollout/map-rollout-status.js'
-import { RolloutStatus } from '#src/modules/runtime/runtime.types.js'
+import { RolloutStatus } from '#src/modules/runtime/runtime.enums.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 function deployment(conditions: V1DeploymentCondition[]): V1Deployment {

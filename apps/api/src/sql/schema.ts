@@ -1,5 +1,7 @@
 export * from '#src/app/app-management/entities/app.table.js'
 export * from '#src/app/auth/entities/oauth-state.table.js'
+export * from '#src/app/database-management/entities/database.table.js'
+export { databaseEngineEnum } from '#src/app/database-management/enums/database-engine.enum.js'
 export * from '#src/app/environment/entities/environment.table.js'
 export * from '#src/app/github-app/entities/github-app.table.js'
 export * from '#src/app/github-app/entities/github-installation.table.js'

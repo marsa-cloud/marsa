@@ -2,10 +2,10 @@ import { describe, it } from 'node:test'
 import { expect } from 'expect'
 import { RELEASE_UUID_ANNOTATION } from '#src/modules/runtime/adapters/kubernetes/app/app.constants.js'
 import { renderManifests } from '#src/modules/runtime/adapters/kubernetes/app/render/render-manifests.js'
+import { NodePinStrategy } from '#src/modules/runtime/runtime.enums.js'
 import {
   type AppDeploySpec,
   type NodePinSpec,
-  NodePinStrategy,
   type RegistryCredentials,
 } from '#src/modules/runtime/runtime.types.js'
 import { generateUuid, type Uuid } from '#src/utils/uuid.js'

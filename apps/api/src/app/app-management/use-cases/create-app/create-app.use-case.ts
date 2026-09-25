@@ -5,10 +5,13 @@ import { CreateAppCommand } from '#src/app/app-management/use-cases/create-app/c
 import { CreateAppRepository } from '#src/app/app-management/use-cases/create-app/create-app.repository.js'
 import { CreateAppResponse } from '#src/app/app-management/use-cases/create-app/create-app.response.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
+import type { Database } from '#src/modules/database/drizzle.factory.js'
+import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 
 @Injectable()
 export class CreateAppUseCase {
   constructor(
+    @InjectDatabase() private readonly db: Database,
     private readonly repository: CreateAppRepository,
     private readonly credentialsCipher: ImagePullCredentialsCipher,
     private readonly config: ConfigService,
@@ -31,13 +34,25 @@ export class CreateAppUseCase {
       .withImagePullCredentialsEnc(credentials ? this.credentialsCipher.seal(credentials) : null)
       .build()
 
-    const outcome = await this.repository.insert(app)
-    if (outcome === 'environment-missing') {
-      throw new NotFoundException(`Environment '${command.environmentUuid}' was not found.`)
-    }
-    if (outcome === 'slug-taken') {
-      throw new ConflictException(`An app with slug '${command.slug}' already exists.`)
-    }
+    await this.db.transaction(async (tx) => {
+      const placement = await this.repository.findEnvironmentForUpdate(tx, command.environmentUuid)
+      if (!placement) {
+        throw new NotFoundException(`Environment '${command.environmentUuid}' was not found.`)
+      }
+
+      // Apps and databases share the environment's namespace, so one name serves both.
+      const taken = await this.repository.isNameTaken(tx, command.environmentUuid, command.slug)
+      if (taken) {
+        throw new ConflictException(
+          `An app or database named '${command.slug}' already exists in this environment.`,
+        )
+      }
+
+      const outcome = await this.repository.insert(tx, app)
+      if (outcome === 'slug-taken') {
+        throw new ConflictException(`An app with slug '${command.slug}' already exists.`)
+      }
+    })
 
     return new CreateAppResponse(app, this.config.getOrThrow<string>('MARSA_BASE_DOMAIN'))
   }

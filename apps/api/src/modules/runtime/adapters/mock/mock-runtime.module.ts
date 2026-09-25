@@ -1,8 +1,10 @@
 import { Global, Module } from '@nestjs/common'
 import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
+import { MockDatabaseRuntime } from '#src/modules/runtime/adapters/mock/mock-database-runtime.js'
 import { MockEnvironmentRuntime } from '#src/modules/runtime/adapters/mock/mock-environment-runtime.js'
 import { MockNodeRuntime } from '#src/modules/runtime/adapters/mock/mock-node-runtime.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
+import { DatabaseRuntime } from '#src/modules/runtime/database-runtime.js'
 import { EnvironmentRuntime } from '#src/modules/runtime/environment-runtime.js'
 import { NodeRuntime } from '#src/modules/runtime/node-runtime.js'
 
@@ -10,9 +12,10 @@ import { NodeRuntime } from '#src/modules/runtime/node-runtime.js'
 @Module({
   providers: [
     { provide: AppRuntime, useClass: MockAppRuntime },
+    { provide: DatabaseRuntime, useClass: MockDatabaseRuntime },
     { provide: EnvironmentRuntime, useClass: MockEnvironmentRuntime },
     { provide: NodeRuntime, useClass: MockNodeRuntime },
   ],
-  exports: [AppRuntime, EnvironmentRuntime, NodeRuntime],
+  exports: [AppRuntime, DatabaseRuntime, EnvironmentRuntime, NodeRuntime],
 })
 export class MockRuntimeModule {}

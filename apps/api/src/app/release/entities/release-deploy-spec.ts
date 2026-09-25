@@ -1,13 +1,7 @@
-import type { NodePin } from '#src/app/app-management/entities/node-pin.js'
-import { PinStrategy } from '#src/app/app-management/enums/pin-strategy.enum.js'
+import { nodePinSpecOf } from '#src/app/app-management/entities/node-pin.js'
 import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import type { Release } from '#src/app/release/entities/release.table.js'
-import {
-  type AppDeploySpec,
-  type NodePinSpec,
-  NodePinStrategy,
-  type RegistryCredentials,
-} from '#src/modules/runtime/runtime.types.js'
+import { type AppDeploySpec, type RegistryCredentials } from '#src/modules/runtime/runtime.types.js'
 
 export interface DeploySpecOptions {
   baseDomain: string
@@ -32,13 +26,4 @@ export function deploySpecOf(
     nodePin: nodePinSpecOf(app.nodePin),
     ...(credentials ? { credentials } : {}),
   }
-}
-
-function nodePinSpecOf(nodePin: NodePin | null): NodePinSpec | null {
-  if (!nodePin) {
-    return null
-  }
-  const strategy =
-    nodePin.strategy === PinStrategy.Required ? NodePinStrategy.Required : NodePinStrategy.Preferred
-  return { key: nodePin.key, values: nodePin.values, strategy }
 }

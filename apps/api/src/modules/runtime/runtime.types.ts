@@ -1,3 +1,4 @@
+import type { NodePinStrategy } from '#src/modules/runtime/runtime.enums.js'
 import type { Uuid } from '#src/utils/uuid.js'
 
 export interface EnvironmentRef {
@@ -7,11 +8,6 @@ export interface EnvironmentRef {
 
 export interface AppRef extends EnvironmentRef {
   app: { slug: string }
-}
-
-export enum NodePinStrategy {
-  Required = 'required',
-  Preferred = 'preferred',
 }
 
 export interface NodePinSpec {
@@ -39,14 +35,6 @@ export interface AppDeploySpec {
   credentials?: RegistryCredentials
 }
 
-// NotFound is absence of observation, not a state — never persist a terminal outcome from it.
-export enum RolloutStatus {
-  Complete = 'complete',
-  Failed = 'failed',
-  Progressing = 'progressing',
-  NotFound = 'not_found',
-}
-
 export interface AppHealth {
   found: boolean
   desiredReplicas: number
@@ -72,4 +60,29 @@ export interface ClusterNode {
   name: string
   labels: Record<string, string>
   ready: boolean
+}
+
+export interface DatabaseRef extends EnvironmentRef {
+  database: { slug: string }
+}
+
+// Decrypted, held in memory only for the length of a provision (AgDR-0036).
+export interface DatabaseCredentials {
+  user: string
+  password: string
+  database: string
+}
+
+export interface DatabaseDeploySpec {
+  image: string
+  port: number
+  dataMountPath: string
+  env: Record<string, string>
+  // Env the engine image reads its init values from, keyed by published-variable name.
+  credentialEnv: Array<{ name: string; key: string }>
+  publishedVariables: Record<string, string>
+  storageGib: number
+  storageClass: string
+  readinessExec: string[]
+  nodePin: NodePinSpec | null
 }

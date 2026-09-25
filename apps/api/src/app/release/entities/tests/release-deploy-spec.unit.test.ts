@@ -5,7 +5,7 @@ import { PinStrategy } from '#src/app/app-management/enums/pin-strategy.enum.js'
 import { AppPlacementBuilder } from '#src/app/app-management/queries/app-placement.builder.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { deploySpecOf } from '#src/app/release/entities/release-deploy-spec.js'
-import { NodePinStrategy } from '#src/modules/runtime/runtime.types.js'
+import { NodePinStrategy } from '#src/modules/runtime/runtime.enums.js'
 
 describe('deploySpecOf', () => {
   const shipped = new AppBuilder()

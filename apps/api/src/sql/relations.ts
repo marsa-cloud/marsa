@@ -12,6 +12,14 @@ export const relations = defineRelations(schema, (r) => ({
       optional: false,
     }),
     apps: r.many.appTable(),
+    databases: r.many.databaseTable(),
+  },
+  databaseTable: {
+    environment: r.one.environmentTable({
+      from: r.databaseTable.environmentUuid,
+      to: r.environmentTable.uuid,
+      optional: false,
+    }),
   },
   appTable: {
     environment: r.one.environmentTable({

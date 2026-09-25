@@ -6,6 +6,7 @@ const { data: user } = useCurrentUser()
 const items = computed<NavigationMenuItem[]>(() => [
   { label: 'Dashboard', icon: 'i-lucide-layout-dashboard', to: '/' },
   { label: 'Apps', icon: 'i-lucide-box', to: '/apps' },
+  { label: 'Databases', icon: 'i-lucide-database', to: '/databases' },
   ...(user.value?.role === 'operator'
     ? [{ label: 'Team', icon: 'i-lucide-users', to: '/team' }]
     : []),

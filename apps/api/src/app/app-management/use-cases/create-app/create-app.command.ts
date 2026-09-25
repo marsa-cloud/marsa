@@ -41,7 +41,7 @@ export class CreateAppCommand {
   @IsString()
   @IsNotEmpty()
   @MaxLength(SLUG_MAX_LENGTH)
-  @Matches(SLUG_PATTERN, { message: 'slug must be a valid DNS-1123 label' })
+  @Matches(SLUG_PATTERN, { message: 'slug must be a valid DNS-1035 label' })
   slug!: string
 
   @ApiProperty({ type: String, example: 'nginx:1.27', description: 'Fully-qualified image ref.' })
