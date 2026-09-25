@@ -127,7 +127,7 @@ AgDRs, numbered when each PR opens:
   - `deleteRepository(appSlug)`. The Zot adapter deletes every tag through the OCI distribution API
     at `MARSA_REGISTRY_URL` as `marsa-push`; Zot GC then reclaims blobs and drops the empty repo.
     Idempotent: a missing repo counts as success.
-  - Mock adapter for tests. `delete-app` calls `deleteRepository` last, after `AppRuntime.destroy`.
+  - Mock adapter for tests. `delete-app` calls `deleteRepository` last, after `AppRuntime.destroy` and after cancelling the app's running builds (a build left running would push after the delete and recreate the repository).
 
 ### Installer / k3d / e2e (marsa)
 
@@ -150,7 +150,7 @@ AgDRs, numbered when each PR opens:
 app.source          jsonb NULL   { type: 'github', installationUuid, repo: 'owner/name',
                                    branch, rootDir: '.', dockerfilePath: 'Dockerfile' }
 app.image           varchar NULL (was NOT NULL)
-CHECK (image IS NOT NULL OR source IS NOT NULL)
+CHECK (image IS NOT NULL OR source IS NOT NULL)   -- not XOR: a built app has both (see D7)
 INDEX app_source_repo_branch ON app ((source->>'repo'), (source->>'branch'))
 
 build
@@ -169,7 +169,7 @@ build
 release.build_uuid  uuid NULL → build.uuid
 ```
 
-`build` lives in a new `build` feature (`src/app/build/`) that owns the table, enums, use-cases and
+`build` lives in a new `build-management` feature (`src/app/build-management/`) that owns the table, enums, use-cases and
 the sweeper. `ReleaseTrigger.Webhook` is used for push-triggered releases; builds triggered by
 create or manual rebuild produce `ReleaseTrigger.Manual` releases.
 
@@ -256,24 +256,28 @@ The api allows cross-feature imports only of `entities/`, `queries/`, `enums/`, 
 `events/`, never another feature's services or use-cases (AgDR-0040, AgDR-0046). So starting a build
 is **not** a shared use-case:
 
-- Pure pieces live in `build/entities/`: `imageRefOf(registryHost, appSlug, commitSha)`,
+- Pure pieces live in `build-management/entities/`: `imageRefOf(registryHost, appSlug, commitSha)`,
   `buildSpecOf(app, build, gitToken, registryHost)`, and `readableGitHubError(error)`.
 - Every use-case that starts a build does its own writes in its own transaction and calls the
-  ports (`GithubClient`, `BuildRuntime`) itself. These are rebuild and receive-push (in `build/`) and
+  ports (`GithubClient`, `BuildRuntime`) itself. These are rebuild and receive-push (in `build-management/`) and
   create-app (in `app-management/`, which may import `build`'s table and entities).
-- Inside `build/`, rebuild and receive-push share a `build/services/build-starter.service.ts`.
+- Inside `build-management/`, rebuild and receive-push share `BuildStarter`, a service with its own
+  module under `build-management/services/build-starter/`.
 
 ### Starting a build (the shared sequence)
 
-1. `tx`: lock the app (`FOR UPDATE`). Set its `running` builds to `cancelled`. Insert the new build
-   as `running`.
-2. Mint the installation token (`GithubClient.getInstallationToken`) for `source.installationUuid`.
-3. Runtime last: `BuildRuntime.cancel` for each cancelled build, then
-   `BuildRuntime.start(buildSpecOf(…))`.
-4. If step 2 or 3 throws, still inside the outer transaction, set the new build to `failed` with
-   `readableGitHubError(error)` ("installation cannot access owner/name", "token mint failed: …") or
-   the runtime error. Steps 2–3 write nothing to the DB, so no savepoint is needed; the
-   cancellations stay committed.
+1. Before any lock: mint the installation token (`GithubClient.getInstallationToken`) for
+   `source.installationUuid`, and (manual rebuild) resolve the branch head. A slow GitHub never
+   holds the app row lock, and the token is minted once per build.
+2. `tx`: lock the app (`FOR UPDATE`) and re-check that its repo and branch are the ones just
+   resolved (409 otherwise). Set its `running` builds to `cancelled`. Insert the new build as
+   `running`.
+3. Runtime last: `BuildRuntime.cancel` for each cancelled build (before anything that can fail, so
+   a superseded Job is never left running), then `BuildRuntime.start(…)`.
+4. If step 3 throws, still inside the outer transaction, set the new build to `failed` with the
+   runtime error. Step 3 writes nothing to the DB, so no savepoint is needed; the cancellations
+   stay committed. A token or branch failure in step 1 happens before any row exists and is
+   returned as 502 (GitHub unreachable) or 422 (branch missing or not accessible).
 
 **`CompleteBuildUseCase.execute(buildUuid, observation)`**
 
@@ -292,8 +296,9 @@ is **not** a shared use-case:
 
 **`BuildSweeper`**: `@Cron('*/5 * * * * *', { name: 'build-sweep', waitForCompletion: true })`.
 
-1. List `running` builds (via the partial index).
-2. For each, call `BuildRuntime.readStatus` and, if it isn't `running`, call `CompleteBuildUseCase`.
+1. Page through `running` builds by uuid (`SWEEP_PAGE_SIZE` per page).
+2. Observe each page with bounded concurrency (`SWEEP_CONCURRENCY`): call `BuildRuntime.readStatus`
+   and, if it isn't `running`, call `CompleteBuildUseCase`.
 3. A build still `running` more than `activeDeadlineSeconds + 5m` after `created_at` is completed as
    `failed: "build exceeded its deadline"` regardless of the observation.
 4. Errors are logged per build and never stop the sweep.
@@ -334,9 +339,11 @@ ref>`, **and** whose `source.installationUuid` maps to `installation.id` in the 
 5. Return 202 with `{ builds: [{ appSlug, buildUuid }] }` (an empty list is fine).
 
 GitHub delivery retries: a redelivered push for a commit whose build already exists or has
-finished must not start a second build. Receive-push skips an app whose newest build has the same
-`commit_sha` and is `running` or `succeeded`. The manual rebuild does not skip; rebuilding the same
-commit is its point.
+finished must not start a second build. Receive-push skips an app that has **any** build for the
+same `commit_sha`, whatever its status. Checking only the newest build would let a redelivery after
+a failure, or after a newer commit has built, rebuild and deploy stale code. An index on
+`build (app_uuid, commit_sha)` backs the check. Retrying a failed commit is a manual rebuild, which
+does not skip; rebuilding the same commit is its point.
 
 ---
 
