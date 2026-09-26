@@ -5,6 +5,13 @@ export interface InstallationTokenParams {
   installationId: string
 }
 
+/** Inputs for resolving a branch's head commit with an installation token. */
+export interface BranchHeadParams {
+  token: string
+  repo: string
+  branch: string
+}
+
 /** Raw GitHub App manifest-conversion response (snake_case, GitHub's shape). */
 export interface GitHubManifestConversionResponse {
   id: number

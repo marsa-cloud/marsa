@@ -1,5 +1,6 @@
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import type { App } from '#src/app/app-management/entities/app.table.js'
+import type { BuildUuid } from '#src/app/build-management/entities/build.uuid.js'
 import type { Release } from '#src/app/release/entities/release.table.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import { type ReleaseSnapshot, snapshotOf } from '#src/app/release/entities/release-snapshot.js'
@@ -19,6 +20,7 @@ export class ReleaseBuilder {
       appUuid: app.uuid,
       ...snapshotOf(app),
       sourceReleaseUuid: null,
+      buildUuid: null,
       triggeredBy: ReleaseTrigger.Manual,
       deployStatus: DeployStatus.Pending,
       createdAt: now,
@@ -48,6 +50,11 @@ export class ReleaseBuilder {
 
   withSourceReleaseUuid(sourceReleaseUuid: ReleaseUuid | null): this {
     this.release.sourceReleaseUuid = sourceReleaseUuid
+    return this
+  }
+
+  withBuildUuid(buildUuid: BuildUuid | null): this {
+    this.release.buildUuid = buildUuid
     return this
   }
 

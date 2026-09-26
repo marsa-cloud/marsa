@@ -1,4 +1,4 @@
-import type { NodePinStrategy } from '#src/modules/runtime/runtime.enums.js'
+import type { BuildState, NodePinStrategy } from '#src/modules/runtime/runtime.enums.js'
 import type { Uuid } from '#src/utils/uuid.js'
 
 export interface EnvironmentRef {
@@ -86,3 +86,25 @@ export interface DatabaseDeploySpec {
   readinessExec: string[]
   nodePin: NodePinSpec | null
 }
+
+export interface BuildRef {
+  build: { uuid: Uuid<'Build'> }
+  app: { slug: string }
+}
+
+export interface BuildSpec {
+  repoUrl: string
+  commitSha: string
+  rootDir: string
+  dockerfilePath: string
+  gitToken: string
+  pushRef: string
+}
+
+export interface BuildLogsOptions {
+  tailLines: number
+}
+
+export type BuildObservation =
+  | { state: BuildState.Running | BuildState.Succeeded | BuildState.NotFound }
+  | { state: BuildState.Failed; reason: string }

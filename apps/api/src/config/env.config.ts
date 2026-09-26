@@ -3,6 +3,9 @@ import Joi from 'joi'
 /** Used by `entrypoints/api.ts` when `AUTH_COOKIE_NAME` is unset. */
 export const DEFAULT_AUTH_COOKIE_NAME = 'marsa_session'
 
+const requiredOnKubernetes = <T extends Joi.Schema>(schema: T): T =>
+  schema.when('MARSA_RUNTIME', { is: 'kubernetes', then: Joi.required() }) as T
+
 /**
  * Single Joi schema validating every env var the api reads (AgDR-0020),
  * registered once via `ConfigModule.forRoot({ validationSchema })`. Feature-local
@@ -30,6 +33,11 @@ export const envValidationSchema = Joi.object({
   // A volume cannot change storage class in place, so a fresh install must be able to pick
   // another backend on day one (#210).
   MARSA_DATABASE_STORAGE_CLASS: Joi.string().default('local-path'),
+  // Public pull host (`registry.<domain>`, no scheme) and the in-cluster url pushes go to (#78).
+  MARSA_REGISTRY_HOST: requiredOnKubernetes(Joi.string().hostname()),
+  MARSA_REGISTRY_URL: requiredOnKubernetes(Joi.string().uri({ scheme: ['http', 'https'] })),
+  MARSA_REGISTRY_PUSH_PASSWORD: requiredOnKubernetes(Joi.string()),
+  MARSA_REGISTRY_PULL_PASSWORD: requiredOnKubernetes(Joi.string()),
   VERSION: Joi.string().default('0.0.0'),
   COMMIT: Joi.string().optional(),
 })

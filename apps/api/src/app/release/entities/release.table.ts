@@ -2,6 +2,8 @@ import { sql } from 'drizzle-orm'
 import { type AnyPgColumn, integer, jsonb, pgTable, text, uuid, varchar } from 'drizzle-orm/pg-core'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
 import type { AppUuid } from '#src/app/app-management/entities/app.uuid.js'
+import { buildTable } from '#src/app/build-management/entities/build.table.js'
+import type { BuildUuid } from '#src/app/build-management/entities/build.uuid.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import { DeployStatus, deployStatusEnum } from '#src/app/release/enums/deploy-status.enum.js'
 import { ReleaseTrigger, releaseTriggerEnum } from '#src/app/release/enums/release-trigger.enum.js'
@@ -25,6 +27,9 @@ export const releaseTable = pgTable('release', {
   sourceReleaseUuid: uuid('source_release_uuid')
     .$type<ReleaseUuid>()
     .references((): AnyPgColumn => releaseTable.uuid, { onDelete: 'set null' }),
+  buildUuid: uuid('build_uuid')
+    .$type<BuildUuid>()
+    .references(() => buildTable.uuid, { onDelete: 'set null' }),
   triggeredBy: releaseTriggerEnum('triggered_by').notNull().default(ReleaseTrigger.Manual),
   deployStatus: deployStatusEnum('deploy_status').notNull().default(DeployStatus.Pending),
   ...timestamps,

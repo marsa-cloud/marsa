@@ -20,7 +20,17 @@ done
 
 here="$(cd "$(dirname "$0")" && pwd)"
 
-k3d cluster create "$CLUSTER" -p "${HTTP_PORT}:80@loadbalancer" -p "${HTTPS_PORT}:443@loadbalancer" --wait
+# install.sh --skip-k3s can't write node config, so k3d gets the registry trust --no-tls needs.
+registries="$(mktemp)"
+trap 'rm -f "$registries"' EXIT
+cat > "$registries" <<EOF
+configs:
+  "registry.${BASE_DOMAIN}":
+    tls:
+      insecure_skip_verify: true
+EOF
+k3d cluster create "$CLUSTER" -p "${HTTP_PORT}:80@loadbalancer" -p "${HTTPS_PORT}:443@loadbalancer" \
+  --registry-config "$registries" --wait
 KUBECONFIG="$(k3d kubeconfig write "$CLUSTER")"
 export KUBECONFIG
 
