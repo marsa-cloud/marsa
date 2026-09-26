@@ -1,4 +1,4 @@
-import type { NodePinStrategy } from '#src/modules/runtime/runtime.enums.js'
+import type { BuildState, NodePinStrategy } from '#src/modules/runtime/runtime.enums.js'
 import type { Uuid } from '#src/utils/uuid.js'
 
 export interface EnvironmentRef {
@@ -103,13 +103,6 @@ export interface BuildSpec {
 
 export interface BuildLogsOptions {
   tailLines: number
-}
-
-export enum BuildState {
-  Running = 'running',
-  Succeeded = 'succeeded',
-  Failed = 'failed',
-  NotFound = 'not_found',
 }
 
 export type BuildObservation =

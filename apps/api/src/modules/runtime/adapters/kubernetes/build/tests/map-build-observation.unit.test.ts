@@ -2,7 +2,7 @@ import { describe, it } from 'node:test'
 import type { V1Job, V1Pod } from '@kubernetes/client-node'
 import { expect } from 'expect'
 import { mapBuildObservation } from '#src/modules/runtime/adapters/kubernetes/build/observe/map-build-observation.js'
-import { BuildState } from '#src/modules/runtime/runtime.types.js'
+import { BuildState } from '#src/modules/runtime/runtime.enums.js'
 
 const job = (type: string, reason?: string, message?: string): V1Job => ({
   status: { conditions: [{ type, status: 'True', reason, message }] },

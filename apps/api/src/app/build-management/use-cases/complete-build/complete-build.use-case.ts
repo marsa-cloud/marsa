@@ -17,7 +17,8 @@ import type { Database, Transaction } from '#src/modules/database/drizzle.factor
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
 import { ImageRegistry } from '#src/modules/runtime/image-registry.js'
-import { type BuildObservation, BuildState } from '#src/modules/runtime/runtime.types.js'
+import { BuildState } from '#src/modules/runtime/runtime.enums.js'
+import { type BuildObservation } from '#src/modules/runtime/runtime.types.js'
 
 @Injectable()
 export class CompleteBuildUseCase {

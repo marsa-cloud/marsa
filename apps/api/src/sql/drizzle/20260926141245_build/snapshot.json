@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "a57e3ae3-45ec-4801-b35a-cafe15a92915",
+  "id": "440a814d-6a60-4b3f-b60a-bb8143e3c6b3",
   "prevIds": [
-    "24ece233-6bbf-45db-9e57-34145ab14ff4"
+    "0d06d319-8193-4e3b-95b9-4e74820fb912"
   ],
   "ddl": [
     {
@@ -24,6 +24,14 @@
         "manual"
       ],
       "name": "build_trigger_enum",
+      "entityType": "enums",
+      "schema": "public"
+    },
+    {
+      "values": [
+        "postgres"
+      ],
+      "name": "database_engine_enum",
       "entityType": "enums",
       "schema": "public"
     },
@@ -73,6 +81,12 @@
     {
       "isRlsEnabled": false,
       "name": "build",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
+      "name": "database",
       "entityType": "tables",
       "schema": "public"
     },
@@ -468,6 +482,149 @@
       "entityType": "columns",
       "schema": "public",
       "table": "build"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "uuidv7()",
+      "generated": null,
+      "identity": null,
+      "name": "uuid",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "database"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "environment_uuid",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "database"
+    },
+    {
+      "type": "varchar(52)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "slug",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "database"
+    },
+    {
+      "type": "database_engine_enum",
+      "typeSchema": "public",
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "engine",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "database"
+    },
+    {
+      "type": "varchar(8)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "version",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "database"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "image",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "database"
+    },
+    {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "credentials_enc",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "database"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "storage_gib",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "database"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "node_pin",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "database"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "database"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "database"
     },
     {
       "type": "uuid",
@@ -1259,6 +1416,23 @@
     {
       "nameExplicit": false,
       "columns": [
+        "environment_uuid"
+      ],
+      "schemaTo": "public",
+      "tableTo": "environment",
+      "columnsTo": [
+        "uuid"
+      ],
+      "onUpdate": "CASCADE",
+      "onDelete": "RESTRICT",
+      "name": "database_environment_uuid_environment_uuid_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "database"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
         "project_uuid"
       ],
       "schemaTo": "public",
@@ -1376,6 +1550,16 @@
         "uuid"
       ],
       "nameExplicit": false,
+      "name": "database_pkey",
+      "schema": "public",
+      "table": "database",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "uuid"
+      ],
+      "nameExplicit": false,
       "name": "environment_pkey",
       "schema": "public",
       "table": "environment",
@@ -1462,6 +1646,17 @@
       "name": "app_slug_key",
       "schema": "public",
       "table": "app",
+      "entityType": "uniques"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "slug"
+      ],
+      "nullsNotDistinct": false,
+      "name": "database_slug_key",
+      "schema": "public",
+      "table": "database",
       "entityType": "uniques"
     },
     {

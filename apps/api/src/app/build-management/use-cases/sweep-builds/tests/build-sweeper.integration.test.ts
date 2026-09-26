@@ -15,7 +15,7 @@ import type { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app
 import type { MockBuildRuntime } from '#src/modules/runtime/adapters/mock/mock-build-runtime.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
 import { BuildRuntime } from '#src/modules/runtime/build-runtime.js'
-import { BuildState } from '#src/modules/runtime/runtime.types.js'
+import { BuildState } from '#src/modules/runtime/runtime.enums.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 

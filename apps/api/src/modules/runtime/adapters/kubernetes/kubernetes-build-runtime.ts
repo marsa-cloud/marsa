@@ -21,12 +21,12 @@ import {
   isNotFound,
 } from '#src/modules/runtime/adapters/kubernetes/shared/not-found.js'
 import { BuildRuntime } from '#src/modules/runtime/build-runtime.js'
+import { BuildState } from '#src/modules/runtime/runtime.enums.js'
 import {
   type BuildLogsOptions,
   type BuildObservation,
   type BuildRef,
   type BuildSpec,
-  BuildState,
 } from '#src/modules/runtime/runtime.types.js'
 
 @Injectable()

@@ -15,7 +15,7 @@ import { ReleaseTrigger } from '#src/app/release/enums/release-trigger.enum.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
 import { MockImageRegistry } from '#src/modules/runtime/adapters/mock/mock-image-registry.js'
-import { BuildState } from '#src/modules/runtime/runtime.types.js'
+import { BuildState } from '#src/modules/runtime/runtime.enums.js'
 import { stubDatabase } from '#src/test/setup/stub-database.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 

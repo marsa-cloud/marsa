@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common'
 import { BuildRuntime } from '#src/modules/runtime/build-runtime.js'
+import { BuildState } from '#src/modules/runtime/runtime.enums.js'
 import {
   type BuildLogsOptions,
   type BuildObservation,
   type BuildRef,
   type BuildSpec,
-  BuildState,
 } from '#src/modules/runtime/runtime.types.js'
 
 @Injectable()

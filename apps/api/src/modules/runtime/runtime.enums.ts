@@ -13,6 +13,13 @@ export enum RolloutStatus {
   NotFound = 'not_found',
 }
 
+export enum BuildState {
+  Running = 'running',
+  Succeeded = 'succeeded',
+  Failed = 'failed',
+  NotFound = 'not_found',
+}
+
 export enum DatabaseStatus {
   Provisioning = 'provisioning',
   Ready = 'ready',

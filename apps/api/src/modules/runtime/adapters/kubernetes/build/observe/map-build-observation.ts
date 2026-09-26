@@ -1,6 +1,7 @@
 import type { V1Job, V1Pod } from '@kubernetes/client-node'
 import { BUILD_DEADLINE_SECONDS } from '#src/modules/runtime/build-runtime.js'
-import { type BuildObservation, BuildState } from '#src/modules/runtime/runtime.types.js'
+import { BuildState } from '#src/modules/runtime/runtime.enums.js'
+import { type BuildObservation } from '#src/modules/runtime/runtime.types.js'
 
 const MAX_REASON_LENGTH = 2000
 

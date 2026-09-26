@@ -8,7 +8,8 @@ import {
   type SinonStubbedInstance,
 } from 'sinon'
 import { KubernetesBuildRuntime } from '#src/modules/runtime/adapters/kubernetes/kubernetes-build-runtime.js'
-import { type BuildRef, type BuildSpec, BuildState } from '#src/modules/runtime/runtime.types.js'
+import { BuildState } from '#src/modules/runtime/runtime.enums.js'
+import { type BuildRef, type BuildSpec } from '#src/modules/runtime/runtime.types.js'
 import type { Uuid } from '#src/utils/uuid.js'
 
 const UUID = '0190f0f0-0000-7000-8000-000000000002' as Uuid<'Build'>

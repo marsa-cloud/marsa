@@ -1,7 +1,8 @@
 import { describe, it } from 'node:test'
 import { expect } from 'expect'
 import { MockBuildRuntime } from '#src/modules/runtime/adapters/mock/mock-build-runtime.js'
-import { type BuildRef, type BuildSpec, BuildState } from '#src/modules/runtime/runtime.types.js'
+import { BuildState } from '#src/modules/runtime/runtime.enums.js'
+import { type BuildRef, type BuildSpec } from '#src/modules/runtime/runtime.types.js'
 import { generateUuid, type Uuid } from '#src/utils/uuid.js'
 
 const ref = (): BuildRef => ({ build: { uuid: generateUuid<Uuid<'Build'>>() }, app: { slug: 'a' } })

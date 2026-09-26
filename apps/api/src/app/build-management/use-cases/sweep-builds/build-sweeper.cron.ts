@@ -13,7 +13,8 @@ import {
   SweepBuildsRepository,
 } from '#src/app/build-management/use-cases/sweep-builds/sweep-builds.repository.js'
 import { BUILD_DEADLINE_SECONDS, BuildRuntime } from '#src/modules/runtime/build-runtime.js'
-import { type BuildObservation, BuildState } from '#src/modules/runtime/runtime.types.js'
+import { BuildState } from '#src/modules/runtime/runtime.enums.js'
+import { type BuildObservation } from '#src/modules/runtime/runtime.types.js'
 
 @Injectable()
 export class BuildSweeper {
