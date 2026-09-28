@@ -1,4 +1,5 @@
 import type {
+  BranchHeadParams,
   GitHubAppCredentials,
   GitHubUser,
   InstallationTokenParams,
@@ -17,6 +18,9 @@ export abstract class GithubClient {
 
   /** Mint a short-lived installation access token (#59). */
   abstract getInstallationToken(params: InstallationTokenParams): Promise<string>
+
+  /** Resolve a branch's current head commit SHA (#21). */
+  abstract getBranchHead(params: BranchHeadParams): Promise<string>
 
   /**
    * Exchange a user-OAuth `code` for an access token, then fetch the

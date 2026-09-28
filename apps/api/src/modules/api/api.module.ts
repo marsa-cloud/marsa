@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common'
 import { AppModule } from '#src/app.module.js'
 import { AppManagementModule } from '#src/app/app-management/app-management.module.js'
 import { AuthModule } from '#src/app/auth/auth.module.js'
+import { BuildManagementModule } from '#src/app/build-management/build-management.module.js'
 import { ClusterModule } from '#src/app/cluster/cluster.module.js'
 import { DatabaseManagementModule } from '#src/app/database-management/database-management.module.js'
 import { EnvironmentModule } from '#src/app/environment/environment.module.js'
@@ -21,6 +22,7 @@ import { StatusModule } from '#src/modules/status/status.module.js'
       ProjectModule,
       EnvironmentModule,
       ReleaseModule,
+      BuildManagementModule,
       AppManagementModule,
       DatabaseManagementModule,
       ClusterModule,

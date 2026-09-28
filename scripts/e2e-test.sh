@@ -47,6 +47,49 @@ echo "== stage: rollout =="
 kubectl -n "$NS" rollout status deploy/marsa-api --timeout=180s || fail rollout "marsa-api did not roll out"
 kubectl -n "$NS" rollout status deploy/marsa-web --timeout=180s || fail rollout "marsa-web did not roll out"
 
+echo "== stage: registry =="
+kubectl -n "$NS" rollout status statefulset/marsa-registry --timeout=180s \
+  || fail registry "marsa-registry did not roll out"
+secret_value() {
+  kubectl -n "$NS" get secret marsa-registry-secrets -o "jsonpath={.data.$1}" | base64 -d
+}
+push_pw="$(secret_value PUSH_PASSWORD)"
+pull_pw="$(secret_value PULL_PASSWORD)"
+registry_image="registry.${BASE_DOMAIN}/e2e-registry:1"
+
+# Pushes from a pod to the in-cluster Service, the way build Jobs will.
+crane_push() {
+  local name="$1" user="$2" password="$3" tag="$4"
+  kubectl -n "$NS" delete pod "$name" --ignore-not-found >/dev/null
+  # shellcheck disable=SC2016 # $U, $P and $T expand inside the pod, not here
+  kubectl -n "$NS" run "$name" --restart=Never --image=gcr.io/go-containerregistry/crane:debug \
+    --env="U=${user}" --env="P=${password}" --env="T=${tag}" --command -- sh -c \
+    'crane auth login marsa-registry:5000 -u "$U" -p "$P" && crane copy --insecure busybox:1.37 "marsa-registry:5000/e2e-registry:$T"' >/dev/null
+}
+
+crane_push registry-push marsa-push "$push_pw" 1
+kubectl -n "$NS" wait --for=jsonpath='{.status.phase}'=Succeeded pod/registry-push --timeout=180s \
+  || fail registry "push as marsa-push failed: $(kubectl -n "$NS" logs registry-push 2>&1 | tail -5)"
+
+# A new tag: crane skips the write, and so never hits the access check, when the manifest exists.
+crane_push registry-push-denied marsa-pull "$pull_pw" denied
+kubectl -n "$NS" wait --for=jsonpath='{.status.phase}'=Failed pod/registry-push-denied --timeout=180s \
+  || fail registry "a push as marsa-pull was not rejected"
+kubectl -n "$NS" logs registry-push-denied 2>&1 | grep -q DENIED \
+  || fail registry "marsa-pull push failed for a reason other than DENIED"
+
+kubectl -n "$NS" delete secret e2e-registry-pull --ignore-not-found >/dev/null
+kubectl -n "$NS" create secret docker-registry e2e-registry-pull --docker-server="registry.${BASE_DOMAIN}" \
+  --docker-username=marsa-pull --docker-password="$pull_pw" >/dev/null
+kubectl -n "$NS" delete pod registry-pull --ignore-not-found >/dev/null
+kubectl -n "$NS" run registry-pull --image="$registry_image" \
+  --overrides='{"spec":{"imagePullSecrets":[{"name":"e2e-registry-pull"}]}}' --command -- sleep 3600 >/dev/null
+kubectl -n "$NS" wait --for=condition=Ready pod/registry-pull --timeout=180s \
+  || fail registry "a node could not pull ${registry_image}: $(kubectl -n "$NS" describe pod registry-pull | tail -15)"
+kubectl -n "$NS" delete pod registry-push registry-push-denied registry-pull --ignore-not-found >/dev/null
+kubectl -n "$NS" delete secret e2e-registry-pull --ignore-not-found >/dev/null
+echo "  pushed in-cluster as marsa-push, marsa-pull refused, node pulled ${registry_image}"
+
 echo "== stage: seed session cookie =="
 # Retried: right after rollout, `kubectl exec` into the api pod can hit a
 # transient containerd "failed to load task: context deadline exceeded".

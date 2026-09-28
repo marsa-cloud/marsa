@@ -28,10 +28,18 @@ export const relations = defineRelations(schema, (r) => ({
       optional: false,
     }),
     releases: r.many.releaseTable(),
+    builds: r.many.buildTable(),
   },
   releaseTable: {
     app: r.one.appTable({
       from: r.releaseTable.appUuid,
+      to: r.appTable.uuid,
+      optional: false,
+    }),
+  },
+  buildTable: {
+    app: r.one.appTable({
+      from: r.buildTable.appUuid,
       to: r.appTable.uuid,
       optional: false,
     }),

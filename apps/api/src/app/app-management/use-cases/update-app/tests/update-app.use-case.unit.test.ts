@@ -13,6 +13,7 @@ import { UpdateAppUseCase } from '#src/app/app-management/use-cases/update-app/u
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
+import { MockImageRegistry } from '#src/modules/runtime/adapters/mock/mock-image-registry.js'
 import { NodePinStrategy } from '#src/modules/runtime/runtime.enums.js'
 import { stubDatabase } from '#src/test/setup/stub-database.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
@@ -40,11 +41,21 @@ function build() {
   appRuntime.deploy.resolves()
   const config = createStubInstance(ConfigService)
   config.getOrThrow.returns('demo.marsa.cc')
+  const imageRegistry = createStubInstance(MockImageRegistry)
+  imageRegistry.pullCredentialsFor.returns(undefined)
   return {
-    usecase: new UpdateAppUseCase(stubDatabase(), repository, cipher, appRuntime, config),
+    usecase: new UpdateAppUseCase(
+      stubDatabase(),
+      repository,
+      cipher,
+      appRuntime,
+      imageRegistry,
+      config,
+    ),
     repository,
     cipher,
     appRuntime,
+    imageRegistry,
   }
 }
 
@@ -139,6 +150,21 @@ describe('UpdateAppUseCase', () => {
       values: ['node-a'],
       strategy: NodePinStrategy.Required,
     })
+  })
+
+  it('re-applies a Marsa-registry image with Marsa credentials, not the stored ones', async () => {
+    const { usecase, appRuntime, cipher, imageRegistry } = buildPinned()
+    const marsaCredentials = {
+      registry: 'registry.demo.marsa.cc',
+      username: 'marsa-pull',
+      password: 'p',
+    }
+    imageRegistry.pullCredentialsFor.returns(marsaCredentials)
+
+    await usecase.execute('my-app', new UpdateAppCommandBuilder().withNodePin(PIN).build())
+
+    expect(appRuntime.deploy.firstCall.args[1].credentials).toEqual(marsaCredentials)
+    expect(cipher.openForApp.called).toBe(false)
   })
 
   it('makes no cluster call when the command carries no pin', async () => {

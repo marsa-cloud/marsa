@@ -727,6 +727,165 @@
         ]
       }
     },
+    "/api/v1/apps/{slug}/builds": {
+      "post": {
+        "operationId": "startBuildV1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
+          "404": {
+            "description": "No app with that slug."
+          },
+          "409": {
+            "description": "The app deploys a prebuilt image."
+          },
+          "422": {
+            "description": "The branch is missing or not accessible."
+          },
+          "502": {
+            "description": "GitHub refused the installation token."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "builds"
+        ]
+      },
+      "get": {
+        "operationId": "viewBuildIndexV1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pagination",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ViewBuildIndexPaginationQuery"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewBuildIndexResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "builds"
+        ]
+      }
+    },
+    "/api/v1/apps/{slug}/builds/{buildUuid}/logs": {
+      "get": {
+        "operationId": "viewBuildLogsV1",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tailLines",
+            "required": false,
+            "in": "query",
+            "description": "Trailing log lines to return (default 1000).",
+            "schema": {
+              "minimum": 1,
+              "maximum": 5000,
+              "example": 1000,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewBuildLogsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "buildUuid is not a uuid, or tailLines is out of range (1–5000)."
+          },
+          "401": {
+            "description": "No active session."
+          },
+          "403": {
+            "description": "Your account is not approved for this action."
+          },
+          "404": {
+            "description": "No such build for the app, or its logs have expired."
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "tags": [
+          "builds"
+        ]
+      }
+    },
     "/api/v1/apps": {
       "post": {
         "operationId": "createAppV1",
@@ -2105,6 +2264,165 @@
         "required": [
           "items",
           "meta"
+        ]
+      },
+      "BuildStatus": {
+        "type": "string",
+        "enum": [
+          "running",
+          "succeeded",
+          "failed",
+          "cancelled"
+        ]
+      },
+      "BuildTrigger": {
+        "type": "string",
+        "enum": [
+          "push",
+          "create",
+          "manual"
+        ]
+      },
+      "BuildSummary": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "commitSha": {
+            "type": "string",
+            "example": "c0ffee0000000000000000000000000000000000"
+          },
+          "branch": {
+            "type": "string",
+            "example": "main"
+          },
+          "status": {
+            "example": "succeeded",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BuildStatus"
+              }
+            ]
+          },
+          "trigger": {
+            "example": "push",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BuildTrigger"
+              }
+            ]
+          },
+          "imageRef": {
+            "type": "string",
+            "nullable": true,
+            "description": "Set once the build succeeds."
+          },
+          "failureReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Why the build failed."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "uuid",
+          "commitSha",
+          "branch",
+          "status",
+          "trigger",
+          "imageRef",
+          "failureReason",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ViewBuildIndexQueryKey": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "uuid"
+        ]
+      },
+      "ViewBuildIndexPaginationQuery": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "key": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ViewBuildIndexQueryKey"
+              }
+            ]
+          }
+        }
+      },
+      "ViewBuildIndexResponseMeta": {
+        "type": "object",
+        "properties": {
+          "next": {
+            "nullable": true,
+            "description": "Key for the next page, or null on the last page. Opaque — send it back as-is.",
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ViewBuildIndexQueryKey"
+              }
+            ]
+          }
+        },
+        "required": [
+          "next"
+        ]
+      },
+      "ViewBuildIndexResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "description": "The items for the current page",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BuildSummary"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ViewBuildIndexResponseMeta"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
+      "ViewBuildLogsResponse": {
+        "type": "object",
+        "properties": {
+          "logs": {
+            "type": "string",
+            "example": "#1 [internal] load build definition from Dockerfile"
+          }
+        },
+        "required": [
+          "logs"
         ]
       },
       "ImagePullCredentials": {

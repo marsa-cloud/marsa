@@ -11,6 +11,7 @@ import { DeployReleaseRepository } from '#src/app/release/use-cases/deploy-relea
 import { DeployReleaseUseCase } from '#src/app/release/use-cases/deploy-release/deploy-release.use-case.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
+import { MockImageRegistry } from '#src/modules/runtime/adapters/mock/mock-image-registry.js'
 import { EnvironmentConflictError } from '#src/modules/runtime/runtime.errors.js'
 import { stubDatabase } from '#src/test/setup/stub-database.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
@@ -32,12 +33,22 @@ function build(release = new ReleaseBuilder().withApp(app).withImageRef('nginx:1
   config.getOrThrow.returns('demo.marsa.cc')
   const cipher = createStubInstance(ImagePullCredentialsCipher)
   cipher.openForApp.returns({ registry: 'ghcr.io', username: 'org', password: 'pw' })
+  const imageRegistry = createStubInstance(MockImageRegistry)
+  imageRegistry.pullCredentialsFor.returns(undefined)
 
   return {
-    usecase: new DeployReleaseUseCase(stubDatabase(), repository, appRuntime, cipher, config),
+    usecase: new DeployReleaseUseCase(
+      stubDatabase(),
+      repository,
+      appRuntime,
+      cipher,
+      imageRegistry,
+      config,
+    ),
     repository,
     appRuntime,
     cipher,
+    imageRegistry,
     release,
   }
 }
@@ -83,6 +94,21 @@ describe('DeployReleaseUseCase', () => {
 
     expect(cipher.openForApp.calledOnceWithExactly('my-app', 'sealed')).toBe(true)
     expect(appRuntime.deploy.firstCall.args[1].credentials?.registry).toBe('ghcr.io')
+  })
+
+  it('pulls an image from Marsa registry with its credentials, not the stored ones', async () => {
+    const { usecase, appRuntime, cipher, imageRegistry } = build()
+    const marsaCredentials = {
+      registry: 'registry.demo.marsa.cc',
+      username: 'marsa-pull',
+      password: 'p',
+    }
+    imageRegistry.pullCredentialsFor.returns(marsaCredentials)
+
+    await usecase.execute('my-app')
+
+    expect(appRuntime.deploy.firstCall.args[1].credentials).toEqual(marsaCredentials)
+    expect(cipher.openForApp.called).toBe(false)
   })
 
   it('marks the rollout failed and rethrows when the apply fails', async () => {

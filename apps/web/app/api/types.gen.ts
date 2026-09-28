@@ -274,6 +274,56 @@ export type ViewReleaseIndexResponse = {
   meta: ViewReleaseIndexResponseMeta
 }
 
+export type BuildStatus = 'running' | 'succeeded' | 'failed' | 'cancelled'
+
+export type BuildTrigger = 'push' | 'create' | 'manual'
+
+export type BuildSummary = {
+  uuid: string
+  commitSha: string
+  branch: string
+  status: BuildStatus
+  trigger: BuildTrigger
+  /**
+   * Set once the build succeeds.
+   */
+  imageRef: string | null
+  /**
+   * Why the build failed.
+   */
+  failureReason: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type ViewBuildIndexQueryKey = {
+  uuid: string
+}
+
+export type ViewBuildIndexPaginationQuery = {
+  limit?: number
+  key?: ViewBuildIndexQueryKey | null
+}
+
+export type ViewBuildIndexResponseMeta = {
+  /**
+   * Key for the next page, or null on the last page. Opaque — send it back as-is.
+   */
+  next: ViewBuildIndexQueryKey | null
+}
+
+export type ViewBuildIndexResponse = {
+  /**
+   * The items for the current page
+   */
+  items: Array<BuildSummary>
+  meta: ViewBuildIndexResponseMeta
+}
+
+export type ViewBuildLogsResponse = {
+  logs: string
+}
+
 export type ImagePullCredentials = {
   /**
    * Registry host the credentials authenticate against.
@@ -1162,6 +1212,115 @@ export type DeployReleaseV1Responses = {
 }
 
 export type DeployReleaseV1Response = DeployReleaseV1Responses[keyof DeployReleaseV1Responses]
+
+export type ViewBuildIndexV1Data = {
+  body?: never
+  path: {
+    slug: string
+  }
+  query?: {
+    pagination?: ViewBuildIndexPaginationQuery
+  }
+  url: '/api/v1/apps/{slug}/builds'
+}
+
+export type ViewBuildIndexV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+}
+
+export type ViewBuildIndexV1Responses = {
+  200: ViewBuildIndexResponse
+}
+
+export type ViewBuildIndexV1Response = ViewBuildIndexV1Responses[keyof ViewBuildIndexV1Responses]
+
+export type StartBuildV1Data = {
+  body?: never
+  path: {
+    slug: string
+  }
+  query?: never
+  url: '/api/v1/apps/{slug}/builds'
+}
+
+export type StartBuildV1Errors = {
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
+   * No app with that slug.
+   */
+  404: unknown
+  /**
+   * The app deploys a prebuilt image.
+   */
+  409: unknown
+  /**
+   * The branch is missing or not accessible.
+   */
+  422: unknown
+  /**
+   * GitHub refused the installation token.
+   */
+  502: unknown
+}
+
+export type StartBuildV1Responses = {
+  201: BuildSummary
+}
+
+export type StartBuildV1Response = StartBuildV1Responses[keyof StartBuildV1Responses]
+
+export type ViewBuildLogsV1Data = {
+  body?: never
+  path: {
+    slug: string
+  }
+  query?: {
+    /**
+     * Trailing log lines to return (default 1000).
+     */
+    tailLines?: number
+  }
+  url: '/api/v1/apps/{slug}/builds/{buildUuid}/logs'
+}
+
+export type ViewBuildLogsV1Errors = {
+  /**
+   * buildUuid is not a uuid, or tailLines is out of range (1–5000).
+   */
+  400: unknown
+  /**
+   * No active session.
+   */
+  401: unknown
+  /**
+   * Your account is not approved for this action.
+   */
+  403: unknown
+  /**
+   * No such build for the app, or its logs have expired.
+   */
+  404: unknown
+}
+
+export type ViewBuildLogsV1Responses = {
+  200: ViewBuildLogsResponse
+}
+
+export type ViewBuildLogsV1Response = ViewBuildLogsV1Responses[keyof ViewBuildLogsV1Responses]
 
 export type ViewAppIndexV1Data = {
   body?: never

@@ -10,6 +10,7 @@ import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-crede
 import type { Database, Executor } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
+import { ImageRegistry } from '#src/modules/runtime/image-registry.js'
 
 // Writes App, then re-applies only when the pin actually changed: a pin is location rather than
 // config, so it never reaches a Release and hasUndeployedChanges structurally cannot see it.
@@ -22,6 +23,7 @@ export class UpdateAppUseCase {
     private readonly repository: UpdateAppRepository,
     private readonly credentialsCipher: ImagePullCredentialsCipher,
     private readonly appRuntime: AppRuntime,
+    private readonly imageRegistry: ImageRegistry,
     config: ConfigService,
   ) {
     this.baseDomain = config.getOrThrow<string>('MARSA_BASE_DOMAIN')
@@ -70,10 +72,9 @@ export class UpdateAppUseCase {
       )
     }
 
-    const credentials = this.credentialsCipher.openForApp(
-      placement.app.slug,
-      release.imagePullCredentialsEnc,
-    )
+    const credentials =
+      this.imageRegistry.pullCredentialsFor(release.imageRef) ??
+      this.credentialsCipher.openForApp(placement.app.slug, release.imagePullCredentialsEnc)
     const spec = deploySpecOf(placement, release, { baseDomain: this.baseDomain, credentials })
     await this.appRuntime.deploy(placement, spec)
   }
