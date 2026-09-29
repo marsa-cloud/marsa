@@ -10,6 +10,7 @@ import { BuildTrigger } from '#src/app/build-management/enums/build-trigger.enum
 import { BUILD_DISAPPEARED } from '#src/app/build-management/use-cases/complete-build/complete-build.constants.js'
 import { CompleteBuildRepository } from '#src/app/build-management/use-cases/complete-build/complete-build.repository.js'
 import { CompleteBuildUseCase } from '#src/app/build-management/use-cases/complete-build/complete-build.use-case.js'
+import { DatabaseEngine } from '#src/app/database-management/enums/database-engine.enum.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/release/enums/release-trigger.enum.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
@@ -37,6 +38,7 @@ function build(trigger = BuildTrigger.Manual) {
   repository.finish.resolves()
   repository.setAppImage.resolves()
   repository.insertRelease.resolves()
+  repository.findAttachments.resolves([])
   repository.setReleaseDeployStatus.resolves()
   const appRuntime = createStubInstance(MockAppRuntime)
   appRuntime.deploy.resolves()
@@ -123,6 +125,23 @@ describe('CompleteBuildUseCase', () => {
     const [ref, spec] = appRuntime.deploy.firstCall.args
     expect(ref.app.slug).toBe('my-app')
     expect(spec).toMatchObject({ releaseUuid: release.uuid, image: IMAGE })
+  })
+
+  it("deploys with the app's attachments injected", async () => {
+    const { usecase, repository, appRuntime, running } = build()
+    repository.findAttachments.resolves([
+      { alias: null, databaseSlug: 'orders', engine: DatabaseEngine.Postgres, version: '17' },
+    ])
+
+    await usecase.execute(running.uuid, { state: BuildState.Succeeded })
+
+    expect(appRuntime.deploy.firstCall.args[1].attachments).toEqual([
+      {
+        databaseSlug: 'orders',
+        envPrefix: null,
+        keys: ['DATABASE_URL', 'PGHOST', 'PGPORT', 'PGUSER', 'PGPASSWORD', 'PGDATABASE'],
+      },
+    ])
   })
 
   it('marks the release a webhook release for a push build', async () => {

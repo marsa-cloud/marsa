@@ -10,6 +10,10 @@ import { type Build, buildTable } from '#src/app/build-management/entities/build
 import type { BuildUuid } from '#src/app/build-management/entities/build.uuid.js'
 import { BuildStatus } from '#src/app/build-management/enums/build-status.enum.js'
 import type { BuildOutcome } from '#src/app/build-management/use-cases/complete-build/complete-build.types.js'
+import {
+  type AttachedDatabase,
+  selectAttachmentsForApp,
+} from '#src/app/database-management/queries/app-attachments.js'
 import { type Release, releaseTable } from '#src/app/release/entities/release.table.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import type { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
@@ -42,6 +46,10 @@ export class CompleteBuildRepository {
 
   async setAppImage(tx: Executor, appUuid: AppUuid, image: string): Promise<void> {
     await tx.update(appTable).set({ image }).where(eq(appTable.uuid, appUuid))
+  }
+
+  findAttachments(tx: Executor, appUuid: AppUuid): Promise<AttachedDatabase[]> {
+    return selectAttachmentsForApp(tx, appUuid)
   }
 
   async insertRelease(tx: Executor, release: Release): Promise<void> {
