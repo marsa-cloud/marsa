@@ -19,6 +19,7 @@ export class ViewDatabaseIndexUseCase {
     const placements = await this.repository.listDatabases(
       keysetLimit(query.pagination),
       query.pagination?.key?.uuid,
+      query.environmentUuid,
     )
     // Status is never stored, so it is read per row rather than reconciled on a GET (#198).
     const statuses = await Promise.all(

@@ -13,7 +13,7 @@ import { deploySpecOf } from '#src/app/release/entities/release-deploy-spec.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/release/enums/release-trigger.enum.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
-import type { Database, Transaction } from '#src/modules/database/drizzle.factory.js'
+import type { Database, Executor, Transaction } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
 import { ImageRegistry } from '#src/modules/runtime/image-registry.js'
@@ -70,18 +70,23 @@ export class CompleteBuildUseCase {
       .build()
     await this.repository.insertRelease(tx, release)
     try {
-      await tx.transaction(() => this.deploy({ ...placement, app }, release))
+      await tx.transaction((savepoint) => this.deploy(savepoint, { ...placement, app }, release))
     } catch {
       // The image is built and stored; only its rollout failed, which the release records.
       await this.repository.setReleaseDeployStatus(tx, release.uuid, DeployStatus.Failed)
     }
   }
 
-  private async deploy(placement: AppPlacement, release: Release): Promise<void> {
+  private async deploy(tx: Executor, placement: AppPlacement, release: Release): Promise<void> {
     const credentials =
       this.imageRegistry.pullCredentialsFor(release.imageRef) ??
       this.cipher.openForApp(placement.app.slug, release.imagePullCredentialsEnc)
-    const spec = deploySpecOf(placement, release, { baseDomain: this.baseDomain, credentials })
+    const attachments = await this.repository.findAttachments(tx, placement.app.uuid)
+    const spec = deploySpecOf(placement, release, {
+      baseDomain: this.baseDomain,
+      attachments,
+      credentials,
+    })
     await this.appRuntime.deploy(placement, spec)
   }
 }

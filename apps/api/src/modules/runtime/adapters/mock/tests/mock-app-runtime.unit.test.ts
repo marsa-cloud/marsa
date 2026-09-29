@@ -15,6 +15,7 @@ const spec = (releaseUuid: Uuid<'Release'>): AppDeploySpec => ({
   image: 'nginx:1.27',
   port: 80,
   env: {},
+  attachments: [],
   minReplicas: 1,
   maxReplicas: 1,
   host: 'my-app.demo.marsa.cc',

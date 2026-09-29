@@ -10,3 +10,24 @@ export function isForeignKeyViolation(error: unknown): boolean {
   }
   return false
 }
+
+const UNIQUE_VIOLATION = '23505'
+
+export function isUniqueViolation(error: unknown): boolean {
+  for (let current: unknown = error; current instanceof Error; current = current.cause) {
+    if ((current as Error & { code?: string }).code === UNIQUE_VIOLATION) {
+      return true
+    }
+  }
+  return false
+}
+
+export function violatedConstraint(error: unknown): string | undefined {
+  for (let current: unknown = error; current instanceof Error; current = current.cause) {
+    const { constraint } = current as Error & { constraint?: string }
+    if (constraint) {
+      return constraint
+    }
+  }
+  return undefined
+}

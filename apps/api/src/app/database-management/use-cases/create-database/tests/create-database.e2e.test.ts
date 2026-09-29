@@ -86,7 +86,10 @@ describe('POST /api/v1/databases (e2e)', () => {
 
   it('rejects a name a database in another environment already uses with 409', async () => {
     const otherProject = new ProjectBuilder().withSlug('other-project').build()
-    const other = new EnvironmentBuilder().withProject(otherProject).withSlug('staging').build()
+    const other = new EnvironmentBuilder()
+      .withProjectUuid(otherProject.uuid)
+      .withSlug('staging')
+      .build()
     await setup.db.insert(projectTable).values(otherProject)
     await setup.db.insert(environmentTable).values(other)
 

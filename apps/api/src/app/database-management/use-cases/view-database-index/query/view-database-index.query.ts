@@ -3,6 +3,7 @@ import { Type } from 'class-transformer'
 import { IsNotEmpty, IsObject, IsOptional, IsUUID, ValidateNested } from 'class-validator'
 import type { DatabaseRow } from '#src/app/database-management/entities/database.table.js'
 import type { DatabaseUuid } from '#src/app/database-management/entities/database.uuid.js'
+import type { EnvironmentUuid } from '#src/app/environment/entities/environment.uuid.js'
 import {
   PaginatedKeysetQuery,
   PaginatedKeysetSearchQuery,
@@ -41,4 +42,13 @@ export class ViewDatabaseIndexQuery extends PaginatedKeysetSearchQuery {
   @Type(() => ViewDatabaseIndexPaginationQuery)
   @ValidateNested()
   declare pagination?: ViewDatabaseIndexPaginationQuery
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    description: 'Only databases in this environment.',
+  })
+  @IsOptional()
+  @IsUUID()
+  environmentUuid?: EnvironmentUuid
 }

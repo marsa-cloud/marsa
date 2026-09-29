@@ -11,7 +11,7 @@ import { stubDatabase } from '#src/test/setup/stub-database.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 const project = new ProjectBuilder().withSlug('demo').build()
-const environment = new EnvironmentBuilder().withProject(project).withSlug('dev').build()
+const environment = new EnvironmentBuilder().withProjectUuid(project.uuid).withSlug('dev').build()
 
 function build() {
   const repository = createStubInstance(DeleteEnvironmentRepository)

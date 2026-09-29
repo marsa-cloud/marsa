@@ -1,6 +1,5 @@
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
 import type { EnvironmentUuid } from '#src/app/environment/entities/environment.uuid.js'
-import type { Project } from '#src/app/project/entities/project.table.js'
 import type { ProjectUuid } from '#src/app/project/entities/project.uuid.js'
 import { generateUuid } from '#src/utils/uuid.js'
 
@@ -19,8 +18,8 @@ export class EnvironmentBuilder {
     }
   }
 
-  withProject(project: Project): this {
-    this.environment.projectUuid = project.uuid
+  withProjectUuid(projectUuid: ProjectUuid): this {
+    this.environment.projectUuid = projectUuid
     return this
   }
 

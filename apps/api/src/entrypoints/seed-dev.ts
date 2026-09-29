@@ -98,7 +98,7 @@ async function rawDogFe(): Promise<void> {
           ),
         )
       if (!environment) {
-        environment = new EnvironmentBuilder().withProject(project).build()
+        environment = new EnvironmentBuilder().withProjectUuid(project.uuid).build()
         await db.insert(environmentTable).values(environment)
       }
 

@@ -1,11 +1,5 @@
 import type { V1Service, V1StatefulSet } from '@kubernetes/client-node'
-import type { NodePinSpec } from '#src/modules/runtime/runtime.types.js'
-
-export interface SecretEnvRef {
-  name: string
-  secret: string
-  key: string
-}
+import type { NodePinSpec, SecretEnvRef } from '#src/modules/runtime/runtime.types.js'
 
 export interface PersistentWorkloadSpec {
   name: string

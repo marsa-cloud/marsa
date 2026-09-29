@@ -21,8 +21,8 @@ describe('GET /api/v1/projects/:projectSlug/environments (e2e)', () => {
     await setup.db
       .insert(environmentTable)
       .values([
-        new EnvironmentBuilder().withProject(demo).withSlug('dev').build(),
-        new EnvironmentBuilder().withProject(other).withSlug('prod').build(),
+        new EnvironmentBuilder().withProjectUuid(demo.uuid).withSlug('dev').build(),
+        new EnvironmentBuilder().withProjectUuid(other.uuid).withSlug('prod').build(),
       ])
   })
 

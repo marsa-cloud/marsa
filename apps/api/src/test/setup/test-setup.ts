@@ -4,13 +4,25 @@ import { TestingModule } from '@nestjs/testing'
 import { eq } from 'drizzle-orm'
 import { Server } from 'http'
 import request from 'supertest'
+import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
+import { type App, appTable } from '#src/app/app-management/entities/app.table.js'
+import type { AppUuid } from '#src/app/app-management/entities/app.uuid.js'
 import type { OAuthStateUuid } from '#src/app/auth/entities/oauth-state.uuid.js'
 import { CompleteGithubLoginCommandBuilder } from '#src/app/auth/use-cases/complete-github-login/complete-github-login.command.builder.js'
+import { DatabaseBuilder } from '#src/app/database-management/entities/database.builder.js'
+import {
+  type DatabaseRow,
+  databaseTable,
+} from '#src/app/database-management/entities/database.table.js'
+import type { DatabaseUuid } from '#src/app/database-management/entities/database.uuid.js'
+import { DatabaseAttachmentBuilder } from '#src/app/database-management/entities/database-attachment.builder.js'
+import { databaseAttachmentTable } from '#src/app/database-management/entities/database-attachment.table.js'
 import { EnvironmentBuilder } from '#src/app/environment/entities/environment.builder.js'
 import {
   type Environment,
   environmentTable,
 } from '#src/app/environment/entities/environment.table.js'
+import type { EnvironmentUuid } from '#src/app/environment/entities/environment.uuid.js'
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
 import { githubAppTable } from '#src/app/github-app/entities/github-app.table.js'
 import { ProjectBuilder } from '#src/app/project/entities/project.builder.js'
@@ -56,10 +68,41 @@ export class TestSetup {
 
   public async seedEnvironment(): Promise<{ project: Project; environment: Environment }> {
     const project = new ProjectBuilder().build()
-    const environment = new EnvironmentBuilder().withProject(project).build()
+    const environment = new EnvironmentBuilder().withProjectUuid(project.uuid).build()
     await this.db.insert(projectTable).values(project)
     await this.db.insert(environmentTable).values(environment)
     return { project, environment }
+  }
+
+  public async seedApp(environmentUuid: EnvironmentUuid, slug: string): Promise<App> {
+    const app = new AppBuilder().withEnvironmentUuid(environmentUuid).withSlug(slug).build()
+    await this.db.insert(appTable).values(app)
+    return app
+  }
+
+  public async seedDatabase(environmentUuid: EnvironmentUuid, slug: string): Promise<DatabaseRow> {
+    const database = new DatabaseBuilder()
+      .withEnvironmentUuid(environmentUuid)
+      .withSlug(slug)
+      .build()
+    await this.db.insert(databaseTable).values(database)
+    return database
+  }
+
+  public async seedAttachment(
+    appUuid: AppUuid,
+    databaseUuid: DatabaseUuid,
+    alias: string | null = null,
+  ): Promise<void> {
+    await this.db
+      .insert(databaseAttachmentTable)
+      .values(
+        new DatabaseAttachmentBuilder()
+          .withAppUuid(appUuid)
+          .withDatabaseUuid(databaseUuid)
+          .withAlias(alias)
+          .build(),
+      )
   }
 
   /**

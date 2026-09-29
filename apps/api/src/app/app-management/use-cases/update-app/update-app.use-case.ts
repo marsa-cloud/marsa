@@ -75,7 +75,12 @@ export class UpdateAppUseCase {
     const credentials =
       this.imageRegistry.pullCredentialsFor(release.imageRef) ??
       this.credentialsCipher.openForApp(placement.app.slug, release.imagePullCredentialsEnc)
-    const spec = deploySpecOf(placement, release, { baseDomain: this.baseDomain, credentials })
+    const attachments = await this.repository.findAttachments(tx, placement.app.uuid)
+    const spec = deploySpecOf(placement, release, {
+      baseDomain: this.baseDomain,
+      attachments,
+      credentials,
+    })
     await this.appRuntime.deploy(placement, spec)
   }
 

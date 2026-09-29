@@ -52,6 +52,12 @@ external access). To open a psql shell against one on a k3d install:
 kubectl -n <project>-<environment> exec -it <slug>-0 -- psql -U postgres -d <slug_with_underscores>
 ```
 
+An app receives a database's connection variables by **attachment**, not by copying: attach one
+from the app's page and its pods get `DATABASE_URL` and the `PG*` variables as references to the
+database's Secret. A second database on the same app needs an alias, which prefixes its variables
+(`ANALYTICS_DATABASE_URL`). Detaching removes them and restarts the app. A database an app is
+still attached to cannot be deleted — the 409 names the apps to detach it from first.
+
 Two things the UI also says, worth repeating here: the requested storage size is **recorded but
 not enforced** — the default `local-path` class ignores capacity and cannot resize — and the data
 lives on whichever node the pod first landed on, so moving it means a dump and restore (#209).

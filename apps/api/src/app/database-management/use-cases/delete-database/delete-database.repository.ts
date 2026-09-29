@@ -6,6 +6,7 @@ import {
   type DatabasePlacement,
   selectDatabasePlacement,
 } from '#src/app/database-management/queries/database-placement.js'
+import { dependentAppsOf } from '#src/app/database-management/queries/dependent-apps.js'
 import type { Executor } from '#src/modules/database/drizzle.factory.js'
 
 @Injectable()
@@ -23,5 +24,9 @@ export class DeleteDatabaseRepository {
 
   async delete(tx: Executor, uuid: DatabaseUuid): Promise<void> {
     await tx.delete(databaseTable).where(eq(databaseTable.uuid, uuid))
+  }
+
+  dependentApps(tx: Executor, databaseUuid: DatabaseUuid): Promise<string[]> {
+    return dependentAppsOf(tx, databaseUuid)
   }
 }

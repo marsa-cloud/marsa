@@ -9,7 +9,7 @@ export class AppPlacementBuilder {
 
   constructor() {
     const project = new ProjectBuilder().build()
-    const environment = new EnvironmentBuilder().withProject(project).build()
+    const environment = new EnvironmentBuilder().withProjectUuid(project.uuid).build()
     this.placement = {
       app: new AppBuilder().withEnvironmentUuid(environment.uuid).build(),
       environment,

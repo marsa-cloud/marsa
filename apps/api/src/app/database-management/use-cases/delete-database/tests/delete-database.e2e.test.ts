@@ -69,4 +69,21 @@ describe('DELETE /api/v1/databases/:slug (e2e)', () => {
   it('rejects an unauthenticated request with 401', async () => {
     await request(setup.httpServer).delete(`/api/v1/databases/${SLUG}`).expect(401)
   })
+
+  it('refuses with 409 while an app is still attached, naming the app', async () => {
+    const slug = 'delete-db-attached'
+    const database = await setup.seedDatabase(environment.uuid, slug)
+    const app = await setup.seedApp(environment.uuid, 'delete-db-dependent')
+    await setup.seedAttachment(app.uuid, database.uuid)
+
+    const response = await request(setup.httpServer)
+      .delete(`/api/v1/databases/${slug}`)
+      .set('Cookie', cookie)
+      .expect(409)
+
+    expect(response.body.message).toContain('delete-db-dependent')
+
+    const rows = await setup.db.select().from(databaseTable).where(eq(databaseTable.slug, slug))
+    expect(rows).toHaveLength(1)
+  })
 })
