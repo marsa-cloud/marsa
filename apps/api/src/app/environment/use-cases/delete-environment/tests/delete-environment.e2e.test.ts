@@ -57,7 +57,10 @@ describe('DELETE /api/v1/projects/:projectSlug/environments/:environmentSlug (e2
 
   it('keeps the environment when the runtime cannot remove it', async () => {
     const project = new ProjectBuilder().withSlug('keep-env').build()
-    const environment = new EnvironmentBuilder().withProject(project).withSlug('dev').build()
+    const environment = new EnvironmentBuilder()
+      .withProjectUuid(project.uuid)
+      .withSlug('dev')
+      .build()
     await setup.db.insert(projectTable).values(project)
     await setup.db.insert(environmentTable).values(environment)
     setup.testModule

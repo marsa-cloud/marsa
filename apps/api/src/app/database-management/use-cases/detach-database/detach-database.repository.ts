@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common'
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
 import type { AppUuid } from '#src/app/app-management/entities/app.uuid.js'
 import {
@@ -7,6 +7,7 @@ import {
   selectAppPlacement,
 } from '#src/app/app-management/queries/app-placement.js'
 import { databaseTable } from '#src/app/database-management/entities/database.table.js'
+import type { DatabaseUuid } from '#src/app/database-management/entities/database.uuid.js'
 import { databaseAttachmentTable } from '#src/app/database-management/entities/database-attachment.table.js'
 import {
   type AttachedDatabase,
@@ -26,20 +27,26 @@ export class DetachDatabaseRepository {
     return placement
   }
 
-  // Keyed by database slug: the unprefixed attachment's alias is null and cannot address itself.
-  async deleteAttachment(tx: Executor, appUuid: AppUuid, databaseSlug: string): Promise<boolean> {
+  async findDatabaseUuid(tx: Executor, slug: string): Promise<DatabaseUuid | undefined> {
+    const [database] = await tx
+      .select({ uuid: databaseTable.uuid })
+      .from(databaseTable)
+      .where(eq(databaseTable.slug, slug))
+      .limit(1)
+    return database?.uuid
+  }
+
+  async deleteAttachment(
+    tx: Executor,
+    appUuid: AppUuid,
+    databaseUuid: DatabaseUuid,
+  ): Promise<boolean> {
     const deleted = await tx
       .delete(databaseAttachmentTable)
       .where(
         and(
           eq(databaseAttachmentTable.appUuid, appUuid),
-          inArray(
-            databaseAttachmentTable.databaseUuid,
-            tx
-              .select({ uuid: databaseTable.uuid })
-              .from(databaseTable)
-              .where(eq(databaseTable.slug, databaseSlug)),
-          ),
+          eq(databaseAttachmentTable.databaseUuid, databaseUuid),
         ),
       )
       .returning({ uuid: databaseAttachmentTable.uuid })

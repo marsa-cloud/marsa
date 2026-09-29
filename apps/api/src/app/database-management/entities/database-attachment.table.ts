@@ -8,6 +8,8 @@ import type { DatabaseUuid } from '#src/app/database-management/entities/databas
 import type { DatabaseAttachmentUuid } from '#src/app/database-management/entities/database-attachment.uuid.js'
 import { timestamps } from '#src/sql/timestamps.js'
 
+export const ATTACHMENT_APP_DATABASE_UNIQUE = 'database_attachment_app_uuid_database_uuid_unique'
+
 export const databaseAttachmentTable = pgTable(
   'database_attachment',
   {
@@ -33,10 +35,7 @@ export const databaseAttachmentTable = pgTable(
     unique('database_attachment_app_uuid_alias_unique')
       .on(table.appUuid, table.alias)
       .nullsNotDistinct(),
-    unique('database_attachment_app_uuid_database_uuid_unique').on(
-      table.appUuid,
-      table.databaseUuid,
-    ),
+    unique(ATTACHMENT_APP_DATABASE_UNIQUE).on(table.appUuid, table.databaseUuid),
   ],
 )
 

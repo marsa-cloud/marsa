@@ -13,7 +13,7 @@ import { stubDatabase } from '#src/test/setup/stub-database.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 const project = new ProjectBuilder().build()
-const environment = new EnvironmentBuilder().withProject(project).build()
+const environment = new EnvironmentBuilder().withProjectUuid(project.uuid).build()
 
 function build() {
   const repository = createStubInstance(CreateAppRepository)

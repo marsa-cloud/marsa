@@ -15,7 +15,8 @@ const s = vi.hoisted(() => ({
   data: null as unknown,
   pending: false,
   error: null as unknown,
-  dependents: { items: [] as string[] },
+  dependents: { items: [] as string[] } as { items: string[] } | null,
+  dependentsStatus: 'success',
 }))
 
 mockNuxtImport('useDatabaseDetail', () => () => ({
@@ -24,7 +25,10 @@ mockNuxtImport('useDatabaseDetail', () => () => ({
   error: ref(s.error),
 }))
 mockNuxtImport('useDeleteDatabase', () => () => ({ remove }))
-mockNuxtImport('useDatabaseDependents', () => () => ({ data: ref(s.dependents) }))
+mockNuxtImport('useDatabaseDependents', () => () => ({
+  data: ref(s.dependents),
+  status: ref(s.dependentsStatus),
+}))
 mockNuxtImport('navigateTo', () => nav)
 mockNuxtImport('useToast', () => () => ({ add: toastAdd }))
 mockNuxtImport('useRoute', () => () => ({ params: { slug: 'orders' } }))
@@ -49,6 +53,7 @@ beforeEach(() => {
   s.pending = false
   s.error = null
   s.dependents = { items: [] }
+  s.dependentsStatus = 'success'
   remove.mockReset().mockResolvedValue(undefined)
   nav.mockReset()
   toastAdd.mockReset()
@@ -156,5 +161,24 @@ describe('databases/[slug] detail page', () => {
     const wrapper = await mountSuspended(Detail)
 
     expect(wrapper.text()).toContain('No apps are using this database')
+  })
+
+  it('does not claim the database is unused while its dependents are loading', async () => {
+    s.dependents = null
+    s.dependentsStatus = 'pending'
+
+    const wrapper = await mountSuspended(Detail)
+
+    expect(wrapper.text()).not.toContain('No apps are using this database')
+  })
+
+  it('reports a failed dependents load instead of claiming the database is unused', async () => {
+    s.dependents = null
+    s.dependentsStatus = 'error'
+
+    const wrapper = await mountSuspended(Detail)
+
+    expect(wrapper.text()).toContain('Couldn\'t load the apps using this database')
+    expect(wrapper.text()).not.toContain('No apps are using this database')
   })
 })

@@ -29,7 +29,12 @@ export class DetachDatabaseUseCase {
         throw new NotFoundException(`App '${appSlug}' was not found.`)
       }
 
-      const detached = await this.repository.deleteAttachment(tx, placement.app.uuid, databaseSlug)
+      const databaseUuid = await this.repository.findDatabaseUuid(tx, databaseSlug)
+      if (!databaseUuid) {
+        throw new NotFoundException(`Database '${databaseSlug}' was not found.`)
+      }
+
+      const detached = await this.repository.deleteAttachment(tx, placement.app.uuid, databaseUuid)
       if (!detached) {
         throw new NotFoundException(`Database '${databaseSlug}' is not attached to '${appSlug}'.`)
       }

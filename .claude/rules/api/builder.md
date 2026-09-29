@@ -55,6 +55,27 @@ build(): App {
 }
 ```
 
+## Set a foreign key with `with<Entity>Uuid`, not the whole entity
+
+```ts
+// WRONG — takes an App but only keeps its uuid; the name promises a populated `attachment.app`
+withApp(app: App): this {
+  this.attachment.appUuid = app.uuid
+  return this
+}
+
+// RIGHT
+withAppUuid(appUuid: AppUuid): this {
+  this.attachment.appUuid = appUuid
+  return this
+}
+```
+
+Why: `withX` reads as "the built object holds X". Rows are flat Drizzle types, so a setter that
+takes an entity and keeps only its key misleads the reader. Take an entity only when the built
+object stores it (`AppPlacementBuilder.withApp` sets `placement.app`) or derives more than the key
+from it (`ReleaseBuilder.withApp` copies the app's snapshot onto the release).
+
 ## Add a column to the table, add it to the builder — same PR
 
 A new non-nullable column with no builder default breaks every existing test with an error

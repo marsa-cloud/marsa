@@ -6,7 +6,14 @@ const props = defineProps<{ slug: string, environmentUuid: string }>()
 const emit = defineEmits<{ changed: [] }>()
 
 const { data: attachments, status, error, refresh } = useAppAttachments(props.slug)
-const { items: databases, reset: loadDatabases } = useDatabaseList(props.environmentUuid)
+const {
+  items: databases,
+  pending: databasesPending,
+  error: databasesError,
+  exhausted,
+  reset,
+  loadMore,
+} = useDatabaseList(props.environmentUuid)
 const { attach } = useAttachDatabase()
 const { detach } = useDetachDatabase()
 const toast = useToast()
@@ -27,6 +34,13 @@ const options = computed(() => {
   const taken = new Set(attachments.value?.items.map(item => item.databaseSlug) ?? [])
   return databases.value.filter(database => !taken.has(database.slug)).map(database => database.slug)
 })
+
+// The picker cannot page, so every page loads. A load already in flight owns the rest of the
+// list; looping on it would spin without yielding.
+async function loadDatabases() {
+  await reset()
+  while (!exhausted.value && !databasesError.value && !databasesPending.value) await loadMore()
+}
 
 function openAttach() {
   chosen.value = undefined

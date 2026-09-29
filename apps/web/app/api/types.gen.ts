@@ -1828,7 +1828,7 @@ export type DetachDatabaseV1Errors = {
    */
   403: unknown
   /**
-   * No such app, or that database is not attached to it.
+   * No such app or database, or that database is not attached to it.
    */
   404: unknown
   /**

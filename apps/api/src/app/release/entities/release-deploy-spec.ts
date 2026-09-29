@@ -57,8 +57,7 @@ function resolveAttachments(attachments: AttachedDatabase[]): AttachedDatabaseSp
   })
 }
 
-// The attachment wins a name collision, and it wins here rather than in the manifest — two env
-// entries with one name resolve silently in Kubernetes.
+// An attached database overrides same-named app env; Kubernetes would accept both and pick one.
 function withoutInjectedNames(
   env: Record<string, string>,
   attachments: AttachedDatabaseSpec[],

@@ -1538,7 +1538,7 @@
             "description": "Your account is not approved for this action."
           },
           "404": {
-            "description": "No such app, or that database is not attached to it."
+            "description": "No such app or database, or that database is not attached to it."
           },
           "502": {
             "description": "The cluster update failed; the attachment was kept."

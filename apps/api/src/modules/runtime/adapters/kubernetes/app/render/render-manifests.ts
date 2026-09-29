@@ -1,4 +1,4 @@
-import type { V1Deployment, V1Secret, V1Service } from '@kubernetes/client-node'
+import type { V1Deployment, V1EnvVar, V1Secret, V1Service } from '@kubernetes/client-node'
 import {
   INTERCEPTOR_PORT,
   INTERCEPTOR_SERVICE_NAME,
@@ -16,7 +16,11 @@ import type {
 } from '#src/modules/runtime/adapters/kubernetes/app/kubernetes-objects.types.js'
 import { buildNodeAffinity } from '#src/modules/runtime/adapters/kubernetes/app/render/node-affinity.js'
 import { credentialsSecretName } from '#src/modules/runtime/adapters/kubernetes/database/render-credentials-secret.js'
-import type { AppDeploySpec, RegistryCredentials } from '#src/modules/runtime/runtime.types.js'
+import type {
+  AppDeploySpec,
+  AttachedDatabaseSpec,
+  RegistryCredentials,
+} from '#src/modules/runtime/runtime.types.js'
 
 /**
  * A `kubernetes.io/dockerconfigjson` payload — HTTP Basic auth per registry.
@@ -28,20 +32,23 @@ function buildDockerConfigJson(credentials: RegistryCredentials): string {
   return JSON.stringify({ auths: { [registry]: { username, password, auth } } })
 }
 
+// Each variable references the database's credentials Secret, so no password enters the manifest.
+function attachedDatabaseEnv(attachments: AttachedDatabaseSpec[]): V1EnvVar[] {
+  return attachments.flatMap((attachment) =>
+    attachment.keys.map((key) => ({
+      name: `${attachment.envPrefix ?? ''}${key}`,
+      valueFrom: { secretKeyRef: { name: credentialsSecretName(attachment.databaseSlug), key } },
+    })),
+  )
+}
+
 export function renderManifests(slug: string, spec: AppDeploySpec): RenderedManifests {
   const name = slug
   const host = spec.host
   const labels = { app: name }
   const env = [
     ...Object.entries(spec.env).map(([key, value]) => ({ name: key, value })),
-    ...spec.attachments.flatMap((attachment) =>
-      attachment.keys.map((key) => ({
-        name: `${attachment.envPrefix ?? ''}${key}`,
-        valueFrom: {
-          secretKeyRef: { name: credentialsSecretName(attachment.databaseSlug), key },
-        },
-      })),
-    ),
+    ...attachedDatabaseEnv(spec.attachments),
   ]
   const affinity = buildNodeAffinity(spec.nodePin)
   const credentials = spec.credentials

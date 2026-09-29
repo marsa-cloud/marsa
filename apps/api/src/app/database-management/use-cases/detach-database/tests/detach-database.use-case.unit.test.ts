@@ -5,6 +5,7 @@ import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { AppPlacementBuilder } from '#src/app/app-management/queries/app-placement.builder.js'
+import type { DatabaseUuid } from '#src/app/database-management/entities/database.uuid.js'
 import { DetachDatabaseRepository } from '#src/app/database-management/use-cases/detach-database/detach-database.repository.js'
 import { DetachDatabaseUseCase } from '#src/app/database-management/use-cases/detach-database/detach-database.use-case.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
@@ -12,6 +13,7 @@ import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-crede
 import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
 import { stubDatabase } from '#src/test/setup/stub-database.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
+import { generateUuid } from '#src/utils/uuid.js'
 
 const placement = new AppPlacementBuilder()
   .withApp(new AppBuilder().withSlug('my-app').build())
@@ -21,6 +23,7 @@ const liveRelease = new ReleaseBuilder().withApp(placement.app).build()
 function build() {
   const repository = createStubInstance(DetachDatabaseRepository)
   repository.lockApp.resolves(placement)
+  repository.findDatabaseUuid.resolves(generateUuid<DatabaseUuid>())
   repository.deleteAttachment.resolves(true)
   repository.findAttachments.resolves([])
   repository.findRelease.resolves(liveRelease)
@@ -60,6 +63,16 @@ describe('DetachDatabaseUseCase', () => {
     repository.lockApp.resolves(undefined)
 
     await expect(usecase.execute('ghost', 'orders')).rejects.toThrow(NotFoundException)
+  })
+
+  it('throws 404 for an unknown database', async () => {
+    const { repository, appRuntime, usecase } = build()
+    repository.findDatabaseUuid.resolves(undefined)
+
+    await expect(usecase.execute('my-app', 'orders')).rejects.toThrow(NotFoundException)
+
+    expect(repository.deleteAttachment.called).toBe(false)
+    expect(appRuntime.deploy.called).toBe(false)
   })
 
   it('throws 404 when that database is not attached to the app', async () => {

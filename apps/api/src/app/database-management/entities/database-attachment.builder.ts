@@ -1,6 +1,4 @@
-import type { App } from '#src/app/app-management/entities/app.table.js'
 import type { AppUuid } from '#src/app/app-management/entities/app.uuid.js'
-import type { DatabaseRow } from '#src/app/database-management/entities/database.table.js'
 import type { DatabaseUuid } from '#src/app/database-management/entities/database.uuid.js'
 import type { DatabaseAttachmentRow } from '#src/app/database-management/entities/database-attachment.table.js'
 import type { DatabaseAttachmentUuid } from '#src/app/database-management/entities/database-attachment.uuid.js'
@@ -21,13 +19,13 @@ export class DatabaseAttachmentBuilder {
     }
   }
 
-  withApp(app: App): this {
-    this.attachment.appUuid = app.uuid
+  withAppUuid(appUuid: AppUuid): this {
+    this.attachment.appUuid = appUuid
     return this
   }
 
-  withDatabase(database: DatabaseRow): this {
-    this.attachment.databaseUuid = database.uuid
+  withDatabaseUuid(databaseUuid: DatabaseUuid): this {
+    this.attachment.databaseUuid = databaseUuid
     return this
   }
 

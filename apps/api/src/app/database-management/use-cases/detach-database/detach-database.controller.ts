@@ -23,7 +23,9 @@ export class DetachDatabaseController {
   @Roles(UserRole.Operator, UserRole.Member)
   @ApiCookieAuth(SESSION_COOKIE_SECURITY_SCHEME)
   @ApiNoContentResponse({ description: 'The variables were removed and the app restarted.' })
-  @ApiNotFoundResponse({ description: 'No such app, or that database is not attached to it.' })
+  @ApiNotFoundResponse({
+    description: 'No such app or database, or that database is not attached to it.',
+  })
   @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   @ApiResponse({

@@ -2,8 +2,7 @@ import { after, before, describe, it } from 'node:test'
 import { eq } from 'drizzle-orm'
 import { expect } from 'expect'
 import request from 'supertest'
-import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
-import { type App, appTable } from '#src/app/app-management/entities/app.table.js'
+import { type App } from '#src/app/app-management/entities/app.table.js'
 import { DatabaseBuilder } from '#src/app/database-management/entities/database.builder.js'
 import { databaseTable } from '#src/app/database-management/entities/database.table.js'
 import { databaseAttachmentTable } from '#src/app/database-management/entities/database-attachment.table.js'
@@ -30,18 +29,9 @@ describe('POST /api/v1/apps/:slug/attachments (e2e)', () => {
     cookie = await setup.authenticate()
     environment = (await setup.seedEnvironment()).environment
 
-    app = new AppBuilder().withEnvironmentUuid(environment.uuid).withSlug(APP_SLUG).build()
-    await setup.db.insert(appTable).values(app)
-    await setup.db
-      .insert(databaseTable)
-      .values(
-        new DatabaseBuilder().withEnvironmentUuid(environment.uuid).withSlug('orders').build(),
-      )
-    await setup.db
-      .insert(databaseTable)
-      .values(
-        new DatabaseBuilder().withEnvironmentUuid(environment.uuid).withSlug('analytics').build(),
-      )
+    app = await setup.seedApp(environment.uuid, APP_SLUG)
+    await setup.seedDatabase(environment.uuid, 'orders')
+    await setup.seedDatabase(environment.uuid, 'analytics')
   })
 
   after(async () => {
@@ -85,16 +75,21 @@ describe('POST /api/v1/apps/:slug/attachments (e2e)', () => {
   })
 
   it('refuses attaching the same database twice with 409', async () => {
-    await request(setup.httpServer)
+    const response = await request(setup.httpServer)
       .post(`/api/v1/apps/${APP_SLUG}/attachments`)
       .set('Cookie', cookie)
       .send({ databaseSlug: 'orders', alias: 'again' })
       .expect(409)
+
+    expect(response.body.message).toContain('is already attached')
   })
 
   it('rejects a database from another environment with 404', async () => {
     const otherProject = new ProjectBuilder().withSlug('attach-other-project').build()
-    const other = new EnvironmentBuilder().withProject(otherProject).withSlug('staging').build()
+    const other = new EnvironmentBuilder()
+      .withProjectUuid(otherProject.uuid)
+      .withSlug('staging')
+      .build()
     await setup.db.insert(projectTable).values(otherProject)
     await setup.db.insert(environmentTable).values(other)
     await setup.db

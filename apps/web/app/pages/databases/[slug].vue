@@ -11,7 +11,7 @@ const slug = computed(() => String(route.params.slug))
 useSeoMeta({ title: () => `${slug.value} — Marsa` })
 
 const { data: database, pending, error } = useDatabaseDetail(slug.value)
-const { data: dependents } = useDatabaseDependents(slug.value)
+const { data: dependents, status: dependentsStatus } = useDatabaseDependents(slug.value)
 const { remove } = useDeleteDatabase()
 const toast = useToast()
 
@@ -173,8 +173,18 @@ async function confirmDelete() {
             </h2>
           </template>
 
+          <USkeleton
+            v-if="!dependents && dependentsStatus === 'pending'"
+            class="h-5 w-full"
+          />
+          <UAlert
+            v-else-if="!dependents"
+            color="error"
+            icon="i-lucide-triangle-alert"
+            title="Couldn't load the apps using this database"
+          />
           <p
-            v-if="!dependents || dependents.items.length === 0"
+            v-else-if="dependents.items.length === 0"
             class="text-sm text-muted"
           >
             No apps are using this database.

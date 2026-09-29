@@ -32,7 +32,7 @@ export class CreateEnvironmentUseCase {
     }
 
     const environment = new EnvironmentBuilder()
-      .withProject(project)
+      .withProjectUuid(project.uuid)
       .withName(command.name)
       .withSlug(command.slug)
       .build()

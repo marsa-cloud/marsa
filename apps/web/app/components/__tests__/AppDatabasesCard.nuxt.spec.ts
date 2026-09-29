@@ -9,6 +9,7 @@ const attach = vi.hoisted(() => vi.fn())
 const detach = vi.hoisted(() => vi.fn())
 const refresh = vi.hoisted(() => vi.fn())
 const loadDatabases = vi.hoisted(() => vi.fn())
+const loadMore = vi.hoisted(() => vi.fn())
 const toastAdd = vi.hoisted(() => vi.fn())
 
 const s = vi.hoisted(() => ({
@@ -16,6 +17,7 @@ const s = vi.hoisted(() => ({
   status: 'success',
   error: null as unknown,
   databases: [] as unknown[],
+  exhausted: true,
 }))
 
 mockNuxtImport('useAppAttachments', () => () => ({
@@ -24,10 +26,19 @@ mockNuxtImport('useAppAttachments', () => () => ({
   error: ref(s.error),
   refresh,
 }))
-mockNuxtImport('useDatabaseList', () => () => ({
-  items: ref(s.databases),
-  reset: loadDatabases,
-}))
+mockNuxtImport('useDatabaseList', () => () => {
+  const exhausted = ref(s.exhausted)
+  return {
+    items: ref(s.databases),
+    pending: ref(false),
+    error: ref(null),
+    exhausted,
+    reset: loadDatabases,
+    loadMore: loadMore.mockImplementation(() => {
+      exhausted.value = true
+    }),
+  }
+})
 mockNuxtImport('useAttachDatabase', () => () => ({ attach }))
 mockNuxtImport('useDetachDatabase', () => () => ({ detach }))
 mockNuxtImport('useToast', () => () => ({ add: toastAdd }))
@@ -49,10 +60,12 @@ beforeEach(() => {
   s.status = 'success'
   s.error = null
   s.databases = [{ slug: 'analytics' }, { slug: 'orders' }]
+  s.exhausted = true
   attach.mockReset().mockResolvedValue({ databaseSlug: 'analytics', alias: null, variables: [] })
   detach.mockReset().mockResolvedValue(undefined)
   refresh.mockReset()
   loadDatabases.mockReset()
+  loadMore.mockReset()
   toastAdd.mockReset()
 })
 
@@ -112,6 +125,16 @@ describe('AppDatabasesCard', () => {
     expect(loadDatabases).toHaveBeenCalled()
     const select = queryTestId('attach-database-select')
     expect(select?.textContent).not.toContain('orders')
+  })
+
+  it('loads every page of databases, not just the first', async () => {
+    s.exhausted = false
+    const wrapper = await mount()
+
+    await wrapper.find('[data-testid="open-attach"]').trigger('click')
+    await flushPromises()
+
+    expect(loadMore).toHaveBeenCalledTimes(1)
   })
 
   it('attaches the chosen database with the typed alias', async () => {

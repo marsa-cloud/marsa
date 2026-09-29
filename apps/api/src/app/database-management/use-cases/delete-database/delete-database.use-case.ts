@@ -44,8 +44,9 @@ export class DeleteDatabaseUseCase {
       }
       // Read after the failure rather than checking first: a pre-check races a concurrent attach.
       const dependents = await this.repository.dependentApps(tx, uuid)
+      const holders = dependents.length > 0 ? dependents.join(', ') : 'an app'
       throw new ConflictException(
-        `Database '${slug}' is still attached to ${dependents.join(', ')}. Detach it there first.`,
+        `Database '${slug}' is still attached to ${holders}. Detach it there first.`,
       )
     }
   }

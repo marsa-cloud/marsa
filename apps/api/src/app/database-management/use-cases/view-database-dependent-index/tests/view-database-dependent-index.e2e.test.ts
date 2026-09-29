@@ -1,15 +1,7 @@
 import { after, before, describe, it } from 'node:test'
 import { expect } from 'expect'
 import request from 'supertest'
-import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
-import { appTable } from '#src/app/app-management/entities/app.table.js'
-import { DatabaseBuilder } from '#src/app/database-management/entities/database.builder.js'
-import {
-  type DatabaseRow,
-  databaseTable,
-} from '#src/app/database-management/entities/database.table.js'
-import { DatabaseAttachmentBuilder } from '#src/app/database-management/entities/database-attachment.builder.js'
-import { databaseAttachmentTable } from '#src/app/database-management/entities/database-attachment.table.js'
+import { type DatabaseRow } from '#src/app/database-management/entities/database.table.js'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
@@ -28,23 +20,12 @@ describe('GET /api/v1/databases/:slug/dependents (e2e)', () => {
     cookie = await setup.authenticate()
     environment = (await setup.seedEnvironment()).environment
 
-    database = new DatabaseBuilder().withEnvironmentUuid(environment.uuid).withSlug(DB_SLUG).build()
-    await setup.db.insert(databaseTable).values(database)
-    await setup.db
-      .insert(databaseTable)
-      .values(
-        new DatabaseBuilder()
-          .withEnvironmentUuid(environment.uuid)
-          .withSlug(LONELY_DB_SLUG)
-          .build(),
-      )
+    database = await setup.seedDatabase(environment.uuid, DB_SLUG)
+    await setup.seedDatabase(environment.uuid, LONELY_DB_SLUG)
 
     for (const slug of ['dependents-worker', 'dependents-api']) {
-      const app = new AppBuilder().withEnvironmentUuid(environment.uuid).withSlug(slug).build()
-      await setup.db.insert(appTable).values(app)
-      await setup.db
-        .insert(databaseAttachmentTable)
-        .values(new DatabaseAttachmentBuilder().withApp(app).withDatabase(database).build())
+      const app = await setup.seedApp(environment.uuid, slug)
+      await setup.seedAttachment(app.uuid, database.uuid)
     }
   })
 

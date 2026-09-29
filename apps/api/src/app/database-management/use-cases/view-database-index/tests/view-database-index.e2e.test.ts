@@ -60,7 +60,10 @@ describe('GET /api/v1/databases (e2e)', () => {
 
   it('lists only the databases of the environment asked for', async () => {
     const otherProject = new ProjectBuilder().withSlug('index-other-project').build()
-    const other = new EnvironmentBuilder().withProject(otherProject).withSlug('staging').build()
+    const other = new EnvironmentBuilder()
+      .withProjectUuid(otherProject.uuid)
+      .withSlug('staging')
+      .build()
     await setup.db.insert(projectTable).values(otherProject)
     await setup.db.insert(environmentTable).values(other)
     await setup.db

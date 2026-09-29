@@ -21,3 +21,13 @@ export function isUniqueViolation(error: unknown): boolean {
   }
   return false
 }
+
+export function violatedConstraint(error: unknown): string | undefined {
+  for (let current: unknown = error; current instanceof Error; current = current.cause) {
+    const { constraint } = current as Error & { constraint?: string }
+    if (constraint) {
+      return constraint
+    }
+  }
+  return undefined
+}

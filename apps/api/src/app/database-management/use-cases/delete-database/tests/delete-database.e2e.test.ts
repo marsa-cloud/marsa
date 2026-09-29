@@ -2,12 +2,8 @@ import { after, before, describe, it } from 'node:test'
 import { eq } from 'drizzle-orm'
 import { expect } from 'expect'
 import request from 'supertest'
-import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
-import { appTable } from '#src/app/app-management/entities/app.table.js'
 import { DatabaseBuilder } from '#src/app/database-management/entities/database.builder.js'
 import { databaseTable } from '#src/app/database-management/entities/database.table.js'
-import { DatabaseAttachmentBuilder } from '#src/app/database-management/entities/database-attachment.builder.js'
-import { databaseAttachmentTable } from '#src/app/database-management/entities/database-attachment.table.js'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
 import type { MockDatabaseRuntime } from '#src/modules/runtime/adapters/mock/mock-database-runtime.js'
 import { DatabaseRuntime } from '#src/modules/runtime/database-runtime.js'
@@ -76,19 +72,9 @@ describe('DELETE /api/v1/databases/:slug (e2e)', () => {
 
   it('refuses with 409 while an app is still attached, naming the app', async () => {
     const slug = 'delete-db-attached'
-    const database = new DatabaseBuilder()
-      .withEnvironmentUuid(environment.uuid)
-      .withSlug(slug)
-      .build()
-    const app = new AppBuilder()
-      .withEnvironmentUuid(environment.uuid)
-      .withSlug('delete-db-dependent')
-      .build()
-    await setup.db.insert(databaseTable).values(database)
-    await setup.db.insert(appTable).values(app)
-    await setup.db
-      .insert(databaseAttachmentTable)
-      .values(new DatabaseAttachmentBuilder().withApp(app).withDatabase(database).build())
+    const database = await setup.seedDatabase(environment.uuid, slug)
+    const app = await setup.seedApp(environment.uuid, 'delete-db-dependent')
+    await setup.seedAttachment(app.uuid, database.uuid)
 
     const response = await request(setup.httpServer)
       .delete(`/api/v1/databases/${slug}`)

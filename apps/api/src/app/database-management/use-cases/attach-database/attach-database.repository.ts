@@ -11,7 +11,10 @@ import {
   databaseTable,
 } from '#src/app/database-management/entities/database.table.js'
 import type { DatabaseUuid } from '#src/app/database-management/entities/database.uuid.js'
-import { databaseAttachmentTable } from '#src/app/database-management/entities/database-attachment.table.js'
+import {
+  ATTACHMENT_APP_DATABASE_UNIQUE,
+  databaseAttachmentTable,
+} from '#src/app/database-management/entities/database-attachment.table.js'
 import {
   type AttachedDatabase,
   selectAttachmentsForApp,
@@ -20,7 +23,7 @@ import type { EnvironmentUuid } from '#src/app/environment/entities/environment.
 import { type Release, releaseTable } from '#src/app/release/entities/release.table.js'
 import type { ReleaseUuid } from '#src/app/release/entities/release.uuid.js'
 import type { Executor } from '#src/modules/database/drizzle.factory.js'
-import { isUniqueViolation } from '#src/modules/database/postgres-errors.js'
+import { isUniqueViolation, violatedConstraint } from '#src/modules/database/postgres-errors.js'
 
 export type InsertOutcome = 'inserted' | 'alias-taken' | 'already-attached'
 
@@ -34,7 +37,8 @@ export class AttachDatabaseRepository {
     return placement
   }
 
-  // Scoped to the environment: a database elsewhere is not found, not forbidden.
+  // Scoped to the environment: a database elsewhere is not found, not forbidden. The key-share
+  // lock makes a concurrent delete wait for this attachment rather than fail its FK check.
   async findDatabaseInEnvironment(
     tx: Executor,
     environmentUuid: EnvironmentUuid,
@@ -45,6 +49,7 @@ export class AttachDatabaseRepository {
       .from(databaseTable)
       .where(and(eq(databaseTable.environmentUuid, environmentUuid), eq(databaseTable.slug, slug)))
       .limit(1)
+      .for('key share')
     return database
   }
 
@@ -62,7 +67,9 @@ export class AttachDatabaseRepository {
         throw error
       }
       // Which constraint fired decides the message, so the operator learns what to change.
-      return String(error).includes('app_uuid_database_uuid') ? 'already-attached' : 'alias-taken'
+      return violatedConstraint(error) === ATTACHMENT_APP_DATABASE_UNIQUE
+        ? 'already-attached'
+        : 'alias-taken'
     }
   }
 
