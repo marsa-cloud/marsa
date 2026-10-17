@@ -1,6 +1,7 @@
 import type { ImagePullCredentials } from '#src/app/app-management/entities/image-pull-credentials.js'
 import type { NodePin } from '#src/app/app-management/entities/node-pin.js'
 import { CreateAppCommand } from '#src/app/app-management/use-cases/create-app/create-app.command.js'
+import type { CreateAppSourceCommand } from '#src/app/app-management/use-cases/create-app/create-app-source.command.js'
 import type { EnvironmentUuid } from '#src/app/environment/entities/environment.uuid.js'
 import { generateUuid } from '#src/utils/uuid.js'
 
@@ -47,6 +48,13 @@ export class CreateAppCommandBuilder {
 
   withNodePin(nodePin: NodePin): this {
     this.command.nodePin = nodePin
+    return this
+  }
+
+  fromSource(source: CreateAppSourceCommand): this {
+    this.command.source = source
+    delete this.command.image
+    delete this.command.containerPort
     return this
   }
 

@@ -20,6 +20,8 @@ const config: ViewAppDetailResponse = {
   maxReplicas: 2,
   env: { LOG_LEVEL: 'info' },
   nodePin: null,
+  source: null,
+  latestBuild: null,
   hasUndeployedChanges: false,
   project: { slug: 'demo', name: 'Demo' },
   environment: { uuid: '0190c3c0-0000-7000-8000-000000000002', slug: 'dev', name: 'Dev' },
@@ -178,5 +180,25 @@ describe('AppConfigForm', () => {
     })
 
     expect(wrapper.text()).not.toContain('Overridden by an attached database')
+  })
+
+  it('hides the image of a source app and leaves it out of the update', async () => {
+    const wrapper = await mount({
+      ...config,
+      image: null,
+      source: {
+        installationUuid: 'i1',
+        repo: 'acme/shop',
+        branch: 'main',
+        rootDir: '.',
+        dockerfilePath: 'Dockerfile',
+      },
+    })
+
+    expect(wrapper.find('input#config-image').exists()).toBe(false)
+    await wrapper.find('form').trigger('submit.prevent')
+    await flush()
+    expect(update).toHaveBeenCalled()
+    expect(update.mock.calls[0]?.[1]).not.toHaveProperty('image')
   })
 })

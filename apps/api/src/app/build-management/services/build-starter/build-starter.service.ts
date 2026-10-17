@@ -3,6 +3,7 @@ import type { App } from '#src/app/app-management/entities/app.table.js'
 import type { AppSource } from '#src/app/app-management/entities/app-source.js'
 import type { Build } from '#src/app/build-management/entities/build.table.js'
 import { buildRefOf } from '#src/app/build-management/entities/build-ref.js'
+import { buildSpecOf } from '#src/app/build-management/entities/build-spec.js'
 import { BuildStatus } from '#src/app/build-management/enums/build-status.enum.js'
 import type { BuildTrigger } from '#src/app/build-management/enums/build-trigger.enum.js'
 import { BuildStarterRepository } from '#src/app/build-management/services/build-starter/build-starter.repository.js'
@@ -58,14 +59,15 @@ export class BuildStarter {
       for (const old of superseded) {
         await this.buildRuntime.cancel(buildRefOf(app.slug, old.uuid))
       }
-      await this.buildRuntime.start(buildRefOf(app.slug, build.uuid), {
-        repoUrl: `https://github.com/${source.repo}.git`,
-        commitSha: options.commitSha,
-        rootDir: source.rootDir,
-        dockerfilePath: source.dockerfilePath,
-        gitToken: options.gitToken,
-        pushRef: this.imageRegistry.pushRefFor(app.slug, options.commitSha),
-      })
+      await this.buildRuntime.start(
+        buildRefOf(app.slug, build.uuid),
+        buildSpecOf(
+          source,
+          options.commitSha,
+          options.gitToken,
+          this.imageRegistry.pushRefFor(app.slug, options.commitSha),
+        ),
+      )
       return build
     } catch (error) {
       return this.repository.fail(tx, build.uuid, (error as Error).message)

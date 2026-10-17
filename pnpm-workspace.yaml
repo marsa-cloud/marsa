@@ -49,6 +49,7 @@ catalog:
   # GitHub integration (api)
   '@octokit/auth-app': ^8.2.0
   '@octokit/request': ^10.0.10
+  '@octokit/webhooks-methods': ^6.0.0
 
   # Kubernetes (api)
   '@kubernetes/client-node': ^1.4.0

@@ -50,7 +50,7 @@ export class AppBuilder {
     return this
   }
 
-  withImage(image: string): this {
+  withImage(image: string | null): this {
     this.app.image = image
     return this
   }

@@ -6,8 +6,13 @@ export class UpdateAppResponse {
   @ApiProperty({ type: String, example: 'my-app' })
   readonly slug: string
 
-  @ApiProperty({ type: String, example: 'nginx:1.27' })
-  readonly image: string
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    example: 'nginx:1.27',
+    description: 'Image the next release uses. Null until a source app finishes its first build.',
+  })
+  readonly image: string | null
 
   @ApiProperty({ type: 'integer', example: 80 })
   readonly containerPort: number
