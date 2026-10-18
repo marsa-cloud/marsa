@@ -4,7 +4,7 @@ export type {
   AppAttachmentSummary,
   AppEnvironmentRef,
   AppHealthStatus,
-  AppLatestBuild,
+  AppLatestBuildResponse,
   AppProjectRef,
   AppSourceResponse,
   AppSummary,

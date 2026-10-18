@@ -492,7 +492,7 @@ export type AppSourceResponse = {
   dockerfilePath: string
 }
 
-export type AppLatestBuild = {
+export type AppLatestBuildResponse = {
   uuid: string
   status: BuildStatus
   commitSha: string
@@ -532,7 +532,7 @@ export type ViewAppDetailResponse = {
   /**
    * Newest build, if any.
    */
-  latestBuild: AppLatestBuild | null
+  latestBuild: AppLatestBuildResponse | null
   /**
    * True when the saved config differs from the release the cluster is running, or nothing is running.
    */

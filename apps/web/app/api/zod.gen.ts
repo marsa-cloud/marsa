@@ -354,7 +354,7 @@ export const zAppSourceResponse = z.object({
   dockerfilePath: z.string(),
 })
 
-export const zAppLatestBuild = z.object({
+export const zAppLatestBuildResponse = z.object({
   uuid: z.uuid(),
   status: zBuildStatus,
   commitSha: z.string(),
@@ -374,7 +374,7 @@ export const zViewAppDetailResponse = z.object({
   env: z.record(z.string(), z.string()),
   nodePin: zNodePin.nullable(),
   source: zAppSourceResponse.nullable(),
-  latestBuild: zAppLatestBuild.nullable(),
+  latestBuild: zAppLatestBuildResponse.nullable(),
   hasUndeployedChanges: z.boolean(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
