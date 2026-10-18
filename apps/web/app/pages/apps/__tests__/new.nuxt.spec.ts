@@ -37,13 +37,10 @@ mockComponent('NodePinPicker', async () => {
 })
 
 // Its own spec covers loading and empty states; here it just reports a chosen repository.
+type Repo = { installationUuid: string, fullName: string, defaultBranch: string, private: boolean }
 const chosen = vi.hoisted(() => ({
-  repo: null as null | {
-    installationUuid: string
-    fullName: string
-    defaultBranch: string
-    private: boolean
-  },
+  repo: null as null | Repo,
+  pick: (_repo: Repo) => {},
 }))
 mockComponent('GithubRepoPicker', async () => {
   const { defineComponent, h } = await import('vue')
@@ -51,6 +48,7 @@ mockComponent('GithubRepoPicker', async () => {
     props: { modelValue: { type: Object, default: undefined } },
     emits: ['update:modelValue'],
     setup(_, { emit }) {
+      chosen.pick = repo => emit('update:modelValue', repo)
       if (chosen.repo) emit('update:modelValue', chosen.repo)
       return () => h('div')
     },
@@ -310,5 +308,51 @@ describe('apps/new deploy from GitHub', () => {
     await submit(wrapper)
 
     expect(create).not.toHaveBeenCalled()
+  })
+
+  it('keeps the suggested slug in step with the repository until the user types one', async () => {
+    chosen.repo = repo
+    const wrapper = await mountSuspended(New)
+    await flush()
+    const slug = () => (wrapper.find('input#slug').element as HTMLInputElement).value
+
+    chosen.pick({ ...repo, fullName: 'acme/Other-Repo' })
+    await flush()
+    expect(slug()).toBe('other-repo')
+
+    await wrapper.find('input#slug').setValue('custom')
+    chosen.pick({ ...repo, fullName: 'acme/Third' })
+    await flush()
+    expect(slug()).toBe('custom')
+  })
+
+  it('rejects paths that leave the repository without calling the API', async () => {
+    chosen.repo = repo
+    const wrapper = await mountSuspended(New)
+    await flush()
+    await wrapper.find('input#rootDir').setValue('/app')
+    await wrapper.find('input#dockerfilePath').setValue('../Dockerfile')
+    await submit(wrapper)
+
+    expect(create).not.toHaveBeenCalled()
+    expect(wrapper.text().match(/Must be a path inside the repo/g)).toHaveLength(2)
+  })
+
+  it('accepts nested relative paths', async () => {
+    chosen.repo = repo
+    const wrapper = await mountSuspended(New)
+    await flush()
+    await wrapper.find('input#rootDir').setValue('services/api')
+    await wrapper.find('input#dockerfilePath').setValue('docker/Dockerfile.prod')
+    await submit(wrapper)
+
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: expect.objectContaining({
+          rootDir: 'services/api',
+          dockerfilePath: 'docker/Dockerfile.prod',
+        }),
+      }),
+    )
   })
 })

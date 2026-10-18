@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import type { GitHubRepositorySummary } from '~/api/types.gen'
 
-// useRepositoryList is an auto-import, left un-imported so tests can mock it.
-
 const repo = defineModel<GitHubRepositorySummary | undefined>({ required: true })
 
-const { data, status, error } = useRepositoryList()
+const { data, status, error, refresh } = useRepositoryList()
 const repos = computed(() => data.value?.items ?? [])
 </script>
 
@@ -15,7 +13,20 @@ const repos = computed(() => data.value?.items ?? [])
     color="error"
     icon="i-lucide-triangle-alert"
     title="Couldn't load your GitHub repositories"
-  />
+  >
+    <template #actions>
+      <UButton
+        data-testid="retry-repositories"
+        size="sm"
+        color="neutral"
+        variant="subtle"
+        icon="i-lucide-refresh-cw"
+        label="Retry"
+        :loading="status === 'pending'"
+        @click="refresh()"
+      />
+    </template>
+  </UAlert>
   <UAlert
     v-else-if="status === 'success' && !repos.length"
     color="neutral"

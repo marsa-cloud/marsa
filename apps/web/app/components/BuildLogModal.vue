@@ -1,6 +1,4 @@
 <script setup lang="ts">
-// useBuildLogs / extractApiError are auto-imports, left un-imported so tests can mock them.
-
 const props = defineProps<{ slug: string }>()
 const buildUuid = defineModel<string | null>('buildUuid', { required: true })
 
@@ -51,7 +49,7 @@ const open = computed({
       />
       <p
         v-else-if="failure"
-        data-testid="build-logs-empty"
+        data-testid="build-logs-error"
         class="text-sm text-muted"
       >
         {{ failure }}

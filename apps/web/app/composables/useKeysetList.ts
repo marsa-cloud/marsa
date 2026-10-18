@@ -16,6 +16,9 @@ function bracketQuery(prefix: string, value: Record<string, unknown>): Record<st
   return flat
 }
 
+// The api's pagination validator caps `limit` here.
+const MAX_LIMIT = 100
+
 export function useKeysetList<TItem, TKey>(
   path: string,
   parse: (raw: unknown) => { items: TItem[], meta: { next: TKey | null } },
@@ -30,13 +33,24 @@ export function useKeysetList<TItem, TKey>(
   const error = ref<unknown>(null)
   const exhausted = ref(false)
 
-  // Bumped by every load and by every reset, so a response that lands after a reset can
+  // Bumped by every load, reset and refresh, so a response that lands after a reset can
   // tell it has been superseded. Without it, reset() returns empty while the request it
   // could not cancel pushes its page onto the cleared list — silently skipping page one.
   let generation = 0
 
   // Excludes `error`: a failed page must not auto-retry on scroll, but the button must.
   const canLoadMore = () => !pending.value && !exhausted.value && error.value === null
+
+  async function fetchPage(pageLimit: number, key: TKey | null) {
+    return parse(
+      await $api(path, {
+        query: {
+          ...filters,
+          ...bracketQuery('pagination', { limit: pageLimit, ...(key ? { key } : {}) }),
+        },
+      }),
+    )
+  }
 
   async function loadMore(): Promise<void> {
     if (pending.value || exhausted.value) return
@@ -45,17 +59,7 @@ export function useKeysetList<TItem, TKey>(
     pending.value = true
     error.value = null
     try {
-      const page = parse(
-        await $api(path, {
-          query: {
-            ...filters,
-            ...bracketQuery('pagination', {
-              limit,
-              ...(next.value ? { key: next.value } : {}),
-            }),
-          },
-        }),
-      )
+      const page = await fetchPage(limit, next.value)
 
       if (attempt !== generation) return
 
@@ -88,5 +92,30 @@ export function useKeysetList<TItem, TKey>(
     await loadMore()
   }
 
-  return { items, next, pending, error, exhausted, canLoadMore, loadMore, reset }
+  // Re-reads the loaded window in one request and swaps it in on arrival, so a poll neither
+  // flashes an empty list nor drops the pages infinite scroll already loaded.
+  async function refresh(): Promise<void> {
+    // A page load in flight will show fresh rows anyway; superseding it would discard them.
+    if (pending.value) return
+
+    const attempt = ++generation
+    const windowLimit = Math.min(
+      MAX_LIMIT,
+      Math.max(limit, Math.ceil(items.value.length / limit) * limit),
+    )
+    try {
+      const page = await fetchPage(windowLimit, null)
+      if (attempt !== generation) return
+
+      items.value = page.items
+      next.value = page.meta.next
+      error.value = null
+      exhausted.value = page.items.length < windowLimit || page.meta.next === null
+    } catch (caught) {
+      // Rows already on screen stay; only an empty list has nothing better to show than the error.
+      if (attempt === generation && !items.value.length) error.value = caught
+    }
+  }
+
+  return { items, next, pending, error, exhausted, canLoadMore, loadMore, reset, refresh }
 }

@@ -3,10 +3,6 @@ import * as z from 'zod'
 
 import type { CreateAppCommand, CreateAppResponse, GitHubRepositorySummary, NodePin } from '~/api/types.gen'
 import { appConfigFields, isReplicaRangeValid, REPLICA_RANGE_ERROR } from '~/utils/appConfigSchema'
-import { repoSlug } from '~/utils/repoSlug'
-
-// useCreateApp / useShipRelease / buildEnvRecord / extractApiError are Nuxt auto-imports,
-// left un-imported so tests can mock them via mockNuxtImport.
 
 useSeoMeta({ title: 'Deploy an app — Marsa' })
 
@@ -31,6 +27,13 @@ const sharedFields = {
   maxReplicas: appConfigFields.maxReplicas,
 }
 
+// Mirrors the api's SOURCE_PATH_PATTERN: relative, and no `..` segment escaping the repo.
+const SOURCE_PATH_PATTERN = /^(?!\/)(?!(?:.*\/)?\.\.(?:\/|$))[\w.\-/]+$/
+const sourcePath = z
+  .string()
+  .min(1, 'Required')
+  .regex(SOURCE_PATH_PATTERN, 'Must be a path inside the repo')
+
 const imageSchema = z
   .object({ ...sharedFields, image: appConfigFields.image, containerPort: appConfigFields.containerPort })
   .refine(isReplicaRangeValid, REPLICA_RANGE_ERROR)
@@ -40,8 +43,8 @@ const githubSchema = z
     ...sharedFields,
     repo: z.custom<GitHubRepositorySummary>(value => !!value, 'Pick a repository'),
     branch: z.string().min(1, 'Required'),
-    rootDir: z.string().min(1, 'Required'),
-    dockerfilePath: z.string().min(1, 'Required'),
+    rootDir: sourcePath,
+    dockerfilePath: sourcePath,
     containerPort: appConfigFields.containerPort.optional(),
   })
   .refine(isReplicaRangeValid, REPLICA_RANGE_ERROR)
@@ -74,12 +77,18 @@ const state = reactive<{
   nodePin: null,
 })
 
+// The suggested slug follows the chosen repo until the user types their own.
+const slugEditedByUser = ref(false)
+function onSlugInput(value: string) {
+  slugEditedByUser.value = value !== ''
+}
+
 watch(
   () => state.repo,
   (repo) => {
     if (!repo) return
     state.branch = repo.defaultBranch
-    if (!state.slug) state.slug = repoSlug(repo.fullName)
+    if (!slugEditedByUser.value) state.slug = repoSlug(repo.fullName)
   },
 )
 
@@ -260,6 +269,7 @@ async function onSubmit() {
                 label="Root directory"
                 name="rootDir"
                 description="Build context inside the repo"
+                required
               >
                 <UInput
                   id="rootDir"
@@ -271,6 +281,7 @@ async function onSubmit() {
                 label="Dockerfile"
                 name="dockerfilePath"
                 description="Relative to the root directory"
+                required
               >
                 <UInput
                   id="dockerfilePath"
@@ -294,6 +305,7 @@ async function onSubmit() {
               v-model="state.slug"
               placeholder="my-app"
               class="w-full"
+              @update:model-value="onSlugInput"
             />
           </UFormField>
 

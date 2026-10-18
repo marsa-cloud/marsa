@@ -18,7 +18,7 @@ const sourceSchema = z
   .object({ ...appConfigFields, image: z.string() })
   .refine(isReplicaRangeValid, REPLICA_RANGE_ERROR)
 const schema = computed(() => (isSource.value ? sourceSchema : imageSchema))
-type Schema = z.output<typeof imageSchema>
+type FormValues = z.output<typeof imageSchema> | z.output<typeof sourceSchema>
 
 const state = reactive<{
   image: string
@@ -93,7 +93,7 @@ function envRowsProblem(): string {
 const saving = ref(false)
 const error = ref('')
 
-async function onSubmit(event: FormSubmitEvent<Schema>) {
+async function onSubmit(event: FormSubmitEvent<FormValues>) {
   error.value = envRowsProblem()
   if (error.value) return
 

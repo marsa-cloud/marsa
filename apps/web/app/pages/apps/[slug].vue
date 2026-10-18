@@ -1,10 +1,7 @@
 <script setup lang="ts">
-import { useIntervalFn } from '@vueuse/core'
+import { useDocumentVisibility, useIntervalFn } from '@vueuse/core'
 
-import type { AppHealthStatus } from '~/api/types.gen'
-
-// useAppReleases / useAppHealth / useAppRunLogs / useAppDetail / useAppBuilds / useRebuild /
-// useShipRelease / extractApiError are Nuxt auto-imports — left un-imported so tests can mock them.
+import type { AppHealthStatus, DeployStatus } from '~/api/types.gen'
 
 // Remount per slug so navigating /apps/a → /apps/b re-runs setup with fresh reads.
 definePageMeta({ key: route => route.fullPath })
@@ -22,10 +19,11 @@ const {
   exhausted: releasesExhausted,
   canLoadMore: canLoadMoreReleases,
   loadMore: loadMoreReleases,
-  reset: refreshReleases,
+  reset: loadReleases,
+  refresh: refreshReleases,
 } = useAppReleases(slug.value)
 
-onMounted(() => void refreshReleases())
+onMounted(() => void loadReleases())
 // Bounds come from the API's tailLines validator (1–1000); 100 is its default.
 const TAIL_LINE_OPTIONS = [50, 100, 200, 500, 1000]
 const tailLines = ref(100)
@@ -55,27 +53,63 @@ const {
   exhausted: buildsExhausted,
   canLoadMore: canLoadMoreBuilds,
   loadMore: loadMoreBuilds,
-  reset: refreshBuilds,
+  reset: loadBuilds,
+  refresh: refreshBuilds,
 } = useAppBuilds(slug.value)
 
 const source = computed(() => config.value?.source ?? null)
+// A config refetch yields a new source object; watching that would reload the builds every time.
 watch(
-  source,
-  (current) => {
-    if (current) void refreshBuilds()
+  () => source.value?.repo ?? null,
+  (repo) => {
+    if (repo) void loadBuilds()
   },
   { immediate: true },
 )
 
-const BUILD_POLL_MS = 5000
-const building = computed(() => config.value?.latestBuild?.status === 'running')
-// A finished build deploys on the server; polling is how the page sees the new release land.
+const FAST_POLL_MS = 5000
+const IDLE_POLL_MS = 15000
+const ROLLING_OUT: DeployStatus[] = ['pending', 'in_progress']
+// A finished build deploys on the server, so stay fast until its release has landed too.
+const settling = computed(() => {
+  const newest = releases.value[0]
+  return (
+    config.value?.latestBuild?.status === 'running'
+    || (!!newest && ROLLING_OUT.includes(newest.deployStatus))
+  )
+})
+
+let polling = false
+async function poll() {
+  if (polling) return
+  polling = true
+  try {
+    await Promise.all([
+      refreshConfig(),
+      refreshReleases(),
+      refreshHealth(),
+      ...(source.value ? [refreshBuilds()] : []),
+    ])
+  } finally {
+    polling = false
+  }
+}
+
 const { pause, resume } = useIntervalFn(
-  () => Promise.all([refreshBuilds(), refreshConfig(), refreshReleases(), refreshHealth()]),
-  BUILD_POLL_MS,
+  poll,
+  () => (settling.value ? FAST_POLL_MS : IDLE_POLL_MS),
   { immediate: false },
 )
-watch(building, isBuilding => (isBuilding ? resume() : pause()), { immediate: true })
+const visibility = useDocumentVisibility()
+watch(
+  visibility,
+  (state, previous) => {
+    if (state === 'hidden') return pause()
+    if (previous === 'hidden') void poll()
+    resume()
+  },
+  { immediate: true },
+)
 
 const { rebuild } = useRebuild()
 const rebuilding = ref(false)
@@ -221,7 +255,7 @@ async function confirmDelete() {
             color="neutral"
             variant="subtle"
             :loading="shipping"
-            :disabled="shipping || config?.image === null"
+            :disabled="shipping || !config?.image"
             @click="runShip()"
           >
             Redeploy
@@ -264,7 +298,7 @@ async function confirmDelete() {
           </template>
 
           <USkeleton
-            v-if="isPending(healthStatus)"
+            v-if="!health && isPending(healthStatus)"
             class="h-6 w-40"
           />
           <UAlert
@@ -405,7 +439,7 @@ async function confirmDelete() {
           </template>
 
           <USkeleton
-            v-if="isPending(logsStatus)"
+            v-if="!logsData && isPending(logsStatus)"
             class="h-24 w-full"
           />
           <UAlert

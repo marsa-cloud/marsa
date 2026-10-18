@@ -54,7 +54,7 @@ const formatTime = (iso: string) => new Date(iso).toLocaleString()
         class="flex flex-wrap items-center gap-x-4 gap-y-1 py-3 first:pt-0 last:pb-0"
       >
         <UBadge
-          :color="buildStatusColor[build.status] ?? 'neutral'"
+          :color="buildStatusColor[build.status]"
           variant="subtle"
         >
           {{ build.status }}

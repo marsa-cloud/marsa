@@ -8,12 +8,14 @@ const s = vi.hoisted(() => ({
   data: null as unknown,
   status: 'success',
   error: null as unknown,
+  refresh: vi.fn(),
 }))
 
 mockNuxtImport('useRepositoryList', () => () => ({
   data: ref(s.data),
   status: ref(s.status),
   error: ref(s.error),
+  refresh: s.refresh,
 }))
 
 const repo = {
@@ -27,6 +29,7 @@ beforeEach(() => {
   s.data = { items: [repo] }
   s.status = 'success'
   s.error = null
+  s.refresh.mockReset()
 })
 
 describe('GithubRepoPicker', () => {
@@ -56,5 +59,14 @@ describe('GithubRepoPicker', () => {
     const wrapper = await mountSuspended(GithubRepoPicker, { props: { modelValue: undefined } })
 
     expect(wrapper.text()).toContain('Couldn\'t load your GitHub repositories')
+  })
+
+  it('retries loading the repositories from the error', async () => {
+    s.error = new Error('502')
+    const wrapper = await mountSuspended(GithubRepoPicker, { props: { modelValue: undefined } })
+
+    await wrapper.find('[data-testid="retry-repositories"]').trigger('click')
+
+    expect(s.refresh).toHaveBeenCalledTimes(1)
   })
 })

@@ -37,7 +37,7 @@ describe('BuildLogModal', () => {
     })
     await flushPromises()
 
-    expect(document.querySelector('[data-testid="build-logs-empty"]')?.textContent).toContain(
+    expect(document.querySelector('[data-testid="build-logs-error"]')?.textContent).toContain(
       'kept for one hour',
     )
     wrapper.unmount()
