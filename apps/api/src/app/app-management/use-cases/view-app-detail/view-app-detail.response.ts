@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger'
 import { NodePin } from '#src/app/app-management/entities/node-pin.js'
 import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
-import { AppLatestBuild } from '#src/app/app-management/responses/app-latest-build.response.js'
+import { AppLatestBuildResponse } from '#src/app/app-management/responses/app-latest-build.response.js'
 import {
   AppEnvironmentRef,
   AppProjectRef,
@@ -61,8 +61,12 @@ export class ViewAppDetailResponse {
   })
   readonly source: AppSourceResponse | null
 
-  @ApiProperty({ type: AppLatestBuild, nullable: true, description: 'Newest build, if any.' })
-  readonly latestBuild: AppLatestBuild | null
+  @ApiProperty({
+    type: AppLatestBuildResponse,
+    nullable: true,
+    description: 'Newest build, if any.',
+  })
+  readonly latestBuild: AppLatestBuildResponse | null
 
   @ApiProperty({
     type: Boolean,
@@ -94,7 +98,7 @@ export class ViewAppDetailResponse {
     this.env = app.env
     this.nodePin = app.nodePin
     this.source = app.source ? new AppSourceResponse(app.source) : null
-    this.latestBuild = latestBuild ? new AppLatestBuild(latestBuild) : null
+    this.latestBuild = latestBuild ? new AppLatestBuildResponse(latestBuild) : null
     this.hasUndeployedChanges = hasUndeployedChanges
     this.createdAt = app.createdAt.toISOString()
     this.updatedAt = app.updatedAt.toISOString()

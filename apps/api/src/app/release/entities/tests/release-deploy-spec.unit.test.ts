@@ -2,15 +2,14 @@ import { describe, it } from 'node:test'
 import { expect } from 'expect'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import type { App } from '#src/app/app-management/entities/app.table.js'
+import { AppSourceBuilder } from '#src/app/app-management/entities/app-source.builder.js'
 import { PinStrategy } from '#src/app/app-management/enums/pin-strategy.enum.js'
 import { AppPlacementBuilder } from '#src/app/app-management/queries/app-placement.builder.js'
 import { DatabaseEngine } from '#src/app/database-management/enums/database-engine.enum.js'
 import type { AttachedDatabase } from '#src/app/database-management/queries/app-attachments.js'
-import type { GitHubInstallationUuid } from '#src/app/github-app/entities/github-installation.uuid.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { deploySpecOf } from '#src/app/release/entities/release-deploy-spec.js'
 import { NodePinStrategy } from '#src/modules/runtime/runtime.enums.js'
-import { generateUuid } from '#src/utils/uuid.js'
 
 describe('deploySpecOf', () => {
   const shipped = new AppBuilder()
@@ -145,14 +144,7 @@ describe('deploySpecOf', () => {
 })
 
 describe('deploySpecOf and $PORT', () => {
-  const source = {
-    type: 'github' as const,
-    installationUuid: generateUuid<GitHubInstallationUuid>(),
-    repo: 'acme/shop',
-    branch: 'main',
-    rootDir: '.',
-    dockerfilePath: 'Dockerfile',
-  }
+  const source = new AppSourceBuilder().build()
   const specOf = (app: App) =>
     deploySpecOf(
       new AppPlacementBuilder().withApp(app).build(),

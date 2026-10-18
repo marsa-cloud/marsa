@@ -1,9 +1,6 @@
 import { before, describe, it } from 'node:test'
 import { expect } from 'expect'
-import {
-  installationIdOf,
-  readBranchPush,
-} from '#src/app/build-management/use-cases/receive-push/github-push.js'
+import { installationIdOf, readBranchPush } from '#src/modules/github-client/github-push.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 const SHA = 'b'.repeat(40)

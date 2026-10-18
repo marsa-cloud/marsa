@@ -6,6 +6,7 @@ import { Test, TestingModule } from '@nestjs/testing'
 import qs from 'qs'
 import { AppModule } from '#src/app.module.js'
 import { ApiModule } from '#src/modules/api/api.module.js'
+import { GITHUB_WEBHOOK_MAX_BYTES } from '#src/modules/github-client/github-client.constants.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
 
 after(async () => await TestBench.teardown())
@@ -72,6 +73,7 @@ export class TestBench {
 
   private static async createApp(testModule: TestingModule): Promise<NestFastifyApplication> {
     const adapter = new FastifyAdapter({
+      bodyLimit: GITHUB_WEBHOOK_MAX_BYTES,
       routerOptions: {
         querystringParser: (str) => qs.parse(str),
         ignoreDuplicateSlashes: false,

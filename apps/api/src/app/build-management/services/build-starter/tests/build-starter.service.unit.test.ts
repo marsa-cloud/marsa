@@ -1,31 +1,26 @@
 import { before, describe, it } from 'node:test'
+import { BadGatewayException, UnprocessableEntityException } from '@nestjs/common'
 import { expect } from 'expect'
 import { createStubInstance, match } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
-import type { AppSource } from '#src/app/app-management/entities/app-source.js'
+import { AppSourceBuilder } from '#src/app/app-management/entities/app-source.builder.js'
 import { BuildBuilder } from '#src/app/build-management/entities/build.builder.js'
 import { BuildStatus } from '#src/app/build-management/enums/build-status.enum.js'
 import { BuildTrigger } from '#src/app/build-management/enums/build-trigger.enum.js'
+import { InstallationNotFoundError } from '#src/app/build-management/errors/installation-not-found.error.js'
 import { BuildStarterRepository } from '#src/app/build-management/services/build-starter/build-starter.repository.js'
 import { BuildStarter } from '#src/app/build-management/services/build-starter/build-starter.service.js'
-import type { GitHubInstallationUuid } from '#src/app/github-app/entities/github-installation.uuid.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
 import type { Executor } from '#src/modules/database/drizzle.factory.js'
+import { BranchNotFoundError } from '#src/modules/github-client/github-client.errors.js'
 import { MockGithubClient } from '#src/modules/github-client/mock-github-client.js'
 import { MockBuildRuntime } from '#src/modules/runtime/adapters/mock/mock-build-runtime.js'
 import { MockImageRegistry } from '#src/modules/runtime/adapters/mock/mock-image-registry.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
-import { generateUuid } from '#src/utils/uuid.js'
+import { commitShaOf } from '#src/test/setup/test-constants.js'
 
-const SHA = 'd'.repeat(40)
-const source: AppSource = {
-  type: 'github',
-  installationUuid: generateUuid<GitHubInstallationUuid>(),
-  repo: 'acme/shop',
-  branch: 'main',
-  rootDir: 'apps/api',
-  dockerfilePath: 'Dockerfile',
-}
+const SHA = commitShaOf('d')
+const source = new AppSourceBuilder().withRootDir('apps/api').build()
 const app = new AppBuilder().withSlug('shop').withSource(source).build()
 const tx = {} as Executor
 const options = (trigger: BuildTrigger) => ({ trigger, commitSha: SHA, gitToken: 'ghs_token' })
@@ -55,6 +50,7 @@ function build() {
   cipher.decrypt.returns('pem')
   const github = createStubInstance(MockGithubClient)
   github.getInstallationToken.resolves('ghs_token')
+  github.getBranchHead.resolves(SHA)
   const runtime = createStubInstance(MockBuildRuntime)
   runtime.start.resolves()
   runtime.cancel.resolves()
@@ -117,12 +113,12 @@ describe('BuildStarter', () => {
     expect(runtime.start.called).toBe(false)
   })
 
-  it('mints an installation token from the stored credentials', async () => {
+  it('resolves the branch head with a token minted from the stored credentials', async () => {
     const { starter, github } = build()
 
-    const token = await starter.mintToken(source)
+    const head = await starter.resolveHead(source)
 
-    expect(token).toBe('ghs_token')
+    expect(head).toEqual({ commitSha: SHA, gitToken: 'ghs_token' })
     expect(
       github.getInstallationToken.calledOnceWith({
         githubAppId: '42',
@@ -130,15 +126,34 @@ describe('BuildStarter', () => {
         installationId: '7',
       }),
     ).toBe(true)
+    expect(
+      github.getBranchHead.calledOnceWith({
+        token: 'ghs_token',
+        repo: 'acme/shop',
+        branch: 'main',
+      }),
+    ).toBe(true)
   })
 
-  it('refuses to mint a token when the installation is gone', async () => {
+  it('422s when the installation is gone', async () => {
     const { starter, repository } = build()
     repository.findCredentials.resolves(undefined)
 
-    await expect(starter.mintToken(source)).rejects.toThrow(
-      'The GitHub App installation for acme/shop no longer exists.',
-    )
+    await expect(starter.resolveHead(source)).rejects.toThrow(InstallationNotFoundError)
+  })
+
+  it('422s when the branch is not readable', async () => {
+    const { starter, github } = build()
+    github.getBranchHead.rejects(new BranchNotFoundError('no such branch'))
+
+    await expect(starter.resolveHead(source)).rejects.toThrow(UnprocessableEntityException)
+  })
+
+  it('502s when GitHub fails', async () => {
+    const { starter, github } = build()
+    github.getInstallationToken.rejects(new Error('github down'))
+
+    await expect(starter.resolveHead(source)).rejects.toThrow(BadGatewayException)
   })
 
   it('refuses an app without a source before touching anything', async () => {

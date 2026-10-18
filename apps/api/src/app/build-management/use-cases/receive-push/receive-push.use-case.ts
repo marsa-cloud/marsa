@@ -2,14 +2,12 @@ import { BadRequestException, Injectable, Logger, UnauthorizedException } from '
 import { verify } from '@octokit/webhooks-methods'
 import type { App } from '#src/app/app-management/entities/app.table.js'
 import type { Build } from '#src/app/build-management/entities/build.table.js'
-import { BuildStatus } from '#src/app/build-management/enums/build-status.enum.js'
 import { BuildTrigger } from '#src/app/build-management/enums/build-trigger.enum.js'
-import { BuildStarter } from '#src/app/build-management/services/build-starter/build-starter.service.js'
 import {
-  installationIdOf,
-  PUSH_EVENT,
-  readBranchPush,
-} from '#src/app/build-management/use-cases/receive-push/github-push.js'
+  type BranchHead,
+  BuildStarter,
+} from '#src/app/build-management/services/build-starter/build-starter.service.js'
+import { INVALID_SIGNATURE } from '#src/app/build-management/use-cases/receive-push/receive-push.constants.js'
 import { ReceivePushRepository } from '#src/app/build-management/use-cases/receive-push/receive-push.repository.js'
 import {
   ReceivePushResponse,
@@ -18,19 +16,18 @@ import {
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
 import type { Database } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
+import {
+  type GitHubPush,
+  installationIdOf,
+  PUSH_EVENT,
+  readBranchPush,
+} from '#src/modules/github-client/github-push.js'
 
 export interface WebhookDelivery {
   event?: string
   signature?: string
   rawBody?: Buffer
 }
-
-const INVALID_SIGNATURE = 'The webhook signature is missing or invalid.'
-
-// A redelivery of the commit already building or built must not build it twice.
-const isRedelivery = (newest: Build | undefined, commitSha: string): boolean =>
-  newest?.commitSha === commitSha &&
-  (newest.status === BuildStatus.Running || newest.status === BuildStatus.Succeeded)
 
 @Injectable()
 export class ReceivePushUseCase {
@@ -51,10 +48,14 @@ export class ReceivePushUseCase {
     }
 
     const apps = await this.repository.findAppsToBuild(push)
+    const head = await this.headIfCurrent(apps, push)
+    if (!head) {
+      return new ReceivePushResponse([])
+    }
     const started: StartedBuild[] = []
     for (const app of apps) {
       try {
-        const build = await this.startBuild(app, push.commitSha)
+        const build = await this.startBuild(app, head)
         if (build) {
           started.push({ appSlug: app.slug, build })
         }
@@ -93,23 +94,35 @@ export class ReceivePushUseCase {
     return payload
   }
 
-  // The token is minted before the app row is locked, so a slow GitHub never holds the lock.
-  private async startBuild(matched: App, commitSha: string): Promise<Build | null> {
+  // Matched apps share one repo and branch; a push the branch has since moved past is skipped.
+  private async headIfCurrent(apps: App[], push: GitHubPush): Promise<BranchHead | null> {
+    const source = apps[0]?.source
+    if (!source) {
+      return null
+    }
+    const head = await this.starter.resolveHead(source)
+    if (head.commitSha !== push.commitSha) {
+      this.logger.log(`skipping push of ${push.commitSha}: ${push.branch} is now ${head.commitSha}`)
+      return null
+    }
+    return head
+  }
+
+  // The head is resolved before the app row is locked, so a slow GitHub never holds the lock.
+  private async startBuild(matched: App, head: BranchHead): Promise<Build | null> {
     const source = matched.source
     if (!source) {
       return null
     }
-    const gitToken = await this.starter.mintToken(source)
     return this.db.transaction(async (tx) => {
       const app = await this.repository.lockApp(tx, matched.uuid)
       if (app?.source?.repo !== source.repo || app.source.branch !== source.branch) {
         return null
       }
-      const newest = await this.repository.findNewestBuild(tx, app.uuid)
-      if (isRedelivery(newest, commitSha)) {
+      if (await this.repository.isNewestBuildLive(tx, app.uuid, head.commitSha)) {
         return null
       }
-      return this.starter.start(tx, app, { trigger: BuildTrigger.Push, commitSha, gitToken })
+      return this.starter.start(tx, app, { trigger: BuildTrigger.Push, ...head })
     })
   }
 }

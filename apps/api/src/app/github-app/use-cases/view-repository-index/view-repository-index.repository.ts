@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common'
+import { desc } from 'drizzle-orm'
 import { githubInstallationTable } from '#src/app/github-app/entities/github-installation.table.js'
 import {
   type InstallationCredentials,
@@ -11,8 +12,10 @@ import { InjectDatabase } from '#src/modules/database/inject-database.decorator.
 export class ViewRepositoryIndexRepository {
   constructor(@InjectDatabase() private readonly db: Database) {}
 
-  // One row per GitHub account or org the App is installed on; there are only ever a handful.
-  async findInstallations(): Promise<InstallationCredentials[]> {
-    return selectInstallationCredentials(this.db).orderBy(githubInstallationTable.uuid)
+  async findInstallation(): Promise<InstallationCredentials | undefined> {
+    const [row] = await selectInstallationCredentials(this.db)
+      .orderBy(desc(githubInstallationTable.uuid))
+      .limit(1)
+    return row
   }
 }

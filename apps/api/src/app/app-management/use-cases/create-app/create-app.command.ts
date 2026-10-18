@@ -24,11 +24,11 @@ import {
 } from '#src/app/app-management/entities/app-config.constants.js'
 import { IsAppEnvRecord } from '#src/app/app-management/entities/app-env.js'
 import { ImagePullCredentials } from '#src/app/app-management/entities/image-pull-credentials.js'
-import { IsExactlyOneOf } from '#src/app/app-management/entities/is-exactly-one-of.validator.js'
 import { IsGteField } from '#src/app/app-management/entities/is-gte-field.validator.js'
 import { NodePin } from '#src/app/app-management/entities/node-pin.js'
 import { CreateAppSourceCommand } from '#src/app/app-management/use-cases/create-app/create-app-source.command.js'
 import type { EnvironmentUuid } from '#src/app/environment/entities/environment.uuid.js'
+import { IsExactlyOneOf } from '#src/utils/validators/is-exactly-one-of.validator.js'
 
 export class CreateAppCommand {
   @ApiProperty({ type: String, format: 'uuid', description: 'Environment the app lives in.' })

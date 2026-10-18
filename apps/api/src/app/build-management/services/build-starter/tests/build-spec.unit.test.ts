@@ -1,19 +1,14 @@
 import { describe, it } from 'node:test'
 import { expect } from 'expect'
-import { buildSpecOf } from '#src/app/build-management/entities/build-spec.js'
-import type { GitHubInstallationUuid } from '#src/app/github-app/entities/github-installation.uuid.js'
-import { generateUuid } from '#src/utils/uuid.js'
+import { AppSourceBuilder } from '#src/app/app-management/entities/app-source.builder.js'
+import { buildSpecOf } from '#src/app/build-management/services/build-starter/build-spec.js'
 
 describe('buildSpecOf', () => {
   it('builds the pinned commit of the GitHub repo from the source directory', () => {
-    const source = {
-      type: 'github' as const,
-      installationUuid: generateUuid<GitHubInstallationUuid>(),
-      repo: 'acme/shop',
-      branch: 'main',
-      rootDir: 'apps/web',
-      dockerfilePath: 'Dockerfile.prod',
-    }
+    const source = new AppSourceBuilder()
+      .withRootDir('apps/web')
+      .withDockerfilePath('Dockerfile.prod')
+      .build()
 
     expect(buildSpecOf(source, 'a'.repeat(40), 'ghs_t', 'registry:5000/shop:aaa')).toEqual({
       repoUrl: 'https://github.com/acme/shop.git',

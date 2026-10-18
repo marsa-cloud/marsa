@@ -3106,7 +3106,7 @@
           "dockerfilePath"
         ]
       },
-      "AppLatestBuild": {
+      "AppLatestBuildResponse": {
         "type": "object",
         "properties": {
           "uuid": {
@@ -3214,7 +3214,7 @@
             "type": "object",
             "allOf": [
               {
-                "$ref": "#/components/schemas/AppLatestBuild"
+                "$ref": "#/components/schemas/AppLatestBuildResponse"
               }
             ]
           },

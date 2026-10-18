@@ -4,13 +4,12 @@ import { expect } from 'expect'
 import request from 'supertest'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
+import { AppSourceBuilder } from '#src/app/app-management/entities/app-source.builder.js'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
-import type { GitHubInstallationUuid } from '#src/app/github-app/entities/github-installation.uuid.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { TestSetup } from '#src/test/setup/test-setup.js'
-import { generateUuid } from '#src/utils/uuid.js'
 
 const SLUG = 'create-release-e2e'
 
@@ -105,14 +104,7 @@ describe('POST /api/v1/apps/:slug/releases (e2e)', () => {
       .withEnvironmentUuid(environment.uuid)
       .withSlug('create-release-e2e-pending')
       .withImage(null)
-      .withSource({
-        type: 'github',
-        installationUuid: generateUuid<GitHubInstallationUuid>(),
-        repo: 'acme/shop',
-        branch: 'main',
-        rootDir: '.',
-        dockerfilePath: 'Dockerfile',
-      })
+      .withSource(new AppSourceBuilder().build())
       .build()
     await setup.db.insert(appTable).values(pending)
 

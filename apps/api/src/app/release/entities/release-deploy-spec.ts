@@ -1,4 +1,5 @@
 import type { App } from '#src/app/app-management/entities/app.table.js'
+import { PORT_ENV } from '#src/app/app-management/entities/app-config.constants.js'
 import { nodePinSpecOf } from '#src/app/app-management/entities/node-pin.js'
 import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import { catalogueEntry } from '#src/app/database-management/catalogue/engine-catalogue.js'
@@ -70,8 +71,6 @@ function withoutInjectedNames(
   )
   return Object.fromEntries(Object.entries(env).filter(([key]) => !injected.has(key)))
 }
-
-const PORT_ENV = 'PORT'
 
 // A built app can't know the port Marsa routes to unless told; a user-set PORT still wins.
 function envOf(app: App, release: Release): Record<string, string> {

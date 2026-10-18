@@ -25,6 +25,11 @@ import {
 import type { EnvironmentUuid } from '#src/app/environment/entities/environment.uuid.js'
 import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
 import { githubAppTable } from '#src/app/github-app/entities/github-app.table.js'
+import { GitHubInstallationBuilder } from '#src/app/github-app/entities/github-installation.builder.js'
+import {
+  type GitHubInstallation,
+  githubInstallationTable,
+} from '#src/app/github-app/entities/github-installation.table.js'
 import { ProjectBuilder } from '#src/app/project/entities/project.builder.js'
 import { type Project, projectTable } from '#src/app/project/entities/project.table.js'
 import { userTable } from '#src/app/user/entities/user.table.js'
@@ -35,6 +40,7 @@ import { DATABASE } from '#src/modules/database/database.tokens.js'
 import type { Database } from '#src/modules/database/drizzle.factory.js'
 import { MOCK_GITHUB_USER } from '#src/modules/github-client/mock-github-client.js'
 import type { TestApp } from '#src/test/setup/test-bench.js'
+import { TEST_WEBHOOK_SECRET } from '#src/test/setup/test-constants.js'
 import { truncateAll } from '#src/test/setup/truncate.js'
 
 export class TestSetup {
@@ -87,6 +93,27 @@ export class TestSetup {
       .build()
     await this.db.insert(databaseTable).values(database)
     return database
+  }
+
+  // Its own App id and slug, so it never collides with the App authenticate() seeds.
+  public async seedGithubInstallation(
+    installationId: string,
+    webhookSecret = TEST_WEBHOOK_SECRET,
+  ): Promise<GitHubInstallation> {
+    const cipher = this.testModule.get(SecretCipherService)
+    const githubApp = new GitHubAppBuilder()
+      .withGithubAppId(installationId)
+      .withSlug(`marsa-installed-${installationId}`)
+      .withWebhookSecretEnc(cipher.encrypt(webhookSecret))
+      .withPrivateKeyPemEnc(cipher.encrypt('pem'))
+      .build()
+    const installation = new GitHubInstallationBuilder()
+      .withInstallationId(installationId)
+      .withAppUuid(githubApp.uuid)
+      .build()
+    await this.db.insert(githubAppTable).values(githubApp)
+    await this.db.insert(githubInstallationTable).values(installation)
+    return installation
   }
 
   public async seedAttachment(

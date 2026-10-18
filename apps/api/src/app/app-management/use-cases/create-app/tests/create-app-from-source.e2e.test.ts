@@ -4,13 +4,10 @@ import { expect } from 'expect'
 import { restore, stub } from 'sinon'
 import request from 'supertest'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
+import type { CreateAppCommand } from '#src/app/app-management/use-cases/create-app/create-app.command.js'
 import { buildTable } from '#src/app/build-management/entities/build.table.js'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
-import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
-import { githubAppTable } from '#src/app/github-app/entities/github-app.table.js'
-import { GitHubInstallationBuilder } from '#src/app/github-app/entities/github-installation.builder.js'
-import { githubInstallationTable } from '#src/app/github-app/entities/github-installation.table.js'
-import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
+import type { GitHubInstallationUuid } from '#src/app/github-app/entities/github-installation.uuid.js'
 import { BranchNotFoundError } from '#src/modules/github-client/github-client.errors.js'
 import { GithubClient } from '#src/modules/github-client/github-client.js'
 import { MOCK_COMMIT_SHA } from '#src/modules/github-client/mock-github-client.js'
@@ -23,25 +20,14 @@ describe('POST /api/v1/apps from a GitHub repo (e2e)', () => {
   let setup: TestSetup
   let cookie: string
   let environment: Environment
-  let installationUuid: string
+  let installationUuid: GitHubInstallationUuid
 
   before(async () => {
     setup = await TestBench.setupEndToEndTest()
     cookie = await setup.authenticate()
     environment = (await setup.seedEnvironment()).environment
-    const cipher = setup.testModule.get(SecretCipherService)
-    const githubApp = {
-      ...new GitHubAppBuilder().withGithubAppId('7171').build(),
-      slug: 'marsa-create-e2e',
-      privateKeyPemEnc: cipher.encrypt('pem'),
-    }
-    const installation = new GitHubInstallationBuilder()
-      .withInstallationId('7171')
-      .withAppUuid(githubApp.uuid)
-      .build()
+    const installation = await setup.seedGithubInstallation('7171')
     installationUuid = installation.uuid
-    await setup.db.insert(githubAppTable).values(githubApp)
-    await setup.db.insert(githubInstallationTable).values(installation)
   })
 
   after(async () => {
@@ -49,7 +35,7 @@ describe('POST /api/v1/apps from a GitHub repo (e2e)', () => {
     await setup.teardown()
   })
 
-  const create = (body: object) =>
+  const create = (body: CreateAppCommand) =>
     request(setup.httpServer).post('/api/v1/apps').set('Cookie', cookie).send(body)
 
   it('creates the app without an image and starts its first build', async () => {

@@ -4,29 +4,20 @@ import { sign } from '@octokit/webhooks-methods'
 import { expect } from 'expect'
 import { createStubInstance, match } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
+import { AppSourceBuilder } from '#src/app/app-management/entities/app-source.builder.js'
 import { BuildBuilder } from '#src/app/build-management/entities/build.builder.js'
-import { BuildStatus } from '#src/app/build-management/enums/build-status.enum.js'
 import { BuildTrigger } from '#src/app/build-management/enums/build-trigger.enum.js'
 import { BuildStarter } from '#src/app/build-management/services/build-starter/build-starter.service.js'
 import { ReceivePushRepository } from '#src/app/build-management/use-cases/receive-push/receive-push.repository.js'
 import { ReceivePushUseCase } from '#src/app/build-management/use-cases/receive-push/receive-push.use-case.js'
-import type { GitHubInstallationUuid } from '#src/app/github-app/entities/github-installation.uuid.js'
 import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
 import { stubDatabase } from '#src/test/setup/stub-database.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
-import { generateUuid } from '#src/utils/uuid.js'
+import { commitShaOf, TEST_WEBHOOK_SECRET } from '#src/test/setup/test-constants.js'
 
-const SECRET = 'whsec'
-const SHA = 'b'.repeat(40)
+const SHA = commitShaOf('b')
 
-const source = {
-  type: 'github' as const,
-  installationUuid: generateUuid<GitHubInstallationUuid>(),
-  repo: 'acme/shop',
-  branch: 'main',
-  rootDir: '.',
-  dockerfilePath: 'Dockerfile',
-}
+const source = new AppSourceBuilder().build()
 const shop = new AppBuilder().withSlug('shop').withSource(source).build()
 const shopApi = new AppBuilder().withSlug('shop-api').withSource(source).build()
 
@@ -41,7 +32,7 @@ const pushBody = (overrides: Record<string, unknown> = {}) =>
   })
 
 async function delivery(body = pushBody(), event = 'push') {
-  return { event, signature: await sign(SECRET, body), rawBody: Buffer.from(body) }
+  return { event, signature: await sign(TEST_WEBHOOK_SECRET, body), rawBody: Buffer.from(body) }
 }
 
 function build(apps = [shop]) {
@@ -52,16 +43,16 @@ function build(apps = [shop]) {
   for (const app of apps) {
     repository.lockApp.withArgs(match.any, app.uuid).resolves(app)
   }
-  repository.findNewestBuild.resolves(undefined)
+  repository.isNewestBuildLive.resolves(false)
   const starter = createStubInstance(BuildStarter)
-  starter.mintToken.resolves('ghs_t')
+  starter.resolveHead.resolves({ commitSha: SHA, gitToken: 'ghs_t' })
   starter.start.callsFake((_tx, app, { commitSha, trigger }) =>
     Promise.resolve(
       new BuildBuilder().withApp(app).withCommitSha(commitSha).withTrigger(trigger).build(),
     ),
   )
   const cipher = createStubInstance(SecretCipherService)
-  cipher.decrypt.returns(SECRET)
+  cipher.decrypt.returns(TEST_WEBHOOK_SECRET)
   const usecase = new ReceivePushUseCase(stubDatabase(), repository, starter, cipher)
   return { usecase, repository, starter }
 }
@@ -165,40 +156,42 @@ describe('ReceivePushUseCase', () => {
     expect(starter.start.called).toBe(false)
   })
 
-  for (const status of [BuildStatus.Running, BuildStatus.Succeeded]) {
-    it(`skips a redelivered push whose commit is the newest build and ${status}`, async () => {
-      const { usecase, repository, starter } = build()
-      repository.findNewestBuild.resolves(
-        new BuildBuilder().withApp(shop).withCommitSha(SHA).withStatus(status).build(),
-      )
-
-      const response = await usecase.execute(await delivery())
-
-      expect(starter.start.called).toBe(false)
-      expect(response.builds).toEqual([])
-    })
-  }
-
-  it('builds the commit again when its newest build failed', async () => {
+  it('skips a redelivered push whose commit is already building or built', async () => {
     const { usecase, repository, starter } = build()
-    repository.findNewestBuild.resolves(
-      new BuildBuilder().withApp(shop).withCommitSha(SHA).withStatus(BuildStatus.Failed).build(),
-    )
+    repository.isNewestBuildLive.withArgs(match.any, shop.uuid, SHA).resolves(true)
 
-    await usecase.execute(await delivery())
+    const response = await usecase.execute(await delivery())
 
-    expect(starter.start.calledOnce).toBe(true)
+    expect(starter.start.called).toBe(false)
+    expect(response.builds).toEqual([])
   })
 
-  it('builds a commit the app built before if a newer one came in between', async () => {
-    const { usecase, repository, starter } = build()
-    repository.findNewestBuild.resolves(
-      new BuildBuilder().withApp(shop).withCommitSha('c'.repeat(40)).build(),
-    )
+  it('skips a late push for a commit the branch has moved past', async () => {
+    const { usecase, starter } = build([shop, shopApi])
+    starter.resolveHead.resolves({ commitSha: commitShaOf('c'), gitToken: 'ghs_t' })
+
+    const response = await usecase.execute(await delivery())
+
+    expect(starter.start.called).toBe(false)
+    expect(response.builds).toEqual([])
+  })
+
+  it('resolves the branch head once for every matching app', async () => {
+    const { usecase, starter } = build([shop, shopApi])
 
     await usecase.execute(await delivery())
 
-    expect(starter.start.calledOnce).toBe(true)
+    expect(starter.resolveHead.calledOnceWith(source)).toBe(true)
+    expect(starter.start.calledTwice).toBe(true)
+  })
+
+  it('does not reach GitHub when no app tracks the pushed branch', async () => {
+    const { usecase, starter } = build([])
+
+    const response = await usecase.execute(await delivery())
+
+    expect(starter.resolveHead.called).toBe(false)
+    expect(response.builds).toEqual([])
   })
 
   it('keeps going when one app fails to start', async () => {

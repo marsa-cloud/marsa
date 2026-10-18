@@ -1,7 +1,7 @@
 import { before, describe, it } from 'node:test'
 import { BadGatewayException } from '@nestjs/common'
 import { expect } from 'expect'
-import { createStubInstance, match } from 'sinon'
+import { createStubInstance } from 'sinon'
 import type { GitHubInstallationUuid } from '#src/app/github-app/entities/github-installation.uuid.js'
 import type { InstallationCredentials } from '#src/app/github-app/queries/installation-credentials.js'
 import { ViewRepositoryIndexRepository } from '#src/app/github-app/use-cases/view-repository-index/view-repository-index.repository.js'
@@ -11,28 +11,22 @@ import { MockGithubClient } from '#src/modules/github-client/mock-github-client.
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { generateUuid } from '#src/utils/uuid.js'
 
-const installation = (installationId: string): InstallationCredentials => ({
+const installation: InstallationCredentials = {
   installationUuid: generateUuid<GitHubInstallationUuid>(),
-  installationId,
+  installationId: '1',
   githubAppId: '42',
   privateKeyPemEnc: 'enc-pem',
-})
-const personal = installation('1')
-const org = installation('2')
+}
 
-function build(installations = [personal, org]) {
+function build(hasInstallation = true) {
   const repository = createStubInstance(ViewRepositoryIndexRepository)
-  repository.findInstallations.resolves(installations)
+  repository.findInstallation.resolves(hasInstallation ? installation : undefined)
   const github = createStubInstance(MockGithubClient)
-  github.getInstallationToken.callsFake(({ installationId }) =>
-    Promise.resolve(`token-${installationId}`),
-  )
-  github.listInstallationRepos
-    .withArgs('token-1')
-    .resolves([{ fullName: 'me/zeta', defaultBranch: 'main', private: false }])
-  github.listInstallationRepos
-    .withArgs('token-2')
-    .resolves([{ fullName: 'acme/alpha', defaultBranch: 'trunk', private: true }])
+  github.getInstallationToken.resolves('token-1')
+  github.listInstallationRepos.withArgs('token-1').resolves([
+    { fullName: 'me/zeta', defaultBranch: 'main', private: false },
+    { fullName: 'acme/alpha', defaultBranch: 'trunk', private: true },
+  ])
   const cipher = createStubInstance(SecretCipherService)
   cipher.decrypt.returns('pem')
   const usecase = new ViewRepositoryIndexUseCase(repository, github, cipher)
@@ -42,20 +36,20 @@ function build(installations = [personal, org]) {
 describe('ViewRepositoryIndexUseCase', () => {
   before(() => TestBench.setupUnitTest())
 
-  it('lists every installation’s repos, tagged with their installation, by name', async () => {
+  it('lists the installation’s repos, tagged with it, by name', async () => {
     const { usecase } = build()
 
     const response = await usecase.execute()
 
     expect(response.items).toEqual([
       {
-        installationUuid: org.installationUuid,
+        installationUuid: installation.installationUuid,
         fullName: 'acme/alpha',
         defaultBranch: 'trunk',
         private: true,
       },
       {
-        installationUuid: personal.installationUuid,
+        installationUuid: installation.installationUuid,
         fullName: 'me/zeta',
         defaultBranch: 'main',
         private: false,
@@ -63,25 +57,22 @@ describe('ViewRepositoryIndexUseCase', () => {
     ])
   })
 
-  it('skips an installation GitHub refuses and keeps the rest', async () => {
+  it('502s when GitHub refuses the installation', async () => {
     const { usecase, github } = build()
-    github.getInstallationToken.withArgs(match({ installationId: '1' })).rejects(new Error('gone'))
+    github.getInstallationToken.rejects(new Error('gone'))
 
-    const response = await usecase.execute()
-
-    expect(response.items.map((repo) => repo.fullName)).toEqual(['acme/alpha'])
+    await expect(usecase.execute()).rejects.toThrow(BadGatewayException)
   })
 
-  it('502s when no installation could be listed', async () => {
+  it('502s when GitHub fails to list the repos', async () => {
     const { usecase, github } = build()
-    // Replaces the callsFake default; a listInstallationRepos withArgs would outrank a default.
-    github.getInstallationToken.rejects(new Error('down'))
+    github.listInstallationRepos.withArgs('token-1').rejects(new Error('down'))
 
     await expect(usecase.execute()).rejects.toThrow(BadGatewayException)
   })
 
   it('is empty, not an error, before any installation exists', async () => {
-    const { usecase } = build([])
+    const { usecase } = build(false)
 
     expect((await usecase.execute()).items).toEqual([])
   })

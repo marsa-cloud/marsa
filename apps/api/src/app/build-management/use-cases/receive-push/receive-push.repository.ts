@@ -2,12 +2,13 @@ import { Injectable } from '@nestjs/common'
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { type App, appTable } from '#src/app/app-management/entities/app.table.js'
 import type { AppUuid } from '#src/app/app-management/entities/app.uuid.js'
-import { type Build, buildTable } from '#src/app/build-management/entities/build.table.js'
-import type { GitHubPush } from '#src/app/build-management/use-cases/receive-push/github-push.js'
+import { buildTable } from '#src/app/build-management/entities/build.table.js'
+import { BuildStatus } from '#src/app/build-management/enums/build-status.enum.js'
 import { githubAppTable } from '#src/app/github-app/entities/github-app.table.js'
 import { githubInstallationTable } from '#src/app/github-app/entities/github-installation.table.js'
 import type { Database, Executor } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
+import type { GitHubPush } from '#src/modules/github-client/github-push.js'
 
 @Injectable()
 export class ReceivePushRepository {
@@ -62,13 +63,17 @@ export class ReceivePushRepository {
     return app
   }
 
-  async findNewestBuild(tx: Executor, appUuid: AppUuid): Promise<Build | undefined> {
-    const [build] = await tx
-      .select()
+  // A redelivery of the commit already building or built must not build it twice.
+  async isNewestBuildLive(tx: Executor, appUuid: AppUuid, commitSha: string): Promise<boolean> {
+    const [newest] = await tx
+      .select({ commitSha: buildTable.commitSha, status: buildTable.status })
       .from(buildTable)
       .where(eq(buildTable.appUuid, appUuid))
       .orderBy(desc(buildTable.uuid))
       .limit(1)
-    return build
+    return (
+      newest?.commitSha === commitSha &&
+      [BuildStatus.Running, BuildStatus.Succeeded].includes(newest.status)
+    )
   }
 }

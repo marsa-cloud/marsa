@@ -4,14 +4,10 @@ import { expect } from 'expect'
 import request from 'supertest'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
+import { AppSourceBuilder } from '#src/app/app-management/entities/app-source.builder.js'
 import { buildTable } from '#src/app/build-management/entities/build.table.js'
 import { BuildStatus } from '#src/app/build-management/enums/build-status.enum.js'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
-import { GitHubAppBuilder } from '#src/app/github-app/entities/github-app.builder.js'
-import { githubAppTable } from '#src/app/github-app/entities/github-app.table.js'
-import { GitHubInstallationBuilder } from '#src/app/github-app/entities/github-installation.builder.js'
-import { githubInstallationTable } from '#src/app/github-app/entities/github-installation.table.js'
-import { SecretCipherService } from '#src/modules/crypto/secret-cipher.service.js'
 import { MOCK_COMMIT_SHA } from '#src/modules/github-client/mock-github-client.js'
 import type { MockBuildRuntime } from '#src/modules/runtime/adapters/mock/mock-build-runtime.js'
 import { BuildRuntime } from '#src/modules/runtime/build-runtime.js'
@@ -29,29 +25,11 @@ describe('POST /api/v1/apps/:slug/builds (e2e)', () => {
     setup = await TestBench.setupEndToEndTest()
     sessionCookie = await setup.authenticate()
     environment = (await setup.seedEnvironment()).environment
-    const cipher = setup.testModule.get(SecretCipherService)
-    const githubApp = {
-      ...new GitHubAppBuilder().withGithubAppId('4242').build(),
-      slug: 'marsa-build-e2e',
-      privateKeyPemEnc: cipher.encrypt('pem'),
-    }
-    const installation = new GitHubInstallationBuilder()
-      .withInstallationId('4242')
-      .withAppUuid(githubApp.uuid)
-      .build()
-    await setup.db.insert(githubAppTable).values(githubApp)
-    await setup.db.insert(githubInstallationTable).values(installation)
+    const installation = await setup.seedGithubInstallation('4242')
     const app = new AppBuilder()
       .withEnvironmentUuid(environment.uuid)
       .withSlug(SLUG)
-      .withSource({
-        type: 'github',
-        installationUuid: installation.uuid,
-        repo: 'acme/shop',
-        branch: 'main',
-        rootDir: '.',
-        dockerfilePath: 'Dockerfile',
-      })
+      .withSource(new AppSourceBuilder().withInstallationUuid(installation.uuid).build())
       .build()
     await setup.db.insert(appTable).values(app)
   })

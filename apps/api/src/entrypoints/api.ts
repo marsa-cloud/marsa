@@ -5,11 +5,13 @@ import { NestFactory } from '@nestjs/core'
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify'
 import QueryString from 'qs'
 import { ApiModule } from '#src/modules/api/api.module.js'
+import { GITHUB_WEBHOOK_MAX_BYTES } from '#src/modules/github-client/github-client.constants.js'
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestFastifyApplication>(
     ApiModule,
     new FastifyAdapter({
+      bodyLimit: GITHUB_WEBHOOK_MAX_BYTES,
       routerOptions: {
         querystringParser: (str) => QueryString.parse(str),
         ignoreDuplicateSlashes: false,

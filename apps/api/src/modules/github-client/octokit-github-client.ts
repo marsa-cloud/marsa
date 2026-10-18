@@ -93,28 +93,19 @@ export class OctokitGithubClient extends GithubClient {
     }
   }
 
+  // First page only; the picker paginates on demand once that's needed.
   async listInstallationRepos(token: string): Promise<GitHubRepository[]> {
-    const repos: GitHubRepository[] = []
     try {
-      for (let page = 1; ; page++) {
-        const response = await request('GET /installation/repositories', {
-          per_page: GITHUB_MAX_PAGE_SIZE,
-          page,
-          headers: { authorization: `token ${token}`, accept: 'application/vnd.github+json' },
-          request: { signal: AbortSignal.timeout(GITHUB_REQUEST_TIMEOUT_MS) },
-        })
-        const { repositories } = response.data
-        repos.push(
-          ...repositories.map((repo) => ({
-            fullName: repo.full_name,
-            defaultBranch: repo.default_branch,
-            private: repo.private,
-          })),
-        )
-        if (repositories.length < GITHUB_MAX_PAGE_SIZE) {
-          return repos
-        }
-      }
+      const response = await request('GET /installation/repositories', {
+        per_page: GITHUB_MAX_PAGE_SIZE,
+        headers: { authorization: `token ${token}`, accept: 'application/vnd.github+json' },
+        request: { signal: AbortSignal.timeout(GITHUB_REQUEST_TIMEOUT_MS) },
+      })
+      return response.data.repositories.map((repo) => ({
+        fullName: repo.full_name,
+        defaultBranch: repo.default_branch,
+        private: repo.private,
+      }))
     } catch (error) {
       this.logger.error(`installation repository listing failed: ${(error as Error).message}`)
       throw new Error("Could not list the installation's repositories from GitHub.")

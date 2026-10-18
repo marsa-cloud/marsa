@@ -1,66 +1,44 @@
 import { before, describe, it } from 'node:test'
-import {
-  BadGatewayException,
-  ConflictException,
-  NotFoundException,
-  UnprocessableEntityException,
-} from '@nestjs/common'
+import { ConflictException, NotFoundException, UnprocessableEntityException } from '@nestjs/common'
 import { expect } from 'expect'
 import { createStubInstance, match } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
-import type { AppSource } from '#src/app/app-management/entities/app-source.js'
+import { AppSourceBuilder } from '#src/app/app-management/entities/app-source.builder.js'
 import { BuildBuilder } from '#src/app/build-management/entities/build.builder.js'
 import { BuildTrigger } from '#src/app/build-management/enums/build-trigger.enum.js'
 import { BuildStarter } from '#src/app/build-management/services/build-starter/build-starter.service.js'
 import { StartBuildRepository } from '#src/app/build-management/use-cases/start-build/start-build.repository.js'
 import { StartBuildUseCase } from '#src/app/build-management/use-cases/start-build/start-build.use-case.js'
-import type { GitHubInstallationUuid } from '#src/app/github-app/entities/github-installation.uuid.js'
-import { BranchNotFoundError } from '#src/modules/github-client/github-client.errors.js'
-import { MOCK_COMMIT_SHA, MockGithubClient } from '#src/modules/github-client/mock-github-client.js'
+import { MOCK_COMMIT_SHA } from '#src/modules/github-client/mock-github-client.js'
 import { stubDatabase } from '#src/test/setup/stub-database.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
-import { generateUuid } from '#src/utils/uuid.js'
 
-const source: AppSource = {
-  type: 'github',
-  installationUuid: generateUuid<GitHubInstallationUuid>(),
-  repo: 'acme/shop',
-  branch: 'main',
-  rootDir: '.',
-  dockerfilePath: 'Dockerfile',
-}
+const source = new AppSourceBuilder().build()
 const sourced = new AppBuilder().withSlug('shop').withSource(source).build()
+const head = { commitSha: MOCK_COMMIT_SHA, gitToken: 'ghs_t' }
 
 function build(app = sourced) {
   const repository = createStubInstance(StartBuildRepository)
   repository.findAppBySlug.resolves(app)
   repository.lockApp.resolves(app)
   const starter = createStubInstance(BuildStarter)
-  starter.mintToken.resolves('ghs_t')
+  starter.resolveHead.resolves(head)
   starter.start.resolves(new BuildBuilder().withApp(app).withCommitSha(MOCK_COMMIT_SHA).build())
-  const github = createStubInstance(MockGithubClient)
-  github.getBranchHead.resolves(MOCK_COMMIT_SHA)
-  const usecase = new StartBuildUseCase(stubDatabase(), repository, starter, github)
-  return { usecase, repository, starter, github }
+  const usecase = new StartBuildUseCase(stubDatabase(), repository, starter)
+  return { usecase, repository, starter }
 }
 
 describe('StartBuildUseCase', () => {
   before(() => TestBench.setupUnitTest())
 
   it('builds the branch head as a manual build', async () => {
-    const { usecase, starter, github } = build()
+    const { usecase, starter } = build()
 
     const summary = await usecase.execute('shop')
 
+    expect(starter.resolveHead.calledOnceWith(source)).toBe(true)
     expect(
-      github.getBranchHead.calledOnceWith({ token: 'ghs_t', repo: 'acme/shop', branch: 'main' }),
-    ).toBe(true)
-    expect(
-      starter.start.calledOnceWith(match.any, sourced, {
-        trigger: BuildTrigger.Manual,
-        commitSha: MOCK_COMMIT_SHA,
-        gitToken: 'ghs_t',
-      }),
+      starter.start.calledOnceWith(match.any, sourced, { trigger: BuildTrigger.Manual, ...head }),
     ).toBe(true)
     expect(summary.commitSha).toBe(MOCK_COMMIT_SHA)
   })
@@ -78,28 +56,12 @@ describe('StartBuildUseCase', () => {
     await expect(usecase.execute('img')).rejects.toThrow(ConflictException)
   })
 
-  it('502s when no installation token can be minted, with the reason', async () => {
+  it('passes a failed head lookup through, and starts nothing', async () => {
     const { usecase, starter } = build()
-    starter.mintToken.rejects(new Error('Could not mint a GitHub installation access token.'))
-
-    await expect(usecase.execute('shop')).rejects.toThrow(BadGatewayException)
-  })
-
-  it('422s when the branch cannot be resolved, and starts nothing', async () => {
-    const { usecase, github, starter } = build()
-    github.getBranchHead.rejects(
-      new BranchNotFoundError("Branch 'main' of 'acme/shop' was not found"),
-    )
+    starter.resolveHead.rejects(new UnprocessableEntityException("Branch 'main' was not found"))
 
     await expect(usecase.execute('shop')).rejects.toThrow(UnprocessableEntityException)
     expect(starter.start.called).toBe(false)
-  })
-
-  it('502s when GitHub itself fails to answer the branch lookup', async () => {
-    const { usecase, github } = build()
-    github.getBranchHead.rejects(new Error("Could not read 'acme/shop' from GitHub."))
-
-    await expect(usecase.execute('shop')).rejects.toThrow(BadGatewayException)
   })
 
   it('409s when the app switched branches while the build was starting', async () => {

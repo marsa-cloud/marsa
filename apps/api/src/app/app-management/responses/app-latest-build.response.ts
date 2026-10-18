@@ -5,7 +5,7 @@ import {
   BuildStatusApiProperty,
 } from '#src/app/build-management/enums/build-status.enum.js'
 
-export class AppLatestBuild {
+export class AppLatestBuildResponse {
   @ApiProperty({ type: String, format: 'uuid' })
   readonly uuid: string
 

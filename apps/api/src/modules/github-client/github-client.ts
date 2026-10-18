@@ -23,7 +23,6 @@ export abstract class GithubClient {
   /** Resolve a branch's current head commit SHA (#21). */
   abstract getBranchHead(params: BranchHeadParams): Promise<string>
 
-  /** Every repository the installation token can read (#21's repo picker). */
   abstract listInstallationRepos(token: string): Promise<GitHubRepository[]>
 
   /**

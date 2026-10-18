@@ -78,30 +78,32 @@ async function seedGithubInstallation(
   db: Database,
   cipher: SecretCipherService,
 ): Promise<GitHubInstallation> {
-  const [existing] = await db
-    .select()
-    .from(githubInstallationTable)
-    .where(eq(githubInstallationTable.installationId, DEV_GITHUB_APP_ID))
-    .limit(1)
-  if (existing) {
-    return existing
-  }
-  const githubApp = new GitHubAppBuilder()
-    .withGithubAppId(DEV_GITHUB_APP_ID)
-    .withSlug('marsa-dev')
-    .withName('marsa-dev')
-    .withClientSecretEnc(cipher.encrypt('dev-client-secret'))
-    .withWebhookSecretEnc(cipher.encrypt('dev-webhook-secret'))
-    .withPrivateKeyPemEnc(cipher.encrypt('dev-private-key'))
-    .build()
-  const installation = new GitHubInstallationBuilder()
-    .withInstallationId(DEV_GITHUB_APP_ID)
-    .withAccountLogin('marsa-mock')
-    .withAppUuid(githubApp.uuid)
-    .build()
-  await db.insert(githubAppTable).values(githubApp)
-  await db.insert(githubInstallationTable).values(installation)
-  return installation
+  return db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select()
+      .from(githubInstallationTable)
+      .where(eq(githubInstallationTable.installationId, DEV_GITHUB_APP_ID))
+      .limit(1)
+    if (existing) {
+      return existing
+    }
+    const githubApp = new GitHubAppBuilder()
+      .withGithubAppId(DEV_GITHUB_APP_ID)
+      .withSlug('marsa-dev')
+      .withName('marsa-dev')
+      .withClientSecretEnc(cipher.encrypt('dev-client-secret'))
+      .withWebhookSecretEnc(cipher.encrypt('dev-webhook-secret'))
+      .withPrivateKeyPemEnc(cipher.encrypt('dev-private-key'))
+      .build()
+    const installation = new GitHubInstallationBuilder()
+      .withInstallationId(DEV_GITHUB_APP_ID)
+      .withAccountLogin('marsa-mock')
+      .withAppUuid(githubApp.uuid)
+      .build()
+    await tx.insert(githubAppTable).values(githubApp)
+    await tx.insert(githubInstallationTable).values(installation)
+    return installation
+  })
 }
 
 async function seedSourceApp(
