@@ -31,9 +31,6 @@ export class BuildStarterRepository {
 
   async insert(tx: Executor, build: NewBuild): Promise<Build> {
     const [inserted] = await tx.insert(buildTable).values(build).returning()
-    if (!inserted) {
-      throw new Error('Inserting a build returned no row')
-    }
     return inserted
   }
 
