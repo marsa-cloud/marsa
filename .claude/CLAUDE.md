@@ -6,10 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Marsa is an open-source, self-hostable PaaS (Heroku/Railway-style) that deploys onto Kubernetes (K3s). Early-stage MVP — APIs and architecture change frequently.
 
-## Project management
-
-GitHub issues, PRs, branch/commit conventions, and SDLC gates follow the **ApexYard** framework that governs this repo — not a marsa-local process doc. Use its structured skills (`/feature`, `/bug`, `/task`, `/spike`, `/migration`) to create issues, and follow its ticket/PR conventions (title prefixes, branch naming, merge gates). Milestones and labels live in GitHub itself.
-
 ## Recommendations: lead with best practice, flag anti-patterns
 
 When proposing options (tooling, structure, naming, libraries, patterns), the **recommended** option must be what is genuinely best-practice in the relevant ecosystem — not what's symmetric with another package in this monorepo, easiest to implement, or already familiar. If the cross-package symmetric choice isn't the FE/BE community standard, say so explicitly. Actively flag anti-patterns ("this is unusual in <ecosystem> — most projects do X because Y") rather than presenting them neutrally. If the user asks to implement something that is clearly an anti-pattern, **push back and explain why** before proceeding — don't silently implement it. Symmetry across `apps/api` and `apps/web` is not a tiebreaker; pick the right convention for each stack.
