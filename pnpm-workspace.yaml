@@ -38,7 +38,7 @@ catalog:
   '@nestjs/cli': ^11.0.0
   '@nestjs/schematics': ^11.0.0
   '@nestjs/testing': ^11.0.1
-  joi: ^17.13.4
+  joi: ^17.13.8
   class-validator: ^0.14.1
   class-transformer: ^0.5.1
   reflect-metadata: ^0.2.2
@@ -71,7 +71,7 @@ catalog:
   # Nuxt (web)
   nuxt: ^4.5.1
   '@nuxt/eslint': ^1.15.2
-  '@nuxt/ui': ^4.8.1
+  '@nuxt/ui': ^4.12.0
   '@vueuse/core': ^14.3.0
   '@iconify-json/lucide': ^1.2.106
   '@iconify-json/simple-icons': ^1.2.81
@@ -83,8 +83,8 @@ catalog:
   zod: ^4.4.3
 
   # Test stack (web)
-  vitest: ^4.1.0
-  '@vitest/coverage-v8': ^4.1.0
+  vitest: ^4.1.12
+  '@vitest/coverage-v8': ^4.1.12
   '@vue/test-utils': ^2.4.6
   '@nuxt/test-utils': ^4.0.3
   happy-dom: ^20.9.0
