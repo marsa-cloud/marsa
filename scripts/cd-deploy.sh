@@ -82,6 +82,10 @@ recover_stale_lock() {
   helm rollback "$RELEASE" "$deployed" -n "$NAMESPACE" --wait --timeout 5m
 }
 
+LOCK_FILE="${MARSA_CD_DEPLOY_LOCK:-/run/lock/marsa-cd-deploy-$RELEASE.lock}"
+exec 9>"$LOCK_FILE"
+flock -n 9 || { echo "cd-deploy: another cd-deploy of '$RELEASE' is running" >&2; exit 1; }
+
 recover_stale_lock
 
 if [[ "$mode" == image ]]; then

@@ -46,6 +46,7 @@ fail=0
 run_deploy() {
   : > "$HELM_LOG"
   PATH="$workdir:$PATH" HELM_LOG="$HELM_LOG" HELM_HISTORY="${HELM_HISTORY:-}" \
+    MARSA_CD_DEPLOY_LOCK="$workdir/cd-deploy.lock" \
     bash "$CD_DEPLOY" "$1" >/dev/null 2>&1
 }
 
@@ -144,6 +145,17 @@ else
   echo "FAIL  pending-install handling — got: $(cat "$HELM_LOG")"; fail=$((fail + 1))
 fi
 HELM_HISTORY=''
+
+# --- 7. Concurrent cd-deploy of the same release: refuse, never reach helm -------
+exec 8>"$workdir/cd-deploy.lock"
+flock -n 8
+if ! run_deploy "sha-abc1234" && [ ! -s "$HELM_LOG" ]; then
+  echo "PASS  concurrent run → refused by the per-release lock"
+  pass=$((pass + 1))
+else
+  echo "FAIL  concurrent run reached helm — got: $(cat "$HELM_LOG")"; fail=$((fail + 1))
+fi
+exec 8>&-
 
 echo "---"
 echo "passed=$pass failed=$fail"
