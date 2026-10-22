@@ -58,6 +58,11 @@ KEDA_HTTP_VERSION="${MARSA_KEDA_HTTP_VERSION:-0.15.0}"
 # and a crashed pod, which is what matters when the node itself is the SPOF.
 KEDA_INTERCEPTOR_MIN="${MARSA_KEDA_INTERCEPTOR_MIN:-2}"
 KEDA_INTERCEPTOR_MAX="${MARSA_KEDA_INTERCEPTOR_MAX:-4}"
+# The add-on's defaults (3 scalers, 250m request per pod) reserve 1.5 vCPU while idle, which on a
+# 2-vCPU node leaves Marsa's own registry unschedulable. Requests only reserve; limits stay 500m.
+KEDA_SCALER_REPLICAS="${MARSA_KEDA_SCALER_REPLICAS:-1}"
+KEDA_INTERCEPTOR_CPU_REQUEST="${MARSA_KEDA_INTERCEPTOR_CPU_REQUEST:-100m}"
+KEDA_CONTROL_CPU_REQUEST="${MARSA_KEDA_CONTROL_CPU_REQUEST:-50m}"
 # Helm's official get-helm-4 installer, pinned to a release tag rather than the
 # moving `main` branch (supply-chain hygiene — see AgDR-0003). Overridable for
 # testing. get-helm-4 exists from v4.1.0 onward; the pin cannot go below that.
@@ -457,6 +462,10 @@ install_keda() {
     --version "$KEDA_HTTP_VERSION" \
     --set "interceptor.replicas.min=${KEDA_INTERCEPTOR_MIN}" \
     --set "interceptor.replicas.max=${KEDA_INTERCEPTOR_MAX}" \
+    --set "interceptor.resources.requests.cpu=${KEDA_INTERCEPTOR_CPU_REQUEST}" \
+    --set "scaler.replicas=${KEDA_SCALER_REPLICAS}" \
+    --set "scaler.resources.requests.cpu=${KEDA_CONTROL_CPU_REQUEST}" \
+    --set "operator.resources.requests.cpu=${KEDA_CONTROL_CPU_REQUEST}" \
     --wait --timeout 5m
 
   ok "KEDA ready"

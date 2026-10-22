@@ -17,6 +17,8 @@
 #                       --reset-then-reuse-values`, keeping the running image +
 #                       tls/domain (see AgDR-0028 amendment, #139)
 #
+# Either mode first rolls back a release left pending-* by a killed helm.
+#
 # One-time setup (see AgDR-0028):
 #   - install at /usr/local/bin/marsa-cd-deploy.sh (root, 0755)
 #   - /root/.ssh/authorized_keys: command="/usr/local/bin/marsa-cd-deploy.sh",...
@@ -51,6 +53,40 @@ else
 fi
 
 export KUBECONFIG="${KUBECONFIG:-/etc/rancher/k3s/k3s.yaml}"
+
+# A cancelled CD run kills helm over SSH before --rollback-on-failure can fire, leaving the
+# release pending-* and every later upgrade refused with "another operation is in progress".
+recover_stale_lock() {
+  local history latest deployed
+  history="$(helm history "$RELEASE" -n "$NAMESPACE" -o yaml 2>/dev/null)" || return 0
+  latest="$(awk '/^(- |  )status:/{s=$NF} END{print s}' <<<"$history")"
+  [[ "$latest" == pending-* ]] || return 0
+
+  if pgrep -x helm >/dev/null; then
+    echo "cd-deploy: release '$RELEASE' is $latest and a helm process is still running" >&2
+    exit 1
+  fi
+
+  deployed="$(awk '
+    /^- /{r=""; s=""}
+    /^(- |  )revision:/{r=$NF}
+    /^(- |  )status:/{s=$NF}
+    r != "" && s == "deployed"{print r; r=""; s=""}
+  ' <<<"$history" | tail -1)"
+  [ -n "$deployed" ] || {
+    echo "cd-deploy: release '$RELEASE' is $latest with no deployed revision to roll back to" >&2
+    exit 1
+  }
+
+  echo "cd-deploy: release '$RELEASE' is stuck $latest; rolling back to revision $deployed"
+  helm rollback "$RELEASE" "$deployed" -n "$NAMESPACE" --wait --timeout 5m
+}
+
+LOCK_FILE="${MARSA_CD_DEPLOY_LOCK:-/run/lock/marsa-cd-deploy-$RELEASE.lock}"
+exec 9>"$LOCK_FILE"
+flock -n 9 || { echo "cd-deploy: another cd-deploy of '$RELEASE' is running" >&2; exit 1; }
+
+recover_stale_lock
 
 if [[ "$mode" == image ]]; then
   # Image roll. Pin to the chart version that is already installed so an app
