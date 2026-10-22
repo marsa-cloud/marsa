@@ -4,9 +4,12 @@ import { ConfigService } from '@nestjs/config'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
+import { AppSourceBuilder } from '#src/app/app-management/entities/app-source.builder.js'
 import { AppPlacementBuilder } from '#src/app/app-management/queries/app-placement.builder.js'
 import { ViewAppDetailRepository } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.repository.js'
 import { ViewAppDetailUseCase } from '#src/app/app-management/use-cases/view-app-detail/view-app-detail.use-case.js'
+import { BuildBuilder } from '#src/app/build-management/entities/build.builder.js'
+import { BuildStatus } from '#src/app/build-management/enums/build-status.enum.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
 import { InvalidReleaseAnnotationError } from '#src/modules/runtime/runtime.errors.js'
@@ -21,6 +24,7 @@ function build() {
   const repository = createStubInstance(ViewAppDetailRepository)
   repository.findBySlug.resolves(placement)
   repository.findRelease.resolves(undefined)
+  repository.findLatestBuild.resolves(undefined)
   const appRuntime = createStubInstance(MockAppRuntime)
   appRuntime.readLiveReleaseUuid.resolves(null)
   const config = createStubInstance(ConfigService)
@@ -109,5 +113,53 @@ describe('ViewAppDetailUseCase', () => {
     const response = await usecase.execute('my-app')
 
     expect(response.hasUndeployedChanges).toBe(false)
+  })
+
+  it('reports no undeployed changes before the first build, since nothing can be deployed', async () => {
+    const { repository, usecase } = build()
+    repository.findBySlug.resolves(
+      new AppPlacementBuilder().withApp(new AppBuilder().withImage(null).build()).build(),
+    )
+
+    expect((await usecase.execute('my-app')).hasUndeployedChanges).toBe(false)
+  })
+
+  it('names the source and the newest build of a source app', async () => {
+    const { repository, usecase } = build()
+    const source = new AppSourceBuilder().build()
+    const sourced = new AppBuilder().withSource(source).withImage(null).build()
+    const latest = new BuildBuilder()
+      .withApp(sourced)
+      .withStatus(BuildStatus.Failed)
+      .withFailureReason('no Dockerfile')
+      .build()
+    repository.findBySlug.resolves(new AppPlacementBuilder().withApp(sourced).build())
+    repository.findLatestBuild.resolves(latest)
+
+    const response = await usecase.execute('my-app')
+
+    expect(response.source).toEqual({
+      installationUuid: source.installationUuid,
+      repo: 'acme/shop',
+      branch: 'main',
+      rootDir: '.',
+      dockerfilePath: 'Dockerfile',
+    })
+    expect(response.latestBuild).toEqual({
+      uuid: latest.uuid,
+      status: BuildStatus.Failed,
+      commitSha: latest.commitSha,
+      failureReason: 'no Dockerfile',
+      createdAt: latest.createdAt.toISOString(),
+    })
+  })
+
+  it('has no source or build for an image app', async () => {
+    const { usecase } = build()
+
+    const response = await usecase.execute('my-app')
+
+    expect(response.source).toBeNull()
+    expect(response.latestBuild).toBeNull()
   })
 })

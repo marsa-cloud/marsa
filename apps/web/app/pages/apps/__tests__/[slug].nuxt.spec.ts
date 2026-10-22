@@ -1,6 +1,6 @@
 import { flushPromises } from '@vue/test-utils'
 import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Ref } from 'vue'
 import { nextTick, ref } from 'vue'
 
@@ -17,8 +17,16 @@ const s = vi.hoisted(() => ({
     status: 'success',
     error: null as unknown,
   },
+  builds: { items: [] as unknown[], pending: false, error: null as unknown },
+  loadBuilds: vi.fn(),
+  refreshBuilds: vi.fn(),
+  rebuild: vi.fn(),
   refreshHealth: vi.fn(),
+  loadReleases: vi.fn(),
   refreshReleases: vi.fn(),
+  // The live refs the page reads, so a poll test can change what the next tick sees.
+  configData: null as unknown as Ref<unknown>,
+  releaseItems: null as unknown as Ref<unknown[]>,
   refreshLogs: vi.fn(),
   refreshConfig: vi.fn(),
   ship: vi.fn(),
@@ -35,15 +43,19 @@ mockNuxtImport('useAppHealth', () => () => ({
   error: ref(s.health.error),
   refresh: s.refreshHealth,
 }))
-mockNuxtImport('useAppReleases', () => () => ({
-  items: ref(s.releases.items),
-  pending: ref(s.releases.pending),
-  error: ref(s.releases.error),
-  exhausted: ref(true),
-  canLoadMore: () => false,
-  loadMore: vi.fn(),
-  reset: s.refreshReleases,
-}))
+mockNuxtImport('useAppReleases', () => () => {
+  s.releaseItems = ref(s.releases.items)
+  return {
+    items: s.releaseItems,
+    pending: ref(s.releases.pending),
+    error: ref(s.releases.error),
+    exhausted: ref(true),
+    canLoadMore: () => false,
+    loadMore: vi.fn(),
+    reset: s.loadReleases,
+    refresh: s.refreshReleases,
+  }
+})
 mockNuxtImport('useShipRelease', () => () => ({ ship: s.ship }))
 mockNuxtImport('useAppRunLogs', () => (_slug: string, tailLines: Ref<number>) => {
   s.tailLines = tailLines
@@ -54,12 +66,27 @@ mockNuxtImport('useAppRunLogs', () => (_slug: string, tailLines: Ref<number>) =>
     refresh: s.refreshLogs,
   }
 })
-mockNuxtImport('useAppDetail', () => () => ({
-  data: ref(s.config.data),
-  status: ref(s.config.status),
-  error: ref(s.config.error),
-  refresh: s.refreshConfig,
+mockNuxtImport('useAppDetail', () => () => {
+  s.configData = ref(s.config.data)
+  return {
+    data: s.configData,
+    status: ref(s.config.status),
+    error: ref(s.config.error),
+    refresh: s.refreshConfig,
+  }
+})
+mockNuxtImport('useAppBuilds', () => () => ({
+  items: ref(s.builds.items),
+  pending: ref(s.builds.pending),
+  error: ref(s.builds.error),
+  exhausted: ref(true),
+  canLoadMore: () => false,
+  loadMore: vi.fn(),
+  reset: s.loadBuilds,
+  refresh: s.refreshBuilds,
 }))
+mockNuxtImport('useRebuild', () => () => ({ rebuild: s.rebuild }))
+mockNuxtImport('useBuildLogs', () => () => ({ read: vi.fn().mockResolvedValue({ logs: '' }) }))
 mockNuxtImport('useUpdateApp', () => () => ({ update: vi.fn() }))
 
 const del = vi.hoisted(() => ({ remove: vi.fn() }))
@@ -94,9 +121,14 @@ beforeEach(() => {
     error: null,
   }
   s.refreshHealth = vi.fn()
+  s.loadReleases = vi.fn()
   s.refreshReleases = vi.fn()
   s.refreshLogs = vi.fn()
   s.refreshConfig = vi.fn()
+  s.builds = { items: [], pending: false, error: null }
+  s.loadBuilds.mockReset()
+  s.refreshBuilds.mockReset()
+  s.rebuild.mockReset().mockResolvedValue({})
   s.ship = vi.fn().mockResolvedValue({
     releaseUuid: 'r-new',
     appSlug: 'my-app',
@@ -391,5 +423,185 @@ describe('apps/[slug] detail page', () => {
     expect(s.ship).toHaveBeenCalledWith('my-app', { fromReleaseUuid: 'r1' })
     expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Rollback started' }))
     wrapper.unmount()
+  })
+})
+
+describe('apps/[slug] builds', () => {
+  const source = {
+    installationUuid: 'i1',
+    repo: 'acme/shop',
+    branch: 'main',
+    rootDir: '.',
+    dockerfilePath: 'Dockerfile',
+  }
+  const sourced = (latestStatus: string | null, extra: Record<string, unknown> = {}) => ({
+    slug: 'my-app',
+    image: latestStatus === 'succeeded' ? 'registry/my-app:abc' : null,
+    env: {},
+    project: { slug: 'p', name: 'P' },
+    environment: { uuid: 'e1', slug: 'dev', name: 'Dev' },
+    source,
+    latestBuild: latestStatus
+      ? {
+          uuid: 'b1',
+          status: latestStatus,
+          commitSha: 'a'.repeat(40),
+          failureReason: null,
+          createdAt: '2026-09-24T00:00:00.000Z',
+        }
+      : null,
+    ...extra,
+  })
+
+  it('hides the builds card for an image app', async () => {
+    const wrapper = await mountSuspended(Detail)
+
+    expect(wrapper.find('[data-testid="rebuild"]').exists()).toBe(false)
+  })
+
+  it('shows the builds card with its source for a source app, and loads the builds', async () => {
+    s.config.data = sourced('succeeded')
+    const wrapper = await mountSuspended(Detail)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('acme/shop@main')
+    expect(s.loadBuilds).toHaveBeenCalledTimes(1)
+  })
+
+  it('rebuilds and refreshes the builds', async () => {
+    s.config.data = sourced('succeeded')
+    const wrapper = await mountSuspended(Detail)
+    s.refreshBuilds.mockClear()
+
+    await wrapper.find('[data-testid="rebuild"]').trigger('click')
+    await flushPromises()
+
+    expect(s.rebuild).toHaveBeenCalledWith('my-app')
+    expect(s.refreshBuilds).toHaveBeenCalled()
+    expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ title: 'Build started' }))
+  })
+
+  it('cannot redeploy before the first image exists', async () => {
+    s.config.data = sourced('running')
+    const wrapper = await mountSuspended(Detail)
+
+    const redeploy = wrapper.findAll('button').find(button => button.text().includes('Redeploy'))
+    expect(redeploy?.attributes('disabled')).toBeDefined()
+  })
+
+  it('loads the builds once, not again on every config refetch', async () => {
+    s.config.data = sourced('succeeded')
+    await mountSuspended(Detail)
+
+    s.configData.value = sourced('succeeded')
+    await nextTick()
+
+    expect(s.loadBuilds).toHaveBeenCalledTimes(1)
+  })
+
+  describe('polling', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('follows a running build by refreshing every 5 seconds', async () => {
+      s.config.data = sourced('running')
+      await mountSuspended(Detail)
+      s.refreshConfig.mockClear()
+
+      vi.advanceTimersByTime(5000)
+
+      expect(s.refreshConfig).toHaveBeenCalled()
+      expect(s.refreshBuilds).toHaveBeenCalled()
+      expect(s.refreshReleases).toHaveBeenCalled()
+      expect(s.refreshHealth).toHaveBeenCalled()
+    })
+
+    it('keeps polling fast after the build until its release has rolled out', async () => {
+      s.config.data = sourced('succeeded')
+      s.releases.items = [aRelease({ deployStatus: 'in_progress' })]
+      await mountSuspended(Detail)
+      s.refreshConfig.mockClear()
+
+      vi.advanceTimersByTime(5000)
+      expect(s.refreshConfig).toHaveBeenCalledTimes(1)
+    })
+
+    it('drops to the idle pace once the build is done and the release has landed', async () => {
+      s.config.data = sourced('running')
+      s.releases.items = [aRelease({ deployStatus: 'succeeded' })]
+      await mountSuspended(Detail)
+
+      s.configData.value = sourced('succeeded')
+      await nextTick()
+      s.refreshConfig.mockClear()
+
+      vi.advanceTimersByTime(5000)
+      expect(s.refreshConfig).not.toHaveBeenCalled()
+
+      vi.advanceTimersByTime(10000)
+      expect(s.refreshConfig).toHaveBeenCalledTimes(1)
+    })
+
+    it('picks up a build started by a push on the idle poll, then follows it fast', async () => {
+      s.config.data = sourced('succeeded')
+      s.releases.items = [aRelease()]
+      await mountSuspended(Detail)
+      s.refreshConfig.mockImplementation(() => {
+        s.configData.value = sourced('running')
+      })
+
+      vi.advanceTimersByTime(15000)
+      expect(s.refreshBuilds).toHaveBeenCalledTimes(1)
+      await flushPromises()
+
+      vi.advanceTimersByTime(5000)
+      expect(s.refreshBuilds).toHaveBeenCalledTimes(2)
+    })
+
+    it('does not refresh builds for an image app', async () => {
+      await mountSuspended(Detail)
+
+      vi.advanceTimersByTime(15000)
+
+      expect(s.refreshConfig).toHaveBeenCalled()
+      expect(s.refreshBuilds).not.toHaveBeenCalled()
+    })
+
+    it('pauses while the tab is hidden and catches up when it is shown again', async () => {
+      const setVisibility = (state: DocumentVisibilityState) => {
+        Object.defineProperty(document, 'visibilityState', { value: state, configurable: true })
+        document.dispatchEvent(new Event('visibilitychange'))
+      }
+      s.config.data = sourced('running')
+      await mountSuspended(Detail)
+      try {
+        setVisibility('hidden')
+        await nextTick()
+        s.refreshConfig.mockClear()
+
+        vi.advanceTimersByTime(15000)
+        expect(s.refreshConfig).not.toHaveBeenCalled()
+
+        setVisibility('visible')
+        await nextTick()
+        expect(s.refreshConfig).toHaveBeenCalledTimes(1)
+      } finally {
+        setVisibility('visible')
+      }
+    })
+
+    it('skips a tick while the previous one is still in flight', async () => {
+      s.config.data = sourced('running')
+      await mountSuspended(Detail)
+      s.refreshConfig.mockReset().mockReturnValue(new Promise(() => {}))
+
+      vi.advanceTimersByTime(10000)
+
+      expect(s.refreshConfig).toHaveBeenCalledTimes(1)
+    })
   })
 })

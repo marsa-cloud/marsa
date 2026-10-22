@@ -4,6 +4,7 @@ import { expect } from 'expect'
 import request from 'supertest'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
 import { appTable } from '#src/app/app-management/entities/app.table.js'
+import { AppSourceBuilder } from '#src/app/app-management/entities/app-source.builder.js'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { releaseTable } from '#src/app/release/entities/release.table.js'
@@ -96,5 +97,23 @@ describe('POST /api/v1/apps/:slug/releases (e2e)', () => {
 
   it('returns 401 without a session', async () => {
     await request(setup.httpServer).post(`/api/v1/apps/${SLUG}/releases`).send({}).expect(401)
+  })
+
+  it('409s an app whose first build has not finished', async () => {
+    const pending = new AppBuilder()
+      .withEnvironmentUuid(environment.uuid)
+      .withSlug('create-release-e2e-pending')
+      .withImage(null)
+      .withSource(new AppSourceBuilder().build())
+      .build()
+    await setup.db.insert(appTable).values(pending)
+
+    const response = await request(setup.httpServer)
+      .post('/api/v1/apps/create-release-e2e-pending/releases')
+      .set('Cookie', cookie)
+      .send({})
+      .expect(409)
+
+    expect(response.body.message).toContain('has no image yet')
   })
 })

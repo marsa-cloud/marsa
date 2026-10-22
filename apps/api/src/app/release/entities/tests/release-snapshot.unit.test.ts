@@ -54,3 +54,11 @@ describe('release snapshot', () => {
     expect(release.sourceReleaseUuid).toBeNull()
   })
 })
+
+describe('snapshotOf an app with no image', () => {
+  it('refuses, because a release must name an image', () => {
+    const app = new AppBuilder().withImage(null).build()
+
+    expect(() => snapshotOf(app)).toThrow('no image')
+  })
+})

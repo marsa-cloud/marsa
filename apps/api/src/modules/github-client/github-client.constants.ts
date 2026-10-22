@@ -9,3 +9,7 @@ export const GITHUB_OAUTH_TOKEN_URL = 'https://github.com/login/oauth/access_tok
  * (#62 / CodeRabbit). A hung GitHub request must not hang the request handler.
  */
 export const GITHUB_REQUEST_TIMEOUT_MS = 10_000
+
+export const GITHUB_MAX_PAGE_SIZE = 100
+
+export const GITHUB_WEBHOOK_MAX_BYTES = 25 * 1024 * 1024

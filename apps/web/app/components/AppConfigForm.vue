@@ -10,8 +10,15 @@ const emit = defineEmits<{ saved: [] }>()
 
 const { update } = useUpdateApp()
 
-const schema = z.object(appConfigFields).refine(isReplicaRangeValid, REPLICA_RANGE_ERROR)
-type Schema = z.output<typeof schema>
+const isSource = computed(() => !!props.config.source)
+
+const imageSchema = z.object(appConfigFields).refine(isReplicaRangeValid, REPLICA_RANGE_ERROR)
+// A source app's image is written by its builds, so the form neither shows nor validates it.
+const sourceSchema = z
+  .object({ ...appConfigFields, image: z.string() })
+  .refine(isReplicaRangeValid, REPLICA_RANGE_ERROR)
+const schema = computed(() => (isSource.value ? sourceSchema : imageSchema))
+type FormValues = z.output<typeof imageSchema> | z.output<typeof sourceSchema>
 
 const state = reactive<{
   image: string
@@ -39,7 +46,7 @@ const formSnapshot = () =>
 let seededSnapshot = ''
 
 function seed(config: ViewAppDetailResponse) {
-  state.image = config.image
+  state.image = config.image ?? ''
   state.containerPort = config.containerPort
   state.minReplicas = config.minReplicas
   state.maxReplicas = config.maxReplicas
@@ -86,14 +93,14 @@ function envRowsProblem(): string {
 const saving = ref(false)
 const error = ref('')
 
-async function onSubmit(event: FormSubmitEvent<Schema>) {
+async function onSubmit(event: FormSubmitEvent<FormValues>) {
   error.value = envRowsProblem()
   if (error.value) return
 
   saving.value = true
   try {
     await update(props.slug, {
-      image: event.data.image,
+      ...(isSource.value ? {} : { image: event.data.image }),
       containerPort: event.data.containerPort,
       ...(event.data.minReplicas !== undefined ? { minReplicas: event.data.minReplicas } : {}),
       ...(event.data.maxReplicas !== undefined ? { maxReplicas: event.data.maxReplicas } : {}),
@@ -126,6 +133,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     />
 
     <UFormField
+      v-if="!isSource"
       label="Image"
       name="image"
       required

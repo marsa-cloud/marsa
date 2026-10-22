@@ -57,3 +57,9 @@ export interface GitHubOAuthAccessTokenResponse {
   error?: string
   error_description?: string
 }
+
+export interface GitHubRepository {
+  fullName: string
+  defaultBranch: string
+  private: boolean
+}

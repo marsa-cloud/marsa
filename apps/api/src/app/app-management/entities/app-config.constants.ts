@@ -14,3 +14,6 @@ export const MAX_CONTAINER_PORT = 65535
  */
 export const MIN_REPLICAS = 0
 export const MAX_REPLICAS = 100
+
+export const DEFAULT_SOURCE_CONTAINER_PORT = 8080
+export const PORT_ENV = 'PORT'

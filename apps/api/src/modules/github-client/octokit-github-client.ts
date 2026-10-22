@@ -3,6 +3,7 @@ import { Injectable, Logger } from '@nestjs/common'
 import { createAppAuth } from '@octokit/auth-app'
 import { request } from '@octokit/request'
 import {
+  GITHUB_MAX_PAGE_SIZE,
   GITHUB_OAUTH_TOKEN_URL,
   GITHUB_REQUEST_TIMEOUT_MS,
 } from '#src/modules/github-client/github-client.constants.js'
@@ -13,6 +14,7 @@ import type {
   GitHubAppCredentials,
   GitHubManifestConversionResponse,
   GitHubOAuthAccessTokenResponse,
+  GitHubRepository,
   GitHubUser,
   InstallationTokenParams,
   UserOAuthExchangeParams,
@@ -88,6 +90,25 @@ export class OctokitGithubClient extends GithubClient {
       }
       this.logger.error(`branch head lookup failed: ${(error as Error).message}`)
       throw new Error(`Could not read '${repo}' from GitHub.`)
+    }
+  }
+
+  // First page only; the picker paginates on demand once that's needed.
+  async listInstallationRepos(token: string): Promise<GitHubRepository[]> {
+    try {
+      const response = await request('GET /installation/repositories', {
+        per_page: GITHUB_MAX_PAGE_SIZE,
+        headers: { authorization: `token ${token}`, accept: 'application/vnd.github+json' },
+        request: { signal: AbortSignal.timeout(GITHUB_REQUEST_TIMEOUT_MS) },
+      })
+      return response.data.repositories.map((repo) => ({
+        fullName: repo.full_name,
+        defaultBranch: repo.default_branch,
+        private: repo.private,
+      }))
+    } catch (error) {
+      this.logger.error(`installation repository listing failed: ${(error as Error).message}`)
+      throw new Error("Could not list the installation's repositories from GitHub.")
     }
   }
 

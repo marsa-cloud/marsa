@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import type { AppHealthStatus } from '~/api/types.gen'
+import { useDocumentVisibility, useIntervalFn } from '@vueuse/core'
 
-// useAppReleases / useAppHealth / useAppRunLogs / useAppDetail / useShipRelease /
-// extractApiError are Nuxt auto-imports — left un-imported so tests can mock them.
+import type { AppHealthStatus, DeployStatus } from '~/api/types.gen'
 
 // Remount per slug so navigating /apps/a → /apps/b re-runs setup with fresh reads.
 definePageMeta({ key: route => route.fullPath })
@@ -20,10 +19,11 @@ const {
   exhausted: releasesExhausted,
   canLoadMore: canLoadMoreReleases,
   loadMore: loadMoreReleases,
-  reset: refreshReleases,
+  reset: loadReleases,
+  refresh: refreshReleases,
 } = useAppReleases(slug.value)
 
-onMounted(() => void refreshReleases())
+onMounted(() => void loadReleases())
 // Bounds come from the API's tailLines validator (1–1000); 100 is its default.
 const TAIL_LINE_OPTIONS = [50, 100, 200, 500, 1000]
 const tailLines = ref(100)
@@ -44,6 +44,101 @@ const overriddenKeys = computed(
   () => attachments.value?.items.flatMap(item => item.variables) ?? [],
 )
 
+const toast = useToast()
+
+const {
+  items: builds,
+  pending: buildsPending,
+  error: buildsError,
+  exhausted: buildsExhausted,
+  canLoadMore: canLoadMoreBuilds,
+  loadMore: loadMoreBuilds,
+  reset: loadBuilds,
+  refresh: refreshBuilds,
+} = useAppBuilds(slug.value)
+
+const source = computed(() => config.value?.source ?? null)
+// A config refetch yields a new source object; watching that would reload the builds every time.
+watch(
+  () => source.value?.repo ?? null,
+  (repo) => {
+    if (repo) void loadBuilds()
+  },
+  { immediate: true },
+)
+
+const FAST_POLL_MS = 5000
+const IDLE_POLL_MS = 15000
+const ROLLING_OUT: DeployStatus[] = ['pending', 'in_progress']
+// A finished build deploys on the server, so stay fast until its release has landed too.
+const settling = computed(() => {
+  const newest = releases.value[0]
+  return (
+    config.value?.latestBuild?.status === 'running'
+    || (!!newest && ROLLING_OUT.includes(newest.deployStatus))
+  )
+})
+
+let polling = false
+async function poll() {
+  if (polling) return
+  polling = true
+  try {
+    await Promise.all([
+      refreshConfig(),
+      refreshReleases(),
+      refreshHealth(),
+      ...(source.value ? [refreshBuilds()] : []),
+    ])
+  } finally {
+    polling = false
+  }
+}
+
+const { pause, resume } = useIntervalFn(
+  poll,
+  () => (settling.value ? FAST_POLL_MS : IDLE_POLL_MS),
+  { immediate: false },
+)
+const visibility = useDocumentVisibility()
+watch(
+  visibility,
+  (state, previous) => {
+    if (state === 'hidden') return pause()
+    if (previous === 'hidden') void poll()
+    resume()
+  },
+  { immediate: true },
+)
+
+const { rebuild } = useRebuild()
+const rebuilding = ref(false)
+
+async function runRebuild() {
+  rebuilding.value = true
+  try {
+    await rebuild(slug.value)
+    toast.add({
+      title: 'Build started',
+      description: 'The branch head is building. It deploys when the build succeeds.',
+      color: 'success',
+      icon: 'i-lucide-hammer',
+    })
+  } catch (err) {
+    toast.add({
+      title: 'Rebuild failed',
+      description: extractApiError(err),
+      color: 'error',
+      icon: 'i-lucide-triangle-alert',
+    })
+  } finally {
+    rebuilding.value = false
+    await Promise.all([refreshBuilds(), refreshConfig()])
+  }
+}
+
+const logsBuildUuid = ref<string | null>(null)
+
 const replicaRange = computed(() => {
   const min = config.value?.minReplicas
   const max = config.value?.maxReplicas
@@ -53,7 +148,6 @@ const replicaRange = computed(() => {
 })
 
 const { ship } = useShipRelease()
-const toast = useToast()
 const shipping = ref(false)
 
 async function runShip(fromReleaseUuid?: string) {
@@ -161,7 +255,7 @@ async function confirmDelete() {
             color="neutral"
             variant="subtle"
             :loading="shipping"
-            :disabled="shipping"
+            :disabled="shipping || !config?.image"
             @click="runShip()"
           >
             Redeploy
@@ -204,7 +298,7 @@ async function confirmDelete() {
           </template>
 
           <USkeleton
-            v-if="isPending(healthStatus)"
+            v-if="!health && isPending(healthStatus)"
             class="h-6 w-40"
           />
           <UAlert
@@ -248,6 +342,45 @@ async function confirmDelete() {
           >
             Scaling: {{ replicaRange }}
           </p>
+        </UCard>
+
+        <!-- Builds -->
+        <UCard v-if="source">
+          <template #header>
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <h2 class="font-medium">
+                Builds
+              </h2>
+              <span class="font-mono text-xs text-muted">{{ source.repo }}@{{ source.branch }}</span>
+              <UButton
+                data-testid="rebuild"
+                class="ms-auto"
+                icon="i-lucide-hammer"
+                color="neutral"
+                variant="subtle"
+                size="sm"
+                :loading="rebuilding"
+                :disabled="rebuilding"
+                @click="runRebuild"
+              >
+                Rebuild
+              </UButton>
+            </div>
+          </template>
+
+          <AppBuildList
+            :builds="builds"
+            :pending="buildsPending"
+            :error="buildsError"
+            :exhausted="buildsExhausted"
+            :can-load-more="canLoadMoreBuilds"
+            :load-more="loadMoreBuilds"
+            @logs="uuid => (logsBuildUuid = uuid)"
+          />
+          <BuildLogModal
+            v-model:build-uuid="logsBuildUuid"
+            :slug="slug"
+          />
         </UCard>
 
         <!-- Release history -->
@@ -306,7 +439,7 @@ async function confirmDelete() {
           </template>
 
           <USkeleton
-            v-if="isPending(logsStatus)"
+            v-if="!logsData && isPending(logsStatus)"
             class="h-24 w-full"
           />
           <UAlert

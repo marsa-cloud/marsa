@@ -1,6 +1,8 @@
 import { describe, it } from 'node:test'
 import { expect } from 'expect'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
+import type { App } from '#src/app/app-management/entities/app.table.js'
+import { AppSourceBuilder } from '#src/app/app-management/entities/app-source.builder.js'
 import { PinStrategy } from '#src/app/app-management/enums/pin-strategy.enum.js'
 import { AppPlacementBuilder } from '#src/app/app-management/queries/app-placement.builder.js'
 import { DatabaseEngine } from '#src/app/database-management/enums/database-engine.enum.js'
@@ -138,5 +140,41 @@ describe('deploySpecOf', () => {
     })
 
     expect(spec.attachments).toEqual([])
+  })
+})
+
+describe('deploySpecOf and $PORT', () => {
+  const source = new AppSourceBuilder().build()
+  const specOf = (app: App) =>
+    deploySpecOf(
+      new AppPlacementBuilder().withApp(app).build(),
+      new ReleaseBuilder().withApp(app).build(),
+      { baseDomain: 'demo.marsa.cc', attachments: [] },
+    )
+
+  it('tells a source app which port to listen on', () => {
+    const app = new AppBuilder()
+      .withSource(source)
+      .withContainerPort(8080)
+      .withEnv({ A: '1' })
+      .build()
+
+    expect(specOf(app).env).toEqual({ A: '1', PORT: '8080' })
+  })
+
+  it("keeps the user's own PORT", () => {
+    const app = new AppBuilder()
+      .withSource(source)
+      .withContainerPort(8080)
+      .withEnv({ PORT: '3000' })
+      .build()
+
+    expect(specOf(app).env).toEqual({ PORT: '3000' })
+  })
+
+  it('leaves an image app alone', () => {
+    const app = new AppBuilder().withContainerPort(80).withEnv({ A: '1' }).build()
+
+    expect(specOf(app).env).toEqual({ A: '1' })
   })
 })

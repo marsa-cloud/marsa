@@ -8,7 +8,8 @@ import { useKeysetList } from '../useKeysetList'
 interface Row { uuid: string }
 
 const PAGE_SIZE = 2
-const rows: Row[] = [{ uuid: 'a' }, { uuid: 'b' }, { uuid: 'c' }, { uuid: 'd' }]
+const ROWS: Row[] = [{ uuid: 'a' }, { uuid: 'b' }, { uuid: 'c' }, { uuid: 'd' }]
+let rows: Row[] = [...ROWS]
 
 const seenQueries: unknown[] = []
 let failNext = false
@@ -25,7 +26,8 @@ registerEndpoint('/api/v1/things', async (event) => {
   // exactly as the composable serializes it.
   const after = (query as Record<string, string | undefined>)['pagination[key][uuid]']
   const start = after ? rows.findIndex(row => row.uuid === after) + 1 : 0
-  const items = rows.slice(start, start + PAGE_SIZE)
+  const limit = Number((query as Record<string, string | undefined>)['pagination[limit]'])
+  const items = rows.slice(start, start + limit)
   return { items, meta: { next: nullNext ? null : (items.at(-1) ?? null) } }
 })
 
@@ -46,6 +48,7 @@ function mountList() {
 }
 
 beforeEach(() => {
+  rows = [...ROWS]
   seenQueries.length = 0
   failNext = false
   delayMs = 0
@@ -170,5 +173,102 @@ describe('useKeysetList', () => {
     await list.reset()
 
     expect(list.items.value.map(row => row.uuid)).toEqual(['a', 'b'])
+  })
+
+  describe('refresh', () => {
+    const uuids = (list: Awaited<ReturnType<typeof mountList>>) =>
+      list.items.value.map(row => row.uuid)
+
+    it('swaps the fresh first page in without emptying the list first', async () => {
+      const list = await mountList()
+      await list.reset()
+
+      rows = [{ uuid: 'z' }, ...ROWS]
+      delayMs = 30
+      const refreshing = list.refresh()
+      expect(uuids(list)).toEqual(['a', 'b'])
+      expect(list.pending.value).toBe(false)
+      await refreshing
+
+      expect(uuids(list)).toEqual(['z', 'a'])
+      expect(list.next.value).toEqual({ uuid: 'a' })
+    })
+
+    it('re-reads every loaded page in one request so infinite scroll keeps its rows', async () => {
+      const list = await mountList()
+      await list.reset()
+      await list.loadMore()
+
+      rows = [{ uuid: 'z' }, ...ROWS]
+      await list.refresh()
+
+      expect(seenQueries.at(-1)).toMatchObject({ 'pagination[limit]': '4' })
+      expect(seenQueries.at(-1)).not.toHaveProperty('pagination[key][uuid]')
+      expect(uuids(list)).toEqual(['z', 'a', 'b', 'c'])
+      expect(list.exhausted.value).toBe(false)
+
+      await list.loadMore()
+      expect(uuids(list)).toEqual(['z', 'a', 'b', 'c', 'd'])
+    })
+
+    it('marks the list exhausted when the window comes back short', async () => {
+      const list = await mountList()
+      await list.reset()
+
+      rows = [{ uuid: 'a' }]
+      await list.refresh()
+
+      expect(uuids(list)).toEqual(['a'])
+      expect(list.exhausted.value).toBe(true)
+    })
+
+    it('loses to a reset that starts while it is in flight', async () => {
+      const list = await mountList()
+      await list.reset()
+      await list.loadMore()
+
+      delayMs = 30
+      const refreshing = list.refresh()
+      delayMs = 0
+      await list.reset()
+      await refreshing
+
+      expect(uuids(list)).toEqual(['a', 'b'])
+      expect(list.next.value).toEqual({ uuid: 'b' })
+    })
+
+    it('skips while a page load is in flight', async () => {
+      const list = await mountList()
+      await list.reset()
+
+      delayMs = 30
+      const loading = list.loadMore()
+      const sent = seenQueries.length
+      await list.refresh()
+      await loading
+
+      expect(seenQueries.length).toBe(sent)
+      expect(uuids(list)).toEqual(['a', 'b', 'c', 'd'])
+    })
+
+    it('keeps the rows on screen when it fails', async () => {
+      const list = await mountList()
+      await list.reset()
+
+      failNext = true
+      await list.refresh()
+
+      expect(uuids(list)).toEqual(['a', 'b'])
+      expect(list.error.value).toBeNull()
+    })
+
+    it('surfaces the failure when there is nothing on screen', async () => {
+      const list = await mountList()
+
+      failNext = true
+      await list.refresh()
+
+      expect(list.error.value).toBeTruthy()
+    })
   })
 })
