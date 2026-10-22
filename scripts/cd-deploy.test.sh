@@ -19,12 +19,18 @@ workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
 
 # Stub helm: `get metadata` answers with a version line (image mode reads the
-# installed chart version); any other call (the `upgrade`) records its full
+# installed chart version); `history` prints $HELM_HISTORY (or fails, like a
+# missing release); any other call (rollback/upgrade) records its full
 # argument list to $HELM_LOG so the test can assert which flags were used.
 cat > "$workdir/helm" <<'STUB'
 #!/usr/bin/env bash
 if [ "${1:-}" = "get" ] && [ "${2:-}" = "metadata" ]; then
   echo "version: 0.0.1-alpha.9"
+  exit 0
+fi
+if [ "${1:-}" = "history" ]; then
+  [ -n "${HELM_HISTORY:-}" ] || exit 1
+  printf '%s\n' "$HELM_HISTORY"
   exit 0
 fi
 printf '%s\n' "$*" >> "$HELM_LOG"
@@ -39,7 +45,8 @@ fail=0
 # and leaves the upgrade invocation (if any) in $HELM_LOG.
 run_deploy() {
   : > "$HELM_LOG"
-  PATH="$workdir:$PATH" HELM_LOG="$HELM_LOG" bash "$CD_DEPLOY" "$1" >/dev/null 2>&1
+  PATH="$workdir:$PATH" HELM_LOG="$HELM_LOG" HELM_HISTORY="${HELM_HISTORY:-}" \
+    bash "$CD_DEPLOY" "$1" >/dev/null 2>&1
 }
 
 HELM_LOG="$workdir/helm.log"
@@ -90,6 +97,53 @@ if run_deploy "chart:1.2.3-rc.1" \
 else
   echo "FAIL  chart bump flags — got: $(cat "$HELM_LOG")"; fail=$((fail + 1))
 fi
+
+# --- 4. Release left pending-* by a killed helm: roll back to last deployed first --
+HELM_HISTORY='- app_version: 0.1.0
+  chart: marsa-0.0.1-alpha.9
+  description: Upgrade complete
+  revision: 29
+  status: deployed
+- app_version: 0.1.0
+  chart: marsa-0.0.1-alpha.9
+  description: |-
+    Upgrade failed: status: deployed
+  revision: 30
+  status: pending-upgrade
+- app_version: 0.1.0
+  chart: marsa-0.0.1-alpha.9
+  description: Rollback to 26
+  revision: 31
+  status: pending-rollback'
+if run_deploy "sha-abc1234" \
+  && [ "$(head -1 "$HELM_LOG")" = "rollback marsa 29 -n marsa --wait --timeout 5m" ] \
+  && sed -n 2p "$HELM_LOG" | grep -q -- "^upgrade"; then
+  echo "PASS  stale pending-* lock → rollback to last deployed, then upgrade"
+  pass=$((pass + 1))
+else
+  echo "FAIL  stale lock recovery — got: $(cat "$HELM_LOG")"; fail=$((fail + 1))
+fi
+
+# --- 5. Healthy release: no rollback --------------------------------------------
+HELM_HISTORY='- revision: 32
+  status: deployed'
+if run_deploy "sha-abc1234" && ! grep -q -- "^rollback" "$HELM_LOG"; then
+  echo "PASS  deployed release → no rollback"
+  pass=$((pass + 1))
+else
+  echo "FAIL  rolled back a healthy release — got: $(cat "$HELM_LOG")"; fail=$((fail + 1))
+fi
+
+# --- 6. Pending with nothing deployed to return to: refuse, never upgrade ---------
+HELM_HISTORY='- revision: 1
+  status: pending-install'
+if ! run_deploy "sha-abc1234" && [ ! -s "$HELM_LOG" ]; then
+  echo "PASS  pending-install with no deployed revision → refused"
+  pass=$((pass + 1))
+else
+  echo "FAIL  pending-install handling — got: $(cat "$HELM_LOG")"; fail=$((fail + 1))
+fi
+HELM_HISTORY=''
 
 echo "---"
 echo "passed=$pass failed=$fail"
