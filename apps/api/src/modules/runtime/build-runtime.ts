@@ -11,7 +11,7 @@ export abstract class BuildRuntime {
   // Idempotent per build uuid.
   abstract start(build: BuildRef, spec: BuildSpec): Promise<void>
 
-  // Idempotent: a build that is already gone counts as cancelled.
+  // Idempotent (a gone build counts as cancelled); resolves once the build can no longer push.
   abstract cancel(build: BuildRef): Promise<void>
 
   abstract readStatus(build: BuildRef): Promise<BuildObservation>

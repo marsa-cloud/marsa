@@ -1,9 +1,13 @@
+import { setTimeout } from 'node:timers/promises'
 import { BatchV1Api, CoreV1Api, KubeConfig, type V1Job, type V1Pod } from '@kubernetes/client-node'
 import { Injectable } from '@nestjs/common'
 import { newestPod } from '#src/modules/runtime/adapters/kubernetes/app/rollout/newest-pod.js'
 import {
   BUILD_LOG_LIMIT_BYTES,
   BUILD_NAMESPACE,
+  CANCEL_POD_GRACE_SECONDS,
+  CANCEL_POLL_MS,
+  CANCEL_WAIT_MS,
   JOB_NAME_LABEL,
 } from '#src/modules/runtime/adapters/kubernetes/build/build.constants.js'
 import { mapBuildObservation } from '#src/modules/runtime/adapters/kubernetes/build/observe/map-build-observation.js'
@@ -67,6 +71,17 @@ export class KubernetesBuildRuntime extends BuildRuntime {
         propagationPolicy: 'Background',
       }),
     )
+    // Background propagation returns before the pod stops, and a live BuildKit can still push.
+    for (const pod of await this.listPods(ref)) {
+      await ignoreNotFound(() =>
+        this.core.deleteNamespacedPod({
+          name: pod.metadata?.name ?? '',
+          namespace: BUILD_NAMESPACE,
+          gracePeriodSeconds: CANCEL_POD_GRACE_SECONDS,
+        }),
+      )
+    }
+    await this.waitForPodsGone(ref)
   }
 
   async readStatus(ref: BuildRef): Promise<BuildObservation> {
@@ -116,6 +131,16 @@ export class KubernetesBuildRuntime extends BuildRuntime {
         throw error
       }
       return this.batch.readNamespacedJob({ name: buildJobName(ref), namespace: BUILD_NAMESPACE })
+    }
+  }
+
+  private async waitForPodsGone(ref: BuildRef): Promise<void> {
+    const deadline = Date.now() + CANCEL_WAIT_MS
+    while ((await this.listPods(ref)).length > 0) {
+      if (Date.now() > deadline) {
+        throw new Error(`The pods of build job '${buildJobName(ref)}' did not stop in time.`)
+      }
+      await setTimeout(CANCEL_POLL_MS)
     }
   }
 

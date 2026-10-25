@@ -70,6 +70,7 @@ describe('KubernetesBuildRuntime', () => {
 
   it('deletes the job in the background on cancel and ignores a missing one', async () => {
     batch.deleteNamespacedJob.rejects(notFound())
+    core.listNamespacedPod.resolves({ items: [] })
 
     await runtime.cancel(ref)
 
@@ -78,6 +79,28 @@ describe('KubernetesBuildRuntime', () => {
       namespace: 'marsa-builds',
       propagationPolicy: 'Background',
     })
+  })
+
+  it('stops the build pod on cancel and resolves only once it is gone', async () => {
+    batch.deleteNamespacedJob.resolves({})
+    core.deleteNamespacedPod.rejects(notFound())
+    const running = { items: [{ metadata: { name: 'p-1' } }] }
+    core.listNamespacedPod
+      .onFirstCall()
+      .resolves(running)
+      .onSecondCall()
+      .resolves(running)
+      .onThirdCall()
+      .resolves({ items: [] })
+
+    await runtime.cancel(ref)
+
+    expect(core.deleteNamespacedPod.firstCall.args[0]).toMatchObject({
+      name: 'p-1',
+      namespace: 'marsa-builds',
+      gracePeriodSeconds: 1,
+    })
+    expect(core.listNamespacedPod.callCount).toBe(3)
   })
 
   it('reads a missing job as not found', async () => {

@@ -7,3 +7,6 @@ export const BUILD_APP_LABEL = 'marsa.cloud/app'
 export const JOB_NAME_LABEL = 'batch.kubernetes.io/job-name'
 export const GIT_TOKEN_KEY = 'token'
 export const BUILD_LOG_LIMIT_BYTES = 1024 * 1024
+export const CANCEL_POD_GRACE_SECONDS = 1
+export const CANCEL_WAIT_MS = 30_000
+export const CANCEL_POLL_MS = 500
