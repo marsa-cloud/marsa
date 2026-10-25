@@ -8,6 +8,7 @@ import { AppPlacementBuilder } from '#src/app/app-management/queries/app-placeme
 import { DatabaseEngine } from '#src/app/database-management/enums/database-engine.enum.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
+import { ReleasePullCredentials } from '#src/app/release/services/release-pull-credentials/release-pull-credentials.service.js'
 import { DeployReleaseRepository } from '#src/app/release/use-cases/deploy-release/deploy-release.repository.js'
 import { DeployReleaseUseCase } from '#src/app/release/use-cases/deploy-release/deploy-release.use-case.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
@@ -43,8 +44,7 @@ function build(release = new ReleaseBuilder().withApp(app).withImageRef('nginx:1
       stubDatabase(),
       repository,
       appRuntime,
-      cipher,
-      imageRegistry,
+      new ReleasePullCredentials(imageRegistry, cipher),
       config,
     ),
     repository,

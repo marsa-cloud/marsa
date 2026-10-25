@@ -12,6 +12,7 @@ import { UpdateAppRepository } from '#src/app/app-management/use-cases/update-ap
 import { UpdateAppUseCase } from '#src/app/app-management/use-cases/update-app/update-app.use-case.js'
 import { DatabaseEngine } from '#src/app/database-management/enums/database-engine.enum.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
+import { ReleasePullCredentials } from '#src/app/release/services/release-pull-credentials/release-pull-credentials.service.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
 import { MockImageRegistry } from '#src/modules/runtime/adapters/mock/mock-image-registry.js'
@@ -51,7 +52,7 @@ function build() {
       repository,
       cipher,
       appRuntime,
-      imageRegistry,
+      new ReleasePullCredentials(imageRegistry, cipher),
       config,
     ),
     repository,

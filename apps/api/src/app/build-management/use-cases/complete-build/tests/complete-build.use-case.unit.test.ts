@@ -13,6 +13,7 @@ import { CompleteBuildUseCase } from '#src/app/build-management/use-cases/comple
 import { DatabaseEngine } from '#src/app/database-management/enums/database-engine.enum.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/release/enums/release-trigger.enum.js'
+import { ReleasePullCredentials } from '#src/app/release/services/release-pull-credentials/release-pull-credentials.service.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
 import { MockImageRegistry } from '#src/modules/runtime/adapters/mock/mock-image-registry.js'
@@ -51,7 +52,7 @@ function build(trigger = BuildTrigger.Manual) {
     repository,
     appRuntime,
     imageRegistry,
-    cipher,
+    new ReleasePullCredentials(imageRegistry, cipher),
     config,
   )
   return { usecase, repository, appRuntime, running }

@@ -12,7 +12,7 @@ import { AttachDatabaseCommand } from '#src/app/database-management/use-cases/at
 import { AttachDatabaseRepository } from '#src/app/database-management/use-cases/attach-database/attach-database.repository.js'
 import { AttachDatabaseResponse } from '#src/app/database-management/use-cases/attach-database/attach-database.response.js'
 import { deploySpecOf } from '#src/app/release/entities/release-deploy-spec.js'
-import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
+import { ReleasePullCredentials } from '#src/app/release/services/release-pull-credentials/release-pull-credentials.service.js'
 import type { Database, Executor } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
@@ -25,7 +25,7 @@ export class AttachDatabaseUseCase {
     @InjectDatabase() private readonly db: Database,
     private readonly repository: AttachDatabaseRepository,
     private readonly appRuntime: AppRuntime,
-    private readonly cipher: ImagePullCredentialsCipher,
+    private readonly pullCredentials: ReleasePullCredentials,
     config: ConfigService,
   ) {
     this.baseDomain = config.getOrThrow<string>('MARSA_BASE_DOMAIN')
@@ -85,7 +85,7 @@ export class AttachDatabaseUseCase {
       return
     }
 
-    const credentials = this.cipher.openForApp(placement.app.slug, release.imagePullCredentialsEnc)
+    const credentials = this.pullCredentials.of(placement.app.slug, release)
     const attachments = await this.repository.findAttachments(tx, placement.app.uuid)
     const spec = deploySpecOf(placement, release, {
       baseDomain: this.baseDomain,
