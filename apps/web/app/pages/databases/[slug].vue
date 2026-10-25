@@ -29,6 +29,20 @@ const STATUS_LABEL: Record<DatabaseStatus, string> = {
   not_found: 'Not running',
 }
 
+const STATUS_ICON: Record<DatabaseStatus, string> = {
+  ready: 'i-lucide-circle-check',
+  provisioning: 'i-lucide-loader-circle',
+  failed: 'i-lucide-circle-x',
+  not_found: 'i-lucide-circle-alert',
+}
+
+const STATUS_HINT: Record<DatabaseStatus, string> = {
+  ready: 'Accepting connections',
+  provisioning: 'Starting up, usually under a minute',
+  failed: 'The database pod is not running',
+  not_found: 'Its cluster resources are missing',
+}
+
 const confirmOpen = ref(false)
 const confirmSlug = ref('')
 const deleting = ref(false)
@@ -81,15 +95,6 @@ async function confirmDelete() {
             aria-label="Back to databases"
           />
         </template>
-        <template #right>
-          <UBadge
-            v-if="database"
-            :color="STATUS_COLOR[database.status]"
-            variant="subtle"
-          >
-            {{ STATUS_LABEL[database.status] }}
-          </UBadge>
-        </template>
       </UDashboardNavbar>
     </template>
 
@@ -115,6 +120,31 @@ async function confirmDelete() {
         v-else
         class="flex max-w-3xl flex-col gap-4"
       >
+        <UCard>
+          <template #header>
+            <h2 class="font-medium">
+              Status
+            </h2>
+          </template>
+
+          <div
+            data-testid="database-status"
+            class="flex items-center gap-3"
+          >
+            <UBadge
+              :color="STATUS_COLOR[database.status]"
+              :icon="STATUS_ICON[database.status]"
+              variant="subtle"
+              size="lg"
+            >
+              {{ STATUS_LABEL[database.status] }}
+            </UBadge>
+            <span class="text-sm text-muted">
+              {{ STATUS_HINT[database.status] }}
+            </span>
+          </div>
+        </UCard>
+
         <UCard>
           <template #header>
             <h2 class="font-medium">
