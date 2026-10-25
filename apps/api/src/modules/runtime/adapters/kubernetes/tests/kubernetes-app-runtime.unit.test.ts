@@ -198,3 +198,53 @@ describe('KubernetesAppRuntime.readLiveReleaseUuid', () => {
     expect(await runtime.readLiveReleaseUuid(APP)).toBeNull()
   })
 })
+
+describe('KubernetesAppRuntime.readRunLogs', () => {
+  let apps: SinonStubbedInstance<AppsV1Api>
+  let core: SinonStubbedInstance<CoreV1Api>
+  let sandbox: SinonSandbox
+  let runtime: KubernetesAppRuntime
+
+  beforeEach(() => {
+    apps = createStubInstance(AppsV1Api)
+    core = createStubInstance(CoreV1Api)
+
+    sandbox = createSandbox()
+    sandbox.stub(KubeConfig.prototype, 'loadFromDefault')
+    sandbox
+      .stub(KubeConfig.prototype, 'makeApiClient')
+      .withArgs(AppsV1Api)
+      .returns(apps)
+      .withArgs(CoreV1Api)
+      .returns(core)
+      .withArgs(CustomObjectsApi)
+      .returns(createStubInstance(CustomObjectsApi))
+
+    runtime = new KubernetesAppRuntime(createStubInstance(MockEnvironmentRuntime))
+    apps.readNamespacedDeployment.resolves({
+      spec: { selector: { matchLabels: { app: SLUG } }, template: {} },
+    })
+    core.listNamespacedPod.resolves({ items: [{ metadata: { name: 'p-1' } }] })
+  })
+
+  afterEach(() => {
+    sandbox.restore()
+  })
+
+  it('reads the newest pod log', async () => {
+    core.readNamespacedPodLog.resolves('Listening on :8080\n')
+
+    expect(await runtime.readRunLogs(APP, { tailLines: 50 })).toEqual({
+      podName: 'p-1',
+      logs: 'Listening on :8080\n',
+    })
+  })
+
+  it('returns an empty log for a container that has not started yet', async () => {
+    core.readNamespacedPodLog.rejects(
+      new ApiException(400, 'Bad Request', { message: 'container is waiting to start' }, {}),
+    )
+
+    expect(await runtime.readRunLogs(APP, { tailLines: 50 })).toEqual({ podName: 'p-1', logs: '' })
+  })
+})
