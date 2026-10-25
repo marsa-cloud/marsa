@@ -14,6 +14,7 @@ import { DatabaseEngine } from '#src/app/database-management/enums/database-engi
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/release/enums/release-trigger.enum.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
+import { PullCredentials } from '#src/modules/pull-credentials/pull-credentials.service.js'
 import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
 import { MockImageRegistry } from '#src/modules/runtime/adapters/mock/mock-image-registry.js'
 import { BuildState } from '#src/modules/runtime/runtime.enums.js'
@@ -51,7 +52,7 @@ function build(trigger = BuildTrigger.Manual) {
     repository,
     appRuntime,
     imageRegistry,
-    cipher,
+    new PullCredentials(imageRegistry, cipher),
     config,
   )
   return { usecase, repository, appRuntime, running }

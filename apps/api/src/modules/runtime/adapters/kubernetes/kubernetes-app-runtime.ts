@@ -27,6 +27,7 @@ import { extractDeployFailure } from '#src/modules/runtime/adapters/kubernetes/a
 import { mapRolloutStatus } from '#src/modules/runtime/adapters/kubernetes/app/rollout/map-rollout-status.js'
 import { newestPod } from '#src/modules/runtime/adapters/kubernetes/app/rollout/newest-pod.js'
 import { namespaceOf } from '#src/modules/runtime/adapters/kubernetes/environment/namespace-name.js'
+import { isBadRequest } from '#src/modules/runtime/adapters/kubernetes/shared/bad-request.js'
 import {
   ignoreNotFound,
   isNotFound,
@@ -252,6 +253,10 @@ export class KubernetesAppRuntime extends AppRuntime {
       // churn); a 404 here is the same "not found → null" case, not a failure.
       if (isNotFound(error)) {
         return null
+      }
+      // A container that hasn't started (e.g. ImagePullBackOff) has no log; the API answers 400.
+      if (isBadRequest(error)) {
+        return { podName: name, logs: '' }
       }
       throw error
     }

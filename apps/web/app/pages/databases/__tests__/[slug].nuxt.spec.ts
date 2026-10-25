@@ -82,6 +82,15 @@ describe('databases/[slug] detail page', () => {
     expect(wrapper.text().toLowerCase()).not.toContain('password')
   })
 
+  it('shows the status prominently with what it means', async () => {
+    s.data = aDatabase({ status: 'provisioning' })
+    const wrapper = await mountSuspended(Detail)
+
+    const status = wrapper.find('[data-testid="database-status"]')
+    expect(status.text()).toContain('Provisioning')
+    expect(status.text()).toContain('Starting up')
+  })
+
   it('states that the requested size is not enforced', async () => {
     const wrapper = await mountSuspended(Detail)
 

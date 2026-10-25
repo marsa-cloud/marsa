@@ -12,9 +12,9 @@ import type { Release } from '#src/app/release/entities/release.table.js'
 import { deploySpecOf } from '#src/app/release/entities/release-deploy-spec.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { ReleaseTrigger } from '#src/app/release/enums/release-trigger.enum.js'
-import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import type { Database, Executor, Transaction } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
+import { PullCredentials } from '#src/modules/pull-credentials/pull-credentials.service.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
 import { ImageRegistry } from '#src/modules/runtime/image-registry.js'
 import { BuildState } from '#src/modules/runtime/runtime.enums.js'
@@ -29,7 +29,7 @@ export class CompleteBuildUseCase {
     private readonly repository: CompleteBuildRepository,
     private readonly appRuntime: AppRuntime,
     private readonly imageRegistry: ImageRegistry,
-    private readonly cipher: ImagePullCredentialsCipher,
+    private readonly pullCredentials: PullCredentials,
     config: ConfigService,
   ) {
     this.baseDomain = config.getOrThrow<string>('MARSA_BASE_DOMAIN')
@@ -78,9 +78,7 @@ export class CompleteBuildUseCase {
   }
 
   private async deploy(tx: Executor, placement: AppPlacement, release: Release): Promise<void> {
-    const credentials =
-      this.imageRegistry.pullCredentialsFor(release.imageRef) ??
-      this.cipher.openForApp(placement.app.slug, release.imagePullCredentialsEnc)
+    const credentials = this.pullCredentials.of(placement.app.slug, release)
     const attachments = await this.repository.findAttachments(tx, placement.app.uuid)
     const spec = deploySpecOf(placement, release, {
       baseDomain: this.baseDomain,

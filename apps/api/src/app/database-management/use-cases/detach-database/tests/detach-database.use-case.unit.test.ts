@@ -10,7 +10,9 @@ import { DetachDatabaseRepository } from '#src/app/database-management/use-cases
 import { DetachDatabaseUseCase } from '#src/app/database-management/use-cases/detach-database/detach-database.use-case.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
+import { PullCredentials } from '#src/modules/pull-credentials/pull-credentials.service.js'
 import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
+import { MockImageRegistry } from '#src/modules/runtime/adapters/mock/mock-image-registry.js'
 import { stubDatabase } from '#src/test/setup/stub-database.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 import { generateUuid } from '#src/utils/uuid.js'
@@ -19,6 +21,7 @@ const placement = new AppPlacementBuilder()
   .withApp(new AppBuilder().withSlug('my-app').build())
   .build()
 const liveRelease = new ReleaseBuilder().withApp(placement.app).build()
+const registryCredentials = { registry: 'registry.mock.test', username: 'marsa', password: 'pw' }
 
 function build() {
   const repository = createStubInstance(DetachDatabaseRepository)
@@ -33,13 +36,23 @@ function build() {
   appRuntime.deploy.resolves()
 
   const cipher = createStubInstance(ImagePullCredentialsCipher)
+  const imageRegistry = createStubInstance(MockImageRegistry)
+  imageRegistry.pullCredentialsFor.returns(undefined)
+  const pullCredentials = new PullCredentials(imageRegistry, cipher)
   const config = createStubInstance(ConfigService)
   config.getOrThrow.returns('demo.marsa.cc')
 
   return {
     repository,
     appRuntime,
-    usecase: new DetachDatabaseUseCase(stubDatabase(), repository, appRuntime, cipher, config),
+    imageRegistry,
+    usecase: new DetachDatabaseUseCase(
+      stubDatabase(),
+      repository,
+      appRuntime,
+      pullCredentials,
+      config,
+    ),
   }
 }
 
@@ -90,5 +103,14 @@ describe('DetachDatabaseUseCase', () => {
     appRuntime.deploy.rejects(new Error('cluster down'))
 
     await expect(usecase.execute('my-app', 'orders')).rejects.toThrow(BadGatewayException)
+  })
+  it('keeps the registry pull secret of an image Marsa built', async () => {
+    const { appRuntime, imageRegistry, usecase } = build()
+    appRuntime.readLiveReleaseUuid.resolves(liveRelease.uuid)
+    imageRegistry.pullCredentialsFor.returns(registryCredentials)
+
+    await usecase.execute('my-app', 'orders')
+
+    expect(appRuntime.deploy.firstCall.args[1].credentials).toEqual(registryCredentials)
   })
 })

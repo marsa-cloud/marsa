@@ -6,11 +6,10 @@ import { deploySpecOf } from '#src/app/release/entities/release-deploy-spec.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { DeployReleaseRepository } from '#src/app/release/use-cases/deploy-release/deploy-release.repository.js'
 import { DeployReleaseResponse } from '#src/app/release/use-cases/deploy-release/deploy-release.response.js'
-import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import type { Database, Executor, Transaction } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
+import { PullCredentials } from '#src/modules/pull-credentials/pull-credentials.service.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
-import { ImageRegistry } from '#src/modules/runtime/image-registry.js'
 
 type Outcome =
   | { deployed: true; response: DeployReleaseResponse }
@@ -25,8 +24,7 @@ export class DeployReleaseUseCase {
     @InjectDatabase() private readonly db: Database,
     private readonly repository: DeployReleaseRepository,
     private readonly appRuntime: AppRuntime,
-    private readonly cipher: ImagePullCredentialsCipher,
-    private readonly imageRegistry: ImageRegistry,
+    private readonly pullCredentials: PullCredentials,
     config: ConfigService,
   ) {
     this.baseDomain = config.getOrThrow<string>('MARSA_BASE_DOMAIN')
@@ -70,9 +68,7 @@ export class DeployReleaseUseCase {
   }
 
   private async deploy(tx: Executor, placement: AppPlacement, release: Release): Promise<void> {
-    const credentials =
-      this.imageRegistry.pullCredentialsFor(release.imageRef) ??
-      this.cipher.openForApp(placement.app.slug, release.imagePullCredentialsEnc)
+    const credentials = this.pullCredentials.of(placement.app.slug, release)
     const attachments = await this.repository.findAttachments(tx, placement.app.uuid)
     const spec = deploySpecOf(placement, release, {
       baseDomain: this.baseDomain,

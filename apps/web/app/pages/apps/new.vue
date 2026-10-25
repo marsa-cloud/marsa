@@ -153,6 +153,13 @@ async function onSubmit() {
     created = await create(toCommand(state.environmentUuid))
   } catch (err) {
     error.value = extractApiError(err)
+    // The alert sits at the top of a long form, out of view from the Deploy button.
+    toast.add({
+      title: 'Could not create the app',
+      description: error.value,
+      color: 'error',
+      icon: 'i-lucide-triangle-alert',
+    })
     submitting.value = false
     return
   }

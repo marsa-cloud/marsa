@@ -1,9 +1,13 @@
+import { setTimeout } from 'node:timers/promises'
 import { BatchV1Api, CoreV1Api, KubeConfig, type V1Job, type V1Pod } from '@kubernetes/client-node'
 import { Injectable } from '@nestjs/common'
 import { newestPod } from '#src/modules/runtime/adapters/kubernetes/app/rollout/newest-pod.js'
 import {
   BUILD_LOG_LIMIT_BYTES,
   BUILD_NAMESPACE,
+  CANCEL_POD_GRACE_SECONDS,
+  CANCEL_POLL_MS,
+  CANCEL_WAIT_MS,
   JOB_NAME_LABEL,
 } from '#src/modules/runtime/adapters/kubernetes/build/build.constants.js'
 import { mapBuildObservation } from '#src/modules/runtime/adapters/kubernetes/build/observe/map-build-observation.js'
@@ -64,9 +68,20 @@ export class KubernetesBuildRuntime extends BuildRuntime {
       this.batch.deleteNamespacedJob({
         name: buildJobName(ref),
         namespace: BUILD_NAMESPACE,
-        propagationPolicy: 'Background',
+        propagationPolicy: 'Foreground',
       }),
     )
+    // The Job controller creates no pods for a deleting Job; a 1 s grace skips BuildKit's 30 s.
+    for (const pod of await this.listPods(ref)) {
+      await ignoreNotFound(() =>
+        this.core.deleteNamespacedPod({
+          name: pod.metadata?.name ?? '',
+          namespace: BUILD_NAMESPACE,
+          gracePeriodSeconds: CANCEL_POD_GRACE_SECONDS,
+        }),
+      )
+    }
+    await this.waitForBuildGone(ref)
   }
 
   async readStatus(ref: BuildRef): Promise<BuildObservation> {
@@ -116,6 +131,29 @@ export class KubernetesBuildRuntime extends BuildRuntime {
         throw error
       }
       return this.batch.readNamespacedJob({ name: buildJobName(ref), namespace: BUILD_NAMESPACE })
+    }
+  }
+
+  // A pod created while the delete landed outlives an empty listing, but never the Job.
+  private async waitForBuildGone(ref: BuildRef): Promise<void> {
+    const deadline = Date.now() + CANCEL_WAIT_MS
+    while ((await this.jobExists(ref)) || (await this.listPods(ref)).length > 0) {
+      if (Date.now() > deadline) {
+        throw new Error(`Build job '${buildJobName(ref)}' did not stop in time.`)
+      }
+      await setTimeout(CANCEL_POLL_MS)
+    }
+  }
+
+  private async jobExists(ref: BuildRef): Promise<boolean> {
+    try {
+      await this.batch.readNamespacedJob({ name: buildJobName(ref), namespace: BUILD_NAMESPACE })
+      return true
+    } catch (error) {
+      if (isNotFound(error)) {
+        return false
+      }
+      throw error
     }
   }
 

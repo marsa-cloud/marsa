@@ -11,6 +11,7 @@ import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
 import { DeployReleaseRepository } from '#src/app/release/use-cases/deploy-release/deploy-release.repository.js'
 import { DeployReleaseUseCase } from '#src/app/release/use-cases/deploy-release/deploy-release.use-case.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
+import { PullCredentials } from '#src/modules/pull-credentials/pull-credentials.service.js'
 import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
 import { MockImageRegistry } from '#src/modules/runtime/adapters/mock/mock-image-registry.js'
 import { EnvironmentConflictError } from '#src/modules/runtime/runtime.errors.js'
@@ -43,8 +44,7 @@ function build(release = new ReleaseBuilder().withApp(app).withImageRef('nginx:1
       stubDatabase(),
       repository,
       appRuntime,
-      cipher,
-      imageRegistry,
+      new PullCredentials(imageRegistry, cipher),
       config,
     ),
     repository,

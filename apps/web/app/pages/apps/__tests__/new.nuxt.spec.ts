@@ -199,6 +199,12 @@ describe('apps/new deploy form', () => {
     await submit(wrapper)
 
     expect(wrapper.text()).toContain('An app with slug \'my-app\' already exists.')
+    expect(toastAdd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: 'An app with slug \'my-app\' already exists.',
+        color: 'error',
+      }),
+    )
     expect(ship).not.toHaveBeenCalled()
     expect(nav).not.toHaveBeenCalled()
   })
