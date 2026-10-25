@@ -3,9 +3,9 @@ import { ConfigService } from '@nestjs/config'
 import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import { DetachDatabaseRepository } from '#src/app/database-management/use-cases/detach-database/detach-database.repository.js'
 import { deploySpecOf } from '#src/app/release/entities/release-deploy-spec.js'
-import { ReleasePullCredentials } from '#src/app/release/services/release-pull-credentials/release-pull-credentials.service.js'
 import type { Database, Executor } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
+import { PullCredentials } from '#src/modules/pull-credentials/pull-credentials.service.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
 
 @Injectable()
@@ -16,7 +16,7 @@ export class DetachDatabaseUseCase {
     @InjectDatabase() private readonly db: Database,
     private readonly repository: DetachDatabaseRepository,
     private readonly appRuntime: AppRuntime,
-    private readonly pullCredentials: ReleasePullCredentials,
+    private readonly pullCredentials: PullCredentials,
     config: ConfigService,
   ) {
     this.baseDomain = config.getOrThrow<string>('MARSA_BASE_DOMAIN')

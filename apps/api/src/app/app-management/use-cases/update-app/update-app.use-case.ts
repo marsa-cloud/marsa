@@ -6,10 +6,10 @@ import { UpdateAppCommand } from '#src/app/app-management/use-cases/update-app/u
 import { UpdateAppRepository } from '#src/app/app-management/use-cases/update-app/update-app.repository.js'
 import { UpdateAppResponse } from '#src/app/app-management/use-cases/update-app/update-app.response.js'
 import { deploySpecOf } from '#src/app/release/entities/release-deploy-spec.js'
-import { ReleasePullCredentials } from '#src/app/release/services/release-pull-credentials/release-pull-credentials.service.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
 import type { Database, Executor } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
+import { PullCredentials } from '#src/modules/pull-credentials/pull-credentials.service.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
 
 // Writes App, then re-applies only when the pin actually changed: a pin is location rather than
@@ -23,7 +23,7 @@ export class UpdateAppUseCase {
     private readonly repository: UpdateAppRepository,
     private readonly credentialsCipher: ImagePullCredentialsCipher,
     private readonly appRuntime: AppRuntime,
-    private readonly pullCredentials: ReleasePullCredentials,
+    private readonly pullCredentials: PullCredentials,
     config: ConfigService,
   ) {
     this.baseDomain = config.getOrThrow<string>('MARSA_BASE_DOMAIN')

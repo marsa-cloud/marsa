@@ -4,11 +4,11 @@ import type { AppPlacement } from '#src/app/app-management/queries/app-placement
 import type { Release } from '#src/app/release/entities/release.table.js'
 import { deploySpecOf } from '#src/app/release/entities/release-deploy-spec.js'
 import { DeployStatus } from '#src/app/release/enums/deploy-status.enum.js'
-import { ReleasePullCredentials } from '#src/app/release/services/release-pull-credentials/release-pull-credentials.service.js'
 import { DeployReleaseRepository } from '#src/app/release/use-cases/deploy-release/deploy-release.repository.js'
 import { DeployReleaseResponse } from '#src/app/release/use-cases/deploy-release/deploy-release.response.js'
 import type { Database, Executor, Transaction } from '#src/modules/database/drizzle.factory.js'
 import { InjectDatabase } from '#src/modules/database/inject-database.decorator.js'
+import { PullCredentials } from '#src/modules/pull-credentials/pull-credentials.service.js'
 import { AppRuntime } from '#src/modules/runtime/app-runtime.js'
 
 type Outcome =
@@ -24,7 +24,7 @@ export class DeployReleaseUseCase {
     @InjectDatabase() private readonly db: Database,
     private readonly repository: DeployReleaseRepository,
     private readonly appRuntime: AppRuntime,
-    private readonly pullCredentials: ReleasePullCredentials,
+    private readonly pullCredentials: PullCredentials,
     config: ConfigService,
   ) {
     this.baseDomain = config.getOrThrow<string>('MARSA_BASE_DOMAIN')

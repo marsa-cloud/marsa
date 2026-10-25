@@ -68,10 +68,10 @@ export class KubernetesBuildRuntime extends BuildRuntime {
       this.batch.deleteNamespacedJob({
         name: buildJobName(ref),
         namespace: BUILD_NAMESPACE,
-        propagationPolicy: 'Background',
+        propagationPolicy: 'Foreground',
       }),
     )
-    // Background propagation returns before the pod stops, and a live BuildKit can still push.
+    // The Job controller creates no pods for a deleting Job; a 1 s grace skips BuildKit's 30 s.
     for (const pod of await this.listPods(ref)) {
       await ignoreNotFound(() =>
         this.core.deleteNamespacedPod({
@@ -81,7 +81,7 @@ export class KubernetesBuildRuntime extends BuildRuntime {
         }),
       )
     }
-    await this.waitForPodsGone(ref)
+    await this.waitForBuildGone(ref)
   }
 
   async readStatus(ref: BuildRef): Promise<BuildObservation> {
@@ -134,13 +134,26 @@ export class KubernetesBuildRuntime extends BuildRuntime {
     }
   }
 
-  private async waitForPodsGone(ref: BuildRef): Promise<void> {
+  // A pod created while the delete landed outlives an empty listing, but never the Job.
+  private async waitForBuildGone(ref: BuildRef): Promise<void> {
     const deadline = Date.now() + CANCEL_WAIT_MS
-    while ((await this.listPods(ref)).length > 0) {
+    while ((await this.jobExists(ref)) || (await this.listPods(ref)).length > 0) {
       if (Date.now() > deadline) {
-        throw new Error(`The pods of build job '${buildJobName(ref)}' did not stop in time.`)
+        throw new Error(`Build job '${buildJobName(ref)}' did not stop in time.`)
       }
       await setTimeout(CANCEL_POLL_MS)
+    }
+  }
+
+  private async jobExists(ref: BuildRef): Promise<boolean> {
+    try {
+      await this.batch.readNamespacedJob({ name: buildJobName(ref), namespace: BUILD_NAMESPACE })
+      return true
+    } catch (error) {
+      if (isNotFound(error)) {
+        return false
+      }
+      throw error
     }
   }
 

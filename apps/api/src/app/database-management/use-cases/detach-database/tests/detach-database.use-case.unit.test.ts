@@ -9,8 +9,8 @@ import type { DatabaseUuid } from '#src/app/database-management/entities/databas
 import { DetachDatabaseRepository } from '#src/app/database-management/use-cases/detach-database/detach-database.repository.js'
 import { DetachDatabaseUseCase } from '#src/app/database-management/use-cases/detach-database/detach-database.use-case.js'
 import { ReleaseBuilder } from '#src/app/release/entities/release.builder.js'
-import { ReleasePullCredentials } from '#src/app/release/services/release-pull-credentials/release-pull-credentials.service.js'
 import { ImagePullCredentialsCipher } from '#src/modules/crypto/image-pull-credentials.cipher.js'
+import { PullCredentials } from '#src/modules/pull-credentials/pull-credentials.service.js'
 import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
 import { MockImageRegistry } from '#src/modules/runtime/adapters/mock/mock-image-registry.js'
 import { stubDatabase } from '#src/test/setup/stub-database.js'
@@ -38,7 +38,7 @@ function build() {
   const cipher = createStubInstance(ImagePullCredentialsCipher)
   const imageRegistry = createStubInstance(MockImageRegistry)
   imageRegistry.pullCredentialsFor.returns(undefined)
-  const pullCredentials = new ReleasePullCredentials(imageRegistry, cipher)
+  const pullCredentials = new PullCredentials(imageRegistry, cipher)
   const config = createStubInstance(ConfigService)
   config.getOrThrow.returns('demo.marsa.cc')
 
