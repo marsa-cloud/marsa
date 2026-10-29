@@ -1,4 +1,4 @@
-FROM node:24.15.0-slim AS builder
+FROM --platform=$BUILDPLATFORM node:24.15.0-slim AS builder
 RUN corepack enable
 
 WORKDIR /app

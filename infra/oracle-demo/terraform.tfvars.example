@@ -1,0 +1,7 @@
+region         = "eu-frankfurt-1"
+tenancy_ocid   = "ocid1.tenancy.oc1..aaaa"
+ssh_public_key = "ssh-ed25519 AAAA... you@laptop"
+domain         = "demo.example.com"
+email          = "ops@example.com"
+
+# cd_deploy_public_key = "ssh-ed25519 AAAA... marsa-cd"
