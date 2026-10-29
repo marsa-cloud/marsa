@@ -3,9 +3,10 @@
 Terraform for the public demo: one Always Free Ampere A1 VM (2 OCPU / 4 GB / 100 GB boot by
 default) on Oracle Cloud, ready for `scripts/install.sh`. Works with Terraform or OpenTofu.
 
-Variable validations cap the shape at the Always Free limits (2 OCPU, 12 GB, 200 GB block
-storage), so a plan cannot drift into paid compute. Still set a **$1 budget alert** in the
-console — validations do not cover resources created outside this module.
+Variable validations cap this instance at the Always Free limits (2 OCPU, 12 GB, 200 GB block
+storage). The allowance is tenancy-wide, though: anything else already running in the tenancy
+counts against it, and on a Pay-As-You-Go tenancy the excess is billed. Set a **$1 budget
+alert** in the console.
 
 ## Prerequisites
 
@@ -34,7 +35,9 @@ Then:
 ## Continuous deploy
 
 Set `cd_deploy_public_key` to the public half of the `CD_SSH_PRIVATE_KEY` secret and cloud-init
-installs the forced-command deploy key from AgDR-0028. After `apply`, update the repo secrets:
+installs the forced-command deploy key from AgDR-0028. Set it before the first `apply`:
+cloud-init only runs on first boot and later metadata changes are ignored, so adding it afterwards
+means replacing the instance (`tofu apply -replace=oci_core_instance.marsa`). After `apply`, update the repo secrets:
 
 - `CD_VPS_HOST` → the `public_ip` output
 - `CD_SSH_USER` → `root`

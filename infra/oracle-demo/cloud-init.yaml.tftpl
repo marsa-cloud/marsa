@@ -14,6 +14,10 @@ write_files:
   - path: /etc/ssh/sshd_config.d/60-marsa-cd.conf
     content: |
       PermitRootLogin forced-commands-only
+  - path: /etc/marsa/cd-deploy.authorized_key
+    permissions: '0600'
+    content: |
+      command="/usr/local/bin/marsa-cd-deploy.sh",no-pty,no-port-forwarding,no-agent-forwarding,no-X11-forwarding ${cd_deploy_public_key}
 %{ endif ~}
 
 runcmd:
@@ -25,7 +29,7 @@ runcmd:
   - curl -fsSL "https://raw.githubusercontent.com/marsa-cloud/marsa/${installer_ref}/scripts/cd-deploy.sh" -o /usr/local/bin/marsa-cd-deploy.sh
   - chown root:root /usr/local/bin/marsa-cd-deploy.sh
   - chmod 0750 /usr/local/bin/marsa-cd-deploy.sh
-  # Appended here, not via write_files: cloud-init's ssh module rewrites root's authorized_keys.
-  - echo 'command="/usr/local/bin/marsa-cd-deploy.sh",no-pty,no-port-forwarding,no-agent-forwarding,no-X11-forwarding ${cd_deploy_public_key}' >> /root/.ssh/authorized_keys
+  # Appended at runcmd, not written directly: cloud-init's ssh module rewrites root's authorized_keys.
+  - cat /etc/marsa/cd-deploy.authorized_key >> /root/.ssh/authorized_keys
   - systemctl restart ssh
 %{ endif ~}

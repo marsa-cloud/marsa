@@ -127,6 +127,11 @@ resource "oci_core_instance" "marsa" {
   }
 
   lifecycle {
+    precondition {
+      condition     = var.memory_in_gbs >= var.ocpus
+      error_message = "A1.Flex needs at least 1 GB of memory per OCPU."
+    }
+
     # A newer Ubuntu image or an edited cloud-init must not silently rebuild the demo.
     ignore_changes = [source_details[0].source_id, metadata]
   }

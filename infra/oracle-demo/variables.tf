@@ -79,6 +79,11 @@ variable "domain" {
 variable "email" {
   type        = string
   description = "Let's Encrypt registration email."
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$", var.email))
+    error_message = "email must be a plain address; it is rendered into a shell command."
+  }
 }
 
 variable "installer_ref" {
@@ -90,5 +95,10 @@ variable "installer_ref" {
 variable "cd_deploy_public_key" {
   type        = string
   default     = ""
-  description = "Public half of the CD_SSH_PRIVATE_KEY repo secret. Empty skips the forced-command deploy key (AgDR-0028)."
+  description = "Public half of the CD_SSH_PRIVATE_KEY repo secret. Empty skips the forced-command deploy key (AgDR-0028). Only applied on first boot."
+
+  validation {
+    condition     = var.cd_deploy_public_key == "" || can(regex("^ssh-[a-z0-9-]+ [A-Za-z0-9+/=]+( [^\\n]*)?$", var.cd_deploy_public_key))
+    error_message = "cd_deploy_public_key must be a single OpenSSH public key line."
+  }
 }
