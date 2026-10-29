@@ -1,7 +1,7 @@
 # Oracle Cloud demo
 
-Terraform for the public demo: one Always Free Ampere A1 VM (2 OCPU / 4 GB / 100 GB boot by
-default) on Oracle Cloud, ready for `scripts/install.sh`. Works with Terraform or OpenTofu.
+[OpenTofu](https://opentofu.org) for the public demo: one Always Free Ampere A1 VM (2 OCPU / 4 GB / 100 GB boot by
+default) on Oracle Cloud, ready for `scripts/install.sh`.
 
 Variable validations cap this instance at the Always Free limits (2 OCPU, 12 GB, 200 GB block
 storage). The allowance is tenancy-wide, though: anything else already running in the tenancy
@@ -12,7 +12,7 @@ alert** in the console.
 
 - The Marsa api/web images must be published for `linux/arm64` (CD builds both architectures).
 - An API key in `~/.oci/config` (Profile → API keys → Add API key). Session tokens from
-  `oci session authenticate` expire hourly and are a poor fit for Terraform.
+  `oci session authenticate` expire hourly and are a poor fit for OpenTofu.
 
 ## Bring it up
 
