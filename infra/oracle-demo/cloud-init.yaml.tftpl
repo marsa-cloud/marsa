@@ -1,0 +1,35 @@
+#cloud-config
+package_update: true
+
+write_files:
+  - path: /usr/local/sbin/marsa-install
+    permissions: '0755'
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      script="$(mktemp)"
+      curl -fsSL "https://raw.githubusercontent.com/marsa-cloud/marsa/${installer_ref}/scripts/install.sh" -o "$script"
+      exec bash "$script" --domain "${domain}" --email "${email}" "$@"
+%{ if cd_deploy_public_key != "" ~}
+  - path: /etc/ssh/sshd_config.d/60-marsa-cd.conf
+    content: |
+      PermitRootLogin forced-commands-only
+  - path: /etc/marsa/cd-deploy.authorized_key
+    permissions: '0600'
+    content: |
+      command="/usr/local/bin/marsa-cd-deploy.sh",no-pty,no-port-forwarding,no-agent-forwarding,no-X11-forwarding ${cd_deploy_public_key}
+%{ endif ~}
+
+runcmd:
+  # Oracle's Ubuntu image REJECTs all INPUT/FORWARD not explicitly allowed, which blocks 80/443
+  # and K3s pod traffic; the VCN security list is the firewall instead.
+  - sed -i '/-j REJECT --reject-with icmp-host-prohibited/d' /etc/iptables/rules.v4
+  - iptables-restore < /etc/iptables/rules.v4
+%{ if cd_deploy_public_key != "" ~}
+  - curl -fsSL "https://raw.githubusercontent.com/marsa-cloud/marsa/${installer_ref}/scripts/cd-deploy.sh" -o /usr/local/bin/marsa-cd-deploy.sh
+  - chown root:root /usr/local/bin/marsa-cd-deploy.sh
+  - chmod 0750 /usr/local/bin/marsa-cd-deploy.sh
+  # Appended at runcmd, not written directly: cloud-init's ssh module rewrites root's authorized_keys.
+  - cat /etc/marsa/cd-deploy.authorized_key >> /root/.ssh/authorized_keys
+  - systemctl restart ssh
+%{ endif ~}
