@@ -1,5 +1,6 @@
 import { type DynamicModule, type MiddlewareConsumer, Module, type Type } from '@nestjs/common'
 import { DatabaseModule } from '#src/modules/database/database.module.js'
+import { JobQueueModule } from '#src/modules/jobs/job-queue.module.js'
 
 @Module({})
 export class TestModule {
@@ -10,7 +11,7 @@ export class TestModule {
   ): DynamicModule {
     return {
       module: TestModule,
-      imports: [DatabaseModule, ...modules],
+      imports: [DatabaseModule, JobQueueModule, ...modules],
     }
   }
 
