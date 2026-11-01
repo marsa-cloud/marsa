@@ -20,7 +20,7 @@ export abstract class Job<TPayload extends object> {
 }
 
 export type JobClass<TPayload extends object = object> = {
-  new (payload: TPayload): Job<TPayload>
+  new (payload: never): Job<TPayload>
   readonly queue: string
   readonly options: JobQueueOptions
   readonly schedule?: string
