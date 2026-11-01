@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import type { Job as PgBossJob, PgBoss } from 'pg-boss'
+import { sendableOptions } from '#src/modules/jobs/job.js'
 import { PG_BOSS } from '#src/modules/jobs/job-queue.tokens.js'
 import { type JobRegistration, JobRegistry } from '#src/modules/jobs/job-registry.js'
 
@@ -26,8 +27,11 @@ export class JobQueueLifecycle implements OnApplicationBootstrap, BeforeApplicat
 
     for (const registration of this.registry.registrations()) {
       const { queue, options, schedule } = registration.jobClass
+      const updatable = sendableOptions(options)
       await this.boss.createQueue(queue, options)
-      if (schedule) await this.boss.schedule(queue, schedule)
+      // pg-boss asserts on an empty update
+      if (Object.keys(updatable).length > 0) await this.boss.updateQueue(queue, updatable)
+      if (schedule) await this.boss.schedule(queue, schedule, null, updatable)
       if (workersEnabled) {
         await this.boss.work(queue, { batchSize: 1 }, ([job]) =>
           this.run(registration, job as PgBossJob<object> | undefined),

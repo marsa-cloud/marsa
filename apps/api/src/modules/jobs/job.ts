@@ -1,4 +1,4 @@
-import type { Queue } from 'pg-boss'
+import type { Queue, SendOptions } from 'pg-boss'
 
 export type JobQueueOptions = Pick<
   Queue,
@@ -24,4 +24,8 @@ export type JobClass<TPayload extends object = object> = {
   readonly queue: string
   readonly options: JobQueueOptions
   readonly schedule?: string
+}
+
+export function sendableOptions(options: JobQueueOptions): SendOptions {
+  return Object.fromEntries(Object.entries(options).filter(([key]) => key !== 'policy'))
 }

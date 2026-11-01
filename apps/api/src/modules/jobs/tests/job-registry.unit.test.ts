@@ -64,6 +64,49 @@ describe('JobRegistry', () => {
     expect(queues).toEqual(['dead-letter-q', 'failing-q'])
   })
 
+  it('orders a dead-letter chain deepest target first', () => {
+    const a = jobClass('JobA', 'a', { deadLetter: 'b' })
+    const b = jobClass('JobB', 'b', { deadLetter: 'c' })
+    const c = jobClass('JobC', 'c')
+
+    const queues = registryOver([
+      { instance: new HandlerA(), jobClass: a },
+      { instance: new HandlerB(), jobClass: b },
+      { instance: new HandlerA(), jobClass: c },
+    ])
+      .registrations()
+      .map((r) => r.jobClass.queue)
+
+    expect(queues).toEqual(['c', 'b', 'a'])
+  })
+
+  it('rejects a dead-letter target without a @JobHandler', () => {
+    const registry = registryOver([
+      { instance: new HandlerA(), jobClass: jobClass('JobA', 'a', { deadLetter: 'ghost' }) },
+    ])
+
+    expect(() => registry.registrations()).toThrow(
+      "Job JobA dead-letters to 'ghost', which has no @JobHandler",
+    )
+  })
+
+  it('rejects a dead-letter cycle', () => {
+    const registry = registryOver([
+      { instance: new HandlerA(), jobClass: jobClass('JobA', 'a', { deadLetter: 'b' }) },
+      { instance: new HandlerB(), jobClass: jobClass('JobB', 'b', { deadLetter: 'a' }) },
+    ])
+
+    expect(() => registry.registrations()).toThrow(/Dead-letter cycle: a -> b -> a/)
+  })
+
+  it('rejects a queue that dead-letters to itself', () => {
+    const registry = registryOver([
+      { instance: new HandlerA(), jobClass: jobClass('JobA', 'a', { deadLetter: 'a' }) },
+    ])
+
+    expect(() => registry.registrations()).toThrow(/Dead-letter cycle: a -> a/)
+  })
+
   it('ignores providers that are not instantiated', () => {
     const registry = registryOver([{ instance: null, jobClass: jobClass('JobA', 'a-q') }])
 

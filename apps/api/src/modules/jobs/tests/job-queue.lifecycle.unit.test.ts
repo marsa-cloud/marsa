@@ -17,7 +17,8 @@ type WorkCallback = (jobs: PgBossJob<object>[]) => Promise<void>
 function build(registrations: JobRegistration[], enabled: boolean) {
   const log: string[] = []
   const queueOptions: Record<string, unknown> = {}
-  const scheduled: Array<[string, string]> = []
+  const updated: Array<[string, unknown]> = []
+  const scheduled: Array<[string, string, unknown]> = []
   const workCalls: Array<{ queue: string; options: unknown; callback: WorkCallback }> = []
   const stops: unknown[] = []
   const boss = {
@@ -27,7 +28,13 @@ function build(registrations: JobRegistration[], enabled: boolean) {
       queueOptions[queue] = options
       return Promise.resolve()
     },
-    schedule: (queue: string, cron: string) => Promise.resolve(void scheduled.push([queue, cron])),
+    updateQueue: (queue: string, options: unknown) => {
+      log.push(`updateQueue:${queue}`)
+      updated.push([queue, options])
+      return Promise.resolve()
+    },
+    schedule: (queue: string, cron: string, _data: unknown, options: unknown) =>
+      Promise.resolve(void scheduled.push([queue, cron, options])),
     work: (queue: string, options: unknown, callback: WorkCallback) =>
       Promise.resolve(void workCalls.push({ queue, options, callback })),
     stop: (options: unknown) => Promise.resolve(void stops.push(options)),
@@ -38,6 +45,7 @@ function build(registrations: JobRegistration[], enabled: boolean) {
     lifecycle: new JobQueueLifecycle(boss, registry, config),
     log,
     queueOptions,
+    updated,
     scheduled,
     workCalls,
     stops,
@@ -62,17 +70,43 @@ describe('JobQueueLifecycle', () => {
 
     await lifecycle.onApplicationBootstrap()
 
-    expect(log).toEqual(['start', 'createQueue:dead-letter-q', 'createQueue:failing-q'])
+    expect(log).toEqual([
+      'start',
+      'createQueue:dead-letter-q',
+      'updateQueue:dead-letter-q',
+      'createQueue:failing-q',
+      'updateQueue:failing-q',
+    ])
     expect(queueOptions['failing-q']).toEqual({ deadLetter: 'dead-letter-q' })
   })
 
-  it('schedules jobs that declare a cron, even with workers off', async () => {
-    const cron = jobClass('cron-q', { schedule: '0 * * * *' })
+  it('refreshes stored queue options without the create-only policy', async () => {
+    const job = jobClass('q', { options: { retryLimit: 2, policy: 'short', deadLetter: 'dlq' } })
+    const { lifecycle, updated } = build([{ jobClass: job, handler: noopHandler }], false)
+
+    await lifecycle.onApplicationBootstrap()
+
+    expect(updated).toEqual([['q', { retryLimit: 2, deadLetter: 'dlq' }]])
+  })
+
+  it('skips the update for a queue with no options', async () => {
+    const { lifecycle, updated } = build([{ jobClass: jobClass('q'), handler: noopHandler }], false)
+
+    await lifecycle.onApplicationBootstrap()
+
+    expect(updated).toEqual([])
+  })
+
+  it('schedules jobs that declare a cron with the class options, even with workers off', async () => {
+    const cron = jobClass('cron-q', {
+      schedule: '0 * * * *',
+      options: { retryLimit: 3, policy: 'short' },
+    })
     const { lifecycle, scheduled } = build([{ jobClass: cron, handler: noopHandler }], false)
 
     await lifecycle.onApplicationBootstrap()
 
-    expect(scheduled).toEqual([['cron-q', '0 * * * *']])
+    expect(scheduled).toEqual([['cron-q', '0 * * * *', { retryLimit: 3 }]])
   })
 
   it('works every queue only when workers are enabled', async () => {
