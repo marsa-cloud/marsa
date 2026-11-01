@@ -55,7 +55,7 @@ To click through the web UI locally **without** a k3d/k3s cluster and **without*
 
 ```bash
 docker compose up -d                       # Postgres (marsa_test)
-cp apps/api/.env.test apps/api/.env        # NODE_ENV=test → mock backends, boots without a cluster
+cp apps/api/.env.test apps/api/.env && echo JOBS_WORKER_ENABLED=true >> apps/api/.env  # mock backends, no cluster
 pnpm --filter api build
 
 # Seed a dev operator + sample apps and print a session cookie (idempotent):
@@ -64,6 +64,8 @@ node --env-file=apps/api/.env apps/api/dist/src/entrypoints/seed-dev.js
 pnpm dev:api                               # api on :3000 (mock backends)
 pnpm dev:web                               # web on :3001 (auto-picks a free port; proxies /api → :3000)
 ```
+
+Tests keep job workers off and drain jobs explicitly; the local loop needs them on.
 
 Then paste the printed `marsa_session=…` cookie into the browser (DevTools → Application → Cookies) for the web origin and reload — the web's `get-current-user` now resolves the seeded operator and the app renders authenticated. The cookie is a real `@fastify/secure-session` cookie minted with the fixed dev `AUTH_SESSION_SECRET_KEY`, so it stays valid across restarts; re-run `seed-dev.js` to reprint it. Real GitHub login + real deploys are exercised on the k3d path below, not here.
 

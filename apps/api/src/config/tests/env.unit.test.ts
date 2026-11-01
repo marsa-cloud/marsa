@@ -87,6 +87,28 @@ describe('envValidationSchema', () => {
     expect(error).toBeUndefined()
   })
 
+  it('defaults JOBS_WORKER_ENABLED to true', () => {
+    const { error, value } = envValidationSchema.validate(VALID_ENV)
+
+    expect(error).toBeUndefined()
+    expect(value.JOBS_WORKER_ENABLED).toBe(true)
+  })
+
+  it('parses JOBS_WORKER_ENABLED=false from a string', () => {
+    const { value } = envValidationSchema.validate({ ...VALID_ENV, JOBS_WORKER_ENABLED: 'false' })
+
+    expect(value.JOBS_WORKER_ENABLED).toBe(false)
+  })
+
+  it('rejects a non-boolean JOBS_WORKER_ENABLED', () => {
+    const { error } = envValidationSchema.validate({
+      ...VALID_ENV,
+      JOBS_WORKER_ENABLED: 'sometimes',
+    })
+
+    expect(error?.message).toMatch(/JOBS_WORKER_ENABLED/)
+  })
+
   it('rejects a registry host with a scheme', () => {
     const { error } = envValidationSchema.validate({
       ...VALID_ENV,

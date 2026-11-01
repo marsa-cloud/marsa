@@ -50,6 +50,7 @@
     "fastify": "^5.12.5",
     "joi": "catalog:",
     "pg": "^8.21.0",
+    "pg-boss": "catalog:",
     "qs": "^6.15.2",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
