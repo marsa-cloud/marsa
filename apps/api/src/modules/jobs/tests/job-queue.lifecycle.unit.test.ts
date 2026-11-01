@@ -9,7 +9,7 @@ import type { JobRegistration, JobRegistry } from '#src/modules/jobs/job-registr
 
 function jobClass(queue: string, extra: Partial<JobClass> = {}): JobClass {
   const cls = class extends Job<object> {}
-  return Object.assign(cls, { queue, options: {}, ...extra }) as unknown as JobClass
+  return Object.assign(cls, { queue, options: {}, ...extra })
 }
 
 type WorkCallback = (jobs: PgBossJob<object>[]) => Promise<void>
@@ -96,9 +96,7 @@ describe('JobQueueLifecycle', () => {
     const failing = {
       jobClass: jobClass('failing-q'),
       handler: {
-        handle: async () => {
-          throw new Error('boom')
-        },
+        handle: () => Promise.reject(new Error('boom')),
       },
     }
     const { lifecycle, workCalls } = build([failing], true)
