@@ -18,7 +18,7 @@ jobs:
   # introduction was 0 findings (issue #43).
   sast:
     name: SAST (Semgrep)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       # Pinned to a version + digest (#110 / AgDR-0033). Renovate
       # keeps this digest current.
@@ -51,7 +51,7 @@ jobs:
 
   secrets:
     name: Secret scan (TruffleHog)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -68,7 +68,7 @@ jobs:
 
   dependency-audit:
     name: Dependency audit (pnpm)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
