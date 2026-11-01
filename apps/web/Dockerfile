@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM node:24.15.0-alpine AS builder
+FROM --platform=$BUILDPLATFORM node:24.21.0-alpine AS builder
 RUN corepack enable
 
 WORKDIR /app
