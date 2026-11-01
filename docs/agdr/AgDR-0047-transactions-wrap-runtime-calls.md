@@ -6,7 +6,10 @@ model: claude-opus-5
 trigger: user-prompt
 status: accepted
 ticket: marsa-cloud/marsa#214
+superseded_in_part_by: AgDR-0051
 ---
+
+> **Partly superseded by [AgDR-0051](AgDR-0051-domain-events-and-pg-boss-job-queue.md)** (#245): new and migrated use-cases send pg-boss jobs instead of calling the runtime inside the transaction. The other rules here still hold, and unmigrated use-cases follow this record until they move. Kept intact for history.
 
 # Transactions wrap runtime calls, runtime call last
 

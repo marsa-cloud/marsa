@@ -6,7 +6,10 @@ model: claude-opus-5-5
 trigger: user-prompt
 status: accepted
 ticket: marsa-cloud/marsa#21
+amended_by: AgDR-0051
 ---
+
+> **Amended by [AgDR-0051](AgDR-0051-domain-events-and-pg-boss-job-queue.md)** (#245): new recurring cluster-wide work uses `boss.schedule`; this 5 s sweep stays on `@nestjs/schedule` until #198 replaces it.
 
 # Detect finished builds with a five-second sweep on `@nestjs/schedule`
 
