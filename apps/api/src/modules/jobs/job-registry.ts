@@ -25,9 +25,13 @@ export class JobRegistry {
     const wrappers = this.discovery.getProviders({ metadataKey: JobHandler.KEY })
 
     for (const wrapper of wrappers) {
-      const handler = wrapper.instance as JobHandlerInstance | undefined
       const jobClass = this.discovery.getMetadataByDecorator(JobHandler, wrapper)
-      if (!handler || !jobClass) continue
+      if (!jobClass) continue
+      if (!wrapper.isDependencyTreeStatic()) {
+        throw new Error(`${wrapper.name} is a @JobHandler but is request-scoped`)
+      }
+      const handler = wrapper.instance as JobHandlerInstance | undefined
+      if (!handler) continue
 
       const handlerName = handler.constructor.name
       if (typeof handler.handle !== 'function') {
