@@ -45,36 +45,17 @@ export class JobRegistry {
       found.push({ jobClass, handler })
     }
 
-    return this.orderByDeadLetter(found)
-  }
-
-  private orderByDeadLetter(found: JobRegistration[]): JobRegistration[] {
-    const byQueue = new Map(found.map((r) => [r.jobClass.queue, r]))
-    const ordered: JobRegistration[] = []
-    const done = new Set<string>()
-
-    const visit = (registration: JobRegistration, path: string[]): void => {
-      const { queue, options } = registration.jobClass
-      if (done.has(queue)) return
-      if (path.includes(queue)) {
+    for (const { jobClass } of found) {
+      const target = jobClass.options.deadLetter
+      if (target && !found.some((r) => r.jobClass.queue === target)) {
         throw new Error(
-          `Dead-letter cycle: ${[...path.slice(path.indexOf(queue)), queue].join(' -> ')}`,
+          `Job ${jobClass.name} dead-letters to '${target}', which has no @JobHandler`,
         )
       }
-      if (options.deadLetter) {
-        const target = byQueue.get(options.deadLetter)
-        if (!target) {
-          throw new Error(
-            `Job ${registration.jobClass.name} dead-letters to '${options.deadLetter}', which has no @JobHandler`,
-          )
-        }
-        visit(target, [...path, queue])
-      }
-      done.add(queue)
-      ordered.push(registration)
     }
 
-    for (const registration of found) visit(registration, [])
-    return ordered
+    const deadLetterTargets = new Set(found.map((r) => r.jobClass.options.deadLetter))
+    const isTarget = (r: JobRegistration) => deadLetterTargets.has(r.jobClass.queue)
+    return [...found.filter(isTarget), ...found.filter((r) => !isTarget(r))]
   }
 }
