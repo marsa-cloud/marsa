@@ -1,11 +1,11 @@
+import { Injectable, type OnModuleInit } from '@nestjs/common'
+import { DiscoveryService } from '@nestjs/core'
 import type { Transaction } from '#src/modules/database/drizzle.factory.js'
 import type { DomainEvent, DomainEventClass } from '#src/modules/domain-events/domain-event.js'
 import {
-  Subscribe,
   type DomainEventSubscriber,
+  Subscribe,
 } from '#src/modules/domain-events/subscribe.decorator.js'
-import { Injectable, type OnModuleInit } from '@nestjs/common'
-import { DiscoveryService } from '@nestjs/core'
 
 @Injectable()
 export class DomainEventEmitter implements OnModuleInit {

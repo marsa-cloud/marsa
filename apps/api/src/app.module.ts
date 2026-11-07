@@ -4,6 +4,7 @@ import { AccessControlModule } from '#src/app/auth/access-control.module.js'
 import { envValidationSchema } from '#src/config/env.config.js'
 import { CryptoModule } from '#src/modules/crypto/crypto.module.js'
 import { DatabaseModule } from '#src/modules/database/database.module.js'
+import { DomainEventsModule } from '#src/modules/domain-events/domain-events.module.js'
 import { JobQueueModule } from '#src/modules/jobs/job-queue.module.js'
 import { RuntimeModule } from '#src/modules/runtime/runtime.module.js'
 
@@ -20,6 +21,7 @@ export class AppModule {
         }),
         DatabaseModule,
         JobQueueModule,
+        DomainEventsModule,
         CryptoModule,
         RuntimeModule,
         AccessControlModule,

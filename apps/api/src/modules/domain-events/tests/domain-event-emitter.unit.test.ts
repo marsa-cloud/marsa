@@ -1,5 +1,4 @@
 import { before, describe, it } from 'node:test'
-import type { DiscoveryService } from '@nestjs/core'
 import { DiscoveryService as DiscoveryServiceClass } from '@nestjs/core'
 import { expect } from 'expect'
 import { createStubInstance } from 'sinon'
@@ -16,7 +15,9 @@ function emitterOver(
 ): DomainEventEmitter {
   const discovery = createStubInstance(DiscoveryServiceClass)
   discovery.getProviders.returns(subscribers as never)
-  discovery.getMetadataByDecorator.callsFake((_d, w) => w.eventClass)
+  discovery.getMetadataByDecorator.callsFake(
+    (_d: unknown, w: unknown) => (w as { eventClass: DomainEventClass }).eventClass,
+  )
   return new DomainEventEmitter(discovery)
 }
 
@@ -31,15 +32,16 @@ class ThrowingSubscriber implements DomainEventSubscriber {
     this.error = error
   }
 
-  async handle(): Promise<void> {
-    throw this.error
+  handle(): Promise<void> {
+    return Promise.reject(this.error)
   }
 }
 
 function loggingSubscriberClass(name: string, log: LogEntry[]): new () => DomainEventSubscriber {
   const cls = class implements DomainEventSubscriber {
-    async handle(event: DomainEvent<object>, tx: Transaction): Promise<void> {
+    handle(event: DomainEvent<object>, tx: Transaction): Promise<void> {
       log.push([name, event, tx])
+      return Promise.resolve()
     }
   }
   Object.defineProperty(cls, 'name', { value: name })
@@ -67,8 +69,8 @@ describe('DomainEventEmitter', () => {
       ['A', event, tx],
       ['B', event, tx],
     ])
-    expect(log[0]![2]).toBe(tx)
-    expect(log[1]![2]).toBe(tx)
+    expect(log[0]?.[2]).toBe(tx)
+    expect(log[1]?.[2]).toBe(tx)
   })
 
   it('runs events in the order given', async () => {

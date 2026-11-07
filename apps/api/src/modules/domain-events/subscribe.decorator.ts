@@ -1,6 +1,6 @@
+import { DiscoveryService } from '@nestjs/core'
 import type { Transaction } from '#src/modules/database/drizzle.factory.js'
 import type { DomainEvent, DomainEventClass } from '#src/modules/domain-events/domain-event.js'
-import { DiscoveryService } from '@nestjs/core'
 
 export const Subscribe = DiscoveryService.createDecorator<DomainEventClass>()
 
