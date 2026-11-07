@@ -10,11 +10,13 @@ GitHub client, and `seed-dev` mints a login cookie.
 
 ```bash
 docker compose up -d                       # Postgres (marsa_test)
-cp apps/api/.env.test apps/api/.env        # NODE_ENV=test → mock backends, MARSA_RUNTIME=mock
+cp apps/api/.env.test apps/api/.env && echo JOBS_WORKER_ENABLED=true >> apps/api/.env  # NODE_ENV=test → mock backends, MARSA_RUNTIME=mock
 pnpm --filter api build
 pnpm seed                                  # seed an operator + sample apps, print a session cookie
 pnpm dev                                   # api + web together
 ```
+
+Tests keep job workers off and drain jobs explicitly; the local loop needs them on.
 
 Paste the printed `marsa_session=…` cookie into the browser (DevTools →
 Application → Cookies) for the web origin and reload. Deploys on this tier are

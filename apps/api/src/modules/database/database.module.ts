@@ -1,7 +1,14 @@
-import { Global, Inject, Module, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common'
+import {
+  Global,
+  Inject,
+  Module,
+  type OnApplicationShutdown,
+  type OnModuleInit,
+} from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { Pool } from 'pg'
 import { DATABASE, DATABASE_POOL } from '#src/modules/database/database.tokens.js'
+import { databaseUrl } from '#src/modules/database/database-url.js'
 import {
   createDatabase,
   type Database,
@@ -17,12 +24,7 @@ import { migrate } from '#src/modules/database/migrate.js'
       provide: DATABASE_POOL,
       inject: [ConfigService],
       useFactory: (configService: ConfigService): Pool => {
-        // DATABASE_URL carries no db path — it pairs a base url with a separate
-        // DB_NAME. Set the db on the URL path, not Pool's `database` field, which
-        // pg silently overwrites when parsing connectionString.
-        const url = new URL(configService.getOrThrow('DATABASE_URL'))
-        url.pathname = `/${configService.getOrThrow('DB_NAME')}`
-        return new Pool({ connectionString: url.toString() })
+        return new Pool({ connectionString: databaseUrl(configService) })
       },
     },
     {
@@ -33,7 +35,7 @@ import { migrate } from '#src/modules/database/migrate.js'
   ],
   exports: [DATABASE, DATABASE_POOL],
 })
-export class DatabaseModule implements OnModuleInit, OnModuleDestroy {
+export class DatabaseModule implements OnModuleInit, OnApplicationShutdown {
   constructor(
     @Inject(DATABASE) private readonly db: Database,
     @Inject(DATABASE_POOL) private readonly pool: Pool,
@@ -45,7 +47,7 @@ export class DatabaseModule implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async onModuleDestroy(): Promise<void> {
+  async onApplicationShutdown(): Promise<void> {
     await this.pool.end()
   }
 }

@@ -21,6 +21,7 @@ async function globalTestSetup(): Promise<void> {
         'DROP SCHEMA IF EXISTS drizzle CASCADE; DROP SCHEMA public CASCADE; CREATE SCHEMA public;',
       )
     await migrate(context.get<Database>(DATABASE), MIGRATIONS_FOLDER)
+    await context.get<Pool>(DATABASE_POOL).query('TRUNCATE pgboss.job CASCADE')
     console.log('Global setup completed')
   } finally {
     await context.close()

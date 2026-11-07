@@ -15,6 +15,7 @@ const requiredOnKubernetes = <T extends Joi.Schema>(schema: T): T =>
 export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string().valid('development', 'test', 'production').default('development'),
   MARSA_RUNTIME: Joi.string().valid('kubernetes', 'mock').default('kubernetes'),
+  JOBS_WORKER_ENABLED: Joi.boolean().default(true),
   PORT: Joi.number().default(3000),
   DATABASE_URL: Joi.string().uri().required(),
   DB_NAME: Joi.string().required(),

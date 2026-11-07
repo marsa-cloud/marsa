@@ -45,6 +45,7 @@ async function bootstrap(): Promise<void> {
     new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }),
   )
 
+  app.enableShutdownHooks()
   await app.listen(config.getOrThrow<number>('PORT'), '0.0.0.0')
 }
 

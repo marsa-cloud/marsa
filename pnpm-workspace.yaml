@@ -54,6 +54,9 @@ catalog:
   # Kubernetes (api)
   '@kubernetes/client-node': ^1.4.0
 
+  # Job queue (api)
+  pg-boss: ^12.38.0
+
   # Node / test tooling (api)
   '@types/express': ^5.0.0
   '@types/node': ^24.0.0
