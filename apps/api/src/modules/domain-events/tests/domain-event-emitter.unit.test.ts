@@ -10,11 +10,16 @@ import { TestBench } from '#src/test/setup/test-bench.js'
 
 type LogEntry = [string, DomainEvent<object>, Transaction]
 
-function emitterOver(
-  subscribers: { instance: object; eventClass: DomainEventClass }[],
-): DomainEventEmitter {
+type StubSubscriber = { instance: object; eventClass: DomainEventClass; requestScoped?: boolean }
+
+function emitterOver(subscribers: StubSubscriber[]): DomainEventEmitter {
   const discovery = createStubInstance(DiscoveryServiceClass)
-  discovery.getProviders.returns(subscribers as never)
+  const wrappers = subscribers.map((s) => ({
+    ...s,
+    name: s.instance.constructor.name,
+    isDependencyTreeStatic: () => !s.requestScoped,
+  }))
+  discovery.getProviders.returns(wrappers as never)
   discovery.getMetadataByDecorator.callsFake(
     (_d: unknown, w: unknown) => (w as { eventClass: DomainEventClass }).eventClass,
   )
@@ -145,6 +150,17 @@ describe('DomainEventEmitter', () => {
     const emitter = emitterOver([{ instance: {}, eventClass: OrderPlaced }])
 
     expect(() => emitter.onModuleInit()).toThrow(/has no handle\(\) method/)
+  })
+
+  it('rejects a request-scoped subscriber at init', () => {
+    const PlacedSub = loggingSubscriberClass('placed-sub', [])
+    const emitter = emitterOver([
+      { instance: new PlacedSub(), eventClass: OrderPlaced, requestScoped: true },
+    ])
+
+    expect(() => emitter.onModuleInit()).toThrow(
+      'placed-sub is a @Subscribe subscriber but is request-scoped',
+    )
   })
 
   it('rejects a subscriber class discovered twice', () => {

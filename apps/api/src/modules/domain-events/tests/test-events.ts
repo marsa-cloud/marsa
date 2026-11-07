@@ -10,6 +10,8 @@ import { EchoJob, TestJobsModule } from '#src/modules/jobs/tests/test-jobs.js'
 
 type NumberContent = { n: number }
 
+export const sentBeforeFailure: NumberContent[] = []
+
 export class TestEvent extends DomainEvent<NumberContent> {}
 
 export class FailingEvent extends DomainEvent<NumberContent> {}
@@ -19,8 +21,8 @@ export class FailingEvent extends DomainEvent<NumberContent> {}
 export class SendsEchoSubscriber implements DomainEventSubscriber<TestEvent> {
   constructor(private readonly scheduler: JobScheduler) {}
 
-  handle(event: TestEvent, tx: Transaction): Promise<void> {
-    return this.scheduler.send(tx, new EchoJob(event.content)).then(() => undefined)
+  async handle(event: TestEvent, tx: Transaction): Promise<void> {
+    await this.scheduler.send(tx, new EchoJob(event.content))
   }
 }
 
@@ -29,8 +31,9 @@ export class SendsEchoSubscriber implements DomainEventSubscriber<TestEvent> {
 export class SendsEchoOnFailingSubscriber implements DomainEventSubscriber<FailingEvent> {
   constructor(private readonly scheduler: JobScheduler) {}
 
-  handle(event: FailingEvent, tx: Transaction): Promise<void> {
-    return this.scheduler.send(tx, new EchoJob(event.content)).then(() => undefined)
+  async handle(event: FailingEvent, tx: Transaction): Promise<void> {
+    await this.scheduler.send(tx, new EchoJob(event.content))
+    sentBeforeFailure.push(event.content)
   }
 }
 

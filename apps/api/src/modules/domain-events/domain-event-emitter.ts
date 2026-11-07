@@ -18,9 +18,13 @@ export class DomainEventEmitter implements OnModuleInit {
     const seenConstructors = new Set<unknown>()
 
     for (const wrapper of wrappers) {
-      const instance = wrapper.instance as DomainEventSubscriber | undefined
       const eventClass = this.discovery.getMetadataByDecorator(Subscribe, wrapper)
-      if (!instance || !eventClass) continue
+      if (!eventClass) continue
+      if (!wrapper.isDependencyTreeStatic()) {
+        throw new Error(`${wrapper.name} is a @Subscribe subscriber but is request-scoped`)
+      }
+      const instance = wrapper.instance as DomainEventSubscriber | undefined
+      if (!instance) continue
 
       const instanceName = instance.constructor.name
       if (typeof instance.handle !== 'function') {

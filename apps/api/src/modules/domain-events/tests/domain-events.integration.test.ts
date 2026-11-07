@@ -6,6 +6,7 @@ import type { Database } from '#src/modules/database/drizzle.factory.js'
 import { DomainEventEmitter } from '#src/modules/domain-events/domain-event-emitter.js'
 import {
   FailingEvent,
+  sentBeforeFailure,
   TestDomainEventsModule,
   TestEvent,
 } from '#src/modules/domain-events/tests/test-events.js'
@@ -31,6 +32,7 @@ describe('domain events (integration)', () => {
   afterEach(async () => {
     await setup.teardown()
     for (const key of Object.keys(calls)) delete calls[key]
+    sentBeforeFailure.length = 0
   })
 
   it('runs a subscriber job after the transaction commits', async () => {
@@ -59,6 +61,7 @@ describe('domain events (integration)', () => {
       db.transaction((tx) => emitter.emit(tx, [new FailingEvent({ n: 3 })])),
     ).rejects.toThrow('subscriber failed')
 
+    expect(sentBeforeFailure).toEqual([{ n: 3 }])
     expect(await boss.findJobs('test-echo')).toEqual([])
   })
 })
