@@ -31,7 +31,7 @@ export class JobQueueLifecycle implements OnApplicationBootstrap, BeforeApplicat
       await this.boss.createQueue(queue, options)
       // pg-boss asserts on an empty update
       if (Object.keys(updatable).length > 0) await this.boss.updateQueue(queue, updatable)
-      if (schedule) await this.boss.schedule(queue, schedule, null, updatable)
+      if (schedule) await this.boss.schedule(queue, schedule, {}, updatable)
       if (workersEnabled) {
         await this.boss.work(queue, { batchSize: 1 }, ([job]) =>
           this.run(registration, job as PgBossJob<object> | undefined),

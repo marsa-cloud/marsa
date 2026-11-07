@@ -132,10 +132,11 @@ describe('JobRegistry', () => {
     expect(() => registry.registrations()).toThrow(/BrokenHandler.*has no handle\(\) method/)
   })
 
-  it('isRegistered reflects discovered queues', () => {
-    const registry = registryOver([{ instance: new HandlerA(), jobClass: jobClass('JobA', 'a-q') }])
+  it('owns reflects the discovered job classes', () => {
+    const job = jobClass('JobA', 'a-q')
+    const registry = registryOver([{ instance: new HandlerA(), jobClass: job }])
 
-    expect(registry.isRegistered('a-q')).toBe(true)
-    expect(registry.isRegistered('nope')).toBe(false)
+    expect(registry.owns(job)).toBe(true)
+    expect(registry.owns(jobClass('JobB', 'a-q'))).toBe(false)
   })
 })

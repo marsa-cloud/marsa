@@ -15,7 +15,7 @@ Installing on a VPS and adding nodes are covered in the [root README](../README.
 | ---------------------------------------- | ----------------------------------------------------------------------- |
 | [`local-dev.md`](local-dev.md)           | No-cluster inner loop for UI work, and the k3d harness for real deploys |
 | [`authentication.md`](authentication.md) | The two guards, the role model, and how to decorate a new route         |
-| [`jobs.md`](jobs.md)                     | The pg-boss job queue, and the dead-letter rules it does/doesn't enforce |
+| [`jobs.md`](jobs.md)                     | The pg-boss job queue: dead-letter rules, ownership, scheduled jobs        |
 | [`agdr/`](agdr/)                         | Agent Decision Records — why the architecture is the way it is          |
 | [`specs/`](specs/)                       | Feature specs                                                           |
 | [`plans/`](plans/)                       | Implementation plans                                                    |

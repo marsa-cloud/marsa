@@ -16,8 +16,8 @@ export class JobRegistry {
     return this.cached
   }
 
-  isRegistered(queue: string): boolean {
-    return this.registrations().some(({ jobClass }) => jobClass.queue === queue)
+  owns(jobClass: JobClass): boolean {
+    return this.registrations().some(({ jobClass: owner }) => owner === jobClass)
   }
 
   private discover(): readonly JobRegistration[] {

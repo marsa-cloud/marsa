@@ -11,9 +11,14 @@ class EchoJob extends Job<{ n: number }> {
   static readonly options = { retryLimit: 3, deadLetter: 'dlq', policy: 'singleton' } as const
 }
 
+class ImpostorJob extends Job<{ evil: string }> {
+  static readonly queue = 'echo-q'
+  static readonly options = {} as const
+}
+
 type SendCall = { queue: string; data: unknown; options: Record<string, unknown> }
 
-function schedulerOver(registered: boolean) {
+function schedulerOver(owned: boolean) {
   const calls: SendCall[] = []
   const boss = {
     send: (queue: string, data: unknown, options: Record<string, unknown>) => {
@@ -21,7 +26,7 @@ function schedulerOver(registered: boolean) {
       return Promise.resolve('job-id')
     },
   } as unknown as PgBoss
-  const registry = { isRegistered: () => registered } as unknown as JobRegistry
+  const registry = { owns: () => owned } as unknown as JobRegistry
   return { scheduler: new JobScheduler(boss, registry), calls }
 }
 
@@ -54,6 +59,14 @@ describe('JobScheduler', () => {
     const { scheduler } = schedulerOver(false)
 
     await expect(scheduler.send(fakeTx, new EchoJob({ n: 1 }))).rejects.toThrow(
+      /No @JobHandler registered for queue 'echo-q'/,
+    )
+  })
+
+  it('rejects a different job class reusing a registered queue', async () => {
+    const { scheduler } = schedulerOver(false)
+
+    await expect(scheduler.send(fakeTx, new ImpostorJob({ evil: 'x' }))).rejects.toThrow(
       /No @JobHandler registered for queue 'echo-q'/,
     )
   })

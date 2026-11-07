@@ -21,7 +21,7 @@ export class JobScheduler {
     overrides?: JobSendOverrides,
   ): Promise<string | null> {
     const jobClass = job.constructor as JobClass<TPayload>
-    if (!this.registry.isRegistered(jobClass.queue)) {
+    if (!this.registry.owns(jobClass)) {
       throw new Error(`No @JobHandler registered for queue '${jobClass.queue}'`)
     }
     // Class options ride on every send: createQueue never updates an existing queue.
