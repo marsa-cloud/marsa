@@ -43,6 +43,20 @@ describe('ViewAppDetailUseCase', () => {
 
     expect(response.url).toBe('https://my-app.demo.marsa.cc')
     expect(response.env).toEqual({ A: '1' })
+    expect(response.state).toBe('active')
+  })
+
+  it('reports a deleting app as deleting', async () => {
+    const { repository, usecase } = build()
+    repository.findBySlug.resolves(
+      new AppPlacementBuilder()
+        .withApp(new AppBuilder().withSlug('dying').withDeletionRequested().build())
+        .build(),
+    )
+
+    const response = await usecase.execute('dying')
+
+    expect(response.state).toBe('deleting')
   })
 
   it('reads the live release from the app environment and names its placement', async () => {

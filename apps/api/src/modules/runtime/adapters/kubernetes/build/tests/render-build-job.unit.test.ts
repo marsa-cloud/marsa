@@ -80,6 +80,10 @@ describe('renderBuildJob', () => {
     expect(job.spec?.ttlSecondsAfterFinished).toBe(3600)
     expect(container?.terminationMessagePolicy).toBe('FallbackToLogsOnError')
   })
+
+  it('terminates the pod within a second grace', () => {
+    expect(job.spec?.template.spec?.terminationGracePeriodSeconds).toBe(1)
+  })
 })
 
 describe('renderGitSecret', () => {

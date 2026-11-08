@@ -1,4 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger'
+import {
+  AppDeletionState,
+  AppDeletionStateApiProperty,
+} from '#src/app/app-management/enums/app-deletion-state.enum.js'
+import { appDeletionState } from '#src/app/app-management/queries/app-deletion.js'
 import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import {
   AppEnvironmentRef,
@@ -37,6 +42,9 @@ export class AppSummary {
   @ApiProperty({ type: String, format: 'date-time' })
   readonly updatedAt: string
 
+  @AppDeletionStateApiProperty({ example: AppDeletionState.Active })
+  readonly state: AppDeletionState
+
   constructor({ app, project, environment }: AppPlacement, baseDomain: string) {
     this.slug = app.slug
     this.image = app.image
@@ -45,6 +53,7 @@ export class AppSummary {
     this.environment = new AppEnvironmentRef(environment)
     this.createdAt = app.createdAt.toISOString()
     this.updatedAt = app.updatedAt.toISOString()
+    this.state = appDeletionState(app)
   }
 }
 

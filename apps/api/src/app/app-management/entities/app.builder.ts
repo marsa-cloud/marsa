@@ -25,6 +25,9 @@ export class AppBuilder {
       nodePin: null,
       source: null,
       imagePullCredentialsEnc: null,
+      deletionRequestedAt: null,
+      deletionFailedAt: null,
+      deletionError: null,
       createdAt: now,
       updatedAt: now,
     }
@@ -82,6 +85,18 @@ export class AppBuilder {
 
   withImagePullCredentialsEnc(imagePullCredentialsEnc: string | null): this {
     this.app.imagePullCredentialsEnc = imagePullCredentialsEnc
+    return this
+  }
+
+  withDeletionRequested(): this {
+    this.app.deletionRequestedAt = new Date()
+    return this
+  }
+
+  withDeletionFailed(error: string): this {
+    this.app.deletionRequestedAt ??= new Date()
+    this.app.deletionFailedAt = new Date()
+    this.app.deletionError = error
     return this
   }
 

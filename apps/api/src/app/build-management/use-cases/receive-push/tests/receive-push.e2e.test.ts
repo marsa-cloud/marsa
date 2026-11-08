@@ -82,4 +82,28 @@ describe('POST /api/v1/github-app/webhooks (e2e)', () => {
 
     expect(response.status).toBe(401)
   })
+
+  it('skips a deleting app without 409-ing GitHub', async () => {
+    const slug = 'webhook-e2e-deleting-app'
+    const deleting = new AppBuilder()
+      .withEnvironmentUuid(app.environmentUuid)
+      .withSlug(slug)
+      .withSource(app.source)
+      .build()
+    await setup.db.insert(appTable).values(deleting)
+    await setup.db
+      .update(appTable)
+      .set({ deletionRequestedAt: new Date() })
+      .where(eq(appTable.slug, slug))
+
+    const response = await deliver(pushBody)
+
+    expect(response.status).toBe(202)
+    expect(response.body.builds).toEqual([])
+    const builds = await setup.db
+      .select()
+      .from(buildTable)
+      .where(eq(buildTable.appUuid, deleting.uuid))
+    expect(builds).toHaveLength(0)
+  })
 })

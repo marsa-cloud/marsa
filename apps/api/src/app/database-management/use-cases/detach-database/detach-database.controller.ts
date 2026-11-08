@@ -1,5 +1,6 @@
 import { Controller, Delete, HttpCode, Param } from '@nestjs/common'
 import {
+  ApiConflictResponse,
   ApiCookieAuth,
   ApiForbiddenResponse,
   ApiNoContentResponse,
@@ -23,6 +24,7 @@ export class DetachDatabaseController {
   @Roles(UserRole.Operator, UserRole.Member)
   @ApiCookieAuth(SESSION_COOKIE_SECURITY_SCHEME)
   @ApiNoContentResponse({ description: 'The variables were removed and the app restarted.' })
+  @ApiConflictResponse({ description: "App '<slug>' is being deleted." })
   @ApiNotFoundResponse({
     description: 'No such app or database, or that database is not attached to it.',
   })

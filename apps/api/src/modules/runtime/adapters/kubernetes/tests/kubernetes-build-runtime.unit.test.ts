@@ -82,45 +82,25 @@ describe('KubernetesBuildRuntime', () => {
     })
   })
 
-  it('stops the build pod on cancel and resolves only once it is gone', async () => {
-    batch.deleteNamespacedJob.resolves({})
-    batch.readNamespacedJob.rejects(notFound())
-    core.deleteNamespacedPod.rejects(notFound())
-    const running = { items: [{ metadata: { name: 'p-1' } }] }
-    core.listNamespacedPod
-      .onFirstCall()
-      .resolves(running)
-      .onSecondCall()
-      .resolves(running)
-      .onThirdCall()
-      .resolves({ items: [] })
-
-    await runtime.cancel(ref)
-
-    expect(core.deleteNamespacedPod.firstCall.args[0]).toMatchObject({
-      name: 'p-1',
-      namespace: 'marsa-builds',
-      gracePeriodSeconds: 1,
-    })
-    expect(core.listNamespacedPod.callCount).toBe(3)
-  })
-
-  it('waits out a pod that appears after an empty listing until the job is gone', async () => {
+  it('polls until a late pod and the job are gone and never deletes a pod itself', async () => {
     batch.deleteNamespacedJob.resolves({})
     batch.readNamespacedJob.rejects(notFound()).onFirstCall().resolves({})
-    const late = { items: [{ metadata: { name: 'p-late' } }] }
     core.listNamespacedPod
       .onFirstCall()
-      .resolves({ items: [] })
+      .resolves({ items: [{ metadata: { name: 'p-late' } }] })
       .onSecondCall()
-      .resolves(late)
-      .onThirdCall()
       .resolves({ items: [] })
 
     await runtime.cancel(ref)
 
+    expect(batch.deleteNamespacedJob.firstCall.args[0]).toMatchObject({
+      name: `build-${UUID}`,
+      namespace: 'marsa-builds',
+      propagationPolicy: 'Foreground',
+    })
+    expect(core.deleteNamespacedPod.callCount).toBe(0)
+    expect(core.listNamespacedPod.callCount).toBe(2)
     expect(batch.readNamespacedJob.callCount).toBe(3)
-    expect(core.listNamespacedPod.callCount).toBe(3)
   })
 
   it('reads a missing job as not found', async () => {

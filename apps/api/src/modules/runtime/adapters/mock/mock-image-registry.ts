@@ -8,9 +8,19 @@ export const MOCK_REGISTRY_HOST = 'registry.mock.test'
 export class MockImageRegistry extends ImageRegistry {
   readonly deletedRepositories: string[] = []
   private armedFailure: Error | null = null
+  private persistentFailure: Error | null = null
 
   failNextDelete(error: Error): void {
     this.armedFailure = error
+  }
+
+  failEveryDelete(error: Error): void {
+    this.persistentFailure = error
+  }
+
+  clearDeleteFailures(): void {
+    this.armedFailure = null
+    this.persistentFailure = null
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -27,6 +37,9 @@ export class MockImageRegistry extends ImageRegistry {
   }
 
   deleteRepository(appSlug: string): Promise<void> {
+    if (this.persistentFailure) {
+      return Promise.reject(this.persistentFailure)
+    }
     const failure = this.armedFailure
     this.armedFailure = null
     if (failure) {

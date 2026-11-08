@@ -5,7 +5,6 @@ import { newestPod } from '#src/modules/runtime/adapters/kubernetes/app/rollout/
 import {
   BUILD_LOG_LIMIT_BYTES,
   BUILD_NAMESPACE,
-  CANCEL_POD_GRACE_SECONDS,
   CANCEL_POLL_MS,
   CANCEL_WAIT_MS,
   JOB_NAME_LABEL,
@@ -71,16 +70,6 @@ export class KubernetesBuildRuntime extends BuildRuntime {
         propagationPolicy: 'Foreground',
       }),
     )
-    // The Job controller creates no pods for a deleting Job; a 1 s grace skips BuildKit's 30 s.
-    for (const pod of await this.listPods(ref)) {
-      await ignoreNotFound(() =>
-        this.core.deleteNamespacedPod({
-          name: pod.metadata?.name ?? '',
-          namespace: BUILD_NAMESPACE,
-          gracePeriodSeconds: CANCEL_POD_GRACE_SECONDS,
-        }),
-      )
-    }
     await this.waitForBuildGone(ref)
   }
 

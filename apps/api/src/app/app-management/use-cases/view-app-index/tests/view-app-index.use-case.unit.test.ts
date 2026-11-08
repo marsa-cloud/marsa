@@ -37,8 +37,18 @@ describe('ViewAppIndexUseCase', () => {
     expect(result.items[0].slug).toBe('alpha')
     expect(result.items[0].image).toBe('nginx:1.27')
     expect(result.items[0].url).toBe('https://alpha.demo.marsa.cc')
+    expect(result.items[0].state).toBe('active')
     expect(result.items[0].project).toEqual({ slug: 'my-project', name: 'My Project' })
     expect(result.items[0].environment).toMatchObject({ slug: 'production', name: 'Production' })
+  })
+
+  it('reports a deleting app as deleting', async () => {
+    const app = new AppBuilder().withSlug('dying').withDeletionRequested().build()
+    const { usecase } = build([app])
+
+    const result = await usecase.execute(unpaginated())
+
+    expect(result.items[0].state).toBe('deleting')
   })
 
   it('preserves repository ordering across multiple apps', async () => {

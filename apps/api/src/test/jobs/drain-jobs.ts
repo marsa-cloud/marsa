@@ -14,7 +14,11 @@ export async function drainJobs(app: INestApplicationContext): Promise<void> {
     for (const { jobClass, handler } of registrations) {
       const queue = jobClass.queue
       for (;;) {
-        const [job] = await boss.fetch<object>(queue, { batchSize: 1, ignoreStartAfter: true })
+        const [job] = await boss.fetch<object>(queue, {
+          batchSize: 1,
+          ignoreStartAfter: true,
+          includeMetadata: true,
+        })
         if (!job) break
         ran++
         try {

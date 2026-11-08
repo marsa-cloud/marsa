@@ -2,6 +2,7 @@
 
 export type {
   AppAttachmentSummary,
+  AppDeletionState,
   AppEnvironmentRef,
   AppHealthStatus,
   AppLatestBuildResponse,
@@ -76,7 +77,6 @@ export type {
   DatabaseSummary,
   DeleteAppV1Data,
   DeleteAppV1Errors,
-  DeleteAppV1Response,
   DeleteAppV1Responses,
   DeleteDatabaseV1Data,
   DeleteDatabaseV1Errors,

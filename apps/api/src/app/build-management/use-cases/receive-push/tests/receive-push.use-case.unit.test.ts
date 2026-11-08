@@ -212,4 +212,19 @@ describe('ReceivePushUseCase', () => {
     expect(starter.start.called).toBe(false)
     expect(response.builds).toEqual([])
   })
+
+  it('skips a deleting app instead of throwing', async () => {
+    const { usecase, repository, starter } = build()
+    const deleting = new AppBuilder()
+      .withSlug(shop.slug)
+      .withSource(source)
+      .withDeletionRequested()
+      .build()
+    repository.lockApp.withArgs(match.any, shop.uuid).resolves(deleting)
+
+    const response = await usecase.execute(await delivery())
+
+    expect(starter.start.called).toBe(false)
+    expect(response.builds).toEqual([])
+  })
 })

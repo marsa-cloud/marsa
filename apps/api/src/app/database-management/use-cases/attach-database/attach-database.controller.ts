@@ -29,6 +29,7 @@ export class AttachDatabaseController {
   @ApiBadRequestResponse({ description: 'Malformed body, or an invalid database slug / alias.' })
   @ApiNotFoundResponse({ description: 'No such app, or no such database in its environment.' })
   @ApiConflictResponse({ description: 'Already attached, or the alias is taken.' })
+  @ApiConflictResponse({ description: "App '<slug>' is being deleted." })
   @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   @ApiResponse({

@@ -70,6 +70,25 @@ describe('POST /api/v1/apps/:slug/deploy (e2e)', () => {
       .expect(409)
   })
 
+  it('409s a deleting app', async () => {
+    const slug = 'deploy-release-e2e-deleting'
+    const app = new AppBuilder().withEnvironmentUuid(environment.uuid).withSlug(slug).build()
+    const release = new ReleaseBuilder().withApp(app).build()
+    await setup.db.insert(appTable).values(app)
+    await setup.db.insert(releaseTable).values(release)
+    await setup.db
+      .update(appTable)
+      .set({ deletionRequestedAt: new Date() })
+      .where(eq(appTable.slug, slug))
+
+    const response = await request(setup.httpServer)
+      .post(`/api/v1/apps/${slug}/deploy`)
+      .set('Cookie', cookie)
+      .expect(409)
+
+    expect(response.body.message).toContain(`App '${slug}' is being deleted.`)
+  })
+
   it('returns 404 for an unknown app and 401 without a session', async () => {
     await request(setup.httpServer)
       .post('/api/v1/apps/ghost/deploy')

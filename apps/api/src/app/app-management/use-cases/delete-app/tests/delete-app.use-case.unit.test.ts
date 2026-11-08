@@ -1,122 +1,81 @@
 import { before, describe, it } from 'node:test'
-import { BadGatewayException, NotFoundException } from '@nestjs/common'
+import { NotFoundException } from '@nestjs/common'
 import { expect } from 'expect'
 import { createStubInstance, match } from 'sinon'
 import { AppBuilder } from '#src/app/app-management/entities/app.builder.js'
+import { AppDeletedDomainEvent } from '#src/app/app-management/events/app-deleted.event.js'
 import { AppPlacementBuilder } from '#src/app/app-management/queries/app-placement.builder.js'
 import { DeleteAppRepository } from '#src/app/app-management/use-cases/delete-app/delete-app.repository.js'
 import { DeleteAppUseCase } from '#src/app/app-management/use-cases/delete-app/delete-app.use-case.js'
-import { BuildBuilder } from '#src/app/build-management/entities/build.builder.js'
-import { MockAppRuntime } from '#src/modules/runtime/adapters/mock/mock-app-runtime.js'
-import { MockBuildRuntime } from '#src/modules/runtime/adapters/mock/mock-build-runtime.js'
-import { MockImageRegistry } from '#src/modules/runtime/adapters/mock/mock-image-registry.js'
+import { DomainEventEmitter } from '#src/modules/domain-events/domain-event-emitter.js'
 import { stubDatabase } from '#src/test/setup/stub-database.js'
 import { TestBench } from '#src/test/setup/test-bench.js'
 
 const placement = new AppPlacementBuilder()
   .withApp(new AppBuilder().withSlug('my-app').build())
   .build()
-const runningBuild = new BuildBuilder().withApp(placement.app).build()
 
-function build() {
+function build(app = placement.app) {
   const repository = createStubInstance(DeleteAppRepository)
-  repository.findBySlug.resolves(placement)
-  repository.deleteWithHistory.resolves()
-  repository.findRunningBuilds.resolves([runningBuild])
-  const appRuntime = createStubInstance(MockAppRuntime)
-  appRuntime.destroy.resolves()
-  const imageRegistry = createStubInstance(MockImageRegistry)
-  imageRegistry.deleteRepository.resolves()
-  const buildRuntime = createStubInstance(MockBuildRuntime)
-  buildRuntime.cancel.resolves()
-  const usecase = new DeleteAppUseCase(
-    stubDatabase(),
-    repository,
-    appRuntime,
-    imageRegistry,
-    buildRuntime,
-  )
-  return { repository, appRuntime, imageRegistry, buildRuntime, usecase }
+  repository.findBySlug.resolves({ ...placement, app })
+  const emitter = createStubInstance(DomainEventEmitter)
+  emitter.emit.resolves()
+  const usecase = new DeleteAppUseCase(stubDatabase(), repository, emitter)
+  return { repository, emitter, usecase }
 }
 
 describe('DeleteAppUseCase', () => {
   before(() => TestBench.setupUnitTest())
 
-  it('deletes the app registry repository after removing it from the runtime', async () => {
-    const { appRuntime, imageRegistry, usecase } = build()
+  it('marks a fresh app deletion-requested and emits the event once', async () => {
+    const { repository, emitter, usecase } = build()
 
     await usecase.execute('my-app')
 
-    expect(imageRegistry.deleteRepository.calledOnceWithExactly('my-app')).toBe(true)
     expect(
-      appRuntime.destroy.getCall(0).calledBefore(imageRegistry.deleteRepository.getCall(0)),
+      repository.markDeletionRequested.calledOnceWithExactly(match.any, placement.app.uuid),
     ).toBe(true)
-  })
-
-  it('cancels the running builds before deleting the registry repository', async () => {
-    const { buildRuntime, imageRegistry, usecase } = build()
-
-    await usecase.execute('my-app')
-
-    expect(
-      buildRuntime.cancel.calledOnceWithExactly({
-        build: { uuid: runningBuild.uuid },
-        app: { slug: 'my-app' },
+    expect(emitter.emit.calledOnce).toBe(true)
+    const [tx, events] = emitter.emit.firstCall.args
+    expect(tx).toBeDefined()
+    expect(events).toEqual([
+      new AppDeletedDomainEvent({
+        appUuid: placement.app.uuid,
+        slug: 'my-app',
+        placement,
       }),
-    ).toBe(true)
-    expect(
-      buildRuntime.cancel.getCall(0).calledBefore(imageRegistry.deleteRepository.getCall(0)),
-    ).toBe(true)
+    ])
   })
 
-  it('maps a failed build cancel to 502 and keeps the registry repository', async () => {
-    const { buildRuntime, imageRegistry, usecase } = build()
-    buildRuntime.cancel.rejects(new Error('cluster down'))
-
-    await expect(usecase.execute('my-app')).rejects.toThrow(BadGatewayException)
-    expect(imageRegistry.deleteRepository.called).toBe(false)
-  })
-
-  it('maps a registry failure to 502 so the rows roll back and the delete can be retried', async () => {
-    const { imageRegistry, usecase } = build()
-    imageRegistry.deleteRepository.rejects(new Error('registry down'))
-
-    await expect(usecase.execute('my-app')).rejects.toThrow(BadGatewayException)
-  })
-
-  it('deletes the rows, then removes the app from the runtime', async () => {
-    const { repository, appRuntime, usecase } = build()
-
-    await usecase.execute('my-app')
-
-    expect(repository.findBySlug.calledOnceWithExactly(match.any, 'my-app')).toBe(true)
-    expect(repository.deleteWithHistory.calledOnceWithExactly(match.any, placement.app.uuid)).toBe(
-      true,
-    )
-    expect(appRuntime.destroy.firstCall.args[0]).toMatchObject({
-      app: { slug: 'my-app' },
-      project: { slug: 'my-project' },
-      environment: { slug: 'production' },
-    })
-    expect(
-      repository.deleteWithHistory.getCall(0).calledBefore(appRuntime.destroy.getCall(0)),
-    ).toBe(true)
-  })
-
-  it('throws 404 for an unknown slug and touches neither the runtime nor the rows', async () => {
-    const { repository, appRuntime, usecase } = build()
+  it('throws 404 for an unknown slug without writing or emitting', async () => {
+    const { repository, emitter, usecase } = build()
     repository.findBySlug.resolves(undefined)
 
     await expect(usecase.execute('ghost')).rejects.toThrow(NotFoundException)
 
-    expect(appRuntime.destroy.called).toBe(false)
-    expect(repository.deleteWithHistory.called).toBe(false)
+    expect(repository.markDeletionRequested.called).toBe(false)
+    expect(emitter.emit.called).toBe(false)
   })
 
-  it('maps a runtime failure to 502 so the transaction rolls the rows back', async () => {
-    const { appRuntime, usecase } = build()
-    appRuntime.destroy.rejects(new Error('connection refused'))
+  it('does not emit a second chain for an already-deleting app', async () => {
+    const app = new AppBuilder().withSlug('my-app').withDeletionRequested().build()
+    const { repository, emitter, usecase } = build(app)
 
-    await expect(usecase.execute('my-app')).rejects.toThrow(BadGatewayException)
+    await usecase.execute('my-app')
+
+    expect(repository.markDeletionRequested.called).toBe(false)
+    expect(repository.clearDeletionFailure.called).toBe(false)
+    expect(emitter.emit.called).toBe(false)
+  })
+
+  it('clears the failure and re-emits for a deletion_failed app (retry path)', async () => {
+    const app = new AppBuilder().withSlug('my-app').withDeletionFailed('registry: boom').build()
+    const { repository, emitter, usecase } = build(app)
+
+    await usecase.execute('my-app')
+
+    expect(repository.clearDeletionFailure.calledOnceWithExactly(match.any, app.uuid)).toBe(true)
+    expect(repository.markDeletionRequested.called).toBe(false)
+    expect(emitter.emit.calledOnce).toBe(true)
   })
 })

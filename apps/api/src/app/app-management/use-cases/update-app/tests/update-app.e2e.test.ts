@@ -99,6 +99,24 @@ describe('PATCH /api/v1/apps/:slug (e2e)', () => {
     await request(setup.httpServer).patch(`/api/v1/apps/${SLUG}`).send({}).expect(401)
   })
 
+  it('409s a deleting app', async () => {
+    const slug = 'update-app-e2e-deleting'
+    const app = new AppBuilder().withEnvironmentUuid(environment.uuid).withSlug(slug).build()
+    await setup.db.insert(appTable).values(app)
+    await setup.db
+      .update(appTable)
+      .set({ deletionRequestedAt: new Date() })
+      .where(eq(appTable.slug, slug))
+
+    const response = await request(setup.httpServer)
+      .patch(`/api/v1/apps/${slug}`)
+      .set('Cookie', cookie)
+      .send({ image: 'nginx:1.28' })
+      .expect(409)
+
+    expect(response.body.message).toContain(`App '${slug}' is being deleted.`)
+  })
+
   it('sets and then clears the node pin', async () => {
     const set = await request(setup.httpServer)
       .patch(`/api/v1/apps/${SLUG}`)

@@ -2,7 +2,7 @@ import { after, before, describe, it } from 'node:test'
 import { eq } from 'drizzle-orm'
 import { expect } from 'expect'
 import request from 'supertest'
-import { type App } from '#src/app/app-management/entities/app.table.js'
+import { type App, appTable } from '#src/app/app-management/entities/app.table.js'
 import { type DatabaseRow } from '#src/app/database-management/entities/database.table.js'
 import { databaseAttachmentTable } from '#src/app/database-management/entities/database-attachment.table.js'
 import type { Environment } from '#src/app/environment/entities/environment.table.js'
@@ -57,5 +57,23 @@ describe('DELETE /api/v1/apps/:slug/attachments/:databaseSlug (e2e)', () => {
     await request(setup.httpServer)
       .delete(`/api/v1/apps/${APP_SLUG}/attachments/${DB_SLUG}`)
       .expect(401)
+  })
+
+  it('409s a deleting app', async () => {
+    const slug = 'detach-e2e-deleting'
+    const app = await setup.seedApp(environment.uuid, slug)
+    const database = await setup.seedDatabase(environment.uuid, `${slug}-db`)
+    await setup.seedAttachment(app.uuid, database.uuid)
+    await setup.db
+      .update(appTable)
+      .set({ deletionRequestedAt: new Date() })
+      .where(eq(appTable.slug, slug))
+
+    const response = await request(setup.httpServer)
+      .delete(`/api/v1/apps/${slug}/attachments/${slug}-db`)
+      .set('Cookie', cookie)
+      .expect(409)
+
+    expect(response.body.message).toContain(`App '${slug}' is being deleted.`)
   })
 })

@@ -1,6 +1,7 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { nodePinEquals } from '#src/app/app-management/entities/node-pin.js'
+import { assertAppNotDeleting } from '#src/app/app-management/queries/app-deletion.js'
 import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import { UpdateAppCommand } from '#src/app/app-management/use-cases/update-app/update-app.command.js'
 import { UpdateAppRepository } from '#src/app/app-management/use-cases/update-app/update-app.repository.js'
@@ -35,6 +36,7 @@ export class UpdateAppUseCase {
       if (!placement) {
         throw new NotFoundException(`App '${slug}' was not found.`)
       }
+      assertAppNotDeleting(placement.app)
 
       const updated = await this.repository.updateBySlug(tx, slug, {
         image: command.image,

@@ -2,6 +2,7 @@ import type { V1Job, V1OwnerReference, V1Secret } from '@kubernetes/client-node'
 import {
   BUILD_APP_LABEL,
   BUILD_NAMESPACE,
+  BUILD_POD_TERMINATION_GRACE_SECONDS,
   BUILD_TTL_SECONDS,
   BUILD_UUID_LABEL,
   BUILDKIT_IMAGE,
@@ -41,6 +42,7 @@ export function renderBuildJob(ref: BuildRef, spec: BuildSpec): V1Job {
         spec: {
           restartPolicy: 'Never',
           automountServiceAccountToken: false,
+          terminationGracePeriodSeconds: BUILD_POD_TERMINATION_GRACE_SECONDS,
           containers: [
             {
               name: 'buildkit',

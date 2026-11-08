@@ -121,7 +121,7 @@ describe('JobQueueLifecycle', () => {
     await off.lifecycle.onApplicationBootstrap()
 
     expect(on.workCalls.map((c) => c.queue)).toEqual(['a-q', 'b-q'])
-    expect(on.workCalls.every((c) => JSON.stringify(c.options) === '{"batchSize":1}')).toBe(true)
+    expect(on.workCalls.every((c) => JSON.stringify(c.options) === '{"batchSize":1,"includeMetadata":true}')).toBe(true)
     expect(off.workCalls).toHaveLength(0)
   })
 

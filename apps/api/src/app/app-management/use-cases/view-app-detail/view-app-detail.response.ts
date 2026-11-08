@@ -1,5 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger'
 import { NodePin } from '#src/app/app-management/entities/node-pin.js'
+import { AppDeletionStateApiProperty } from '#src/app/app-management/enums/app-deletion-state.enum.js'
+import { AppDeletionState } from '#src/app/app-management/enums/app-deletion-state.enum.js'
+import { appDeletionState } from '#src/app/app-management/queries/app-deletion.js'
 import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import { AppLatestBuildResponse } from '#src/app/app-management/responses/app-latest-build.response.js'
 import {
@@ -81,6 +84,9 @@ export class ViewAppDetailResponse {
   @ApiProperty({ type: String, format: 'date-time' })
   readonly updatedAt: string
 
+  @AppDeletionStateApiProperty({ example: AppDeletionState.Active })
+  readonly state: AppDeletionState
+
   constructor(
     { app, project, environment }: AppPlacement,
     baseDomain: string,
@@ -102,5 +108,6 @@ export class ViewAppDetailResponse {
     this.hasUndeployedChanges = hasUndeployedChanges
     this.createdAt = app.createdAt.toISOString()
     this.updatedAt = app.updatedAt.toISOString()
+    this.state = appDeletionState(app)
   }
 }
