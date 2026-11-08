@@ -16,7 +16,7 @@ function emitterOver(subscribers: StubSubscriber[]): DomainEventEmitter {
   const discovery = createStubInstance(DiscoveryServiceClass)
   const wrappers = subscribers.map((s) => ({
     ...s,
-    name: s.instance.constructor.name,
+    name: s.instance?.constructor.name,
     isDependencyTreeStatic: () => !s.requestScoped,
   }))
   discovery.getProviders.returns(wrappers as never)
@@ -150,6 +150,22 @@ describe('DomainEventEmitter', () => {
     const emitter = emitterOver([{ instance: {}, eventClass: OrderPlaced }])
 
     expect(() => emitter.onModuleInit()).toThrow(/has no handle\(\) method/)
+  })
+
+  it('skips wrappers without metadata or instance and registers the rest', async () => {
+    const log: LogEntry[] = []
+    const Unmarked = loggingSubscriberClass('unmarked', log)
+    const PlacedSub = loggingSubscriberClass('placed-sub', log)
+    const emitter = emitterOver([
+      { instance: new Unmarked(), eventClass: undefined as never },
+      { instance: undefined as never, eventClass: OrderPlaced },
+      { instance: new PlacedSub(), eventClass: OrderPlaced },
+    ])
+    emitter.onModuleInit()
+
+    await emitter.emit({} as Transaction, [new OrderPlaced({})])
+
+    expect(log.map(([name]) => name)).toEqual(['placed-sub'])
   })
 
   it('rejects a request-scoped subscriber at init', () => {
