@@ -1349,6 +1349,8 @@ export type DeployReleaseV1Errors = {
    */
   404: unknown
   /**
+   * App '<slug>' is being deleted.
+   *
    * The app has no release to deploy.
    */
   409: unknown
@@ -1415,6 +1417,8 @@ export type StartBuildV1Errors = {
    */
   404: unknown
   /**
+   * App '<slug>' is being deleted.
+   *
    * The app deploys a prebuilt image.
    */
   409: unknown
@@ -1565,20 +1569,14 @@ export type DeleteAppV1Errors = {
    * No app with that slug.
    */
   404: unknown
-  /**
-   * Kubernetes teardown failed; the app was kept.
-   */
-  502: unknown
 }
 
 export type DeleteAppV1Responses = {
   /**
-   * The app and its Kubernetes resources were removed.
+   * Deletion scheduled; the app is in the deleting state.
    */
-  204: void
+  202: unknown
 }
-
-export type DeleteAppV1Response = DeleteAppV1Responses[keyof DeleteAppV1Responses]
 
 export type ViewAppDetailV1Data = {
   body?: never
@@ -1636,6 +1634,10 @@ export type UpdateAppV1Errors = {
    * No app with that slug.
    */
   404: unknown
+  /**
+   * App '<slug>' is being deleted.
+   */
+  409: unknown
 }
 
 export type UpdateAppV1Responses = {
@@ -1910,6 +1912,8 @@ export type AttachDatabaseV1Errors = {
    */
   404: unknown
   /**
+   * App '<slug>' is being deleted.
+   *
    * Already attached, or the alias is taken.
    */
   409: unknown
@@ -1948,6 +1952,10 @@ export type DetachDatabaseV1Errors = {
    * No such app or database, or that database is not attached to it.
    */
   404: unknown
+  /**
+   * App '<slug>' is being deleted.
+   */
+  409: unknown
   /**
    * The cluster update failed; the attachment was kept.
    */

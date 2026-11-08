@@ -1,10 +1,9 @@
 import { Controller, Delete, HttpCode, Param } from '@nestjs/common'
 import {
+  ApiAcceptedResponse,
   ApiCookieAuth,
   ApiForbiddenResponse,
-  ApiNoContentResponse,
   ApiNotFoundResponse,
-  ApiResponse,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger'
@@ -21,12 +20,11 @@ export class DeleteAppController {
   @Delete()
   @Roles(UserRole.Operator, UserRole.Member)
   @ApiCookieAuth(SESSION_COOKIE_SECURITY_SCHEME)
-  @HttpCode(204)
-  @ApiNoContentResponse({ description: 'The app and its Kubernetes resources were removed.' })
+  @HttpCode(202)
+  @ApiAcceptedResponse({ description: 'Deletion scheduled; the app is in the deleting state.' })
   @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })
   @ApiNotFoundResponse({ description: 'No app with that slug.' })
-  @ApiResponse({ status: 502, description: 'Kubernetes teardown failed; the app was kept.' })
   handle(@Param('slug') slug: string): Promise<void> {
     return this.usecase.execute(slug)
   }
