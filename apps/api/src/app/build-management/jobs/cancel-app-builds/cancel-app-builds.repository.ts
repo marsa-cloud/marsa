@@ -19,6 +19,6 @@ export class CancelAppBuildsRepository {
     await tx
       .update(buildTable)
       .set({ status: BuildStatus.Cancelled })
-      .where(eq(buildTable.uuid, buildUuid))
+      .where(and(eq(buildTable.uuid, buildUuid), eq(buildTable.status, BuildStatus.Running)))
   }
 }

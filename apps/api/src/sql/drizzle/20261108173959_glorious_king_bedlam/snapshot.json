@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "23527dea-2a89-468e-ac48-f1ea90e7bea2",
+  "id": "0402b980-20b2-4cf5-a65a-bdb477afe3df",
   "prevIds": [
     "bfceb77e-d74b-44a9-9208-87b74d4195b0"
   ],
@@ -295,7 +295,7 @@
       "table": "app"
     },
     {
-      "type": "timestamp",
+      "type": "timestamp with time zone",
       "typeSchema": null,
       "notNull": false,
       "dimensions": 0,
@@ -308,7 +308,7 @@
       "table": "app"
     },
     {
-      "type": "timestamp",
+      "type": "timestamp with time zone",
       "typeSchema": null,
       "notNull": false,
       "dimensions": 0,
