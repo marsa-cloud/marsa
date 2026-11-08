@@ -17,6 +17,9 @@ export class MockAppRuntime extends AppRuntime {
   private readonly liveReleases = new Map<string, Uuid<'Release'>>()
   private readonly armedFailures = new Map<'deploy' | 'destroy', Error>()
 
+  readonly deployed: AppRef[] = []
+  readonly destroyed: AppRef[] = []
+
   failNext(operation: 'deploy' | 'destroy', error: Error): void {
     this.armedFailures.set(operation, error)
   }
@@ -31,6 +34,7 @@ export class MockAppRuntime extends AppRuntime {
       return Promise.reject(failure)
     }
     this.liveReleases.set(ref.app.slug, spec.releaseUuid)
+    this.deployed.push(ref)
     return Promise.resolve()
   }
 
@@ -40,6 +44,7 @@ export class MockAppRuntime extends AppRuntime {
       return Promise.reject(failure)
     }
     this.liveReleases.delete(ref.app.slug)
+    this.destroyed.push(ref)
     return Promise.resolve()
   }
 

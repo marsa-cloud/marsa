@@ -20,7 +20,7 @@
 - Subscribers/jobs never re-derive placement: every job payload and event content is the shared `AppDeletedPayload`.
 - After this PR, **app-management no longer imports `BuildRuntime` or `ImageRegistry`** (spec: no cross-feature imports). Cross-feature imports of `entities/`, `queries/`, `enums/`, `errors/`, `events/` are allowed (`.claude/rules/api/service.md`).
 - Imports: `#src/...` / `#test/...` with `.js` extensions, never relative. Comments: one line, only a non-obvious why.
-- 409 copy, verbatim: `` App '<slug>' is being deleted. `` State values, verbatim: `'active' | 'deleting' | 'deletion_failed'`.
+- 409 copy, verbatim: `App '<slug>' is being deleted.` State values, verbatim: `'active' | 'deleting' | 'deletion_failed'`.
 - Api tests: Postgres via `docker compose up -d` (db `marsa_test`). Iterate only touched files:
   `cd apps/api && pnpm build && pnpm test:setup && node --experimental-default-config-file --no-experimental-test-coverage --env-file=.env.test --test src/<touched path>/tests/*.test.ts`
   One full `pnpm --filter api test` run at the end (Task 7). Coverage floors (lines 80 / branches 75 / functions 75) are ratchets — never lower them.
@@ -111,7 +111,7 @@ export const AppDeletionStateApiProperty = (options?: ApiPropertyOptions): Prope
   ApiProperty({ ...options, enum: AppDeletionState, enumName: 'AppDeletionState' })
 ```
 
-  No pg enum — `state` is derived, never stored.
+No pg enum — `state` is derived, never stored.
 
 - Produces (`app.table.ts`, before `...timestamps`):
 
@@ -121,7 +121,7 @@ deletionFailedAt: timestamp('deletion_failed_at'),
 deletionError: text('deletion_error'),
 ```
 
-  All nullable, no defaults. Row types `App` / `NewApp` re-derive automatically.
+All nullable, no defaults. Row types `App` / `NewApp` re-derive automatically.
 
 - Produces (`app-deletion.ts`):
 
@@ -136,7 +136,7 @@ export function appDeletionState(
 ): AppDeletionState
 ```
 
-  `deletionFailedAt` wins over `deleting`; both null → `Active`.
+`deletionFailedAt` wins over `deleting`; both null → `Active`.
 
 - Produces (builder): `withDeletionRequested(): this` sets `deletionRequestedAt`, `withDeletionFailed(error: string): this` sets both `deletionRequestedAt` and `deletionFailedAt` + `deletionError`.
 
@@ -156,7 +156,7 @@ it('derives deleting from deletionRequestedAt alone')
 it('derives deletion_failed when deletionFailedAt is set, even if deletionRequestedAt is too')
 ```
 
-  All three build the input with `new AppBuilder()…build()` — that is also the failing drive for the builder setters (which don't compile yet, which is the failure).
+All three build the input with `new AppBuilder()…build()` — that is also the failing drive for the builder setters (which don't compile yet, which is the failure).
 
 - [ ] **Step 3: Run the test to verify it fails**
 
@@ -217,7 +217,6 @@ export function assertAppNotDeleting(app: App): void
 - Produces (receive-push): **not** `assertAppNotDeleting` — inside its per-app `lockApp` transaction it adds `if (appDeletionState(app) !== AppDeletionState.Active) return null` (the existing "nothing to build" skip), so a webhook answers 200 without 409-ing GitHub.
 
 - [ ] **Step 1: Write the failing tests**
-
   - `app-deletion.unit.test.ts`: `assertAppNotDeleting` throws `AppDeletionConflictError` with the exact message for `withDeletionRequested()` and for `withDeletionFailed('registry: boom')` apps, and returns for a default `AppBuilder().build()`.
   - Each guarded endpoint's e2e test gains one case: seed `new AppBuilder().withSlug(SLUG)…build()` + `db.update(appTable).set({ deletionRequestedAt: new Date() }).where(eq(appTable.slug, SLUG))` (a state no endpoint can produce — direct seeding per `.claude/rules/api/tests.md`), authenticate, request, expect `409` with body containing `App '<slug>' is being deleted.`
   - receive-push integration: seed a deleting app, drive the use-case with a matched push, expect it resolves without starting a build (no `buildTable` row) and without throwing.
@@ -255,7 +254,7 @@ git add -A && git commit -m "feat(api): 409 guard on writes to a deleting app"
 export class AppDeletedDomainEvent extends DomainEvent<AppDeletedPayload> {}
 ```
 
-  Content **is** the payload — no wrapper field. Named after the use-case, past tense, per `.claude/rules/api/domain-events.md` (added in this task).
+Content **is** the payload — no wrapper field. Named after the use-case, past tense, per `.claude/rules/api/domain-events.md` (added in this task).
 
 - Produces (`.claude/rules/api/domain-events.md`) — path-scoped to `apps/api/src/app/**/*.event.ts`:
 
@@ -270,7 +269,7 @@ ends `DomainEvent`, and its content type is the shared payload named `<UseCase>P
 kind — no bare `XEvent`/`X` names.
 ```
 
-  Only the delete-app chain lands this PR; the rule is the pattern for the rest (#249 onward).
+Only the delete-app chain lands this PR; the rule is the pattern for the rest (#249 onward).
 
 - Produces (repository — `findRunningBuilds` and `deleteWithHistory` are **removed**, they move to Tasks 4/5):
 
@@ -299,12 +298,11 @@ await this.db.transaction(async (tx) => {
 })
 ```
 
-  No BadGateway wrapping — there is no runtime call left in the use-case.
+No BadGateway wrapping — there is no runtime call left in the use-case.
 
 - Produces (controller): `@HttpCode(202)` + `@ApiAcceptedResponse({ description: 'Deletion scheduled; the app is in the deleting state.' })` replacing the 204/502 decorators. Body stays empty — `handle(@Param('slug') slug: string): Promise<void>`. 404/401/403 decorators unchanged.
 
 - [ ] **Step 1: Rewrite the failing tests**
-
   - Unit (`setupUnitTest`, `stubDatabase()` for the tx, `createStubInstance` repository + emitter, builder-placed `App`): missing slug → `NotFoundException`; fresh app → `markDeletionRequested` + `emit` called **once** with content `{ appUuid, slug, placement }` (deep-equal the whole payload); already-deleting (`withDeletionRequested`) → `emit` **not** called, no repo write; `deletion_failed` (`withDeletionFailed('registry: boom')`) → `clearDeletionFailure` called **and** `emit` called.
   - e2e: seed app + release via direct inserts. `DELETE` → `202` with empty body; `GET /apps/:slug` → `200` with `state: 'deleting'` (the row is **kept**, slug reserved); a second `DELETE` → `202` (Task 3 only asserts the status — the no-duplicate job assert lands in Task 4's drain test); unknown slug → 404; unauthenticated → 401. The old 502 rollback cases are **deleted** (no synchronous runtime call remains).
 
@@ -345,20 +343,32 @@ export class AppRuntimeDestroyedDomainEvent extends DomainEvent<AppDeletedPayloa
 export class AppImagesDeletedDomainEvent extends DomainEvent<AppDeletedPayload> {} // app-management file for now; emitted by build-management in Task 5
 ```
 
-  `AppImagesDeletedDomainEvent` is created here because `ScheduleFinalizeAppDeletionSubscriber` must compile; its emitter arrives in Task 5. The file lives in **build-management**'s events folder instead if you prefer emitting-feature ownership — but then move the subscriber's import; pick the app-management location only if the import direction stays feature-legal (`events/` imports across features are allowed).
+`AppImagesDeletedDomainEvent` is created here because `ScheduleFinalizeAppDeletionSubscriber` must compile; its emitter arrives in Task 5. The file lives in **build-management**'s events folder instead if you prefer emitting-feature ownership — but then move the subscriber's import; pick the app-management location only if the import direction stays feature-legal (`events/` imports across features are allowed).
 
 - Produces (jobs — all in app-management, all `extends Job<AppDeletedPayload>`):
 
 ```ts
 export class DestroyAppRuntimeJob extends Job<AppDeletedPayload> {
   static readonly queue = 'destroy-app-runtime'
-  static readonly options = { retryLimit: 5, retryDelay: 5, retryBackoff: true, retryDelayMax: 120, expireInSeconds: 60, deadLetter: AppDeletionFailedJob.queue }
+  static readonly options = {
+    retryLimit: 5,
+    retryDelay: 5,
+    retryBackoff: true,
+    retryDelayMax: 120,
+    expireInSeconds: 60,
+    deadLetter: AppDeletionFailedJob.queue,
+  }
 }
-export class FinalizeAppDeletionJob extends Job<AppDeletedPayload> { /* queue 'finalize-app-deletion', same options */ }
-export class AppDeletionFailedJob extends Job<AppDeletedPayload> { static readonly queue = 'app-deletion-failed'; static readonly options = {} }
+export class FinalizeAppDeletionJob extends Job<AppDeletedPayload> {
+  /* queue 'finalize-app-deletion', same options */
+}
+export class AppDeletionFailedJob extends Job<AppDeletedPayload> {
+  static readonly queue = 'app-deletion-failed'
+  static readonly options = {}
+}
 ```
 
-  `AppDeletionFailedJob.options` is empty — a dead-letter queue with its own `deadLetter` would loop. `JobRegistry` already orders dead-letter targets first at boot.
+`AppDeletionFailedJob.options` is empty — a dead-letter queue with its own `deadLetter` would loop. `JobRegistry` already orders dead-letter targets first at boot.
 
 - Produces (handlers):
 
@@ -402,7 +412,8 @@ AppDeletionFailedRepository.markDeletionFailed(tx: Executor, appUuid: AppUuid, e
 - Produces (subscribers — the only links between steps):
 
 ```ts
-@Injectable() @Subscribe(AppDeletedDomainEvent)
+@Injectable()
+@Subscribe(AppDeletedDomainEvent)
 export class ScheduleDestroyAppRuntimeSubscriber implements DomainEventSubscriber<AppDeletedDomainEvent> {
   constructor(private readonly scheduler: JobScheduler) {}
   async handle(event: AppDeletedDomainEvent, tx: Transaction): Promise<void> {
@@ -412,10 +423,9 @@ export class ScheduleDestroyAppRuntimeSubscriber implements DomainEventSubscribe
 // ScheduleFinalizeAppDeletionSubscriber: @Subscribe(AppImagesDeletedDomainEvent) → send(tx, new FinalizeAppDeletionJob(event.content))
 ```
 
-  Each subscriber + job handler gets its own `@Module({ providers: [Subscriber] })` / `@Module({ providers: [Handler, Repository] })`, imported by `app-management.module.ts` (subscriber.md + module-wiring rule: one instance, one seam).
+Each subscriber + job handler gets its own `@Module({ providers: [Subscriber] })` / `@Module({ providers: [Handler, Repository] })`, imported by `app-management.module.ts` (subscriber.md + module-wiring rule: one instance, one seam).
 
 - [ ] **Step 1: Write the failing integration test** — `app-management/jobs/tests/app-deletion-jobs.integration.test.ts`, `TestBench.setupEndToEndTest()`:
-
   - `DELETE then drain destroys the runtime and keeps the row`: seed app (`AppBuilder`), `DELETE` → 202, `await drainJobs(setup.app)`, assert `MockAppRuntime` (fetched from the container) recorded `destroy` for the placement, and `GET /apps/:slug` still `200` with `state: 'deleting'` (no build-management subscriber exists yet, so the chain stops here). Also assert a **second** `DELETE` before the drain would not send a second `destroy-app-runtime` job — read `pgboss.job` count by name via `setup.db`, expect 1.
   - `AppImagesDeletedDomainEvent finalizes the deletion`: seed app + release rows, `setup.app.get(DomainEventEmitter).emit(db transaction, [new AppImagesDeletedDomainEvent({ appUuid, slug, placement })])`, `await drainJobs(setup.app)`, assert `GET /apps/:slug` → 404 and the release row is gone.
   - `the dead-letter handler writes the failure`: seed app, get `AppDeletionFailedJobHandler` from the container, call `handler.handle(payload, { sourceName: 'delete-app-repository', sourceOutput: { message: 'registry unreachable' } } as never)`, assert the app row has `deletion_failed_at` set and `deletion_error === 'delete-app-repository: registry unreachable'`.
@@ -495,7 +505,6 @@ async handle(payload: AppDeletedPayload): Promise<void> {
 - Produces (mock): `MockImageRegistry.failEveryDelete(error: Error): void` + `clearDeleteFailures(): void` — a persistent arm alongside the existing one-shot `failNextDelete`.
 
 - [ ] **Step 1: Write the failing integration test** — `build-management/jobs/tests/app-deletion-chain.integration.test.ts`, `TestBench.setupEndToEndTest()`. For order assertions, wrap the three mock methods with sinon fakes appending to one `log: string[]` (`sinon.replace(app.get(MockAppRuntime), 'destroy', …)` — same instances `drainJobs` runs).
-
   - `the full chain deletes everything in order`: seed app + a running build + release; `DELETE` → 202; `await drainJobs(setup.app)`; assert `log` equals `['destroy', 'cancel', 'registry']` (the subscriber wiring **is** the order assertion), the build row is `cancelled`, `GET /apps/:slug` → 404, and the release row is gone.
   - `a transient registry failure converges`: `imageRegistry.failNextDelete(new Error('registry flaky'))`, `DELETE`, `drainJobs` — the retry inside the drain succeeds, app row gone.
   - `a permanent registry failure dead-letters`: `imageRegistry.failEveryDelete(new Error('registry unreachable'))`, `DELETE`, `drainJobs` — app row **kept**, `state: 'deletion_failed'` on GET, `deletion_error` contains `'delete-app-repository'`. Then `clearDeleteFailures()`, `DELETE` again (retry path) → `clearDeletionFailure` runs, `drainJobs` → `GET` → 404.
@@ -535,10 +544,9 @@ async cancel(ref: BuildRef): Promise<void> {
 }
 ```
 
-  The per-pod delete loop is gone — the pod's own 1 s grace (set at render, honoured by the GC's dependent delete) covers every deletion path.
+The per-pod delete loop is gone — the pod's own 1 s grace (set at render, honoured by the GC's dependent delete) covers every deletion path.
 
 - [ ] **Step 1: Write the failing tests**
-
   - Render test: `renderBuildJob(...)` pod spec has `terminationGracePeriodSeconds === 1`.
   - Cancel test (fake batch/core clients, like the existing adapter tests): a pod that appears in `listPods` **after** the Job delete (first listing empty, second listing one pod, third empty) — `cancel` resolves without an explicit per-pod delete call, polling until the late pod is gone (fake the poll clock the existing tests already fake; keep the "throws past `CANCEL_WAIT_MS`" case green).
   - Assert no `deleteNamespacedPod` call happens in `cancel` — the loop is deleted, not skipped.
@@ -580,7 +588,7 @@ Closes #267"
 git add -A && git commit -m "docs: deletion chain conventions in api CLAUDE.md"
 ```
 
-  Open the PR `feat/245-async-delete-app` → `main`, description referencing #245 (PR 4 of the series) and `Closes #267`.
+Open the PR `feat/245-async-delete-app` → `main`, description referencing #245 (PR 4 of the series) and `Closes #267`.
 
 ---
 
