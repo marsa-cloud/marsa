@@ -13,9 +13,14 @@ Plan: `docs/superpowers/plans/2026-11-08-245-pr4-async-delete-app.md`.
 - Task 6 (#267 build-cancel timeout fix): `eb5d23f` + `343bd0a` (dead-letter source/error surfaced in `deletion_error`)
 - Task 7 (verification + docs): full api suite green — 714/714 pass, coverage lines 91.07 / branches 82.15 / functions 93.07 (floors 80/75/75 unchanged). Typecheck clean. `rtk proxy pnpm lint` exit 0. No contract drift (`openapi.json` + web `app/api` untouched). Fixed pre-existing type error in app-deletion-jobs.integration.test.ts (`ref.app.uuid` → `ref.app.slug`; `AppRef` carries no uuid). Added `jobs/<name>/` (`.job.ts` / `.job-handler.ts`) to the feature-shape tree in `apps/api/.claude/CLAUDE.md`.
 
-## Todo
+## COMPLETE — PR open
 
-- Whole-branch review, then PR → main (references #245, closes #267)
+PR: https://github.com/marsa-cloud/marsa/pull/278 (references #245, closes #267).
+Whole-branch review: no blockers; follow-ups applied in `918171d` (timestamptz columns, conditional markCancelled, explicit DLQ retry options). Full suite re-verified 714/714.
+Residual risk noted in PR body: complete-build intentionally unguarded (spec); tiny race window before step-2 cancel.
+
+Next phase (fresh session): address PR review comments on #278, then PR 5 (web badges/polling/retry).
+Resume prompt: "PR 4 is open as #278 in /home/gomaa/Github/marsa-workspace/marsa — read progress.md; address its review comments, or start PR 5 (web) from docs/superpowers/specs/2026-11-01-domain-events-job-queue-design.md Web section."
 
 ## Open issues
 
