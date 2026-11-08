@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import { assertAppNotDeleting } from '#src/app/app-management/queries/app-deletion.js'
 import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import type { Release } from '#src/app/release/entities/release.table.js'
 import { deploySpecOf } from '#src/app/release/entities/release-deploy-spec.js'
@@ -43,6 +44,7 @@ export class DeployReleaseUseCase {
     if (!placement) {
       throw new NotFoundException(`App '${slug}' was not found.`)
     }
+    assertAppNotDeleting(placement.app)
     const release = await this.repository.findNewestRelease(tx, placement.app.uuid)
     if (!release) {
       throw new ConflictException(`App '${slug}' has no release to deploy. Create one first.`)

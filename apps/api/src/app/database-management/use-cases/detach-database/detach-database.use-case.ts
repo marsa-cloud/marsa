@@ -1,5 +1,6 @@
 import { BadGatewayException, Injectable, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import { assertAppNotDeleting } from '#src/app/app-management/queries/app-deletion.js'
 import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import { DetachDatabaseRepository } from '#src/app/database-management/use-cases/detach-database/detach-database.repository.js'
 import { deploySpecOf } from '#src/app/release/entities/release-deploy-spec.js'
@@ -28,6 +29,7 @@ export class DetachDatabaseUseCase {
       if (!placement) {
         throw new NotFoundException(`App '${appSlug}' was not found.`)
       }
+      assertAppNotDeleting(placement.app)
 
       const databaseUuid = await this.repository.findDatabaseUuid(tx, databaseSlug)
       if (!databaseUuid) {

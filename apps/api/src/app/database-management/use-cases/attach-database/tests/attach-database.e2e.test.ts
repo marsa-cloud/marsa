@@ -2,7 +2,7 @@ import { after, before, describe, it } from 'node:test'
 import { eq } from 'drizzle-orm'
 import { expect } from 'expect'
 import request from 'supertest'
-import { type App } from '#src/app/app-management/entities/app.table.js'
+import { type App, appTable } from '#src/app/app-management/entities/app.table.js'
 import { DatabaseBuilder } from '#src/app/database-management/entities/database.builder.js'
 import { databaseTable } from '#src/app/database-management/entities/database.table.js'
 import { databaseAttachmentTable } from '#src/app/database-management/entities/database-attachment.table.js'
@@ -116,5 +116,22 @@ describe('POST /api/v1/apps/:slug/attachments (e2e)', () => {
       .post(`/api/v1/apps/${APP_SLUG}/attachments`)
       .send({ databaseSlug: 'orders' })
       .expect(401)
+  })
+
+  it('409s a deleting app', async () => {
+    const slug = 'attach-e2e-deleting'
+    await setup.seedApp(environment.uuid, slug)
+    await setup.db
+      .update(appTable)
+      .set({ deletionRequestedAt: new Date() })
+      .where(eq(appTable.slug, slug))
+
+    const response = await request(setup.httpServer)
+      .post(`/api/v1/apps/${slug}/attachments`)
+      .set('Cookie', cookie)
+      .send({ databaseSlug: 'orders' })
+      .expect(409)
+
+    expect(response.body.message).toContain(`App '${slug}' is being deleted.`)
   })
 })

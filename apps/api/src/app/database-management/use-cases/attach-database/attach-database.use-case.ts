@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import { assertAppNotDeleting } from '#src/app/app-management/queries/app-deletion.js'
 import type { AppPlacement } from '#src/app/app-management/queries/app-placement.js'
 import { catalogueEntry } from '#src/app/database-management/catalogue/engine-catalogue.js'
 import { envPrefixOf } from '#src/app/database-management/entities/attachment-env.js'
@@ -39,6 +40,7 @@ export class AttachDatabaseUseCase {
       if (!placement) {
         throw new NotFoundException(`App '${appSlug}' was not found.`)
       }
+      assertAppNotDeleting(placement.app)
 
       const database = await this.repository.findDatabaseInEnvironment(
         tx,

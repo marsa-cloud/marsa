@@ -26,6 +26,7 @@ export class DeployReleaseController {
   @ApiCookieAuth(SESSION_COOKIE_SECURITY_SCHEME)
   @ApiOkResponse({ type: DeployReleaseResponse })
   @ApiConflictResponse({ description: 'The app has no release to deploy.' })
+  @ApiConflictResponse({ description: "App '<slug>' is being deleted." })
   @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiNotFoundResponse({ description: 'No app with that slug.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })

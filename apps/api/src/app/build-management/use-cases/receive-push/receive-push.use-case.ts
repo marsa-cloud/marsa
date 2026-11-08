@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common'
 import { verify } from '@octokit/webhooks-methods'
 import type { App } from '#src/app/app-management/entities/app.table.js'
+import { AppDeletionState } from '#src/app/app-management/enums/app-deletion-state.enum.js'
+import { appDeletionState } from '#src/app/app-management/queries/app-deletion.js'
 import type { Build } from '#src/app/build-management/entities/build.table.js'
 import { BuildTrigger } from '#src/app/build-management/enums/build-trigger.enum.js'
 import {
@@ -117,6 +119,9 @@ export class ReceivePushUseCase {
     return this.db.transaction(async (tx) => {
       const app = await this.repository.lockApp(tx, matched.uuid)
       if (app?.source?.repo !== source.repo || app.source.branch !== source.branch) {
+        return null
+      }
+      if (appDeletionState(app) !== AppDeletionState.Active) {
         return null
       }
       if (await this.repository.isNewestBuildLive(tx, app.uuid, head.commitSha)) {

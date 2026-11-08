@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import type { AppSource } from '#src/app/app-management/entities/app-source.js'
+import { assertAppNotDeleting } from '#src/app/app-management/queries/app-deletion.js'
 import { BuildTrigger } from '#src/app/build-management/enums/build-trigger.enum.js'
 import { BuildSummary } from '#src/app/build-management/responses/build-summary.response.js'
 import { BuildStarter } from '#src/app/build-management/services/build-starter/build-starter.service.js'
@@ -33,6 +34,7 @@ export class StartBuildUseCase {
       if (!locked) {
         throw new NotFoundException(`App '${slug}' was not found.`)
       }
+      assertAppNotDeleting(locked)
       if (!isSameBranch(locked.source, source)) {
         throw new ConflictException(
           `App '${slug}' changed its source while the build was starting. Please try again.`,

@@ -1,6 +1,7 @@
 import { Body, Controller, Param, Patch } from '@nestjs/common'
 import {
   ApiBadRequestResponse,
+  ApiConflictResponse,
   ApiCookieAuth,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
@@ -25,6 +26,7 @@ export class UpdateAppController {
   @ApiCookieAuth(SESSION_COOKIE_SECURITY_SCHEME)
   @ApiOkResponse({ type: UpdateAppResponse })
   @ApiBadRequestResponse({ description: 'A field is out of range or malformed.' })
+  @ApiConflictResponse({ description: "App '<slug>' is being deleted." })
   @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
   @ApiNotFoundResponse({ description: 'No app with that slug.' })
   @ApiUnauthorizedResponse({ description: 'No active session.' })

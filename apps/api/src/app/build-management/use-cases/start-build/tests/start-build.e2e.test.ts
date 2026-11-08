@@ -83,4 +83,26 @@ describe('POST /api/v1/apps/:slug/builds (e2e)', () => {
   it('rejects an unauthenticated request with 401', async () => {
     await request(setup.httpServer).post(`/api/v1/apps/${SLUG}/builds`).expect(401)
   })
+
+  it('409s a deleting app', async () => {
+    const slug = 'build-e2e-deleting'
+    const installation = await setup.seedGithubInstallation('6363')
+    const app = new AppBuilder()
+      .withEnvironmentUuid(environment.uuid)
+      .withSlug(slug)
+      .withSource(new AppSourceBuilder().withInstallationUuid(installation.uuid).build())
+      .build()
+    await setup.db.insert(appTable).values(app)
+    await setup.db
+      .update(appTable)
+      .set({ deletionRequestedAt: new Date() })
+      .where(eq(appTable.slug, slug))
+
+    const response = await request(setup.httpServer)
+      .post(`/api/v1/apps/${slug}/builds`)
+      .set('Cookie', sessionCookie)
+      .expect(409)
+
+    expect(response.body.message).toContain(`App '${slug}' is being deleted.`)
+  })
 })

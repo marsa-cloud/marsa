@@ -27,6 +27,7 @@ export class StartBuildController {
   @ApiCreatedResponse({ type: BuildSummary })
   @ApiNotFoundResponse({ description: 'No app with that slug.' })
   @ApiConflictResponse({ description: 'The app deploys a prebuilt image.' })
+  @ApiConflictResponse({ description: "App '<slug>' is being deleted." })
   @ApiUnprocessableEntityResponse({ description: 'The branch is missing or not accessible.' })
   @ApiBadGatewayResponse({ description: 'GitHub refused the installation token.' })
   @ApiForbiddenResponse({ description: 'Your account is not approved for this action.' })
