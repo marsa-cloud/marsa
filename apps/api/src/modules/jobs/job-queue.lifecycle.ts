@@ -33,7 +33,7 @@ export class JobQueueLifecycle implements OnApplicationBootstrap, BeforeApplicat
       if (Object.keys(updatable).length > 0) await this.boss.updateQueue(queue, updatable)
       if (schedule) await this.boss.schedule(queue, schedule, {}, updatable)
       if (workersEnabled) {
-        await this.boss.work(queue, { batchSize: 1 }, ([job]) =>
+        await this.boss.work(queue, { batchSize: 1, includeMetadata: true }, ([job]) =>
           this.run(registration, job as PgBossJob<object> | undefined),
         )
       }

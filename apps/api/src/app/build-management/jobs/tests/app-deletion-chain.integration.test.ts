@@ -113,6 +113,8 @@ describe('the full app deletion chain (integration)', () => {
     const [row] = await setup.db.select().from(appTable).where(eq(appTable.uuid, app.uuid))
     expect(row).toBeDefined()
     expect(row?.deletionFailedAt).not.toBeNull()
+    expect(row?.deletionError).toContain('delete-app-repository')
+    expect(row?.deletionError).toContain('registry unreachable')
     const detail = await request(setup.httpServer)
       .get(`/api/v1/apps/${SLUG}-permanent`)
       .set('Cookie', sessionCookie)
