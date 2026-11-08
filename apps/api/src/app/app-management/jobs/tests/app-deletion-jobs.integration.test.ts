@@ -53,7 +53,7 @@ describe('app deletion chain jobs (integration)', () => {
 
     await drainJobs(setup.app)
 
-    expect(runtime.destroyed.some((ref) => ref.app.uuid === app.uuid)).toBe(true)
+    expect(runtime.destroyed.some((ref) => ref.app.slug === app.slug)).toBe(true)
     await request(setup.httpServer)
       .get(`/api/v1/apps/${SLUG}`)
       .set('Cookie', sessionCookie)

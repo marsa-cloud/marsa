@@ -104,6 +104,9 @@ src/app/<feature>/
     tests/                       # *.unit.test.ts · *.e2e.test.ts
   entities/                      # feature-owned tables + builders
   errors/ · enums/ · events/ · subscribers/ · utils/
+  jobs/<name>/                   # one pg-boss job per reaction
+    <name>.job.ts                # queue name + payload — Job<...>
+    <name>.job-handler.ts        # @JobHandler — external call first, then row writes + next event
 ```
 
 Placement rules: feature-internal code stays inside the feature folder; promote anything genuinely shared to `src/modules/` or a workspace package rather than reaching across. A helper used by one feature lives in that feature's `utils/`; a cross-cutting one goes in `src/utils/`. Shared exported types go in a co-located `.types.ts`; domain-significant literals in a co-located `.constant(s).ts`.
