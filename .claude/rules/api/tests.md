@@ -8,6 +8,15 @@ paths:
 Runner is Node's built-in `node:test` with `expect`. The suite runs against compiled output
 in `dist/` — there is no watch mode. Change code, then `pnpm --filter api test`.
 
+While iterating, run only the files you touched, then the full suite once before handing back:
+
+```bash
+cd apps/api && pnpm build && pnpm test:setup && node --experimental-default-config-file \
+  --no-experimental-test-coverage --env-file=.env.test --test src/<path>/tests/*.test.ts
+```
+
+Coverage is off because a subset always trips the repo-wide floors.
+
 ## Pick the layer by what has an HTTP entry point
 
 | Suffix                   | Scope                                           | How much                           |

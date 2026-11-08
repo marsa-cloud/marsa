@@ -20,6 +20,7 @@ Per-file-type conventions are in `.claude/rules/api/`, loaded automatically when
 | `*.repository.ts`                       | `.claude/rules/api/repository.md`    |
 | `*.builder.ts`                          | `.claude/rules/api/builder.md`       |
 | `*.module.ts`                           | `.claude/rules/api/module-wiring.md` |
+| `*.subscriber.ts`                       | `.claude/rules/api/subscriber.md`    |
 | `tests/**`                              | `.claude/rules/api/tests.md`         |
 | any `src/**/*.ts` (import style)        | `.claude/rules/api/imports.md`       |
 | `.swcrc`, `tsconfig*.json`, build cfg   | `.claude/rules/api/build-config.md`  |
@@ -102,7 +103,7 @@ src/app/<feature>/
     <use-case>.response.ts       # output DTO — <Action>Response
     tests/                       # *.unit.test.ts · *.e2e.test.ts
   entities/                      # feature-owned tables + builders
-  errors/ · enums/ · events/ · utils/
+  errors/ · enums/ · events/ · subscribers/ · utils/
 ```
 
 Placement rules: feature-internal code stays inside the feature folder; promote anything genuinely shared to `src/modules/` or a workspace package rather than reaching across. A helper used by one feature lives in that feature's `utils/`; a cross-cutting one goes in `src/utils/`. Shared exported types go in a co-located `.types.ts`; domain-significant literals in a co-located `.constant(s).ts`.

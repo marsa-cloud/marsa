@@ -4,12 +4,18 @@ import { expect } from 'expect'
 import { Job, type JobClass } from '#src/modules/jobs/job.js'
 import { JobRegistry } from '#src/modules/jobs/job-registry.js'
 
-type Stub = { instance: object | null; jobClass: JobClass }
+type Stub = { instance: object | null; jobClass: JobClass; requestScoped?: boolean }
 
 function registryOver(stubs: Stub[]): JobRegistry {
   const discovery = {
     getProviders: () =>
-      stubs.map((s) => ({ instance: s.instance, metatype: s.instance?.constructor, s })),
+      stubs.map((s) => ({
+        instance: s.instance,
+        metatype: s.instance?.constructor,
+        name: s.instance?.constructor.name,
+        isDependencyTreeStatic: () => !s.requestScoped,
+        s,
+      })),
     getMetadataByDecorator: (_decorator: unknown, wrapper: { s: Stub }) => wrapper.s.jobClass,
   } as unknown as DiscoveryService
   return new JobRegistry(discovery)
@@ -103,6 +109,16 @@ describe('JobRegistry', () => {
     const registry = registryOver([{ instance: null, jobClass: jobClass('JobA', 'a-q') }])
 
     expect(registry.registrations()).toEqual([])
+  })
+
+  it('rejects a request-scoped handler', () => {
+    const registry = registryOver([
+      { instance: new HandlerA(), jobClass: jobClass('JobA', 'a-q'), requestScoped: true },
+    ])
+
+    expect(() => registry.registrations()).toThrow(
+      'HandlerA is a @JobHandler but is request-scoped',
+    )
   })
 
   it('rejects two job classes on one queue', () => {

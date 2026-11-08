@@ -147,3 +147,8 @@ vite.config.ts.timestamp-*
 
 # Claude
 .claude/.local
+**/.claude/settings.local.json
+.superpowers/
+
+# Playwright MCP screenshots, snapshots and console logs
+.playwright-mcp/
