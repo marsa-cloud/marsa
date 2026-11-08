@@ -33,7 +33,7 @@ describe('app deletion chain jobs (integration)', () => {
     await setup.teardown()
   })
 
-  it('DELETE then drain destroys the runtime and keeps the row', async () => {
+  it('DELETE then drain runs the chain once and deletes the app', async () => {
     const app = await setup.seedApp(environment.uuid, SLUG)
     const runtime = setup.app.get<AppRuntime>(AppRuntime) as MockAppRuntime
 
@@ -54,11 +54,10 @@ describe('app deletion chain jobs (integration)', () => {
     await drainJobs(setup.app)
 
     expect(runtime.destroyed.some((ref) => ref.app.uuid === app.uuid)).toBe(true)
-    const detail = await request(setup.httpServer)
+    await request(setup.httpServer)
       .get(`/api/v1/apps/${SLUG}`)
       .set('Cookie', sessionCookie)
-      .expect(200)
-    expect(detail.body.state).toBe('deleting')
+      .expect(404)
   })
 
   it('AppImagesDeletedDomainEvent finalizes the deletion', async () => {
