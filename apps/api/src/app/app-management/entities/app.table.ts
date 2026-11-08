@@ -1,5 +1,15 @@
 import { sql } from 'drizzle-orm'
-import { check, index, integer, jsonb, pgTable, text, uuid, varchar } from 'drizzle-orm/pg-core'
+import {
+  check,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core'
 import type { AppUuid } from '#src/app/app-management/entities/app.uuid.js'
 import type { AppDomain } from '#src/app/app-management/entities/app-domain.types.js'
 import type { AppSource } from '#src/app/app-management/entities/app-source.js'
@@ -29,6 +39,9 @@ export const appTable = pgTable(
     nodePin: jsonb('node_pin').$type<NodePin>(),
     source: jsonb().$type<AppSource>(),
     imagePullCredentialsEnc: text('image_pull_credentials_enc'),
+    deletionRequestedAt: timestamp('deletion_requested_at'),
+    deletionFailedAt: timestamp('deletion_failed_at'),
+    deletionError: text('deletion_error'),
     ...timestamps,
   },
   (table) => [

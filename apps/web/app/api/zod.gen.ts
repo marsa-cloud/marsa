@@ -327,6 +327,8 @@ export const zAppEnvironmentRef = z.object({
   name: z.string(),
 })
 
+export const zAppDeletionState = z.enum(['active', 'deleting', 'deletion_failed'])
+
 export const zAppSummary = z.object({
   slug: z.string(),
   image: z.string().nullable(),
@@ -335,6 +337,7 @@ export const zAppSummary = z.object({
   environment: zAppEnvironmentRef,
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
+  state: zAppDeletionState,
 })
 
 export const zViewAppIndexResponseMeta = z.object({
@@ -378,6 +381,7 @@ export const zViewAppDetailResponse = z.object({
   hasUndeployedChanges: z.boolean(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
+  state: zAppDeletionState,
 })
 
 export const zAppHealthStatus = z.enum(['healthy', 'degraded', 'idle', 'unavailable', 'not_found'])

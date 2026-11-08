@@ -456,6 +456,8 @@ export type AppEnvironmentRef = {
   name: string
 }
 
+export type AppDeletionState = 'active' | 'deleting' | 'deletion_failed'
+
 export type AppSummary = {
   slug: string
   /**
@@ -467,6 +469,7 @@ export type AppSummary = {
   environment: AppEnvironmentRef
   createdAt: string
   updatedAt: string
+  state: AppDeletionState
 }
 
 export type ViewAppIndexResponseMeta = {
@@ -539,6 +542,7 @@ export type ViewAppDetailResponse = {
   hasUndeployedChanges: boolean
   createdAt: string
   updatedAt: string
+  state: AppDeletionState
 }
 
 export type AppHealthStatus = 'healthy' | 'degraded' | 'idle' | 'unavailable' | 'not_found'

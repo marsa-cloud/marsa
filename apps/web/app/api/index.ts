@@ -2,6 +2,7 @@
 
 export type {
   AppAttachmentSummary,
+  AppDeletionState,
   AppEnvironmentRef,
   AppHealthStatus,
   AppLatestBuildResponse,

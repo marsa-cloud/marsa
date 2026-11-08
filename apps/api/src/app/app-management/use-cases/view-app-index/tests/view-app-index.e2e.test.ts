@@ -59,6 +59,7 @@ describe('GET /api/v1/apps (e2e)', () => {
     expect(appA.project.slug).toBe('my-project')
     expect(appA.environment.slug).toBe('production')
     expect(typeof appA.createdAt).toBe('string')
+    expect(appA.state).toBe('active')
   })
 
   it('returns one page plus a cursor when a limit is given', async () => {

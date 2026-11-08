@@ -2995,6 +2995,14 @@
           "name"
         ]
       },
+      "AppDeletionState": {
+        "type": "string",
+        "enum": [
+          "active",
+          "deleting",
+          "deletion_failed"
+        ]
+      },
       "AppSummary": {
         "type": "object",
         "properties": {
@@ -3025,6 +3033,14 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "state": {
+            "example": "active",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AppDeletionState"
+              }
+            ]
           }
         },
         "required": [
@@ -3034,7 +3050,8 @@
           "project",
           "environment",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "state"
         ]
       },
       "ViewAppIndexResponseMeta": {
@@ -3229,6 +3246,14 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "state": {
+            "example": "active",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AppDeletionState"
+              }
+            ]
           }
         },
         "required": [
@@ -3246,7 +3271,8 @@
           "latestBuild",
           "hasUndeployedChanges",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "state"
         ]
       },
       "AppHealthStatus": {
